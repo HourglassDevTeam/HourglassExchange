@@ -1,3 +1,11 @@
+// CerebroBroker
+//
+// 高性能和标准化的交易接口，能够在多个金融场所执行交易。同时提供一个功能丰富的模拟交易所，以协助进行回测和干式交易。通过初始化其关联的ExecutionClient实例与交易所进行通信。
+// 特性
+// 简单易用：ExecutionClient trait 提供了一个统一且简单的语言，用于与交易所进行交互。
+// 标准化：允许您的策略使用相同的接口与每个真实或模拟的交易所进行通信。
+// 可扩展：CerebroBroker具有高度可扩展性，使其易于通过添加新的交易所集成。
+
 #![warn(
     missing_debug_implementations,
     missing_copy_implementations,
@@ -6,20 +14,7 @@
 )]
 #![allow(clippy::type_complexity)]
 
-//! # Cerebro-Execution
-//! High-performance and normalised trading interface capable of executing across many financial
-//! venues. Also provides a feature rich simulated exchange to assist with backtesting
-//! and dry-trading. Communicate with an exchange by initialising it's associated
-//! `ExecutionClient` instance.
-//! **It is:**
-//! * **Easy**: ExecutionClient trait provides a unified and simple language for interacting with
-//! exchanges.
-//! * **Normalised**: Allow your strategy to communicate with every real or simulated exchange
-//! using the same interface.
-//! * **Extensible**: Cerebro-Execution is highly extensible, making it easy to contribute by adding
-//! new exchange integrations!
-//!
-//! See `README.md` for more information and examples.
+
 
 use std::fmt::{Display, Formatter};
 
