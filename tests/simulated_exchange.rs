@@ -622,7 +622,7 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
         }
     }
 }
-
+// 8. 获取打开的订单并检查test_6_order_cid_1是否只剩一个限价买单。
 // 8. Fetch open orders & check there is only one limit buy order remaining from test_6_order_cid_1.
 async fn test_8_fetch_open_orders_and_check_test_6_order_cid_1_only(
     client: &SimulatedExecution,
@@ -644,6 +644,7 @@ async fn test_8_fetch_open_orders_and_check_test_6_order_cid_1_only(
     );
 }
 
+// 9. 打开2x LIMIT Sell Order并检查是否发送了余额和订单新建的AccountEvents。
 // 9. Open 2x LIMIT Sell Order & check AccountEvents for balances and order news are sent.
 async fn test_9_open_2x_limit_sell_orders(
     client: &SimulatedExecution,
@@ -694,12 +695,14 @@ async fn test_9_open_2x_limit_sell_orders(
     assert_eq!(opened_orders[0].clone().unwrap(), expected_order_new_1);
     assert_eq!(opened_orders[1].clone().unwrap(), expected_order_new_2);
 
-    // Check AccountEvent Balance for first order - quote currency has available balance decrease
+    // 检查第一个订单的AccountEvent Balance - 基础货币的可用余额减少
+    // Check AccountEvent Balance for first order - base currency has available balance decrease
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::Balance(btc_balance),
-            ..
-        }) => {
+               kind: AccountEventKind::Balance(btc_balance),
+               ..
+           }) => {
+            // 预期btc Balance.available = 10.5 - 1.0
             // Expected btc Balance.available = 10.5 - 1.0
             let expected = SymbolBalance::new("btc", Balance::new(10.5, 10.5 - 1.0));
             assert_eq!(btc_balance, expected);
@@ -712,12 +715,13 @@ async fn test_9_open_2x_limit_sell_orders(
         }
     }
 
+    // 检查第一个订单的AccountEvent OrdersNew
     // Check AccountEvent OrdersNew for first order
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::OrdersNew(new_orders),
-            ..
-        }) => {
+               kind: AccountEventKind::OrdersNew(new_orders),
+               ..
+           }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone(), expected_order_new_1);
         }
@@ -729,12 +733,14 @@ async fn test_9_open_2x_limit_sell_orders(
         }
     }
 
-    // Check AccountEvent Balance for second order - quote currency has available balance decrease
+    // 检查第二个订单的AccountEvent Balance - 基础货币的可用余额减少
+    // Check AccountEvent Balance for second order - base currency has available balance decrease
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::Balance(btc_balance),
-            ..
-        }) => {
+               kind: AccountEventKind::Balance(btc_balance),
+               ..
+           }) => {
+            // 预期btc Balance.available = 9.5 - 1.0
             // Expected btc Balance.available = 9.5 - 1.0
             let expected = SymbolBalance::new("btc", Balance::new(10.5, 9.5 - 1.0));
             assert_eq!(btc_balance, expected);
@@ -747,12 +753,13 @@ async fn test_9_open_2x_limit_sell_orders(
         }
     }
 
+    // 检查第二个订单的AccountEvent OrdersNew
     // Check AccountEvent OrdersNew for second order
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::OrdersNew(new_orders),
-            ..
-        }) => {
+               kind: AccountEventKind::OrdersNew(new_orders),
+               ..
+           }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone(), expected_order_new_2);
         }
@@ -764,6 +771,7 @@ async fn test_9_open_2x_limit_sell_orders(
         }
     }
 
+    // 检查是否没有更多的AccountEvents生成
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {}
@@ -775,6 +783,7 @@ async fn test_9_open_2x_limit_sell_orders(
         }
     }
 }
+
 
 // 10. Send MarketEvent that fully matches 1x sell Order (trade), and partially matches the another
 //    (trade). Check AccountEvents for balances and trades of both matches are sent.
