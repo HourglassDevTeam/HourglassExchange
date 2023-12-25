@@ -8,7 +8,7 @@ use crate::{
     SymbolBalance,
 };
 
-/// Simulated [`ExecutionClient`] implementation that integrates with the Cerebro
+/// 模拟[`ExecutionClient`]实现，可用于 Cerebro。
 /// [`SimulatedExchange`](super::exchange::SimulatedExchange).
 #[derive(Clone, Debug)]
 pub struct SimulatedExecution {
@@ -25,6 +25,7 @@ impl ExecutionClient for SimulatedExecution {
     }
 
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError> {
+        // 使用 Oneshot 通道与模拟交易所通信
         // Oneshot channel to communicate with the SimulatedExchange
         let (response_tx, response_rx) = oneshot::channel();
 
@@ -40,6 +41,7 @@ impl ExecutionClient for SimulatedExecution {
     }
 
     async fn fetch_balances(&self) -> Result<Vec<SymbolBalance>, ExecutionError> {
+        // 使用 Oneshot 通道与模拟交易所通信
         // Oneshot channel to communicate with the SimulatedExchange
         let (response_tx, response_rx) = oneshot::channel();
 
@@ -76,14 +78,15 @@ impl ExecutionClient for SimulatedExecution {
         &self,
         cancel_requests: Vec<Order<RequestCancel>>,
     ) -> Vec<Result<Order<Cancelled>, ExecutionError>> {
+        // 创建一个 oneshot 通道以与模拟交易所通信。
         // Oneshot channel to communicate with the SimulatedExchange
         let (response_tx, response_rx) = oneshot::channel();
-
+        // 向模拟交易所发送取消订单的请求。
         // Send CancelOrders request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::CancelOrders((cancel_requests, response_tx)))
             .expect("SimulatedExchange is offline - failed to send CancelOrders request");
-
+        // 从模拟交易所接收取消订单的响应。
         // Receive CancelOrders response from the SimulatedExchange
         response_rx
             .await
