@@ -32,12 +32,12 @@ impl ExecutionClient for SimulatedExecution {
         // Send FetchOrdersOpen request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::FetchOrdersOpen(response_tx))
-            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to send FetchOrdersOpen request");
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - 发送FetchOrdersOpen请求失败");
         // 从模拟交易所接收开放订单的响应。
         // Receive FetchOrdersOpen response from the SimulatedExchange
         response_rx
             .await
-            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to receive FetchOrdersOpen response")
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - 接收FetchOrdersOpen响应失败")
     }
 
     async fn fetch_balances(&self) -> Result<Vec<SymbolBalance>, ExecutionError> {
