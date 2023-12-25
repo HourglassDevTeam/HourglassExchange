@@ -99,7 +99,7 @@ impl ClientAccount {
         // Send AccountEvents to client
         self.event_account_tx
             .send(balance_event)
-            .expect("Client is offline - failed to send AccountEvent::Balance");
+            .expect("[CerebroBroker] : Client is offline - failed to send AccountEvent::Balance");
 
         self.event_account_tx
             .send(AccountEvent {
@@ -107,7 +107,7 @@ impl ClientAccount {
                 exchange: Exchange::from(ExecutionId::Simulated),
                 kind: AccountEventKind::OrdersNew(vec![open.clone()]),
             })
-            .expect("Client is offline - failed to send AccountEvent::Trade");
+            .expect("[CerebroBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         Ok(open)
     }
@@ -180,7 +180,7 @@ impl ClientAccount {
                 exchange: Exchange::from(ExecutionId::Simulated),
                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
             })
-            .expect("Client is offline - failed to send AccountEvent::Trade");
+            .expect("[CerebroBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.event_account_tx
             .send(AccountEvent {
@@ -188,7 +188,7 @@ impl ClientAccount {
                 exchange: Exchange::from(ExecutionId::Simulated),
                 kind: AccountEventKind::Balance(balance_event),
             })
-            .expect("Client is offline - failed to send AccountEvent::Balance");
+            .expect("[CerebroBroker] : Client is offline - failed to send AccountEvent::Balance");
 
         Ok(cancelled)
     }
@@ -228,7 +228,7 @@ impl ClientAccount {
                 exchange: Exchange::from(ExecutionId::Simulated),
                 kind: AccountEventKind::OrdersCancelled(cancelled_orders.clone()),
             })
-            .expect("Client is offline - failed to send AccountEvent::OrdersCancelled");
+            .expect("[CerebroBroker] : Client is offline - failed to send AccountEvent::OrdersCancelled");
 
         self.event_account_tx
             .send(AccountEvent {
@@ -236,7 +236,7 @@ impl ClientAccount {
                 exchange: Exchange::from(ExecutionId::Simulated),
                 kind: AccountEventKind::Balances(balance_updates),
             })
-            .expect("Client is offline - failed to send AccountEvent::Balances");
+            .expect("[CerebroBroker] : Client is offline - failed to send AccountEvent::Balances");
 
         respond_with_latency(self.latency, response_tx, Ok(cancelled_orders))
     }
@@ -273,7 +273,7 @@ impl ClientAccount {
 
             self.event_account_tx
                 .send(balances_event)
-                .expect("Client is offline - failed to send AccountEvent::Balances");
+                .expect("[CerebroBroker] : Client is offline - failed to send AccountEvent::Balances");
 
             self.event_account_tx
                 .send(AccountEvent {
@@ -281,7 +281,7 @@ impl ClientAccount {
                     exchange: Exchange::from(ExecutionId::Simulated),
                     kind: AccountEventKind::Trade(trade),
                 })
-                .expect("Client is offline - failed to send AccountEvent::Trade");
+                .expect("[CerebroBroker] : Client is offline - failed to send AccountEvent::Trade");
         }
     }
 }
@@ -299,7 +299,7 @@ pub fn respond_with_latency<Response>(
         tokio::time::sleep(latency).await;
         response_tx
             .send(response)
-            .expect("SimulatedExchange failed to send oneshot response to execution request")
+            .expect("[CerebroBroker] : SimulatedExchange failed to send oneshot response to execution request")
     });
 }
 
