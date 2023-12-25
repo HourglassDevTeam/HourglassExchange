@@ -108,7 +108,7 @@ pub enum OrderFill {
 impl Ord for Order<Open> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other)
-            .unwrap_or_else(|| panic!("{:?}.partial_cmp({:?}) impossible", self, other))
+            .unwrap_or_else(|| panic!("[CerebroBroker] : {:?}.partial_cmp({:?}) impossible", self, other))
     }
 }
 
@@ -361,7 +361,7 @@ mod tests {
                 }
                 (actual, expected) => {
                     // Test failed
-                    panic!("TC{index} failed because actual != expected. \nActual: {actual:?}\nExpected: {expected:?}\n");
+                    panic!("[CerebroBroker] : TC{index} failed because actual != expected. \nActual: {actual:?}\nExpected: {expected:?}\n");
                 }
             }
         }

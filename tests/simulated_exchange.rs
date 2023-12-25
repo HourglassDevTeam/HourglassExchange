@@ -195,7 +195,7 @@ async fn test_3_open_limit_buy_order(
             assert_eq!(usdt_balance, expected);
         }
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
@@ -209,7 +209,7 @@ async fn test_3_open_limit_buy_order(
             assert_eq!(new_orders[0].clone(), expected_new_order);
         }
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
@@ -217,7 +217,7 @@ async fn test_3_open_limit_buy_order(
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 }
@@ -243,7 +243,7 @@ fn test_4_send_market_event_that_does_not_match_any_open_order(
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 }
@@ -283,7 +283,7 @@ async fn test_5_cancel_buy_order(
             assert_eq!(cancelled[0].clone(), expected_cancelled);
         }
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
@@ -298,7 +298,7 @@ async fn test_5_cancel_buy_order(
             assert_eq!(usdt_balance, expected);
         }
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
@@ -306,7 +306,7 @@ async fn test_5_cancel_buy_order(
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 }
@@ -372,7 +372,7 @@ async fn test_6_open_2x_limit_buy_orders(
             assert_eq!(usdt_balance, expected);
         }
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
@@ -386,7 +386,7 @@ async fn test_6_open_2x_limit_buy_orders(
             assert_eq!(new_orders[0].clone(), expected_order_new_1);
         }
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
@@ -401,7 +401,7 @@ async fn test_6_open_2x_limit_buy_orders(
             assert_eq!(usdt_balance, expected);
         }
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
@@ -415,7 +415,7 @@ async fn test_6_open_2x_limit_buy_orders(
             assert_eq!(new_orders[0].clone(), expected_order_new_2);
         }
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
@@ -423,7 +423,7 @@ async fn test_6_open_2x_limit_buy_orders(
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 }
@@ -471,7 +471,7 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
             assert_eq!(balances[1], expected_usdt);
         }
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
@@ -493,7 +493,7 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
             assert_eq!(trade, expected);
         }
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
@@ -501,7 +501,7 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 }
