@@ -1,5 +1,5 @@
 [package]
-name = "cerebro-broker"
+name = "tide_broker"
 version = "0.1.0"
 edition = "2021"
 
