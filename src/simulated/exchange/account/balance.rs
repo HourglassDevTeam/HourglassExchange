@@ -104,7 +104,7 @@ impl ClientBalances {
                 SymbolBalance::new(cancelled.instrument.quote.clone(), *balance)
             }
             Side::Sell => {
-                let mut balance = self
+                let balance = self
                     .balance_mut(&cancelled.instrument.base)
                     .expect("Balance existence checked when opening Order");
 
