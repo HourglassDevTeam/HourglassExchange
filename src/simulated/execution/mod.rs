@@ -60,14 +60,15 @@ impl ExecutionClient for SimulatedExecution {
         &self,
         open_requests: Vec<Order<RequestOpen>>,
     ) -> Vec<Result<Order<Open>, ExecutionError>> {
+        // 创建一个 oneshot 通道以与模拟交易所通信。
         // Oneshot channel to communicate with the SimulatedExchange
         let (response_tx, response_rx) = oneshot::channel();
-
+        // 向模拟交易所发送开启订单的请求。
         // Send OpenOrders request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::OpenOrders((open_requests, response_tx)))
             .expect("SimulatedExchange is offline - failed to send OpenOrders request");
-
+        // 从模拟交易所接收开启订单的响应。
         // Receive OpenOrders response from the SimulatedExchange
         response_rx
             .await
