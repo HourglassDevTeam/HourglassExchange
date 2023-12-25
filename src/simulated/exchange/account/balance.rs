@@ -70,7 +70,7 @@ impl ClientBalances {
             Side::Buy => {
                 let balance = self
                     .balance_mut(&open.instrument.quote)
-                    .expect("[CerebroBroker] : Balance existence checked in has_sufficient_available_balance");
+                    .expect("[TideBroker] : Balance existence checked in has_sufficient_available_balance");
 
                 balance.available -= required_balance;
                 SymbolBalance::new(open.instrument.quote.clone(), *balance)
@@ -78,7 +78,7 @@ impl ClientBalances {
             Side::Sell => {
                 let balance = self
                     .balance_mut(&open.instrument.base)
-                    .expect("[CerebroBroker] : Balance existence checked in has_sufficient_available_balance");
+                    .expect("[TideBroker] : Balance existence checked in has_sufficient_available_balance");
 
                 balance.available -= required_balance;
                 SymbolBalance::new(open.instrument.base.clone(), *balance)
@@ -100,7 +100,7 @@ impl ClientBalances {
             Side::Buy => {
                 let balance = self
                     .balance_mut(&cancelled.instrument.quote)
-                    .expect("[CerebroBroker] : Balance existence checked when opening Order");
+                    .expect("[TideBroker] : Balance existence checked when opening Order");
 
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
                 SymbolBalance::new(cancelled.instrument.quote.clone(), *balance)
@@ -108,7 +108,7 @@ impl ClientBalances {
             Side::Sell => {
                 let balance = self
                     .balance_mut(&cancelled.instrument.base)
-                    .expect("[CerebroBroker] : Balance existence checked when opening Order");
+                    .expect("[TideBroker] : Balance existence checked when opening Order");
 
                 balance.available += cancelled.state.remaining_quantity();
                 SymbolBalance::new(cancelled.instrument.base.clone(), *balance)

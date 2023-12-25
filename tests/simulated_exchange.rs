@@ -234,7 +234,7 @@ async fn test_3_open_limit_buy_order(
         }
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -252,7 +252,7 @@ async fn test_3_open_limit_buy_order(
         }
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -264,7 +264,7 @@ async fn test_3_open_limit_buy_order(
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -296,7 +296,7 @@ fn test_4_send_market_event_that_does_not_match_any_open_order(
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -344,7 +344,7 @@ async fn test_5_cancel_buy_order(
         }
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -364,7 +364,7 @@ async fn test_5_cancel_buy_order(
         }
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -376,7 +376,7 @@ async fn test_5_cancel_buy_order(
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -452,7 +452,7 @@ async fn test_6_open_2x_limit_buy_orders(
         }
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -470,7 +470,7 @@ async fn test_6_open_2x_limit_buy_orders(
         }
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -490,7 +490,7 @@ async fn test_6_open_2x_limit_buy_orders(
         }
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -508,7 +508,7 @@ async fn test_6_open_2x_limit_buy_orders(
         }
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -520,7 +520,7 @@ async fn test_6_open_2x_limit_buy_orders(
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -577,7 +577,7 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
         }
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -604,7 +604,7 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
         }
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
@@ -616,7 +616,7 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
             panic!(
-                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                "[TideBroker] : try_recv() consumed unexpected: {:?}",
                 other
             );
         }
