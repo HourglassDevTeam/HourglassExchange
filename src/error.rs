@@ -5,7 +5,7 @@ use thiserror::Error;
 
 #[derive(Error, PartialEq, Eq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
 pub enum ExecutionError {
-    #[error("[CerebroBroker] : 【cerebro_brokerfailed to build component due to missing attributes: {0}")]
+    #[error("[CerebroBroker] : Failed to build component due to missing attributes: {0}")]
     BuilderIncomplete(String),
 
     #[error("[CerebroBroker] : SimulatedExchange error: {0}")]
