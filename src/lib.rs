@@ -32,56 +32,53 @@ use crate::{
     },
 };
 
-/// Errors generated during live, dry, or simulated execution.
+/// 在实时、干运行或模拟执行过程中产生的错误。
 pub mod error;
 
-/// Core data structures to support executing on exchanges.
-///
-/// eg/ `Order`, `Balance`, `Trade` etc.
+/// 支持在交易所执行操作的核心数据结构。
+/// 例如：`Order`（订单）、`Balance`（余额）、`Trade`（交易）等。
 pub mod model;
 
-/// [`ExecutionClient`] implementations for official exchanges.
+/// 为官方交易所实现的[`ExecutionClient`]。
 pub mod execution;
 
-/// Simulated Exchange and it's associated simulated [`ExecutionClient`].
+/// 模拟交易所及其关联的模拟[`ExecutionClient`]。
 pub mod simulated;
-
-/// Defines the communication with the exchange. Each exchange integration requires it's own
-/// implementation.
+/// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
 pub trait ExecutionClient {
     const CLIENT: ExecutionId;
     type Config;
 
-    /// Initialise a new [`ExecutionClient`] with the provided [`Self::Config`] and
-    /// [`AccountEvent`] transmitter.
+    /// 使用提供的[`Self::Config`]和[`AccountEvent`]发送器初始化一个新的[`ExecutionClient`]。
     ///
-    /// **Note:**
-    /// Usually entails spawning an asynchronous WebSocket event loop to consume [`AccountEvent`]s
-    /// from the exchange, as well as returning the HTTP client `Self`.
+    /// **注意:**
+    /// 通常包括启动一个异步WebSocket事件循环以从交易所接收[`AccountEvent`]，
+    /// 同时返回HTTP客户端`Self`。
     async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<AccountEvent>) -> Self;
 
-    /// Fetch account [`Order<Open>`]s.
+    /// 获取账户中的[`Order<Open>`]（未完成订单）。
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>;
 
-    /// Fetch account [`SymbolBalance`]s.
+    /// 获取账户的[`SymbolBalance`]（符号余额）。
     async fn fetch_balances(&self) -> Result<Vec<SymbolBalance>, ExecutionError>;
 
-    /// Open orders.
+    /// 打开订单。
     async fn open_orders(
         &self,
         open_requests: Vec<Order<RequestOpen>>,
     ) -> Vec<Result<Order<Open>, ExecutionError>>;
 
-    /// Cancel [`Order<Open>`]s.
+    /// 取消[`Order<Open>`]（未完成订单）。
     async fn cancel_orders(
         &self,
         cancel_requests: Vec<Order<RequestCancel>>,
     ) -> Vec<Result<Order<Cancelled>, ExecutionError>>;
 
-    /// Cancel all account [`Order<Open>`]s.
+    /// 取消所有账户中的[`Order<Open>`]（未完成订单）。
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>;
 }
+
 
 /// Unique identifier for an [`ExecutionClient`] implementation.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -129,6 +126,8 @@ pub mod test_util {
         Order, OrderId, simulated::exchange::account::order::Orders,
     };
 
+    /// 生成客户端订单集合。
+    /// 接收交易编号、买单和卖单向量，返回一个`Orders`实例。
     pub fn client_orders(
         trade_number: u64,
         bids: Vec<Order<Open>>,
@@ -141,6 +140,9 @@ pub mod test_util {
         }
     }
 
+    /// 创建一个开放状态的订单。
+    /// 接收客户端订单ID、买卖方向、价格、数量和已成交量，
+    /// 返回一个`Order<Open>`类型的实例。
     pub fn order_open(
         cid: ClientOrderId,
         side: Side,
@@ -162,6 +164,8 @@ pub mod test_util {
         }
     }
 
+    /// 生成一个公开的交易记录。
+    /// 接收买卖方向、价格和数量，返回一个`PublicTrade`类型的实例。
     pub fn public_trade(side: Side, price: f64, amount: f64) -> PublicTrade {
         PublicTrade {
             id: "trade_id".to_string(),
@@ -171,6 +175,8 @@ pub mod test_util {
         }
     }
 
+    /// 创建一个交易实例。
+    /// 接收交易ID、买卖方向、价格、数量和费用，返回一个`Trade`类型的实例。
     pub fn trade(id: TradeId, side: Side, price: f64, quantity: f64, fees: SymbolFees) -> Trade {
         Trade {
             id,
