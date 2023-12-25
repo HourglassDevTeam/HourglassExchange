@@ -5,7 +5,7 @@ edition = "2021"
 
 
 [dependencies]
-# Barter Ecosystem
+# Cerebro Ecosystem
 cerebro-integration ={ path = "../cerebro-integration"}
 cerebro-data ={ path = "../cerebro-data"}
 

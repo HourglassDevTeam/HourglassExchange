@@ -7,7 +7,7 @@ use crate::{
 use async_trait::async_trait;
 use tokio::sync::{mpsc, oneshot};
 
-/// Simulated [`ExecutionClient`] implementation that integrates with the Barter
+/// Simulated [`ExecutionClient`] implementation that integrates with the Cerebro
 /// [`SimulatedExchange`](super::exchange::SimulatedExchange).
 #[derive(Clone, Debug)]
 pub struct SimulatedExecution {

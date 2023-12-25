@@ -6,7 +6,7 @@
 )]
 #![allow(clippy::type_complexity)]
 
-//! # Barter-Execution
+//! # Cerebro-Execution
 //! High-performance and normalised trading interface capable of executing across many financial
 //! venues. Also provides a feature rich simulated exchange to assist with backtesting
 //! and dry-trading. Communicate with an exchange by initialising it's associated
@@ -16,7 +16,7 @@
 //! exchanges.
 //! * **Normalised**: Allow your strategy to communicate with every real or simulated exchange
 //! using the same interface.
-//! * **Extensible**: Barter-Execution is highly extensible, making it easy to contribute by adding
+//! * **Extensible**: Cerebro-Execution is highly extensible, making it easy to contribute by adding
 //! new exchange integrations!
 //!
 //! See `README.md` for more information and examples.

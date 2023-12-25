@@ -40,39 +40,50 @@ impl Ids {
 
 #[tokio::test]
 async fn main() {
+    // 创建通道:
+    //  - event_account_tx 发送AccountEvents到Cerebro Engine
+    //  - event_simulated_tx 发送MarketEvents和执行请求到SimulatedExchange
     // Create channels:
-    //  - event_account_tx sends AccountEvents to the Barter Engine
+    //  - event_account_tx sends AccountEvents to the Cerebro Engine
     //  - event_simulated_tx sends MarketEvents and execution requests to the SimulatedExchange
     let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
     let (mut event_simulated_tx, event_simulated_rx) = mpsc::unbounded_channel();
 
+    // 构建SimulatedExchange并在它自己的Tokio任务上运行
     // Build SimulatedExchange & run on it's own Tokio task
     tokio::spawn(run_default_exchange(event_account_tx, event_simulated_rx));
 
+    // 初始化SimulatedExecution执行，通过模拟通道与交易所交互
     // Initialise SimulatedExecution execution to interact with the exchange via the simulated channel
     let client = SimulatedExecution {
         request_tx: event_simulated_tx.clone(),
     };
 
+    // 1. 获取初始OpenOrders时我们没有打开的订单
     // 1. Fetch initial OpenOrders when we have no open Orders
     test_1_fetch_initial_orders_and_check_empty(&client).await;
 
+    // 2. 获取初始Balances时没有发生余额变化的事件
     // 2. Fetch initial Balances when there have been no balance changing events
     test_2_fetch_balances_and_check_same_as_initial(&client).await;
 
+    // 3. 打开LIMIT Buy Order并检查报价货币(usdt)的AccountEvent Balance是否已发送
     // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (usdt)
     let test_3_ids = Ids::new(Uuid::new_v4(), 1);
     test_3_open_limit_buy_order(&client, test_3_ids.clone(), &mut event_account_rx).await;
 
+    // 4. 发送不匹配任何打开订单的MarketEvent并检查是否没有发送AccountEvents
     // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent
     test_4_send_market_event_that_does_not_match_any_open_order(
         &mut event_simulated_tx,
         &mut event_account_rx,
     );
 
+    // 5. 取消打开的买单并检查是否已发送取消订单和余额的AccountEvents
     // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent
     test_5_cancel_buy_order(&client, test_3_ids, &mut event_account_rx).await;
 
+    // 6. 打开2x LIMIT Buy Orders并对接收到的AccountEvents进行断言
     // 6. Open 2x LIMIT Buy Orders & assert on received AccountEvents
     let test_6_ids_1 = Ids::new(Uuid::new_v4(), 2);
     let test_6_ids_2 = Ids::new(Uuid::new_v4(), 3);
@@ -82,19 +93,22 @@ async fn main() {
         test_6_ids_2,
         &mut event_account_rx,
     )
-    .await;
+        .await;
 
+    // 7. 发送完全匹配1x打开订单(交易)的MarketEvent并检查余额和交易的AccountEvents
     // 7. Send MarketEvent that exactly full matches 1x open Order (trade) and check AccountEvents
     //    for balances and trades
     test_7_send_market_event_that_exact_full_matches_order(
         &mut event_simulated_tx,
         &mut event_account_rx,
     )
-    .await;
+        .await;
 
+    // 8. 获取打开的订单并检查test_6_order_cid_1是否只剩一个限价买单
     // 8. Fetch open orders & check only one limit buy order remaining from test_6_order_cid_1
     test_8_fetch_open_orders_and_check_test_6_order_cid_1_only(&client, test_6_ids_1.clone()).await;
 
+    // 9. 打开2x LIMIT Sell Order并对接收到的AccountEvents进行断言
     // 9. Open 2x LIMIT Sell Order & assert on received AccountEvents
     let test_9_ids_1 = Ids::new(Uuid::new_v4(), 4);
     let test_9_ids_2 = Ids::new(Uuid::new_v4(), 5);
@@ -104,34 +118,39 @@ async fn main() {
         test_9_ids_2.clone(),
         &mut event_account_rx,
     )
-    .await;
+        .await;
 
+    // 10. 发送完全匹配1x卖单(交易)的MarketEvent，并部分匹配另一卖单(交易)。检查两个匹配的余额和交易的AccountEvents是否已发送。
     // 10. Send MarketEvent that fully matches 1x sell Order (trade), and partially matches the other
     //     sell Order (trade). Check AccountEvents for balances and trades of both matches are sent.
     test_10_send_market_event_that_full_and_partial_matches_orders(
         &mut event_simulated_tx,
         &mut event_account_rx,
     )
-    .await;
+        .await;
 
+    // 11. 取消所有打开的订单。包括部分填充的卖单和未填充的买单。检查已发送订单取消和余额的AccountEvents。
     // 11. Cancel all open orders. Includes a partially filled sell order, and non-filled buy order.
     //     Check AccountEvents for orders cancelled and balances are sent.
     test_11_cancel_all_orders(&client, test_6_ids_1, test_9_ids_2, &mut event_account_rx).await;
 
+    // 12. 获取打开的订单（现在我们已经调用了cancel_all）并检查它是否为空
     // 12. Fetch open orders (now that we've called cancel_all) and check it is empty
     test_12_fetch_open_orders_and_check_empty(&client).await;
 
+    // 13. 由于资金不足，未能打开限价买单
     // 13. Fail to open limit buy order with insufficient funds
     let test_13_ids_1 = Ids::new(Uuid::new_v4(), 6);
-    let test_13_ids_2 = Ids::new(Uuid::new_v4(), 6); // 6 because first should fail
+    let test_13_ids_2 = Ids::new(Uuid::new_v4(), 6); // 6因为第一个应该失败
     test_13_fail_to_open_one_of_two_limits_with_insufficient_funds(
         &client,
         test_13_ids_1,
         test_13_ids_2,
         &mut event_account_rx,
     )
-    .await;
+        .await;
 
+    // 14. 使用错误的OrderId尝试取消不存在的限价订单而失败
     // 14. Fail to cancel limit order with OrderNotFound using incorrect OrderId
     test_14_fail_to_cancel_limit_with_order_not_found(&client).await;
 }

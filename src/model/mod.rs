@@ -25,7 +25,7 @@ pub struct AccountEvent {
     pub kind: AccountEventKind,        // 事件类型
 }
 
-/// Defines the type of Barter [`AccountEvent`].
+/// Defines the type of Cerebro [`AccountEvent`].
 /// 定义交换[`AccountEvent`]的类型。
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum AccountEventKind {

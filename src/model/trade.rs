@@ -5,7 +5,7 @@ use cerebro_integration::model::{
 };
 use serde::{Deserialize, Serialize};
 
-/// Normalised Barter private [`Trade`] model.
+/// Normalised Cerebro private [`Trade`] model.
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Trade {
     pub id: TradeId,

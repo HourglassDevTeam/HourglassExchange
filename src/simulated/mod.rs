@@ -8,10 +8,10 @@ use tokio::sync::oneshot;
 pub mod exchange;
 
 /// Simulated [`ExecutionClient`](crate::ExecutionClient) implementation that integrates with the
-/// Barter [`SimulatedExchange`](exchange::SimulatedExchange).
+/// Cerebro [`SimulatedExchange`](exchange::SimulatedExchange).
 pub mod execution;
 
-/// Events used to communicate with the Barter [`SimulatedExchange`](exchange::SimulatedExchange).
+/// Events used to communicate with the Cerebro [`SimulatedExchange`](exchange::SimulatedExchange).
 ///
 /// Two main types of [`SimulatedEvent`]:
 /// 1. Request sent from the [`SimulatedExecution`](execution::SimulatedExecution)
