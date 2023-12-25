@@ -43,17 +43,17 @@ pub enum AccountEventKind {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub struct ClientOrderId(pub Uuid);
+pub struct ClientOrderId(pub Uuid);  // 客户端订单ID结构
 
 impl std::fmt::Display for ClientOrderId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.0) // 实现格式化显示
     }
 }
 
 #[derive(Clone, Copy, Debug)]
 pub enum ClientStatus {
-    Connected,
-    CancelOnly,
-    Disconnected,
+    Connected,      // 已连接
+    CancelOnly,     // 仅取消
+    Disconnected,   // 已断开
 }
