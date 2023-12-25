@@ -14,28 +14,31 @@ pub mod balance;      // 定义balance模块
 pub mod order;        // 定义订单模块
 pub mod trade;        // 定义交易模块
 
-/// Normalised Barter [`AccountEvent`] containing metadata about the included
+/// Normalised  [`AccountEvent`] containing metadata about the included
 /// [`AccountEventKind`] variant. Produced by [`ExecutionClients`](crate::ExecutionClient).
+/// 标准化的[`AccountEvent`]，包含了相关[`AccountEventKind`]变体的元数据。由[`ExecutionClients`](crate::ExecutionClient)生成。
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AccountEvent {
-    pub received_time: DateTime<Utc>,
-    pub exchange: Exchange,
-    pub kind: AccountEventKind,
+    pub received_time: DateTime<Utc>,  // 接收时间
+    pub exchange: Exchange,            // 交易所
+    pub kind: AccountEventKind,        // 事件类型
 }
 
 /// Defines the type of Barter [`AccountEvent`].
+/// 定义交换[`AccountEvent`]的类型。
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum AccountEventKind {
-    // HTTP Only
+    // HTTP Only - 仅限HTTP
     OrdersOpen(Vec<Order<Open>>),
     OrdersNew(Vec<Order<Open>>),
     OrdersCancelled(Vec<Order<Cancelled>>),
 
-    // WebSocket Only
+    // WebSocket Only - 仅限WebSocket
     Balance(SymbolBalance),
     Trade(Trade),
 
-    // HTTP & WebSocket
+    // HTTP & WebSocket - HTTP和WebSocket
     Balances(Vec<SymbolBalance>),
 }
 
