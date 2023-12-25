@@ -6,7 +6,7 @@ use cerebro_integration::model::{
 };
 use tokio::sync::mpsc;
 
-use cerebro_broker::{
+use tide_broker::{
     ExecutionId,
     model::{
         AccountEvent,

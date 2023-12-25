@@ -6,7 +6,7 @@ use cerebro_integration::model::{
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use cerebro_broker::{
+use tide_broker::{
     error::ExecutionError,
     ExecutionClient,
     model::{

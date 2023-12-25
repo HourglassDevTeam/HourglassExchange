@@ -72,7 +72,7 @@ impl ExecutionClient for SimulatedExecution {
         // Receive OpenOrders response from the SimulatedExchange
         response_rx
             .await
-            .expect("[TideBroker] : 模拟交易所目前离线 - 接收 OpenOrders 响应失败");
+            .expect("[TideBroker] : 模拟交易所目前离线 - 接收 OpenOrders 响应失败")
     }
 
     async fn cancel_orders(
@@ -91,7 +91,7 @@ impl ExecutionClient for SimulatedExecution {
         // Receive CancelOrders response from the SimulatedExchange
         response_rx
             .await
-            .expect("[TideBroker] : 模拟交易所目前离线 - 接收 CancelOrders 响应失败");
+            .expect("[TideBroker] : 模拟交易所目前离线 - 接收 CancelOrders 响应失败")
     }
 
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError> {
