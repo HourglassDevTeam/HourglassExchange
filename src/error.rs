@@ -1,7 +1,8 @@
-use crate::model::{order::OrderKind, ClientOrderId};
 use cerebro_integration::model::instrument::symbol::Symbol;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use crate::model::{ClientOrderId, order::OrderKind};
 
 #[derive(Error, PartialEq, Eq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
 pub enum ExecutionError {

@@ -1,8 +1,17 @@
+use std::{collections::HashMap, time::Duration};
+
+use cerebro_integration::model::{
+    Exchange,
+    instrument::{Instrument, kind::InstrumentKind, symbol::Symbol}, Side,
+};
+use tokio::sync::mpsc;
+
 use cerebro_broker::{
+    ExecutionId,
     model::{
+        AccountEvent,
         balance::Balance,
-        order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
-        AccountEvent, ClientOrderId,
+        ClientOrderId, order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
     },
     simulated::{
         exchange::{
@@ -11,14 +20,7 @@ use cerebro_broker::{
         },
         SimulatedEvent,
     },
-    ExecutionId,
 };
-use cerebro_integration::model::{
-    instrument::{kind::InstrumentKind, symbol::Symbol, Instrument},
-    Exchange, Side,
-};
-use std::{collections::HashMap, time::Duration};
-use tokio::sync::mpsc;
 
 pub(super) async fn run_default_exchange(
     event_account_tx: mpsc::UnboundedSender<AccountEvent>,

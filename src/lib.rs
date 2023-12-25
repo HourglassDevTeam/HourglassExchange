@@ -21,19 +21,21 @@
 //!
 //! See `README.md` for more information and examples.
 
-use crate::{
-    error::ExecutionError,
-    model::{
-        balance::SymbolBalance,
-        order::{Cancelled, Open, Order, OrderId, RequestCancel, RequestOpen},
-        AccountEvent,
-    },
-};
+use std::fmt::{Display, Formatter};
+
 use async_trait::async_trait;
 use cerebro_integration::model::Exchange;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
 use tokio::sync::mpsc;
+
+use crate::{
+    error::ExecutionError,
+    model::{
+        AccountEvent,
+        balance::SymbolBalance,
+        order::{Cancelled, Open, Order, OrderId, RequestCancel, RequestOpen},
+    },
+};
 
 /// Errors generated during live, dry, or simulated execution.
 pub mod error;
@@ -117,18 +119,19 @@ impl ExecutionId {
 
 /// Utilities for generating common data structures required for testing.
 pub mod test_util {
-    use crate::{
-        model::{
-            trade::{SymbolFees, Trade, TradeId},
-            ClientOrderId,
-        },
-        simulated::exchange::account::order::Orders,
-        Open, Order, OrderId,
-    };
     use cerebro_data::subscription::trade::PublicTrade;
     use cerebro_integration::model::{
-        instrument::{kind::InstrumentKind, Instrument},
-        Exchange, Side,
+        Exchange,
+        instrument::{Instrument, kind::InstrumentKind}, Side,
+    };
+
+    use crate::{
+        model::{
+            ClientOrderId,
+            trade::{SymbolFees, Trade, TradeId},
+        },
+        Open,
+        Order, OrderId, simulated::exchange::account::order::Orders,
     };
 
     pub fn client_orders(

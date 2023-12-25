@@ -1,11 +1,13 @@
-use crate::{
-    model::trade::{SymbolFees, Trade, TradeId},
-    ExecutionError, Open, Order, OrderId, RequestOpen,
-};
+use std::{cmp::Ordering, collections::HashMap};
+
 use cerebro_data::subscription::trade::PublicTrade;
 use cerebro_integration::model::{instrument::Instrument, Side};
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, collections::HashMap};
+
+use crate::{
+    ExecutionError,
+    model::trade::{SymbolFees, Trade, TradeId}, Open, Order, OrderId, RequestOpen,
+};
 
 /// [`ClientAccount`](super::ClientAccount) [`Orders`] for each [`Instrument`].
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
@@ -331,14 +333,16 @@ pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f6
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use cerebro_integration::model::Side;
+    use uuid::Uuid;
+
     use crate::{
         model::ClientOrderId,
         simulated::exchange::account::order::Orders,
         test_util::{client_orders, order_open, public_trade, trade},
     };
-    use cerebro_integration::model::Side;
-    use uuid::Uuid;
+
+    use super::*;
 
     #[test]
     fn test_client_orders_has_matching_order() {

@@ -1,9 +1,10 @@
-use super::order::OrderId;
 use cerebro_integration::model::{
-    instrument::{symbol::Symbol, Instrument},
+    instrument::{Instrument, symbol::Symbol},
     Side,
 };
 use serde::{Deserialize, Serialize};
+
+use super::order::OrderId;
 
 /// Normalised Cerebro private [`Trade`] model.
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]

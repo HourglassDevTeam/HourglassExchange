@@ -1,11 +1,12 @@
-use crate::{
-    model::order::{Cancelled, Open, Order},
-    simulated::SimulatedEvent,
-    AccountEvent, ExecutionClient, ExecutionError, ExecutionId, RequestCancel, RequestOpen,
-    SymbolBalance,
-};
 use async_trait::async_trait;
 use tokio::sync::{mpsc, oneshot};
+
+use crate::{
+    AccountEvent,
+    ExecutionClient,
+    ExecutionError, ExecutionId, model::order::{Cancelled, Open, Order}, RequestCancel, RequestOpen, simulated::SimulatedEvent,
+    SymbolBalance,
+};
 
 /// Simulated [`ExecutionClient`] implementation that integrates with the Cerebro
 /// [`SimulatedExchange`](super::exchange::SimulatedExchange).

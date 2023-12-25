@@ -1,7 +1,8 @@
-use crate::{Cancelled, ExecutionError, Open, Order, RequestCancel, RequestOpen, SymbolBalance};
 use cerebro_data::subscription::trade::PublicTrade;
 use cerebro_integration::model::instrument::Instrument;
 use tokio::sync::oneshot;
+
+use crate::{Cancelled, ExecutionError, Open, Order, RequestCancel, RequestOpen, SymbolBalance};
 
 /// Simulated Exchange using public trade `Streams` to model available market liquidity. Liquidity
 /// is then used to match to open client orders.

@@ -1,6 +1,8 @@
-use super::{exchange::account::ClientAccount, SimulatedEvent};
-use crate::ExecutionError;
 use tokio::sync::mpsc;
+
+use crate::ExecutionError;
+
+use super::{exchange::account::ClientAccount, SimulatedEvent};
 
 /// [`SimulatedExchange`] account balances, open orders, fees, and latency.
 pub mod account;

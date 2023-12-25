@@ -1,13 +1,15 @@
-use super::ClientOrderId;
-use cerebro_integration::model::{
-    instrument::{symbol::Symbol, Instrument},
-    Exchange, Side,
-};
-use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
     fmt::{Display, Formatter},
 };
+
+use cerebro_integration::model::{
+    Exchange,
+    instrument::{Instrument, symbol::Symbol}, Side,
+};
+use serde::{Deserialize, Serialize};
+
+use super::ClientOrderId;
 
 /// Type of [`Order`].
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -107,8 +109,12 @@ pub enum OrderFill {
 
 impl Ord for Order<Open> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other)
-            .unwrap_or_else(|| panic!("[CerebroBroker] : {:?}.partial_cmp({:?}) impossible", self, other))
+        self.partial_cmp(other).unwrap_or_else(|| {
+            panic!(
+                "[CerebroBroker] : {:?}.partial_cmp({:?}) impossible",
+                self, other
+            )
+        })
     }
 }
 
@@ -210,9 +216,11 @@ impl From<Order<Open>> for Order<Cancelled> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test_util::order_open;
     use uuid::Uuid;
+
+    use crate::test_util::order_open;
+
+    use super::*;
 
     #[test]
     fn test_open_order_remaining_quantity() {

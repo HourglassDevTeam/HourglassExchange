@@ -1,18 +1,21 @@
-use self::{balance::ClientBalances, order::ClientOrders};
-use crate::{
-    model::{
-        balance::{Balance, SymbolBalance},
-        order::OrderKind,
-        AccountEvent, AccountEventKind,
-    },
-    Cancelled, ExecutionError, ExecutionId, Open, Order, RequestCancel, RequestOpen,
-};
-use cerebro_data::subscription::trade::PublicTrade;
-use cerebro_integration::model::{instrument::Instrument, Exchange, Side};
-use chrono::Utc;
 use std::{fmt::Debug, time::Duration};
+
+use cerebro_data::subscription::trade::PublicTrade;
+use cerebro_integration::model::{Exchange, instrument::Instrument, Side};
+use chrono::Utc;
 use tokio::sync::{mpsc, oneshot};
 use tracing::warn;
+
+use crate::{
+    Cancelled,
+    ExecutionError, ExecutionId, model::{
+        AccountEvent,
+        AccountEventKind,
+        balance::{Balance, SymbolBalance}, order::OrderKind,
+    }, Open, Order, RequestCancel, RequestOpen,
+};
+
+use self::{balance::ClientBalances, order::ClientOrders};
 
 /// [`ClientAccount`] [`Balance`] for each [`Symbol`](cerebro_integration::model::Symbol) and
 /// associated balance management logic.

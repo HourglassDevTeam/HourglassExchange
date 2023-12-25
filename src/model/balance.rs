@@ -1,5 +1,8 @@
-use cerebro_integration::model::instrument::symbol::Symbol; // 引入符号模型
-use serde::{Deserialize, Serialize}; // 引入序列化和反序列化库
+use cerebro_integration::model::instrument::symbol::Symbol;
+// 引入符号模型
+use serde::{Deserialize, Serialize};
+
+// 引入序列化和反序列化库
 
 /// [`Balance`] associated with a [`Symbol`].
 /// 与[`Symbol`]相关联的[`Balance`]。
@@ -13,8 +16,8 @@ impl SymbolBalance {
     /// Construct a new [`SymbolBalance`] from a [`Symbol`] and it's associated [`Balance`].
     /// 从一个[`Symbol`]和它关联的[`Balance`]构造一个新的[`SymbolBalance`]。
     pub fn new<S>(symbol: S, balance: Balance) -> Self
-        where
-            S: Into<Symbol>,
+    where
+        S: Into<Symbol>,
     {
         Self {
             symbol: symbol.into(),
@@ -27,8 +30,8 @@ impl SymbolBalance {
 /// 总余额和可用余额值。
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Balance {
-    pub total: f64,      // 总额
-    pub available: f64,  // 可用额
+    pub total: f64,     // 总额
+    pub available: f64, // 可用额
 }
 
 impl Balance {
@@ -56,8 +59,8 @@ impl Balance {
 /// 传达要应用于[`Balance`]的变更；
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct BalanceDelta {
-    pub total: f64,      // 总额变化
-    pub available: f64,  // 可用额变化
+    pub total: f64,     // 总额变化
+    pub available: f64, // 可用额变化
 }
 
 impl BalanceDelta {

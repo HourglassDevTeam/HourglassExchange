@@ -1,25 +1,27 @@
-use crate::util::{
-    fees_50_percent, initial_balances, latency_50ms, open_order, order_cancel_request,
-    order_cancelled, order_request_limit, run_default_exchange,
-};
-use cerebro_broker::{
-    error::ExecutionError,
-    model::{
-        balance::{Balance, SymbolBalance},
-        order::OrderId,
-        trade::{SymbolFees, Trade, TradeId},
-        AccountEvent, AccountEventKind, ClientOrderId,
-    },
-    simulated::{execution::SimulatedExecution, SimulatedEvent},
-    ExecutionClient,
-};
 use cerebro_data::subscription::trade::PublicTrade;
 use cerebro_integration::model::{
-    instrument::{kind::InstrumentKind, symbol::Symbol, Instrument},
+    instrument::{Instrument, kind::InstrumentKind, symbol::Symbol},
     Side,
 };
 use tokio::sync::mpsc;
 use uuid::Uuid;
+
+use cerebro_broker::{
+    error::ExecutionError,
+    ExecutionClient,
+    model::{
+        AccountEvent,
+        AccountEventKind,
+        balance::{Balance, SymbolBalance},
+        ClientOrderId, order::OrderId, trade::{SymbolFees, Trade, TradeId},
+    },
+    simulated::{execution::SimulatedExecution, SimulatedEvent},
+};
+
+use crate::util::{
+    fees_50_percent, initial_balances, latency_50ms, open_order, order_cancel_request,
+    order_cancelled, order_request_limit, run_default_exchange,
+};
 
 mod util;
 
@@ -93,7 +95,7 @@ async fn main() {
         test_6_ids_2,
         &mut event_account_rx,
     )
-        .await;
+    .await;
 
     // 7. 发送完全匹配1x打开订单(交易)的MarketEvent并检查余额和交易的AccountEvents
     // 7. Send MarketEvent that exactly full matches 1x open Order (trade) and check AccountEvents
@@ -102,7 +104,7 @@ async fn main() {
         &mut event_simulated_tx,
         &mut event_account_rx,
     )
-        .await;
+    .await;
 
     // 8. 获取打开的订单并检查test_6_order_cid_1是否只剩一个限价买单
     // 8. Fetch open orders & check only one limit buy order remaining from test_6_order_cid_1
@@ -118,7 +120,7 @@ async fn main() {
         test_9_ids_2.clone(),
         &mut event_account_rx,
     )
-        .await;
+    .await;
 
     // 10. 发送完全匹配1x卖单(交易)的MarketEvent，并部分匹配另一卖单(交易)。检查两个匹配的余额和交易的AccountEvents是否已发送。
     // 10. Send MarketEvent that fully matches 1x sell Order (trade), and partially matches the other
@@ -127,7 +129,7 @@ async fn main() {
         &mut event_simulated_tx,
         &mut event_account_rx,
     )
-        .await;
+    .await;
 
     // 11. 取消所有打开的订单。包括部分填充的卖单和未填充的买单。检查已发送订单取消和余额的AccountEvents。
     // 11. Cancel all open orders. Includes a partially filled sell order, and non-filled buy order.
@@ -148,38 +150,51 @@ async fn main() {
         test_13_ids_2,
         &mut event_account_rx,
     )
-        .await;
+    .await;
 
     // 14. 使用错误的OrderId尝试取消不存在的限价订单而失败
     // 14. Fail to cancel limit order with OrderNotFound using incorrect OrderId
     test_14_fail_to_cancel_limit_with_order_not_found(&client).await;
 }
 
+// 1. 当我们没有打开的订单时，获取初始OpenOrders。
 // 1. Fetch initial OpenOrders when we have no open Orders.
 async fn test_1_fetch_initial_orders_and_check_empty(client: &SimulatedExecution) {
+    // 获取当前打开的订单
     let initial_orders = client.fetch_orders_open().await.unwrap();
+    // 断言初始订单列表为空
     assert!(initial_orders.is_empty());
 }
 
+// 2. 当没有发生余额变化的事件时，获取初始Balances。
 // 2. Fetch initial Balances when there have been no balance changing events.
 async fn test_2_fetch_balances_and_check_same_as_initial(client: &SimulatedExecution) {
+    // 获取实际的余额
     let actual_balances = client.fetch_balances().await.unwrap();
+    // 获取初始余额
     let initial_balances = initial_balances();
 
+    // 断言实际余额的数量与初始余额的数量相等
     assert_eq!(actual_balances.len(), initial_balances.len());
 
+    // 遍历实际余额
     for actual in actual_balances {
+        // 获取预期的余额
         let expected = initial_balances.get(&actual.symbol).unwrap();
+        // 断言实际余额等于预期余额
         assert_eq!(actual.balance, *expected);
     }
 }
 
+
+// 3. 打开LIMIT Buy Order并检查报价货币(usdt)的AccountEvent Balance是否已发送。
 // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (usdt).
 async fn test_3_open_limit_buy_order(
     client: &SimulatedExecution,
     test_3_ids: Ids,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
+    // 打开新的订单
     let new_orders = client
         .open_orders(vec![order_request_limit(
             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
@@ -190,6 +205,7 @@ async fn test_3_open_limit_buy_order(
         )])
         .await;
 
+    // 预期的新订单
     let expected_new_order = open_order(
         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
         test_3_ids.cid,
@@ -200,52 +216,68 @@ async fn test_3_open_limit_buy_order(
         0.0,
     );
 
+    // 确认新订单被成功创建
     assert_eq!(new_orders.len(), 1);
     assert_eq!(new_orders[0].clone().unwrap(), expected_new_order);
 
+    // 检查AccountEvent Balance，确认报价货币(usdt)的可用余额已减少
     // Check AccountEvent Balance for quote currency (usdt) has available balance decrease
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::Balance(usdt_balance),
-            ..
-        }) => {
+               kind: AccountEventKind::Balance(usdt_balance),
+               ..
+           }) => {
+            // 预期usdt Balance.available = 10_000 - (100.0 * 1.0)
             // Expected usdt Balance.available = 10_000 - (100.0 * 1.0)
             let expected = SymbolBalance::new("usdt", Balance::new(10_000.0, 9_900.0));
             assert_eq!(usdt_balance, expected);
         }
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 
+    // 检查是否生成了AccountEvent OrderNew
     // Check AccountEvent OrderNew generated
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::OrdersNew(new_orders),
-            ..
-        }) => {
+               kind: AccountEventKind::OrdersNew(new_orders),
+               ..
+           }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone(), expected_new_order);
         }
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 
+    // 检查是否没有更多的AccountEvents生成
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 }
 
+// 4. 发送一个不匹配任何打开订单的MarketEvent，并检查是否没有发送AccountEvents。
 // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent.
 fn test_4_send_market_event_that_does_not_match_any_open_order(
     event_simulated_tx: &mut mpsc::UnboundedSender<SimulatedEvent>,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
+    // 发送不匹配任何订单的市场交易事件
     event_simulated_tx
         .send(SimulatedEvent::MarketTrade((
             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
@@ -258,21 +290,27 @@ fn test_4_send_market_event_that_does_not_match_any_open_order(
         )))
         .unwrap();
 
+    // 检查是否没有生成更多的AccountEvents
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 }
 
+// 5. 取消打开的买单并检查已发送取消订单和余额的AccountEvents。
 // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent.
 async fn test_5_cancel_buy_order(
     client: &SimulatedExecution,
     test_3_ids: Ids,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
+    // 取消订单
     let cancelled = client
         .cancel_orders(vec![order_cancel_request(
             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
@@ -282,6 +320,7 @@ async fn test_5_cancel_buy_order(
         )])
         .await;
 
+    // 预期被取消的订单
     let expected_cancelled = order_cancelled(
         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
         test_3_ids.cid,
@@ -289,54 +328,70 @@ async fn test_5_cancel_buy_order(
         test_3_ids.id,
     );
 
+    // 确认订单已被取消
     assert_eq!(cancelled.len(), 1);
     assert_eq!(cancelled[0].clone().unwrap(), expected_cancelled);
 
+    // 检查AccountEvent Order是否被取消
     // Check AccountEvent Order cancelled
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::OrdersCancelled(cancelled),
-            ..
-        }) => {
+               kind: AccountEventKind::OrdersCancelled(cancelled),
+               ..
+           }) => {
             assert_eq!(cancelled.len(), 1);
             assert_eq!(cancelled[0].clone(), expected_cancelled);
         }
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 
+    // 检查报价货币(usdt)的AccountEvent Balance是否显示可用余额增加
     // Check AccountEvent Balance for quote currency (usdt) has available balance increase
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::Balance(usdt_balance),
-            ..
-        }) => {
+               kind: AccountEventKind::Balance(usdt_balance),
+               ..
+           }) => {
+            // 预期usdt Balance.available = 9_900 + (100.0 * 1.0)
             // Expected usdt Balance.available = 9_900 + (100.0 * 1.0)
             let expected = SymbolBalance::new("usdt", Balance::new(10_000.0, 10_000.0));
             assert_eq!(usdt_balance, expected);
         }
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 
+    // 检查是否没有更多的AccountEvents生成
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 }
 
-// 6. Open 2x limit buy orders and check AccountEvents for balance & order new are sent
+// 6. 打开2x限价买单并检查是否发送了余额和订单新建的AccountEvents。
+// 6. Open 2x limit buy orders and check AccountEvents for balance & order new are sent.
 async fn test_6_open_2x_limit_buy_orders(
     client: &SimulatedExecution,
     test_6_ids_1: Ids,
     test_6_ids_2: Ids,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
+    // 打开两个限价买单
     let opened_orders = client
         .open_orders(vec![
             order_request_limit(
@@ -356,6 +411,7 @@ async fn test_6_open_2x_limit_buy_orders(
         ])
         .await;
 
+    // 预期的第一个新订单
     let expected_order_new_1 = open_order(
         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
         test_6_ids_1.cid,
@@ -366,6 +422,7 @@ async fn test_6_open_2x_limit_buy_orders(
         0.0,
     );
 
+    // 预期的第二个新订单
     let expected_order_new_2 = open_order(
         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
         test_6_ids_2.cid,
@@ -376,83 +433,108 @@ async fn test_6_open_2x_limit_buy_orders(
         0.0,
     );
 
+    // 确认订单已被成功创建
     assert_eq!(opened_orders.len(), 2);
     assert_eq!(opened_orders[0].clone().unwrap(), expected_order_new_1);
     assert_eq!(opened_orders[1].clone().unwrap(), expected_order_new_2);
 
+    // 检查第一个订单的AccountEvent Balance - 报价货币的可用余额应该减少
     // Check AccountEvent Balance for first order - quote currency has available balance decrease
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::Balance(usdt_balance),
-            ..
-        }) => {
+               kind: AccountEventKind::Balance(usdt_balance),
+               ..
+           }) => {
+            // 预期usdt Balance.available = 10_000 - (100.0 * 1.0)
             // Expected usdt Balance.available = 10_000 - (100.0 * 1.0)
             let expected = SymbolBalance::new("usdt", Balance::new(10_000.0, 9_900.0));
             assert_eq!(usdt_balance, expected);
         }
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 
+    // 检查第一个订单的AccountEvent OrdersNew
     // Check AccountEvent OrdersNew for first order
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::OrdersNew(new_orders),
-            ..
-        }) => {
+               kind: AccountEventKind::OrdersNew(new_orders),
+               ..
+           }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone(), expected_order_new_1);
         }
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 
+    // 检查第二个订单的AccountEvent Balance - 报价货币的可用余额应该减少
     // Check AccountEvent Balance for second order - quote currency has available balance decrease
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::Balance(usdt_balance),
-            ..
-        }) => {
+               kind: AccountEventKind::Balance(usdt_balance),
+               ..
+           }) => {
+            // 预期usdt Balance.available = 9_900 - (200.0 * 1.0)
             // Expected usdt Balance.available = 9_900 - (200.0 * 1.0)
             let expected = SymbolBalance::new("usdt", Balance::new(10_000.0, 9_700.0));
             assert_eq!(usdt_balance, expected);
         }
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 
+    // 检查第二个订单的AccountEvent OrdersNew
     // Check AccountEvent OrdersNew for second order
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::OrdersNew(new_orders),
-            ..
-        }) => {
+               kind: AccountEventKind::OrdersNew(new_orders),
+               ..
+           }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone(), expected_order_new_2);
         }
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 
+    // 检查是否没有更多的AccountEvents生成
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 }
 
+// 7. 发送完全匹配1x打开订单（交易）的MarketEvent，并检查是否发送了余额和交易的AccountEvents。
 // 7. Send MarketEvent that exactly full matches 1x open Order (trade) and check AccountEvents for
 // balances and trades are sent.
 async fn test_7_send_market_event_that_exact_full_matches_order(
     event_simulated_tx: &mut mpsc::UnboundedSender<SimulatedEvent>,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
+    // 发送匹配的MarketEvent
     // Send matching MarketEvent
     event_simulated_tx
         .send(SimulatedEvent::MarketTrade((
@@ -468,15 +550,18 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
 
     tokio::time::sleep(latency_50ms()).await;
 
+    // 检查与交易相关的基础和报价货币的AccountEvent Balances
     // Check AccountEvent Balances for base & quote currencies related to the trade
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::Balances(balances),
-            ..
-        }) => {
+               kind: AccountEventKind::Balances(balances),
+               ..
+           }) => {
+            // 应更新基础和报价SymbolBalances
             // Base & Quote SymbolBalances should be updated
             assert_eq!(balances.len(), 2);
 
+            // 先检查基础余额：预期btc { total: 10.0 + 1.0 - 手续费, available: 10.0 + 1.0 - 手续费 }
             // Base Balance first: expected btc { total: 10.0 + 1.0 - fees, available: 10.0 + 1.0 - fees }
             let btc_fees = 1.0 * fees_50_percent();
             let expected_btc = SymbolBalance::new(
@@ -485,21 +570,27 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
             );
             assert_eq!(balances[0], expected_btc);
 
+            // 然后检查报价余额：预期usdt Balance { total: 10_000 - 200, available: 9_700 }
             // Quote Balance second: expected usdt Balance { total: 10_000 - 200, available: 9_700 }
             let expected_usdt = SymbolBalance::new("usdt", Balance::new(9_800.0, 9_700.0));
             assert_eq!(balances[1], expected_usdt);
         }
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 
+    // 检查匹配MarketEvent的AccountEvent Trade
     // Check AccountEvent Trade for order matching MarketEvent
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::Trade(trade),
-            ..
-        }) => {
+               kind: AccountEventKind::Trade(trade),
+               ..
+           }) => {
+            // 预期的交易信息
             let expected = Trade {
                 id: TradeId(1.to_string()),
                 order_id: OrderId(3.to_string()),
@@ -512,15 +603,22 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
             assert_eq!(trade, expected);
         }
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 
+    // 检查是否没有更多的AccountEvents生成
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
-            panic!("[CerebroBroker] : try_recv() consumed unexpected: {:?}", other);
+            panic!(
+                "[CerebroBroker] : try_recv() consumed unexpected: {:?}",
+                other
+            );
         }
     }
 }

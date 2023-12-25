@@ -1,18 +1,20 @@
-use crate::{
-    model::{
-        balance::{Balance, BalanceDelta, SymbolBalance},
-        trade::Trade,
-        AccountEvent, AccountEventKind,
-    },
-    ExecutionError, ExecutionId, Open, Order,
-};
+use std::collections::HashMap;
+
 use cerebro_integration::model::{
-    instrument::{symbol::Symbol, Instrument},
-    Exchange, Side,
+    Exchange,
+    instrument::{Instrument, symbol::Symbol}, Side,
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
+use crate::{
+    ExecutionError,
+    ExecutionId, model::{
+        AccountEvent,
+        AccountEventKind,
+        balance::{Balance, BalanceDelta, SymbolBalance}, trade::Trade,
+    }, Open, Order,
+};
 
 /// [`ClientAccount`](super::ClientAccount) [`Balance`] for each [`Symbol`].
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
