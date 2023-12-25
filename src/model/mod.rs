@@ -9,9 +9,10 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 use uuid::Uuid;
 
-pub mod balance;
-pub mod order;
-pub mod trade;
+
+pub mod balance;      // 定义balance模块
+pub mod order;        // 定义订单模块
+pub mod trade;        // 定义交易模块
 
 /// Normalised Barter [`AccountEvent`] containing metadata about the included
 /// [`AccountEventKind`] variant. Produced by [`ExecutionClients`](crate::ExecutionClient).
