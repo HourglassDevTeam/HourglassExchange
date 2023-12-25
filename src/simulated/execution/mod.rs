@@ -67,12 +67,12 @@ impl ExecutionClient for SimulatedExecution {
         // Send OpenOrders request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::OpenOrders((open_requests, response_tx)))
-            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to send OpenOrders request");
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - 发送 OpenOrders 请求失败");
         // 从模拟交易所接收开启订单的响应。
         // Receive OpenOrders response from the SimulatedExchange
         response_rx
             .await
-            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to receive OpenOrders response")
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - 接收 OpenOrders 响应失败");
     }
 
     async fn cancel_orders(
