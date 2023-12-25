@@ -86,12 +86,12 @@ impl ExecutionClient for SimulatedExecution {
         // Send CancelOrders request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::CancelOrders((cancel_requests, response_tx)))
-            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to send CancelOrders request");
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - 发送 CancelOrders 请求失败");
         // 从模拟交易所接收取消订单的响应。
         // Receive CancelOrders response from the SimulatedExchange
         response_rx
             .await
-            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to receive CancelOrders response")
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - 接收 CancelOrders 响应失败");
     }
 
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError> {
