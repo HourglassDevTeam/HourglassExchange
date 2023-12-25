@@ -1,12 +1,15 @@
+// 引入相关模块和结构体。
 use cerebro_integration::model::{
     instrument::{Instrument, symbol::Symbol},
     Side,
 };
 use serde::{Deserialize, Serialize};
 
+// 引入订单ID。
 use super::order::OrderId;
 
 /// Normalised Cerebro private [`Trade`] model.
+/// Cerebro 标准化私有 [`Trade`]（交易）模型。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Trade {
     pub id: TradeId,
@@ -22,12 +25,14 @@ pub struct Trade {
 /// [`Exchange`](cerebro_integration::model::Exchange),
 /// [`Market`](cerebro_integration::model::Market), or
 /// [`Instrument`](cerebro_integration::model::Instrument).
+/// 由交易所生成的私有 [`Trade`]（交易）标识符。不能假设这在每个[`Exchange`](cerebro_integration::model::Exchange)（交易所）、
+/// [`Market`](cerebro_integration::model::Market)（市场）或 [`Instrument`](cerebro_integration::model::Instrument)（金融工具）中都是唯一的。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct TradeId(pub String);
 
 impl<S> From<S> for TradeId
-where
-    S: Into<String>,
+    where
+        S: Into<String>,
 {
     fn from(id: S) -> Self {
         Self(id.into())
@@ -35,6 +40,7 @@ where
 }
 
 /// [`Trade`] fees denominated in a [`Symbol`].
+/// 以 [`Symbol`]（符号）表示的 [`Trade`]（交易）费用。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct SymbolFees {
     pub symbol: Symbol,
@@ -43,9 +49,10 @@ pub struct SymbolFees {
 
 impl SymbolFees {
     /// Construct a new [`SymbolFees`].
+    /// 构造一个新的 [`SymbolFees`]。
     pub fn new<S>(symbol: S, fees: f64) -> Self
-    where
-        S: Into<Symbol>,
+        where
+            S: Into<Symbol>,
     {
         Self {
             symbol: symbol.into(),
