@@ -95,14 +95,15 @@ impl ExecutionClient for SimulatedExecution {
     }
 
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError> {
+        // 创建一个 oneshot 通道以与模拟交易所通信。
         // Oneshot channel to communicate with the SimulatedExchange
         let (response_tx, response_rx) = oneshot::channel();
-
+        // 向模拟交易所发送取消所有订单的请求。
         // Send CancelOrdersAll request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::CancelOrdersAll(response_tx))
             .expect("[CerebroBroker] : SimulatedExchange is offline - failed to send CancelOrdersAll request");
-
+        // 从模拟交易所接收取消所有订单的响应。
         // Receive CancelOrdersAll response from the SimulatedExchange
         response_rx
             .await
