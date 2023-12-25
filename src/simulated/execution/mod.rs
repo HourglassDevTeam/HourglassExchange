@@ -28,12 +28,12 @@ impl ExecutionClient for SimulatedExecution {
         // 使用 Oneshot 通道与模拟交易所通信
         // Oneshot channel to communicate with the SimulatedExchange
         let (response_tx, response_rx) = oneshot::channel();
-
+        // 向模拟交易所发送获取开放订单的请求。
         // Send FetchOrdersOpen request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::FetchOrdersOpen(response_tx))
             .expect("[CerebroBroker] : SimulatedExchange is offline - failed to send FetchOrdersOpen request");
-
+        // 从模拟交易所接收开放订单的响应。
         // Receive FetchOrdersOpen response from the SimulatedExchange
         response_rx
             .await
@@ -44,12 +44,12 @@ impl ExecutionClient for SimulatedExecution {
         // 使用 Oneshot 通道与模拟交易所通信
         // Oneshot channel to communicate with the SimulatedExchange
         let (response_tx, response_rx) = oneshot::channel();
-
+        // 向模拟交易所发送获取账户余额的请求。
         // Send FetchBalances request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::FetchBalances(response_tx))
             .expect("[CerebroBroker] : SimulatedExchange is offline - failed to send FetchBalances request");
-
+        // 从模拟交易所接收账户余额的响应。
         // Receive FetchBalances response from the SimulatedExchange
         response_rx
             .await
