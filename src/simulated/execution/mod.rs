@@ -32,12 +32,12 @@ impl ExecutionClient for SimulatedExecution {
         // Send FetchOrdersOpen request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::FetchOrdersOpen(response_tx))
-            .expect("[CerebroBroker] : SimulatedExchange is offline - failed to send FetchOrdersOpen request");
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to send FetchOrdersOpen request");
         // 从模拟交易所接收开放订单的响应。
         // Receive FetchOrdersOpen response from the SimulatedExchange
         response_rx
             .await
-            .expect("[CerebroBroker] : SimulatedExchange is offline - failed to receive FetchOrdersOpen response")
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to receive FetchOrdersOpen response")
     }
 
     async fn fetch_balances(&self) -> Result<Vec<SymbolBalance>, ExecutionError> {
@@ -48,12 +48,12 @@ impl ExecutionClient for SimulatedExecution {
         // Send FetchBalances request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::FetchBalances(response_tx))
-            .expect("[CerebroBroker] : SimulatedExchange is offline - failed to send FetchBalances request");
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to send FetchBalances request");
         // 从模拟交易所接收账户余额的响应。
         // Receive FetchBalances response from the SimulatedExchange
         response_rx
             .await
-            .expect("[CerebroBroker] : SimulatedExchange is offline - failed to receive FetchBalances response")
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to receive FetchBalances response")
     }
 
     async fn open_orders(
@@ -67,12 +67,12 @@ impl ExecutionClient for SimulatedExecution {
         // Send OpenOrders request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::OpenOrders((open_requests, response_tx)))
-            .expect("[CerebroBroker] : SimulatedExchange is offline - failed to send OpenOrders request");
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to send OpenOrders request");
         // 从模拟交易所接收开启订单的响应。
         // Receive OpenOrders response from the SimulatedExchange
         response_rx
             .await
-            .expect("[CerebroBroker] : SimulatedExchange is offline - failed to receive OpenOrders response")
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to receive OpenOrders response")
     }
 
     async fn cancel_orders(
@@ -86,12 +86,12 @@ impl ExecutionClient for SimulatedExecution {
         // Send CancelOrders request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::CancelOrders((cancel_requests, response_tx)))
-            .expect("[CerebroBroker] : SimulatedExchange is offline - failed to send CancelOrders request");
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to send CancelOrders request");
         // 从模拟交易所接收取消订单的响应。
         // Receive CancelOrders response from the SimulatedExchange
         response_rx
             .await
-            .expect("[CerebroBroker] : SimulatedExchange is offline - failed to receive CancelOrders response")
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to receive CancelOrders response")
     }
 
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError> {
@@ -102,11 +102,11 @@ impl ExecutionClient for SimulatedExecution {
         // Send CancelOrdersAll request to the SimulatedExchange
         self.request_tx
             .send(SimulatedEvent::CancelOrdersAll(response_tx))
-            .expect("[CerebroBroker] : SimulatedExchange is offline - failed to send CancelOrdersAll request");
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to send CancelOrdersAll request");
         // 从模拟交易所接收取消所有订单的响应。
         // Receive CancelOrdersAll response from the SimulatedExchange
         response_rx
             .await
-            .expect("[CerebroBroker] : SimulatedExchange is offline - failed to receive CancelOrdersAll response")
+            .expect("[CerebroBroker] : 模拟交易所目前离线 - failed to receive CancelOrdersAll response")
     }
 }
