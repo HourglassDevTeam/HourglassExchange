@@ -5,8 +5,8 @@ use cerebro_integration::model::{instrument::Instrument, Side};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ExecutionError,
-    model::trade::{SymbolFees, Trade, TradeId}, Open, Order, OrderId, RequestOpen,
+    model::trade::{SymbolFees, Trade, TradeId},
+    ExecutionError, Open, Order, OrderId, RequestOpen,
 };
 
 /// [`ClientAccount`](super::ClientAccount) [`Orders`] for each [`Instrument`].
@@ -21,20 +21,15 @@ impl ClientOrders {
     pub fn new(instruments: Vec<Instrument>) -> Self {
         Self {
             request_counter: 0,
-            all: instruments
-                .into_iter()
-                .map(|instrument| (instrument, Orders::default()))
-                .collect(),
+            all: instruments.into_iter().map(|instrument| (instrument, Orders::default())).collect(),
         }
     }
 
     /// Return a mutable reference to the client [`Orders`] of the specified [`Instrument`].
     pub fn orders_mut(&mut self, instrument: &Instrument) -> Result<&mut Orders, ExecutionError> {
-        self.all.get_mut(instrument).ok_or_else(|| {
-            ExecutionError::Simulated(format!(
-                "SimulatedExchange is not configured for Instrument: {instrument}"
-            ))
-        })
+        self.all
+            .get_mut(instrument)
+            .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Instrument: {instrument}")))
     }
 
     /// Fetch the bid and ask [`Order<Open>`]s for every [`Instrument`].
@@ -79,12 +74,12 @@ impl Orders {
     /// Add an [`Order<Open>`] to the bids or asks depending on it's [`Side`].
     pub fn add_order_open(&mut self, open: Order<Open>) {
         match open.side {
-            Side::Buy => {
+            | Side::Buy => {
                 // Add Order<Open> to open bids
                 self.bids.push(open);
                 self.bids.sort();
             }
-            Side::Sell => {
+            | Side::Sell => {
                 // Add Order<Open> to open asks
                 self.asks.push(open);
                 self.asks.sort();
@@ -101,7 +96,7 @@ impl Orders {
     pub fn has_matching_order(&self, trade: &PublicTrade) -> Option<Side> {
         match (self.bids.last(), self.asks.last()) {
             // Check the best bid & ask Order<Open> for a match
-            (Some(best_bid), Some(best_ask)) => {
+            | (Some(best_bid), Some(best_ask)) => {
                 // Note:
                 // In the unlikely case that: best_bid.price == best_ask.price == trade.price
                 // Preferentially select the larger remaining quantity Order<Open> to match on
@@ -109,8 +104,8 @@ impl Orders {
                     let best_bid_quantity = best_bid.state.remaining_quantity();
                     let best_ask_quantity = best_ask.state.remaining_quantity();
                     match best_bid_quantity.partial_cmp(&best_ask_quantity) {
-                        Some(Ordering::Greater) => Some(Side::Buy),
-                        _ => Some(Side::Sell),
+                        | Some(Ordering::Greater) => Some(Side::Buy),
+                        | _ => Some(Side::Sell),
                     }
                 }
                 // Best bid matches
@@ -128,13 +123,13 @@ impl Orders {
             }
 
             // Best bid Order<Open> matches the input PublicTrade
-            (Some(best_bid), None) if best_bid.state.price >= trade.price => Some(Side::Buy),
+            | (Some(best_bid), None) if best_bid.state.price >= trade.price => Some(Side::Buy),
 
             // Best ask Order<Open> matches the input PublicTrade
-            (None, Some(best_ask)) if best_ask.state.price <= trade.price => Some(Side::Sell),
+            | (None, Some(best_ask)) if best_ask.state.price <= trade.price => Some(Side::Sell),
 
             // Either no bid or ask Order<Open>, or no matches
-            _ => None,
+            | _ => None,
         }
     }
 
@@ -150,8 +145,8 @@ impl Orders {
         let remaining_best_bid = loop {
             // Pop the best bid Order<Open>
             let mut best_bid = match self.bids.pop() {
-                Some(best_bid) => best_bid,
-                None => break None,
+                | Some(best_bid) => best_bid,
+                | None => break None,
             };
 
             // Break with remaining best bid if it's not a match, or trade liquidity is exhausted
@@ -163,7 +158,7 @@ impl Orders {
             self.trade_counter += 1;
             match OrderFill::kind(&best_bid, remaining_liquidity) {
                 // Full Order<Open> fill
-                OrderFill::Full => {
+                | OrderFill::Full => {
                     // Remove trade quantity from remaining liquidity
                     let trade_quantity = best_bid.state.remaining_quantity();
                     remaining_liquidity -= trade_quantity;
@@ -178,17 +173,13 @@ impl Orders {
                 }
 
                 // Partial Order<Open> fill with zero remaining trade liquidity
-                OrderFill::Partial => {
+                | OrderFill::Partial => {
                     // Partial-fill means trade quantity is all the remaining trade liquidity
                     let trade_quantity = remaining_liquidity;
 
                     // Generate execution Trade from partial Order<Open> fill
                     best_bid.state.filled_quantity += trade_quantity;
-                    trades.push(self.generate_trade(
-                        best_bid.clone(),
-                        trade_quantity,
-                        fees_percent,
-                    ));
+                    trades.push(self.generate_trade(best_bid.clone(), trade_quantity, fees_percent));
 
                     break Some(best_bid);
                 }
@@ -204,12 +195,7 @@ impl Orders {
     }
 
     /// Generate a client [`Trade`] with a unique [`TradeId`] for this [`Instrument`] market.
-    pub fn generate_trade(
-        &self,
-        order: Order<Open>,
-        trade_quantity: f64,
-        fees_percent: f64,
-    ) -> Trade {
+    pub fn generate_trade(&self, order: Order<Open>, trade_quantity: f64, fees_percent: f64) -> Trade {
         // Calculate the trade fees (denominated in base or quote depending on Order Side)
         let fees = calculate_fees(&order, trade_quantity, fees_percent);
 
@@ -243,8 +229,8 @@ impl Orders {
         let remaining_best_ask = loop {
             // Pop the best Order<Open>
             let mut best_ask = match self.asks.pop() {
-                Some(best_ask) => best_ask,
-                None => break None,
+                | Some(best_ask) => best_ask,
+                | None => break None,
             };
 
             // Break with remaining best ask if it's not a match, or trade liquidity is exhausted
@@ -256,7 +242,7 @@ impl Orders {
             self.trade_counter += 1;
             match OrderFill::kind(&best_ask, remaining_liquidity) {
                 // Full Order<Open> fill
-                OrderFill::Full => {
+                | OrderFill::Full => {
                     // Remove trade quantity from remaining liquidity
                     let trade_quantity = best_ask.state.remaining_quantity();
                     remaining_liquidity -= trade_quantity;
@@ -271,17 +257,13 @@ impl Orders {
                 }
 
                 // Partial Order<Open> fill with zero remaining trade liquidity
-                OrderFill::Partial => {
+                | OrderFill::Partial => {
                     // Partial-fill means trade quantity is all the remaining trade liquidity
                     let trade_quantity = remaining_liquidity;
 
                     // Generate execution Trade from partial Order<Open> fill
                     best_ask.state.filled_quantity += trade_quantity;
-                    trades.push(self.generate_trade(
-                        best_ask.clone(),
-                        trade_quantity,
-                        fees_percent,
-                    ));
+                    trades.push(self.generate_trade(best_ask.clone(), trade_quantity, fees_percent));
 
                     break Some(best_ask);
                 }
@@ -314,8 +296,8 @@ impl OrderFill {
     /// Determine the [`OrderFill`] kind given the [`Order<Open>`] and the available liquidity.
     pub fn kind(order: &Order<Open>, liquidity: f64) -> Self {
         match order.state.remaining_quantity() <= liquidity {
-            true => Self::Full,
-            false => Self::Partial,
+            | true => Self::Full,
+            | false => Self::Partial,
         }
     }
 }
@@ -323,11 +305,8 @@ impl OrderFill {
 /// Calculate the [`SymbolFees`] of a [`Order<Open>`] match (trade).
 pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> SymbolFees {
     match order.side {
-        Side::Buy => SymbolFees::new(order.instrument.base.clone(), fees_percent * trade_quantity),
-        Side::Sell => SymbolFees::new(
-            order.instrument.quote.clone(),
-            fees_percent * order.state.price * trade_quantity,
-        ),
+        | Side::Buy => SymbolFees::new(order.instrument.base.clone(), fees_percent * trade_quantity),
+        | Side::Sell => SymbolFees::new(order.instrument.quote.clone(), fees_percent * order.state.price * trade_quantity),
     }
 }
 
@@ -369,11 +348,7 @@ mod tests {
             },
             TestCase {
                 // TC2: No matching ask for trade with no bids open
-                orders: client_orders(
-                    0,
-                    vec![],
-                    vec![order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
-                ),
+                orders: client_orders(0, vec![], vec![order_open(cid, Side::Sell, 100.0, 1.0, 0.0)]),
                 input_trade: public_trade(Side::Sell, 50.0, 1.0),
                 expected: None,
             },
@@ -385,11 +360,7 @@ mod tests {
             },
             TestCase {
                 // TC4: Exact matching ask for trade with no bids open
-                orders: client_orders(
-                    0,
-                    vec![],
-                    vec![order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
-                ),
+                orders: client_orders(0, vec![], vec![order_open(cid, Side::Sell, 100.0, 1.0, 0.0)]),
                 input_trade: public_trade(Side::Sell, 100.0, 1.0),
                 expected: Some(Side::Sell),
             },
@@ -448,109 +419,56 @@ mod tests {
                 // TC0: Best bid matches the PublicTrade w/ a full-fill
                 orders: client_orders(
                     0,
-                    vec![
-                        order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
-                        order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
-                    ],
+                    vec![order_open(cid, Side::Buy, 100.0, 1.0, 0.0), order_open(cid, Side::Buy, 200.0, 1.0, 0.0)],
                     vec![],
                 ),
                 input_trade: public_trade(Side::Buy, 200.0, 1.0),
                 input_fees_percent: 0.1,
-                expected_orders: client_orders(
-                    1,
-                    vec![order_open(cid, Side::Buy, 100.0, 1.0, 0.0)],
-                    vec![],
-                ),
-                expected_trades: vec![trade(
-                    TradeId(1.to_string()),
-                    Side::Buy,
-                    200.0,
-                    1.0,
-                    SymbolFees::new("base", 0.1 * 1.0),
-                )],
+                expected_orders: client_orders(1, vec![order_open(cid, Side::Buy, 100.0, 1.0, 0.0)], vec![]),
+                expected_trades: vec![trade(TradeId(1.to_string()), Side::Buy, 200.0, 1.0, SymbolFees::new("base", 0.1 * 1.0))],
             },
             TestCase {
                 // TC1: Two bids match the PublicTrade w/ two full-fills
                 orders: client_orders(
                     0,
-                    vec![
-                        order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
-                        order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
-                    ],
+                    vec![order_open(cid, Side::Buy, 100.0, 1.0, 0.0), order_open(cid, Side::Buy, 200.0, 1.0, 0.0)],
                     vec![],
                 ),
                 input_trade: public_trade(Side::Buy, 100.0, 2.0),
                 input_fees_percent: 0.1,
                 expected_orders: client_orders(2, vec![], vec![]),
                 expected_trades: vec![
-                    trade(
-                        TradeId(1.to_string()),
-                        Side::Buy,
-                        200.0,
-                        1.0,
-                        SymbolFees::new("base", 0.1 * 1.0),
-                    ),
-                    trade(
-                        TradeId(2.to_string()),
-                        Side::Buy,
-                        100.0,
-                        1.0,
-                        SymbolFees::new("base", 0.1 * 1.0),
-                    ),
+                    trade(TradeId(1.to_string()), Side::Buy, 200.0, 1.0, SymbolFees::new("base", 0.1 * 1.0)),
+                    trade(TradeId(2.to_string()), Side::Buy, 100.0, 1.0, SymbolFees::new("base", 0.1 * 1.0)),
                 ],
             },
             TestCase {
                 // TC2: Two bids match the PublicTrade w/ one full-fill & one partial-fill
                 orders: client_orders(
                     0,
-                    vec![
-                        order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
-                        order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
-                    ],
+                    vec![order_open(cid, Side::Buy, 100.0, 1.0, 0.0), order_open(cid, Side::Buy, 200.0, 1.0, 0.0)],
                     vec![],
                 ),
                 input_trade: public_trade(Side::Sell, 100.0, 1.5),
                 input_fees_percent: 0.1,
-                expected_orders: client_orders(
-                    2,
-                    vec![order_open(cid, Side::Buy, 100.0, 1.0, 0.5)],
-                    vec![],
-                ),
+                expected_orders: client_orders(2, vec![order_open(cid, Side::Buy, 100.0, 1.0, 0.5)], vec![]),
                 expected_trades: vec![
-                    trade(
-                        TradeId(1.to_string()),
-                        Side::Buy,
-                        200.0,
-                        1.0,
-                        SymbolFees::new("base", 0.1 * 1.0),
-                    ),
-                    trade(
-                        TradeId(2.to_string()),
-                        Side::Buy,
-                        100.0,
-                        0.5,
-                        SymbolFees::new("base", 0.1 * 0.5),
-                    ),
+                    trade(TradeId(1.to_string()), Side::Buy, 200.0, 1.0, SymbolFees::new("base", 0.1 * 1.0)),
+                    trade(TradeId(2.to_string()), Side::Buy, 100.0, 0.5, SymbolFees::new("base", 0.1 * 0.5)),
                 ],
             },
             TestCase {
                 // TC3: No bids match the PublicTrade
                 orders: client_orders(
                     0,
-                    vec![
-                        order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
-                        order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
-                    ],
+                    vec![order_open(cid, Side::Buy, 100.0, 1.0, 0.0), order_open(cid, Side::Buy, 200.0, 1.0, 0.0)],
                     vec![],
                 ),
                 input_trade: public_trade(Side::Sell, 1_000_000_000.0, 1.0),
                 input_fees_percent: 0.1,
                 expected_orders: client_orders(
                     0,
-                    vec![
-                        order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
-                        order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
-                    ],
+                    vec![order_open(cid, Side::Buy, 100.0, 1.0, 0.0), order_open(cid, Side::Buy, 200.0, 1.0, 0.0)],
                     vec![],
                 ),
                 expected_trades: vec![],
@@ -558,9 +476,7 @@ mod tests {
         ];
 
         for (index, mut test) in tests.into_iter().enumerate() {
-            let actual_trades = test
-                .orders
-                .match_bids(&test.input_trade, test.input_fees_percent);
+            let actual_trades = test.orders.match_bids(&test.input_trade, test.input_fees_percent);
             assert_eq!(actual_trades, test.expected_trades, "TC{}", index);
 
             let actual_orders = test.orders;
@@ -586,18 +502,11 @@ mod tests {
                 orders: client_orders(
                     0,
                     vec![],
-                    vec![
-                        order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
-                        order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
-                    ],
+                    vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0), order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
                 ),
                 input_trade: public_trade(Side::Buy, 100.0, 1.0),
                 input_fees_percent: 0.1,
-                expected_orders: client_orders(
-                    1,
-                    vec![],
-                    vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0)],
-                ),
+                expected_orders: client_orders(1, vec![], vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0)]),
                 expected_trades: vec![trade(
                     TradeId(1.to_string()),
                     Side::Sell,
@@ -611,10 +520,7 @@ mod tests {
                 orders: client_orders(
                     0,
                     vec![],
-                    vec![
-                        order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
-                        order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
-                    ],
+                    vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0), order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
                 ),
                 input_trade: public_trade(Side::Buy, 200.0, 2.0),
                 input_fees_percent: 0.1,
@@ -641,18 +547,11 @@ mod tests {
                 orders: client_orders(
                     0,
                     vec![],
-                    vec![
-                        order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
-                        order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
-                    ],
+                    vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0), order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
                 ),
                 input_trade: public_trade(Side::Sell, 200.0, 1.5),
                 input_fees_percent: 0.1,
-                expected_orders: client_orders(
-                    2,
-                    vec![],
-                    vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.5)],
-                ),
+                expected_orders: client_orders(2, vec![], vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.5)]),
                 expected_trades: vec![
                     trade(
                         TradeId(1.to_string()),
@@ -675,29 +574,21 @@ mod tests {
                 orders: client_orders(
                     0,
                     vec![],
-                    vec![
-                        order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
-                        order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
-                    ],
+                    vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0), order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
                 ),
                 input_trade: public_trade(Side::Sell, 1.0, 1.0),
                 input_fees_percent: 0.1,
                 expected_orders: client_orders(
                     0,
                     vec![],
-                    vec![
-                        order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
-                        order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
-                    ],
+                    vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0), order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
                 ),
                 expected_trades: vec![],
             },
         ];
 
         for (index, mut test) in tests.into_iter().enumerate() {
-            let actual_trades = test
-                .orders
-                .match_asks(&test.input_trade, test.input_fees_percent);
+            let actual_trades = test.orders.match_asks(&test.input_trade, test.input_fees_percent);
             assert_eq!(actual_trades, test.expected_trades, "TC{}", index);
 
             let actual_orders = test.orders;
@@ -727,25 +618,15 @@ mod tests {
             },
             TestCase {
                 // TC2: empty bids, one ask
-                orders: client_orders(
-                    0,
-                    vec![],
-                    vec![order_open(cid, Side::Sell, 150.0, 1.0, 0.0)],
-                ),
+                orders: client_orders(0, vec![], vec![order_open(cid, Side::Sell, 150.0, 1.0, 0.0)]),
                 expected_num: 1,
             },
             TestCase {
                 // TC2: many of each
                 orders: client_orders(
                     0,
-                    vec![
-                        order_open(cid, Side::Sell, 150.0, 1.0, 0.0),
-                        order_open(cid, Side::Sell, 150.0, 1.0, 0.0),
-                    ],
-                    vec![
-                        order_open(cid, Side::Sell, 150.0, 1.0, 0.0),
-                        order_open(cid, Side::Sell, 150.0, 1.0, 0.0),
-                    ],
+                    vec![order_open(cid, Side::Sell, 150.0, 1.0, 0.0), order_open(cid, Side::Sell, 150.0, 1.0, 0.0)],
+                    vec![order_open(cid, Side::Sell, 150.0, 1.0, 0.0), order_open(cid, Side::Sell, 150.0, 1.0, 0.0)],
                 ),
                 expected_num: 4,
             },

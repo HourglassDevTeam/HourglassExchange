@@ -14,8 +14,6 @@
 )]
 #![allow(clippy::type_complexity)]
 
-
-
 use std::fmt::{Display, Formatter};
 
 use async_trait::async_trait;
@@ -26,9 +24,9 @@ use tokio::sync::mpsc;
 use crate::{
     error::ExecutionError,
     model::{
-        AccountEvent,
         balance::SymbolBalance,
         order::{Cancelled, Open, Order, OrderId, RequestCancel, RequestOpen},
+        AccountEvent,
     },
 };
 
@@ -64,21 +62,14 @@ pub trait ExecutionClient {
     async fn fetch_balances(&self) -> Result<Vec<SymbolBalance>, ExecutionError>;
 
     /// 打开订单。
-    async fn open_orders(
-        &self,
-        open_requests: Vec<Order<RequestOpen>>,
-    ) -> Vec<Result<Order<Open>, ExecutionError>>;
+    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>;
 
     /// 取消[`Order<Open>`]（未完成订单）。
-    async fn cancel_orders(
-        &self,
-        cancel_requests: Vec<Order<RequestCancel>>,
-    ) -> Vec<Result<Order<Cancelled>, ExecutionError>>;
+    async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>>;
 
     /// 取消所有账户中的[`Order<Open>`]（未完成订单）。
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>;
 }
-
 
 /// Unique identifier for an [`ExecutionClient`] implementation.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -103,8 +94,8 @@ impl Display for ExecutionId {
 impl ExecutionId {
     pub fn as_str(&self) -> &'static str {
         match self {
-            ExecutionId::Simulated => "simulated",
-            ExecutionId::Ftx => "ftx",
+            | ExecutionId::Simulated => "simulated",
+            | ExecutionId::Ftx => "ftx",
         }
     }
 }
@@ -113,26 +104,22 @@ impl ExecutionId {
 pub mod test_util {
     use cerebro_data::subscription::trade::PublicTrade;
     use cerebro_integration::model::{
-        Exchange,
-        instrument::{Instrument, kind::InstrumentKind}, Side,
+        instrument::{kind::InstrumentKind, Instrument},
+        Exchange, Side,
     };
 
     use crate::{
         model::{
-            ClientOrderId,
             trade::{SymbolFees, Trade, TradeId},
+            ClientOrderId,
         },
-        Open,
-        Order, OrderId, simulated::exchange::account::order::Orders,
+        simulated::exchange::account::order::Orders,
+        Open, Order, OrderId,
     };
 
     /// 生成客户端订单集合。
     /// 接收交易编号、买单和卖单向量，返回一个`Orders`实例。
-    pub fn client_orders(
-        trade_number: u64,
-        bids: Vec<Order<Open>>,
-        asks: Vec<Order<Open>>,
-    ) -> Orders {
+    pub fn client_orders(trade_number: u64, bids: Vec<Order<Open>>, asks: Vec<Order<Open>>) -> Orders {
         Orders {
             trade_counter: trade_number,
             bids,
@@ -143,13 +130,7 @@ pub mod test_util {
     /// 创建一个开放状态的订单。
     /// 接收客户端订单ID、买卖方向、价格、数量和已成交量，
     /// 返回一个`Order<Open>`类型的实例。
-    pub fn order_open(
-        cid: ClientOrderId,
-        side: Side,
-        price: f64,
-        quantity: f64,
-        filled: f64,
-    ) -> Order<Open> {
+    pub fn order_open(cid: ClientOrderId, side: Side, price: f64, quantity: f64, filled: f64) -> Order<Open> {
         Order {
             exchange: Exchange::from("exchange"),
             instrument: Instrument::from(("base", "quote", InstrumentKind::Perpetual)),

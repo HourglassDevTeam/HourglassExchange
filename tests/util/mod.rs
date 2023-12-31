@@ -1,17 +1,16 @@
 use std::{collections::HashMap, time::Duration};
 
 use cerebro_integration::model::{
-    Exchange,
-    instrument::{Instrument, kind::InstrumentKind, symbol::Symbol}, Side,
+    instrument::{kind::InstrumentKind, symbol::Symbol, Instrument},
+    Exchange, Side,
 };
 use tokio::sync::mpsc;
 
 use tide_broker::{
-    ExecutionId,
     model::{
-        AccountEvent,
         balance::Balance,
-        ClientOrderId, order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
+        order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
+        AccountEvent, ClientOrderId,
     },
     simulated::{
         exchange::{
@@ -20,6 +19,7 @@ use tide_broker::{
         },
         SimulatedEvent,
     },
+    ExecutionId,
 };
 
 pub(super) async fn run_default_exchange(
@@ -73,13 +73,7 @@ pub(super) fn initial_balances() -> ClientBalances {
 }
 
 // Utility for creating an Open Order request
-pub(super) fn order_request_limit<I>(
-    instrument: I,
-    cid: ClientOrderId,
-    side: Side,
-    price: f64,
-    quantity: f64,
-) -> Order<RequestOpen>
+pub(super) fn order_request_limit<I>(instrument: I, cid: ClientOrderId, side: Side, price: f64, quantity: f64) -> Order<RequestOpen>
 where
     I: Into<Instrument>,
 {
@@ -97,15 +91,7 @@ where
 }
 
 // Utility for creating an Open Order
-pub(super) fn open_order<I>(
-    instrument: I,
-    cid: ClientOrderId,
-    id: OrderId,
-    side: Side,
-    price: f64,
-    quantity: f64,
-    filled: f64,
-) -> Order<Open>
+pub(super) fn open_order<I>(instrument: I, cid: ClientOrderId, id: OrderId, side: Side, price: f64, quantity: f64, filled: f64) -> Order<Open>
 where
     I: Into<Instrument>,
 {
@@ -124,12 +110,7 @@ where
 }
 
 // Utility for creating an Order RequestCancel
-pub(super) fn order_cancel_request<I, Id>(
-    instrument: I,
-    cid: ClientOrderId,
-    side: Side,
-    id: Id,
-) -> Order<RequestCancel>
+pub(super) fn order_cancel_request<I, Id>(instrument: I, cid: ClientOrderId, side: Side, id: Id) -> Order<RequestCancel>
 where
     I: Into<Instrument>,
     Id: Into<OrderId>,
@@ -144,12 +125,7 @@ where
 }
 
 // Utility for creating an Order<Cancelled>
-pub(super) fn order_cancelled<I, Id>(
-    instrument: I,
-    cid: ClientOrderId,
-    side: Side,
-    id: Id,
-) -> Order<Cancelled>
+pub(super) fn order_cancelled<I, Id>(instrument: I, cid: ClientOrderId, side: Side, id: Id) -> Order<Cancelled>
 where
     I: Into<Instrument>,
     Id: Into<OrderId>,

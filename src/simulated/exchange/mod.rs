@@ -1,6 +1,6 @@
 // 引入多生产者单消费者通道模块和执行错误类型。
-use tokio::sync::mpsc;
 use crate::ExecutionError;
+use tokio::sync::mpsc;
 
 // 引入上级模块中的客户账户和模拟事件类型。
 use super::{exchange::account::ClientAccount, SimulatedEvent};
@@ -29,29 +29,17 @@ impl SimulatedExchange {
         while let Some(event) = self.event_simulated_rx.recv().await {
             match event {
                 // 处理获取开放订单请求。
-                SimulatedEvent::FetchOrdersOpen(response_tx) => {
-                    self.account.fetch_orders_open(response_tx)
-                }
+                | SimulatedEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx),
                 // 处理获取账户余额请求。
-                SimulatedEvent::FetchBalances(response_tx) => {
-                    self.account.fetch_balances(response_tx)
-                }
+                | SimulatedEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx),
                 // 处理开启订单请求。
-                SimulatedEvent::OpenOrders((open_requests, response_tx)) => {
-                    self.account.open_orders(open_requests, response_tx)
-                }
+                | SimulatedEvent::OpenOrders((open_requests, response_tx)) => self.account.open_orders(open_requests, response_tx),
                 // 处理取消订单请求。
-                SimulatedEvent::CancelOrders((cancel_requests, response_tx)) => {
-                    self.account.cancel_orders(cancel_requests, response_tx)
-                }
+                | SimulatedEvent::CancelOrders((cancel_requests, response_tx)) => self.account.cancel_orders(cancel_requests, response_tx),
                 // 处理取消所有订单请求。
-                SimulatedEvent::CancelOrdersAll(response_tx) => {
-                    self.account.cancel_orders_all(response_tx)
-                }
+                | SimulatedEvent::CancelOrdersAll(response_tx) => self.account.cancel_orders_all(response_tx),
                 // 处理市场交易事件。
-                SimulatedEvent::MarketTrade((instrument, trade)) => {
-                    self.account.match_orders(instrument, trade)
-                }
+                | SimulatedEvent::MarketTrade((instrument, trade)) => self.account.match_orders(instrument, trade),
             }
         }
     }
@@ -68,9 +56,7 @@ pub struct ExchangeBuilder {
 impl ExchangeBuilder {
     // 构造函数，创建新的构建器实例。
     fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
+        Self { ..Default::default() }
     }
 
     // 设置模拟事件的接收器。
@@ -92,12 +78,10 @@ impl ExchangeBuilder {
     // 构建并返回 `SimulatedExchange` 实例。
     pub fn build(self) -> Result<SimulatedExchange, ExecutionError> {
         Ok(SimulatedExchange {
-            event_simulated_rx: self.event_simulated_rx.ok_or_else(|| {
-                ExecutionError::BuilderIncomplete("event_simulated_rx".to_string())
-            })?,
-            account: self
-                .account
-                .ok_or_else(|| ExecutionError::BuilderIncomplete("account".to_string()))?,
+            event_simulated_rx: self
+                .event_simulated_rx
+                .ok_or_else(|| ExecutionError::BuilderIncomplete("event_simulated_rx".to_string()))?,
+            account: self.account.ok_or_else(|| ExecutionError::BuilderIncomplete("account".to_string()))?,
         })
     }
 }

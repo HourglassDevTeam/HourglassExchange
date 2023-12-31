@@ -1,19 +1,19 @@
 use std::collections::HashMap;
 
 use cerebro_integration::model::{
-    Exchange,
-    instrument::{Instrument, symbol::Symbol}, Side,
+    instrument::{symbol::Symbol, Instrument},
+    Exchange, Side,
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ExecutionError,
-    ExecutionId, model::{
-        AccountEvent,
-        AccountEventKind,
-        balance::{Balance, BalanceDelta, SymbolBalance}, trade::Trade,
-    }, Open, Order,
+    model::{
+        balance::{Balance, BalanceDelta, SymbolBalance},
+        trade::Trade,
+        AccountEvent, AccountEventKind,
+    },
+    ExecutionError, ExecutionId, Open, Order,
 };
 
 /// [`ClientAccount`](super::ClientAccount) [`Balance`] for each [`Symbol`].
@@ -23,20 +23,14 @@ pub struct ClientBalances(pub HashMap<Symbol, Balance>);
 impl ClientBalances {
     /// Return a reference to the [`Balance`] of the specified [`Symbol`].
     pub fn balance(&self, symbol: &Symbol) -> Result<&Balance, ExecutionError> {
-        self.get(symbol).ok_or_else(|| {
-            ExecutionError::Simulated(format!(
-                "SimulatedExchange is not configured for Symbol: {symbol}"
-            ))
-        })
+        self.get(symbol)
+            .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Symbol: {symbol}")))
     }
 
     /// Return a mutable reference to the [`Balance`] of the specified [`Symbol`].
     pub fn balance_mut(&mut self, symbol: &Symbol) -> Result<&mut Balance, ExecutionError> {
-        self.get_mut(symbol).ok_or_else(|| {
-            ExecutionError::Simulated(format!(
-                "SimulatedExchange is not configured for Symbol: {symbol}"
-            ))
-        })
+        self.get_mut(symbol)
+            .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Symbol: {symbol}")))
     }
 
     /// Fetch the client [`Balance`] for every [`Symbol``].
@@ -50,15 +44,11 @@ impl ClientBalances {
 
     /// Determine if the client has sufficient available [`Balance`] to execute an
     /// [`Order<RequestOpen>`].
-    pub fn has_sufficient_available_balance(
-        &self,
-        symbol: &Symbol,
-        required_balance: f64,
-    ) -> Result<(), ExecutionError> {
+    pub fn has_sufficient_available_balance(&self, symbol: &Symbol, required_balance: f64) -> Result<(), ExecutionError> {
         let available = self.balance(symbol)?.available;
         match available >= required_balance {
-            true => Ok(()),
-            false => Err(ExecutionError::InsufficientBalance(symbol.clone())),
+            | true => Ok(()),
+            | false => Err(ExecutionError::InsufficientBalance(symbol.clone())),
         }
     }
 
@@ -67,7 +57,7 @@ impl ClientBalances {
     /// [`Side::Buy`] or [`Side::Sell`].
     pub fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> AccountEvent {
         let updated_balance = match open.side {
-            Side::Buy => {
+            | Side::Buy => {
                 let balance = self
                     .balance_mut(&open.instrument.quote)
                     .expect("[TideBroker] : Balance existence checked in has_sufficient_available_balance");
@@ -75,7 +65,7 @@ impl ClientBalances {
                 balance.available -= required_balance;
                 SymbolBalance::new(open.instrument.quote.clone(), *balance)
             }
-            Side::Sell => {
+            | Side::Sell => {
                 let balance = self
                     .balance_mut(&open.instrument.base)
                     .expect("[TideBroker] : Balance existence checked in has_sufficient_available_balance");
@@ -97,7 +87,7 @@ impl ClientBalances {
     /// [`Side::Buy`] or [`Side::Sell`].
     pub fn update_from_cancel(&mut self, cancelled: &Order<Open>) -> SymbolBalance {
         match cancelled.side {
-            Side::Buy => {
+            | Side::Buy => {
                 let balance = self
                     .balance_mut(&cancelled.instrument.quote)
                     .expect("[TideBroker] : Balance existence checked when opening Order");
@@ -105,7 +95,7 @@ impl ClientBalances {
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
                 SymbolBalance::new(cancelled.instrument.quote.clone(), *balance)
             }
-            Side::Sell => {
+            | Side::Sell => {
                 let balance = self
                     .balance_mut(&cancelled.instrument.base)
                     .expect("[TideBroker] : Balance existence checked when opening Order");
@@ -130,7 +120,7 @@ impl ClientBalances {
 
         // Calculate the base & quote Balance deltas
         let (base_delta, quote_delta) = match trade.side {
-            Side::Buy => {
+            | Side::Buy => {
                 // Base total & available increase by trade.quantity minus base trade.fees
                 let base_increase = trade.quantity - trade.fees.fees;
                 let base_delta = BalanceDelta {
@@ -147,7 +137,7 @@ impl ClientBalances {
 
                 (base_delta, quote_delta)
             }
-            Side::Sell => {
+            | Side::Sell => {
                 // Base total decreases by trade.quantity
                 // Note: available was already decreased by the opening of the Side::Sell order
                 let base_delta = BalanceDelta {

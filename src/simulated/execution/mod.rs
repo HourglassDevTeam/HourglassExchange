@@ -2,10 +2,9 @@ use async_trait::async_trait;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
-    AccountEvent,
-    ExecutionClient,
-    ExecutionError, ExecutionId, model::order::{Cancelled, Open, Order}, RequestCancel, RequestOpen, simulated::SimulatedEvent,
-    SymbolBalance,
+    model::order::{Cancelled, Open, Order},
+    simulated::SimulatedEvent,
+    AccountEvent, ExecutionClient, ExecutionError, ExecutionId, RequestCancel, RequestOpen, SymbolBalance,
 };
 
 /// 模拟[`ExecutionClient`]实现，可用于 Cerebro。
@@ -56,10 +55,7 @@ impl ExecutionClient for SimulatedExecution {
             .expect("[TideBroker] : 模拟交易所目前离线 - 接收获取账户余额 FetchBalances 响应失败")
     }
 
-    async fn open_orders(
-        &self,
-        open_requests: Vec<Order<RequestOpen>>,
-    ) -> Vec<Result<Order<Open>, ExecutionError>> {
+    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>> {
         // 创建一个 oneshot 通道以与模拟交易所通信。
         // Oneshot channel to communicate with the SimulatedExchange
         let (response_tx, response_rx) = oneshot::channel();
@@ -70,15 +66,10 @@ impl ExecutionClient for SimulatedExecution {
             .expect("[TideBroker] : 模拟交易所目前离线 - 发送 OpenOrders 请求失败");
         // 从模拟交易所接收开启订单的响应。
         // Receive OpenOrders response from the SimulatedExchange
-        response_rx
-            .await
-            .expect("[TideBroker] : 模拟交易所目前离线 - 接收 OpenOrders 响应失败")
+        response_rx.await.expect("[TideBroker] : 模拟交易所目前离线 - 接收 OpenOrders 响应失败")
     }
 
-    async fn cancel_orders(
-        &self,
-        cancel_requests: Vec<Order<RequestCancel>>,
-    ) -> Vec<Result<Order<Cancelled>, ExecutionError>> {
+    async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>> {
         // 创建一个 oneshot 通道以与模拟交易所通信。
         // Oneshot channel to communicate with the SimulatedExchange
         let (response_tx, response_rx) = oneshot::channel();
@@ -89,9 +80,7 @@ impl ExecutionClient for SimulatedExecution {
             .expect("[TideBroker] : 模拟交易所目前离线 - 发送 CancelOrders 请求失败");
         // 从模拟交易所接收取消订单的响应。
         // Receive CancelOrders response from the SimulatedExchange
-        response_rx
-            .await
-            .expect("[TideBroker] : 模拟交易所目前离线 - 接收 CancelOrders 响应失败")
+        response_rx.await.expect("[TideBroker] : 模拟交易所目前离线 - 接收 CancelOrders 响应失败")
     }
 
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError> {

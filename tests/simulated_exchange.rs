@@ -1,6 +1,6 @@
 use cerebro_data::subscription::trade::PublicTrade;
 use cerebro_integration::model::{
-    instrument::{Instrument, kind::InstrumentKind, symbol::Symbol},
+    instrument::{kind::InstrumentKind, symbol::Symbol, Instrument},
     Side,
 };
 use tokio::sync::mpsc;
@@ -8,19 +8,18 @@ use uuid::Uuid;
 
 use tide_broker::{
     error::ExecutionError,
-    ExecutionClient,
     model::{
-        AccountEvent,
-        AccountEventKind,
         balance::{Balance, SymbolBalance},
-        ClientOrderId, order::OrderId, trade::{SymbolFees, Trade, TradeId},
+        order::OrderId,
+        trade::{SymbolFees, Trade, TradeId},
+        AccountEvent, AccountEventKind, ClientOrderId,
     },
     simulated::{execution::SimulatedExecution, SimulatedEvent},
+    ExecutionClient,
 };
 
 use crate::util::{
-    fees_50_percent, initial_balances, latency_50ms, open_order, order_cancel_request,
-    order_cancelled, order_request_limit, run_default_exchange,
+    fees_50_percent, initial_balances, latency_50ms, open_order, order_cancel_request, order_cancelled, order_request_limit, run_default_exchange,
 };
 
 mod util;
@@ -76,10 +75,7 @@ async fn main() {
 
     // 4. 发送不匹配任何打开订单的MarketEvent并检查是否没有发送AccountEvents
     // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent
-    test_4_send_market_event_that_does_not_match_any_open_order(
-        &mut event_simulated_tx,
-        &mut event_account_rx,
-    );
+    test_4_send_market_event_that_does_not_match_any_open_order(&mut event_simulated_tx, &mut event_account_rx);
 
     // 5. 取消打开的买单并检查是否已发送取消订单和余额的AccountEvents
     // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent
@@ -89,22 +85,12 @@ async fn main() {
     // 6. Open 2x LIMIT Buy Orders & assert on received AccountEvents
     let test_6_ids_1 = Ids::new(Uuid::new_v4(), 2);
     let test_6_ids_2 = Ids::new(Uuid::new_v4(), 3);
-    test_6_open_2x_limit_buy_orders(
-        &client,
-        test_6_ids_1.clone(),
-        test_6_ids_2,
-        &mut event_account_rx,
-    )
-    .await;
+    test_6_open_2x_limit_buy_orders(&client, test_6_ids_1.clone(), test_6_ids_2, &mut event_account_rx).await;
 
     // 7. 发送完全匹配1x打开订单(交易)的MarketEvent并检查余额和交易的AccountEvents
     // 7. Send MarketEvent that exactly full matches 1x open Order (trade) and check AccountEvents
     //    for balances and trades
-    test_7_send_market_event_that_exact_full_matches_order(
-        &mut event_simulated_tx,
-        &mut event_account_rx,
-    )
-    .await;
+    test_7_send_market_event_that_exact_full_matches_order(&mut event_simulated_tx, &mut event_account_rx).await;
 
     // 8. 获取打开的订单并检查test_6_order_cid_1是否只剩一个限价买单
     // 8. Fetch open orders & check only one limit buy order remaining from test_6_order_cid_1
@@ -114,22 +100,12 @@ async fn main() {
     // 9. Open 2x LIMIT Sell Order & assert on received AccountEvents
     let test_9_ids_1 = Ids::new(Uuid::new_v4(), 4);
     let test_9_ids_2 = Ids::new(Uuid::new_v4(), 5);
-    test_9_open_2x_limit_sell_orders(
-        &client,
-        test_9_ids_1,
-        test_9_ids_2.clone(),
-        &mut event_account_rx,
-    )
-    .await;
+    test_9_open_2x_limit_sell_orders(&client, test_9_ids_1, test_9_ids_2.clone(), &mut event_account_rx).await;
 
     // 10. 发送完全匹配1x卖单(交易)的MarketEvent，并部分匹配另一卖单(交易)。检查两个匹配的余额和交易的AccountEvents是否已发送。
     // 10. Send MarketEvent that fully matches 1x sell Order (trade), and partially matches the other
     //     sell Order (trade). Check AccountEvents for balances and trades of both matches are sent.
-    test_10_send_market_event_that_full_and_partial_matches_orders(
-        &mut event_simulated_tx,
-        &mut event_account_rx,
-    )
-    .await;
+    test_10_send_market_event_that_full_and_partial_matches_orders(&mut event_simulated_tx, &mut event_account_rx).await;
 
     // 11. 取消所有打开的订单。包括部分填充的卖单和未填充的买单。检查已发送订单取消和余额的AccountEvents。
     // 11. Cancel all open orders. Includes a partially filled sell order, and non-filled buy order.
@@ -144,13 +120,7 @@ async fn main() {
     // 13. Fail to open limit buy order with insufficient funds
     let test_13_ids_1 = Ids::new(Uuid::new_v4(), 6);
     let test_13_ids_2 = Ids::new(Uuid::new_v4(), 6); // 6因为第一个应该失败
-    test_13_fail_to_open_one_of_two_limits_with_insufficient_funds(
-        &client,
-        test_13_ids_1,
-        test_13_ids_2,
-        &mut event_account_rx,
-    )
-    .await;
+    test_13_fail_to_open_one_of_two_limits_with_insufficient_funds(&client, test_13_ids_1, test_13_ids_2, &mut event_account_rx).await;
 
     // 14. 使用错误的OrderId尝试取消不存在的限价订单而失败
     // 14. Fail to cancel limit order with OrderNotFound using incorrect OrderId
@@ -186,14 +156,9 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SimulatedExecu
     }
 }
 
-
 // 3. 打开LIMIT Buy Order并检查报价货币(usdt)的AccountEvent Balance是否已发送。
 // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (usdt).
-async fn test_3_open_limit_buy_order(
-    client: &SimulatedExecution,
-    test_3_ids: Ids,
-    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
-) {
+async fn test_3_open_limit_buy_order(client: &SimulatedExecution, test_3_ids: Ids, event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>) {
     // 打开新的订单
     let new_orders = client
         .open_orders(vec![order_request_limit(
@@ -223,50 +188,41 @@ async fn test_3_open_limit_buy_order(
     // 检查AccountEvent Balance，确认报价货币(usdt)的可用余额已减少
     // Check AccountEvent Balance for quote currency (usdt) has available balance decrease
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Balance(usdt_balance),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Balance(usdt_balance),
+            ..
+        }) => {
             // 预期usdt Balance.available = 10_000 - (100.0 * 1.0)
             // Expected usdt Balance.available = 10_000 - (100.0 * 1.0)
             let expected = SymbolBalance::new("usdt", Balance::new(10_000.0, 9_900.0));
             assert_eq!(usdt_balance, expected);
         }
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
     // 检查是否生成了AccountEvent OrderNew
     // Check AccountEvent OrderNew generated
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::OrdersNew(new_orders),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::OrdersNew(new_orders),
+            ..
+        }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone(), expected_new_order);
         }
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
     // 检查是否没有更多的AccountEvents生成
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
-        Err(mpsc::error::TryRecvError::Empty) => {}
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | Err(mpsc::error::TryRecvError::Empty) => {}
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 }
@@ -293,23 +249,16 @@ fn test_4_send_market_event_that_does_not_match_any_open_order(
     // 检查是否没有生成更多的AccountEvents
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
-        Err(mpsc::error::TryRecvError::Empty) => {}
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | Err(mpsc::error::TryRecvError::Empty) => {}
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 }
 
 // 5. 取消打开的买单并检查已发送取消订单和余额的AccountEvents。
 // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent.
-async fn test_5_cancel_buy_order(
-    client: &SimulatedExecution,
-    test_3_ids: Ids,
-    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
-) {
+async fn test_5_cancel_buy_order(client: &SimulatedExecution, test_3_ids: Ids, event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>) {
     // 取消订单
     let cancelled = client
         .cancel_orders(vec![order_cancel_request(
@@ -335,50 +284,41 @@ async fn test_5_cancel_buy_order(
     // 检查AccountEvent Order是否被取消
     // Check AccountEvent Order cancelled
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::OrdersCancelled(cancelled),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::OrdersCancelled(cancelled),
+            ..
+        }) => {
             assert_eq!(cancelled.len(), 1);
             assert_eq!(cancelled[0].clone(), expected_cancelled);
         }
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
     // 检查报价货币(usdt)的AccountEvent Balance是否显示可用余额增加
     // Check AccountEvent Balance for quote currency (usdt) has available balance increase
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Balance(usdt_balance),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Balance(usdt_balance),
+            ..
+        }) => {
             // 预期usdt Balance.available = 9_900 + (100.0 * 1.0)
             // Expected usdt Balance.available = 9_900 + (100.0 * 1.0)
             let expected = SymbolBalance::new("usdt", Balance::new(10_000.0, 10_000.0));
             assert_eq!(usdt_balance, expected);
         }
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
     // 检查是否没有更多的AccountEvents生成
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
-        Err(mpsc::error::TryRecvError::Empty) => {}
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | Err(mpsc::error::TryRecvError::Empty) => {}
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 }
@@ -441,88 +381,73 @@ async fn test_6_open_2x_limit_buy_orders(
     // 检查第一个订单的AccountEvent Balance - 报价货币的可用余额应该减少
     // Check AccountEvent Balance for first order - quote currency has available balance decrease
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Balance(usdt_balance),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Balance(usdt_balance),
+            ..
+        }) => {
             // 预期usdt Balance.available = 10_000 - (100.0 * 1.0)
             // Expected usdt Balance.available = 10_000 - (100.0 * 1.0)
             let expected = SymbolBalance::new("usdt", Balance::new(10_000.0, 9_900.0));
             assert_eq!(usdt_balance, expected);
         }
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
     // 检查第一个订单的AccountEvent OrdersNew
     // Check AccountEvent OrdersNew for first order
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::OrdersNew(new_orders),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::OrdersNew(new_orders),
+            ..
+        }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone(), expected_order_new_1);
         }
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
     // 检查第二个订单的AccountEvent Balance - 报价货币的可用余额应该减少
     // Check AccountEvent Balance for second order - quote currency has available balance decrease
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Balance(usdt_balance),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Balance(usdt_balance),
+            ..
+        }) => {
             // 预期usdt Balance.available = 9_900 - (200.0 * 1.0)
             // Expected usdt Balance.available = 9_900 - (200.0 * 1.0)
             let expected = SymbolBalance::new("usdt", Balance::new(10_000.0, 9_700.0));
             assert_eq!(usdt_balance, expected);
         }
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
     // 检查第二个订单的AccountEvent OrdersNew
     // Check AccountEvent OrdersNew for second order
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::OrdersNew(new_orders),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::OrdersNew(new_orders),
+            ..
+        }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone(), expected_order_new_2);
         }
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
     // 检查是否没有更多的AccountEvents生成
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
-        Err(mpsc::error::TryRecvError::Empty) => {}
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | Err(mpsc::error::TryRecvError::Empty) => {}
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 }
@@ -553,10 +478,10 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
     // 检查与交易相关的基础和报价货币的AccountEvent Balances
     // Check AccountEvent Balances for base & quote currencies related to the trade
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Balances(balances),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Balances(balances),
+            ..
+        }) => {
             // 应更新基础和报价SymbolBalances
             // Base & Quote SymbolBalances should be updated
             assert_eq!(balances.len(), 2);
@@ -564,10 +489,7 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
             // 先检查基础余额：预期btc { total: 10.0 + 1.0 - 手续费, available: 10.0 + 1.0 - 手续费 }
             // Base Balance first: expected btc { total: 10.0 + 1.0 - fees, available: 10.0 + 1.0 - fees }
             let btc_fees = 1.0 * fees_50_percent();
-            let expected_btc = SymbolBalance::new(
-                "btc",
-                Balance::new(10.0 + 1.0 - btc_fees, 10.0 + 1.0 - btc_fees),
-            );
+            let expected_btc = SymbolBalance::new("btc", Balance::new(10.0 + 1.0 - btc_fees, 10.0 + 1.0 - btc_fees));
             assert_eq!(balances[0], expected_btc);
 
             // 然后检查报价余额：预期usdt Balance { total: 10_000 - 200, available: 9_700 }
@@ -575,21 +497,18 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
             let expected_usdt = SymbolBalance::new("usdt", Balance::new(9_800.0, 9_700.0));
             assert_eq!(balances[1], expected_usdt);
         }
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
     // 检查匹配MarketEvent的AccountEvent Trade
     // Check AccountEvent Trade for order matching MarketEvent
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Trade(trade),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Trade(trade),
+            ..
+        }) => {
             // 预期的交易信息
             let expected = Trade {
                 id: TradeId(1.to_string()),
@@ -602,32 +521,23 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
             };
             assert_eq!(trade, expected);
         }
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 
     // 检查是否没有更多的AccountEvents生成
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
-        Err(mpsc::error::TryRecvError::Empty) => {}
-        other => {
-            panic!(
-                "[TideBroker] : try_recv() consumed unexpected: {:?}",
-                other
-            );
+        | Err(mpsc::error::TryRecvError::Empty) => {}
+        | other => {
+            panic!("[TideBroker] : try_recv() consumed unexpected: {:?}", other);
         }
     }
 }
 // 8. 获取打开的订单并检查test_6_order_cid_1是否只剩一个限价买单。
 // 8. Fetch open orders & check there is only one limit buy order remaining from test_6_order_cid_1.
-async fn test_8_fetch_open_orders_and_check_test_6_order_cid_1_only(
-    client: &SimulatedExecution,
-    test_6_ids_1: Ids,
-) {
+async fn test_8_fetch_open_orders_and_check_test_6_order_cid_1_only(client: &SimulatedExecution, test_6_ids_1: Ids) {
     let open_orders = client.fetch_orders_open().await.unwrap();
     assert_eq!(open_orders.len(), 1);
     assert_eq!(
@@ -698,88 +608,73 @@ async fn test_9_open_2x_limit_sell_orders(
     // 检查第一个订单的AccountEvent Balance - 基础货币的可用余额减少
     // Check AccountEvent Balance for first order - base currency has available balance decrease
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Balance(btc_balance),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Balance(btc_balance),
+            ..
+        }) => {
             // 预期btc Balance.available = 10.5 - 1.0
             // Expected btc Balance.available = 10.5 - 1.0
             let expected = SymbolBalance::new("btc", Balance::new(10.5, 10.5 - 1.0));
             assert_eq!(btc_balance, expected);
         }
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 
     // 检查第一个订单的AccountEvent OrdersNew
     // Check AccountEvent OrdersNew for first order
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::OrdersNew(new_orders),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::OrdersNew(new_orders),
+            ..
+        }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone(), expected_order_new_1);
         }
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 
     // 检查第二个订单的AccountEvent Balance - 基础货币的可用余额减少
     // Check AccountEvent Balance for second order - base currency has available balance decrease
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Balance(btc_balance),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Balance(btc_balance),
+            ..
+        }) => {
             // 预期btc Balance.available = 9.5 - 1.0
             // Expected btc Balance.available = 9.5 - 1.0
             let expected = SymbolBalance::new("btc", Balance::new(10.5, 9.5 - 1.0));
             assert_eq!(btc_balance, expected);
         }
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 
     // 检查第二个订单的AccountEvent OrdersNew
     // Check AccountEvent OrdersNew for second order
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::OrdersNew(new_orders),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::OrdersNew(new_orders),
+            ..
+        }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone(), expected_order_new_2);
         }
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 
     // 检查是否没有更多的AccountEvents生成
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
-        Err(mpsc::error::TryRecvError::Empty) => {}
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | Err(mpsc::error::TryRecvError::Empty) => {}
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 }
@@ -813,10 +708,10 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
     // 检查与交易相关的基础和报价货币的AccountEvent Balances
     // Check AccountEvent Balances for base & quote currencies related to the trade
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Balances(balances),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Balances(balances),
+            ..
+        }) => {
             // 基础和报价SymbolBalances应该更新
             // Base & Quote SymbolBalances should be updated
             assert_eq!(balances.len(), 2);
@@ -833,21 +728,18 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
             let expected_usdt = SymbolBalance::new("usdt", Balance::new(10_050.0, 9_950.0));
             assert_eq!(balances[1], expected_usdt);
         }
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 
     // 检查匹配MarketEvent的AccountEvent Trade
     // Check AccountEvent Trade for order matching MarketEvent
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Trade(trade),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Trade(trade),
+            ..
+        }) => {
             let expected = Trade {
                 id: TradeId(2.to_string()),
                 order_id: OrderId(4.to_string()),
@@ -859,11 +751,8 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
             };
             assert_eq!(trade, expected);
         }
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 
@@ -874,10 +763,10 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
     // 检查与交易相关的基础和报价货币的AccountEvent Balances
     // Check AccountEvent Balances for base & quote currencies related to the trade
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Balances(balances),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Balances(balances),
+            ..
+        }) => {
             // 基础和报价SymbolBalances应该更新
             // Base & Quote SymbolBalances should be updated
             assert_eq!(balances.len(), 2);
@@ -891,25 +780,21 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
             // Quote Balance second:
             // Expected usdt increase = (1000 * 0.5) - (1000 * 0.5 * 0.5) = 500 - 250 = 250
             // expected usdt Balance { total: 10_050 + 250, available: 9_950 + 250 }
-            let expected_usdt =
-                SymbolBalance::new("usdt", Balance::new(10_050.0 + 250.0, 9_950.0 + 250.0));
+            let expected_usdt = SymbolBalance::new("usdt", Balance::new(10_050.0 + 250.0, 9_950.0 + 250.0));
             assert_eq!(balances[1], expected_usdt);
         }
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 
     // 检查匹配MarketEvent的AccountEvent Trade
     // Check AccountEvent Trade for order matching MarketEvent
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Trade(trade),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Trade(trade),
+            ..
+        }) => {
             let expected = Trade {
                 id: TradeId(3.to_string()),
                 order_id: OrderId(5.to_string()),
@@ -921,23 +806,17 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
             };
             assert_eq!(trade, expected);
         }
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 
     // 检查是否没有更多的AccountEvents生成
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
-        Err(mpsc::error::TryRecvError::Empty) => {}
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | Err(mpsc::error::TryRecvError::Empty) => {}
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 }
@@ -981,29 +860,26 @@ async fn test_11_cancel_all_orders(
     // 检查买卖单的AccountEvent Order是否已被取消
     // Check AccountEvent Order cancelled for both the bid & ask
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::OrdersCancelled(cancelled),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::OrdersCancelled(cancelled),
+            ..
+        }) => {
             assert_eq!(cancelled.len(), 2);
             assert_eq!(cancelled[0].clone(), expected_cancelled[0]);
             assert_eq!(cancelled[1].clone(), expected_cancelled[1]);
         }
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 
     // 检查买卖单取消后的AccountEvent Balances
     // Check AccountEvent Balances for cancelled bid and ask orders
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Balances(balances),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Balances(balances),
+            ..
+        }) => {
             // 买单报价和卖单基础的SymbolBalances应更新
             // SymbolBalances for Bid order quote, & ask order base should be updated
             assert_eq!(balances.len(), 2);
@@ -1012,8 +888,7 @@ async fn test_11_cancel_all_orders(
             // test_6_order_cid_1, Side::Buy, price=100.0, quantity=1.0
             // 因此，usdt Balance { total: 10_300, available: 10_200 + (100 * 1)
             // Bids are cancelled first, so balance is updated first
-            let expected_usdt =
-                SymbolBalance::new("usdt", Balance::new(10_300.0, 10_200.0 + 100.0));
+            let expected_usdt = SymbolBalance::new("usdt", Balance::new(10_300.0, 10_200.0 + 100.0));
             assert_eq!(balances[0], expected_usdt);
 
             // 然后取消卖单，因此随后更新余额
@@ -1023,23 +898,17 @@ async fn test_11_cancel_all_orders(
             let expected_btc = SymbolBalance::new("btc", Balance::new(9.0, 8.5 + 0.5));
             assert_eq!(balances[1], expected_btc);
         }
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 
     // 检查是否没有更多的AccountEvents生成
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
-        Err(mpsc::error::TryRecvError::Empty) => {}
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | Err(mpsc::error::TryRecvError::Empty) => {}
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 }
@@ -1102,47 +971,38 @@ async fn test_13_fail_to_open_one_of_two_limits_with_insufficient_funds(
 
     // 检查第二个订单的AccountEvent Balance - 基础货币的可用余额减少
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::Balance(btc_balance),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::Balance(btc_balance),
+            ..
+        }) => {
             // 预期btc Balance.available = 9.0 - 1.0
             let expected = SymbolBalance::new("btc", Balance::new(9.0, 9.0 - 1.0));
             assert_eq!(btc_balance, expected);
         }
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 
     // 检查第二个订单的AccountEvent OrdersNew
     match event_account_rx.try_recv() {
-        Ok(AccountEvent {
-               kind: AccountEventKind::OrdersNew(new_orders),
-               ..
-           }) => {
+        | Ok(AccountEvent {
+            kind: AccountEventKind::OrdersNew(new_orders),
+            ..
+        }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone(), expected_order_new_2);
         }
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 
     // 检查是否没有更多的AccountEvents生成
     match event_account_rx.try_recv() {
-        Err(mpsc::error::TryRecvError::Empty) => {}
-        other => {
-            panic!(
-                "try_recv() consumed unexpected Result<AccountEvent>: {:?}",
-                other
-            );
+        | Err(mpsc::error::TryRecvError::Empty) => {}
+        | other => {
+            panic!("try_recv() consumed unexpected Result<AccountEvent>: {:?}", other);
         }
     }
 }
@@ -1169,4 +1029,3 @@ async fn test_14_fail_to_cancel_limit_with_order_not_found(client: &SimulatedExe
     assert_eq!(cancelled.len(), 1);
     assert_eq!(cancelled[0], expected);
 }
-

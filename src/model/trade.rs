@@ -1,6 +1,6 @@
 // 引入相关模块和结构体。
 use cerebro_integration::model::{
-    instrument::{Instrument, symbol::Symbol},
+    instrument::{symbol::Symbol, Instrument},
     Side,
 };
 use serde::{Deserialize, Serialize};
@@ -31,8 +31,8 @@ pub struct Trade {
 pub struct TradeId(pub String);
 
 impl<S> From<S> for TradeId
-    where
-        S: Into<String>,
+where
+    S: Into<String>,
 {
     fn from(id: S) -> Self {
         Self(id.into())
@@ -51,12 +51,9 @@ impl SymbolFees {
     /// Construct a new [`SymbolFees`].
     /// 构造一个新的 [`SymbolFees`]。
     pub fn new<S>(symbol: S, fees: f64) -> Self
-        where
-            S: Into<Symbol>,
+    where
+        S: Into<Symbol>,
     {
-        Self {
-            symbol: symbol.into(),
-            fees,
-        }
+        Self { symbol: symbol.into(), fees }
     }
 }

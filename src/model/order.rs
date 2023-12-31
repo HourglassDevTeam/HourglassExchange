@@ -4,8 +4,8 @@ use std::{
 };
 
 use cerebro_integration::model::{
-    Exchange,
-    instrument::{Instrument, symbol::Symbol}, Side,
+    instrument::{symbol::Symbol, Instrument},
+    Exchange, Side,
 };
 use serde::{Deserialize, Serialize};
 
@@ -26,10 +26,10 @@ impl Display for OrderKind {
             f,
             "{}",
             match self {
-                OrderKind::Market => "market",
-                OrderKind::Limit => "limit",
-                OrderKind::PostOnly => "post_only",
-                OrderKind::ImmediateOrCancel => "immediate_or_cancel",
+                | OrderKind::Market => "market",
+                | OrderKind::Limit => "limit",
+                | OrderKind::PostOnly => "post_only",
+                | OrderKind::ImmediateOrCancel => "immediate_or_cancel",
             }
         )
     }
@@ -57,11 +57,8 @@ pub struct RequestOpen {
 impl Order<RequestOpen> {
     pub fn required_available_balance(&self) -> (&Symbol, f64) {
         match self.side {
-            Side::Buy => (
-                &self.instrument.quote,
-                self.state.price * self.state.quantity,
-            ),
-            Side::Sell => (&self.instrument.base, self.state.quantity),
+            | Side::Buy => (&self.instrument.quote, self.state.price * self.state.quantity),
+            | Side::Sell => (&self.instrument.base, self.state.quantity),
         }
     }
 }
@@ -109,33 +106,23 @@ pub enum OrderFill {
 
 impl Ord for Order<Open> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or_else(|| {
-            panic!(
-                "[TideBroker] : {:?}.partial_cmp({:?}) impossible",
-                self, other
-            )
-        })
+        self.partial_cmp(other)
+            .unwrap_or_else(|| panic!("[TideBroker] : {:?}.partial_cmp({:?}) impossible", self, other))
     }
 }
 
 impl PartialOrd for Order<Open> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self.side, other.side) {
-            (Side::Buy, Side::Buy) => match self.state.price.partial_cmp(&other.state.price)? {
-                Ordering::Equal => self
-                    .state
-                    .remaining_quantity()
-                    .partial_cmp(&other.state.remaining_quantity()),
-                non_equal => Some(non_equal),
+            | (Side::Buy, Side::Buy) => match self.state.price.partial_cmp(&other.state.price)? {
+                | Ordering::Equal => self.state.remaining_quantity().partial_cmp(&other.state.remaining_quantity()),
+                | non_equal => Some(non_equal),
             },
-            (Side::Sell, Side::Sell) => match other.state.price.partial_cmp(&self.state.price)? {
-                Ordering::Equal => other
-                    .state
-                    .remaining_quantity()
-                    .partial_cmp(&self.state.remaining_quantity()),
-                non_equal => Some(non_equal),
+            | (Side::Sell, Side::Sell) => match other.state.price.partial_cmp(&self.state.price)? {
+                | Ordering::Equal => other.state.remaining_quantity().partial_cmp(&self.state.remaining_quantity()),
+                | non_equal => Some(non_equal),
             },
-            _ => None,
+            | _ => None,
         }
     }
 }
@@ -361,13 +348,13 @@ mod tests {
         for (index, test) in tests.into_iter().enumerate() {
             let actual = test.input_one.partial_cmp(&test.input_two);
             match (actual, test.expected) {
-                (None, None) => {
+                | (None, None) => {
                     // Test passed
                 }
-                (Some(actual), Some(expected)) => {
+                | (Some(actual), Some(expected)) => {
                     assert_eq!(actual, expected, "TC{} failed", index)
                 }
-                (actual, expected) => {
+                | (actual, expected) => {
                     // Test failed
                     panic!("[TideBroker] : TC{index} failed because actual != expected. \nActual: {actual:?}\nExpected: {expected:?}\n");
                 }

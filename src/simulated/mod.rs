@@ -22,18 +22,8 @@ pub mod execution;
 pub enum SimulatedEvent {
     FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>),
     FetchBalances(oneshot::Sender<Result<Vec<SymbolBalance>, ExecutionError>>),
-    OpenOrders(
-        (
-            Vec<Order<RequestOpen>>,
-            oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>,
-        ),
-    ),
-    CancelOrders(
-        (
-            Vec<Order<RequestCancel>>,
-            oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>,
-        ),
-    ),
+    OpenOrders((Vec<Order<RequestOpen>>, oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>)),
+    CancelOrders((Vec<Order<RequestCancel>>, oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)),
     CancelOrdersAll(oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>),
     MarketTrade((Instrument, PublicTrade)),
 }

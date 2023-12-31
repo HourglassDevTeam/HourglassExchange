@@ -2,7 +2,7 @@ use cerebro_integration::model::instrument::symbol::Symbol;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::model::{ClientOrderId, order::OrderKind};
+use crate::model::{order::OrderKind, ClientOrderId};
 
 /// 表示执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, Eq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
