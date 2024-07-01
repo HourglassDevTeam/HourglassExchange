@@ -15,13 +15,12 @@ pub mod balance; // 定义balance模块
 pub mod order; // 定义订单模块
 pub mod trade; // 定义交易模块
 
-/// Normalised  [`AccountEvent`] containing metadata about the included
-/// [`AccountEventKind`] variant. Produced by [`ExecutionClients`](crate::ExecutionClient).
-/// 标准化的[`AccountEvent`]，包含了相关[`AccountEventKind`]变体的元数据。由[`ExecutionClients`](crate::ExecutionClient)生成。
 
+/// 标准化的[`AccountEvent`]，包含了相关[`AccountEventKind`]变体的元数据。由[`ExecutionClients`](crate::ExecutionClient)生成。
+/// NOTE: 如果需要记录交易所的时间戳，可以在 AccountEvent 结构中添加一个专门的字段来表示交易所的时间，例如：    pub exchange: Exchange
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AccountEvent {
-    pub received_time: DateTime<Utc>, // 接收时间
+    pub received_time: DateTime<Utc>, // 客户端接收到事件的时间
     pub exchange: Exchange,           // 交易所
     pub kind: AccountEventKind,       // 事件类型
 }
