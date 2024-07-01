@@ -106,7 +106,7 @@ pub enum OrderFill {
 impl Ord for Order<Open> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other)
-            .unwrap_or_else(|| panic!("[UnilinkExecution] : {:?}.partial_cmp({:?}) impossible", self, other))
+            .unwrap_or_else(|| panic!("[UniLinkExecution] : {:?}.partial_cmp({:?}) impossible", self, other))
     }
 }
 
@@ -355,7 +355,7 @@ mod tests {
                 }
                 | (actual, expected) => {
                     // Test failed
-                    panic!("[UnilinkExecution] : TC{index} failed because actual != expected. \nActual: {actual:?}\nExpected: {expected:?}\n");
+                    panic!("[UniLinkExecution] : TC{index} failed because actual != expected. \nActual: {actual:?}\nExpected: {expected:?}\n");
                 }
             }
         }
