@@ -18,7 +18,6 @@ pub struct SimulatedExecution {
 impl ExecutionClient for SimulatedExecution {
     const CLIENT: ExecutionId = ExecutionId::Simulated;
     type Config = mpsc::UnboundedSender<SimulatedEvent>;
-
     async fn init(request_tx: Self::Config, _: mpsc::UnboundedSender<AccountEvent>) -> Self {
         Self { request_tx }
     }
