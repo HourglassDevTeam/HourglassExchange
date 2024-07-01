@@ -95,7 +95,7 @@ impl ExecutionId {
     pub fn as_str(&self) -> &'static str {
         match self {
             | ExecutionId::Simulated => "simulated",
-            | ExecutionId::Ftx => "ftx",
+            | ExecutionId::Ftx => "okx",
         }
     }
 }
@@ -145,7 +145,7 @@ pub mod test_util {
         }
     }
 
-    /// 生成一个公开的交易记录。
+    /// 生成一个public_trade记录。
     /// 接收买卖方向、价格和数量，返回一个`PublicTrade`类型的实例。
     pub fn public_trade(side: Side, price: f64, amount: f64) -> PublicTrade {
         PublicTrade {
@@ -156,7 +156,7 @@ pub mod test_util {
         }
     }
 
-    /// 创建一个交易实例。
+    /// 创建一个trade实例。
     /// 接收交易ID、买卖方向、价格、数量和费用，返回一个`Trade`类型的实例。
     pub fn trade(id: TradeId, side: Side, price: f64, quantity: f64, fees: SymbolFees) -> Trade {
         Trade {
