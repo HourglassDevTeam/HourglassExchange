@@ -28,9 +28,7 @@ impl ExecutionClient for SimulatedExecution {
     }
 
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError> {
-        // 使用 Oneshot 通道与模拟交易所通信
         let (response_tx, response_rx) = oneshot::channel();
-        // 向模拟交易所发送获取开放订单的请求。
         self.request_tx
             .send(SimulatedEvent::FetchOrdersOpen(response_tx))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送获取开放订单FetchOrdersOpen请求失败");
@@ -41,9 +39,7 @@ impl ExecutionClient for SimulatedExecution {
     }
 
     async fn fetch_balances(&self) -> Result<Vec<SymbolBalance>, ExecutionError> {
-        // 使用 Oneshot 通道与模拟交易所通信
         let (response_tx, response_rx) = oneshot::channel();
-        // 向模拟交易所发送获取账户余额的请求。
         self.request_tx
             .send(SimulatedEvent::FetchBalances(response_tx))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送获取账户余额 FetchBalances 请求失败");
@@ -54,9 +50,7 @@ impl ExecutionClient for SimulatedExecution {
     }
 
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>> {
-        // 创建一个 oneshot 通道以与模拟交易所通信。
         let (response_tx, response_rx) = oneshot::channel();
-        // 向模拟交易所发送开启订单的请求。
         self.request_tx
             .send(SimulatedEvent::OpenOrders((open_requests, response_tx)))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送 OpenOrders 请求失败");
@@ -65,9 +59,7 @@ impl ExecutionClient for SimulatedExecution {
     }
 
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>> {
-        // 创建一个 oneshot 通道以与模拟交易所通信。
         let (response_tx, response_rx) = oneshot::channel();
-        // 向模拟交易所发送取消订单的请求。
         self.request_tx
             .send(SimulatedEvent::CancelOrders((cancel_requests, response_tx)))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送 CancelOrders 请求失败");
@@ -76,9 +68,7 @@ impl ExecutionClient for SimulatedExecution {
     }
 
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError> {
-        // 创建一个 oneshot 通道以与模拟交易所通信。
         let (response_tx, response_rx) = oneshot::channel();
-        // 向模拟交易所发送取消所有订单的请求。
         self.request_tx
             .send(SimulatedEvent::CancelOrdersAll(response_tx))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送 CancelOrdersAll 请求失败");
