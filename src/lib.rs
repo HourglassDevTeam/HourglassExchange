@@ -6,12 +6,7 @@
 // 标准化：允许您的策略使用相同的接口与每个真实或模拟的交易所进行通信。
 // 可扩展：TideBroker具有高度可扩展性，使其易于通过添加新的交易所集成。
 
-#![warn(
-    missing_debug_implementations,
-    missing_copy_implementations,
-    rust_2018_idioms,
-    // missing_docs
-)]
+
 #![allow(clippy::type_complexity)]
 
 use std::fmt::{Display, Formatter};
