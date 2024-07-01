@@ -82,7 +82,7 @@ impl ClientAccount {
         // Send AccountEvents to client
         self.event_account_tx
             .send(balance_event)
-            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
+            .expect("[UnilinkExecution] : Client is offline - failed to send AccountEvent::Balance");
 
         self.event_account_tx
             .send(AccountEvent {
@@ -90,7 +90,7 @@ impl ClientAccount {
                 exchange: Exchange::from(ExecutionId::Simulated),
                 kind: AccountEventKind::OrdersNew(vec![open.clone()]),
             })
-            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
+            .expect("[UnilinkExecution] : Client is offline - failed to send AccountEvent::Trade");
 
         Ok(open)
     }
@@ -157,7 +157,7 @@ impl ClientAccount {
                 exchange: Exchange::from(ExecutionId::Simulated),
                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
             })
-            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
+            .expect("[UnilinkExecution] : Client is offline - failed to send AccountEvent::Trade");
 
         self.event_account_tx
             .send(AccountEvent {
@@ -165,7 +165,7 @@ impl ClientAccount {
                 exchange: Exchange::from(ExecutionId::Simulated),
                 kind: AccountEventKind::Balance(balance_event),
             })
-            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
+            .expect("[UnilinkExecution] : Client is offline - failed to send AccountEvent::Balance");
 
         Ok(cancelled)
     }
@@ -199,7 +199,7 @@ impl ClientAccount {
                 exchange: Exchange::from(ExecutionId::Simulated),
                 kind: AccountEventKind::OrdersCancelled(cancelled_orders.clone()),
             })
-            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::OrdersCancelled");
+            .expect("[UnilinkExecution] : Client is offline - failed to send AccountEvent::OrdersCancelled");
 
         self.event_account_tx
             .send(AccountEvent {
@@ -207,7 +207,7 @@ impl ClientAccount {
                 exchange: Exchange::from(ExecutionId::Simulated),
                 kind: AccountEventKind::Balances(balance_updates),
             })
-            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balances");
+            .expect("[UnilinkExecution] : Client is offline - failed to send AccountEvent::Balances");
 
         respond_with_latency(self.latency, response_tx, Ok(cancelled_orders))
     }
@@ -244,7 +244,7 @@ impl ClientAccount {
 
             self.event_account_tx
                 .send(balances_event)
-                .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balances");
+                .expect("[UnilinkExecution] : Client is offline - failed to send AccountEvent::Balances");
 
             self.event_account_tx
                 .send(AccountEvent {
@@ -252,7 +252,7 @@ impl ClientAccount {
                     exchange: Exchange::from(ExecutionId::Simulated),
                     kind: AccountEventKind::Trade(trade),
                 })
-                .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
+                .expect("[UnilinkExecution] : Client is offline - failed to send AccountEvent::Trade");
         }
     }
 }
@@ -267,7 +267,7 @@ where
         tokio::time::sleep(latency).await;
         response_tx
             .send(response)
-            .expect("[TideBroker] : SimulatedExchange failed to send oneshot response to execution request")
+            .expect("[UnilinkExecution] : SimulatedExchange failed to send oneshot response to execution request")
     });
 }
 

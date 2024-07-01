@@ -43,10 +43,10 @@ pub(super) async fn run_default_exchange(
                 .instruments(instruments)
                 .balances(balances)
                 .build()
-                .expect("[TideBroker] : 【Cerebrofailed to build ClientAccount"),
+                .expect("[UnilinkExecution] : 【Cerebrofailed to build ClientAccount"),
         )
         .build()
-        .expect("[TideBroker] : failed to build SimulatedExchange")
+        .expect("[UnilinkExecution] : failed to build SimulatedExchange")
         .run()
         .await
 }
