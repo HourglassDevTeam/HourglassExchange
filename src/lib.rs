@@ -1,11 +1,6 @@
 // TideBroker
-//
 // 高性能和标准化的交易接口，能够在多个金融场所执行交易。同时提供一个功能丰富的模拟交易所，以协助进行回测和干式交易。通过初始化其关联的ExecutionClient实例与交易所进行通信。
-// 特性
-// 简单易用：ExecutionClient trait 提供了一个统一且简单的语言，用于与交易所进行交互。
-// 标准化：允许您的策略使用相同的接口与每个真实或模拟的交易所进行通信。
-// 可扩展：TideBroker具有高度可扩展性，使其易于通过添加新的交易所集成。
-
+// ExecutionClient trait 提供了一个统一且简单的语言，用于与交易所进行交互。
 
 #![allow(clippy::type_complexity)]
 
@@ -27,14 +22,11 @@ use crate::{
 
 /// 在实时、干运行或模拟执行过程中产生的错误。
 pub mod error;
-
 /// 支持在交易所执行操作的核心数据结构。
 /// 例如：`Order`（订单）、`Balance`（余额）、`Trade`（交易）等。
 pub mod model;
-
 /// 为官方交易所实现的[`ExecutionClient`]。
 pub mod execution;
-
 /// 模拟交易所及其关联的模拟[`ExecutionClient`]。
 pub mod simulated;
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
@@ -49,17 +41,9 @@ pub trait ExecutionClient {
     /// 通常包括启动一个异步WebSocket事件循环以从交易所接收[`AccountEvent`]，
     /// 同时返回HTTP客户端`Self`。
     async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<AccountEvent>) -> Self;
-
-    /// 获取账户中的[`Order<Open>`]（未完成订单）。
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>;
-
-    /// 获取账户的[`SymbolBalance`]（符号余额）。
     async fn fetch_balances(&self) -> Result<Vec<SymbolBalance>, ExecutionError>;
-
-    /// 打开订单。
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>;
-
-    /// 取消[`Order<Open>`]（未完成订单）。
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>>;
 
     /// 取消所有账户中的[`Order<Open>`]（未完成订单）。
