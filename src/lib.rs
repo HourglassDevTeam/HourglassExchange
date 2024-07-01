@@ -1,4 +1,3 @@
-// TideBroker
 // 高性能和标准化的交易接口，能够在多个金融场所执行交易。同时提供一个功能丰富的模拟交易所，以协助进行回测和干式交易。通过初始化其关联的ExecutionClient实例与交易所进行通信。
 // ExecutionClient trait 提供了一个统一且简单的语言，用于与交易所进行交互。
 
@@ -25,9 +24,7 @@ pub mod error;
 /// 支持在交易所执行操作的核心数据结构。
 /// 例如：`Order`（订单）、`Balance`（余额）、`Trade`（交易）等。
 pub mod model;
-/// 为官方交易所实现的[`ExecutionClient`]。
 pub mod execution;
-/// 模拟交易所及其关联的模拟[`ExecutionClient`]。
 pub mod simulated;
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
