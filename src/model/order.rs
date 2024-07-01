@@ -11,7 +11,6 @@ use serde::{Deserialize, Serialize};
 
 use super::ClientOrderId;
 
-/// Type of [`Order`].
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub enum OrderKind {
     Market,
