@@ -12,21 +12,89 @@ use std::{
 /// 订单类型枚举
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub enum OrderKind {
-    Market,            // 市价单
-    Limit,             // 限价单
-    PostOnly,          // 仅挂单
-    ImmediateOrCancel, // 立即或取消
-    FillOrKill,        // 全成或全撤单
+    /// 市价单
+    /// 行为：以当前市场价格立即执行订单。
+    Market,
+    /// 限价单
+    /// 行为：订单只有在达到指定价格或更好的价格时才会执行。
+    Limit,
+    /// 仅挂单
+    /// 行为：订单只会添加到订单簿，不会立即与现有订单匹配。如果订单会立即执行，则会被取消。
+    /// 优点：确保订单会作为挂单存在，通常用于提供流动性。
+    /// 缺点：无法立即执行订单。
+    /// 应用场景：当希望成为市场的流动性提供者，并且不希望订单立即执行时使用。
+    PostOnly,
+    /// 立即或取消
+    /// 行为：订单会尽快以指定价格或更好的价格部分或全部执行，未执行的部分会被取消。
+    /// 优点：确保订单能尽快执行，不会成为挂单。
+    /// 缺点：部分订单可能被取消，未能全部执行。
+    /// 应用场景：当希望订单尽快执行，但不希望部分订单留在订单簿上时使用。
+    ImmediateOrCancel,
+    /// 全成或全撤单
+    /// 行为：订单必须立即完全执行，否则将被取消。
+    /// 优点：确保订单要么全部执行，要么完全取消。
+    /// 缺点：如果无法完全执行，订单会被取消。
+    /// 应用场景：当希望订单立即完全执行，而不是部分执行时使用。
+    FillOrKill,
+    /// 有效直到取消
+    /// 行为：订单将一直保持有效，直到被执行或手动取消。
+    /// 优点：订单不会因时间限制而过期。
+    /// 缺点：订单可能会长期挂在订单簿上。
+    /// 应用场景：当希望订单在达到指定价格时被执行，而不考虑时间限制时使用。
+    GoodTilCancelled,
+    /// 当日有效
+    /// 行为：订单在当天有效，如果当天未执行，则会被取消。
+    /// 优点：订单在当天有效，避免长期挂单。
+    /// 缺点：如果当天未能执行，订单会被取消。
+    /// 应用场景：当希望订单在当天被执行，如果未执行则自动取消时使用。
+    GoodForDay,
+    /// 止损单
+    /// 行为：当市场价格达到预设的触发价格时，订单会变成市价单。
+    /// 优点：帮助限制损失或保护利润。
+    /// 缺点：在市场剧烈波动时，执行价格可能会有所不同。
+    /// 应用场景：用于设置止损点，保护投资免受过大损失。
+    Stop,
+    /// 止损限价单
+    /// 行为：当市场价格达到预设的触发价格时，订单会变成限价单。
+    /// 优点：结合了止损单和限价单的优点，控制执行价格。
+    /// 缺点：如果市场价格快速波动，可能无法执行。
+    /// 应用场景：希望在达到止损点时以特定价格或更好的价格执行订单。
+    StopLimit,
+    /// 跟踪止损单
+    /// 行为：止损价格会随着市场价格的变动而调整，保持一定的距离。
+    /// 优点：在锁定利润的同时，随着市场价格的变动，调整止损价格。
+    /// 缺点：可能在市场剧烈波动时触发。
+    /// 应用场景：在市场趋势有利时保护利润。
+    TrailingStop,
+    /// 冰山订单
+    /// 行为：大订单分成多个小订单逐步显示在市场上。
+    /// 优点：隐藏大订单的实际规模，减少对市场价格的影响。
+    /// 缺点：可能增加执行时间。
+    /// 应用场景：希望大订单逐步执行，减少对市场影响时使用。
+    Iceberg,
+    /// 互撤单 NOTE that this might not be plausible as OCO is  actually a dual order.
+    /// 行为：同时设置两个订单，如果其中一个被触发执行，另一个自动取消。
+    /// 优点：管理风险和锁定利润。
+    /// 缺点：需要设置两个订单。
+    /// 应用场景：设置止损和止盈点，同时管理风险和收益。
+    OneCancelsOther,
 }
 
 impl Display for OrderKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
-            | OrderKind::Market => "market",
-            | OrderKind::Limit => "limit",
-            | OrderKind::PostOnly => "post_only",
-            | OrderKind::ImmediateOrCancel => "immediate_or_cancel(IOC)",
-            | OrderKind::FillOrKill => "fill_or_kill (FOK)",
+            OrderKind::Market => "market",
+            OrderKind::Limit => "limit",
+            OrderKind::PostOnly => "post_only",
+            OrderKind::ImmediateOrCancel => "immediate_or_cancel (IOC)",
+            OrderKind::FillOrKill => "fill_or_kill (FOK)",
+            OrderKind::GoodTilCancelled => "good_til_cancelled (GTC)",
+            OrderKind::GoodForDay => "good_for_day (GFD)",
+            OrderKind::Stop => "stop",
+            OrderKind::StopLimit => "stop_limit",
+            OrderKind::TrailingStop => "trailing_stop",
+            OrderKind::Iceberg => "iceberg",
+            OrderKind::OneCancelsOther => "one_cancels_other (OCO)",
         })
     }
 }
