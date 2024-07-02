@@ -366,31 +366,37 @@ mod tests {
             },
             TestCase {
                 // TC5: No matches for trade with open bids and asks
-                orders: client_orders(
-                    0,
-                    vec![order_open(cid, Side::Buy, 50.0, 1.0, 0.0)],
-                    vec![order_open(cid, Side::Sell, 150.0, 1.0, 0.0)],
-                ),
+                orders: client_orders(0, vec![order_open(cid, Side::Buy, 50.0, 1.0, 0.0)], vec![order_open(
+                    cid,
+                    Side::Sell,
+                    150.0,
+                    1.0,
+                    0.0,
+                )]),
                 input_trade: public_trade(Side::Buy, 100.0, 1.0),
                 expected: None,
             },
             TestCase {
                 // TC6: Trade matches bid & ask (same price), so take larger quantity bid
-                orders: client_orders(
-                    0,
-                    vec![order_open(cid, Side::Buy, 100.0, 100.0, 0.0)],
-                    vec![order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
-                ),
+                orders: client_orders(0, vec![order_open(cid, Side::Buy, 100.0, 100.0, 0.0)], vec![order_open(
+                    cid,
+                    Side::Sell,
+                    100.0,
+                    1.0,
+                    0.0,
+                )]),
                 input_trade: public_trade(Side::Buy, 100.0, 1.0),
                 expected: Some(Side::Buy),
             },
             TestCase {
                 // TC6: Trade matches bid & ask (same price), so take larger quantity ask
-                orders: client_orders(
-                    0,
-                    vec![order_open(cid, Side::Buy, 100.0, 1.0, 0.0)],
-                    vec![order_open(cid, Side::Sell, 100.0, 100.0, 0.0)],
-                ),
+                orders: client_orders(0, vec![order_open(cid, Side::Buy, 100.0, 1.0, 0.0)], vec![order_open(
+                    cid,
+                    Side::Sell,
+                    100.0,
+                    100.0,
+                    0.0,
+                )]),
                 input_trade: public_trade(Side::Buy, 100.0, 1.0),
                 expected: Some(Side::Sell),
             },
@@ -499,11 +505,10 @@ mod tests {
         let tests = vec![
             TestCase {
                 // TC0: Best ask matches the PublicTrade w/ a full-fill
-                orders: client_orders(
-                    0,
-                    vec![],
-                    vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0), order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
-                ),
+                orders: client_orders(0, vec![], vec![
+                    order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
+                    order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
+                ]),
                 input_trade: public_trade(Side::Buy, 100.0, 1.0),
                 input_fees_percent: 0.1,
                 expected_orders: client_orders(1, vec![], vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0)]),
@@ -517,11 +522,10 @@ mod tests {
             },
             TestCase {
                 // TC1: Two asks match the PublicTrade w/ two full-fills
-                orders: client_orders(
-                    0,
-                    vec![],
-                    vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0), order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
-                ),
+                orders: client_orders(0, vec![], vec![
+                    order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
+                    order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
+                ]),
                 input_trade: public_trade(Side::Buy, 200.0, 2.0),
                 input_fees_percent: 0.1,
                 expected_orders: client_orders(2, vec![], vec![]),
@@ -544,11 +548,10 @@ mod tests {
             },
             TestCase {
                 // TC2: Two asks match the PublicTrade w/ one full-fill & one partial-fill
-                orders: client_orders(
-                    0,
-                    vec![],
-                    vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0), order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
-                ),
+                orders: client_orders(0, vec![], vec![
+                    order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
+                    order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
+                ]),
                 input_trade: public_trade(Side::Sell, 200.0, 1.5),
                 input_fees_percent: 0.1,
                 expected_orders: client_orders(2, vec![], vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.5)]),
@@ -571,18 +574,16 @@ mod tests {
             },
             TestCase {
                 // TC3: No asks match the PublicTrade
-                orders: client_orders(
-                    0,
-                    vec![],
-                    vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0), order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
-                ),
+                orders: client_orders(0, vec![], vec![
+                    order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
+                    order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
+                ]),
                 input_trade: public_trade(Side::Sell, 1.0, 1.0),
                 input_fees_percent: 0.1,
-                expected_orders: client_orders(
-                    0,
-                    vec![],
-                    vec![order_open(cid, Side::Sell, 200.0, 1.0, 0.0), order_open(cid, Side::Sell, 100.0, 1.0, 0.0)],
-                ),
+                expected_orders: client_orders(0, vec![], vec![
+                    order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
+                    order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
+                ]),
                 expected_trades: vec![],
             },
         ];

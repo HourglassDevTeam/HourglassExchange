@@ -1,7 +1,7 @@
-use std::{fmt::Debug, time::Duration};
 use cerebro_data::subscription::trade::PublicTrade;
 use cerebro_integration::model::{instrument::Instrument, Exchange, Side};
 use chrono::Utc;
+use std::{fmt::Debug, time::Duration};
 use tokio::sync::{mpsc, oneshot};
 use tracing::warn;
 

@@ -1,47 +1,44 @@
-use std::{
-    cmp::Ordering,
-    fmt::{Display, Formatter},
-};
+use super::ClientOrderId;
 use cerebro_integration::model::{
     instrument::{symbol::Symbol, Instrument},
     Exchange, Side,
 };
 use serde::{Deserialize, Serialize};
-use super::ClientOrderId;
+use std::{
+    cmp::Ordering,
+    fmt::{Display, Formatter},
+};
 
 /// 订单类型枚举
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub enum OrderKind {
-    Market,                // 市价单
-    Limit,                 // 限价单
-    PostOnly,              // 仅挂单
-    ImmediateOrCancel,     // 立即或取消
+    Market,            // 市价单
+    Limit,             // 限价单
+    PostOnly,          // 仅挂单
+    ImmediateOrCancel, // 立即或取消
+    FillOrKill,        // 全成或全撤单
 }
 
 impl Display for OrderKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                | OrderKind::Market => "market",
-                | OrderKind::Limit => "limit",
-                | OrderKind::PostOnly => "post_only",
-                | OrderKind::ImmediateOrCancel => "immediate_or_cancel",
-            }
-        )
+        write!(f, "{}", match self {
+            | OrderKind::Market => "market",
+            | OrderKind::Limit => "limit",
+            | OrderKind::PostOnly => "post_only",
+            | OrderKind::ImmediateOrCancel => "immediate_or_cancel(IOC)",
+            | OrderKind::FillOrKill => "fill_or_kill (FOK)",
+        })
     }
 }
-
 
 /// 订单结构体，注意State在这里是泛型
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State> {
-    pub exchange: Exchange,        // 交易所
-    pub instrument: Instrument,    // 交易工具
-    pub cid: ClientOrderId,        // 客户端订单ID
-    pub side: Side,                // 买卖方向
-    pub state: State,              // 订单状态
+    pub exchange: Exchange,     // 交易所
+    pub instrument: Instrument, // 交易工具
+    pub cid: ClientOrderId,     // 客户端订单ID
+    pub side: Side,             // 买卖方向
+    pub state: State,           // 订单状态
 }
 
 /// 订单初始状态。发送到ExecutionClient进行操作
