@@ -58,15 +58,14 @@ impl ClientAccount {
         respond_with_latency(self.latency, response_tx, open_results);
     }
 
-    /// 执行开仓订单请求，将其添加到 [`ClientOrders`] 并更新相关的
-    /// [`Balance`]。发送新订单和余额更新的 [`AccountEvent`]。
+    /// try_open_order_atomic 是底层开仓执行函数，用于执行单个开仓订单请求。
     pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError> {
         Self::check_order_kind_support(request.state.kind)?;
 
         // Calculate required available balance to open order
         let (symbol, required_balance) = request.required_available_balance();
 
-        // Check available balance is sufficient
+        // 计算开仓订单所需的可用余额，并检查余额是否充足。
         self.balances.has_sufficient_available_balance(symbol, required_balance)?;
 
         // Build Open<Order>
