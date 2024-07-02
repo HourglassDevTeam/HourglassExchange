@@ -171,6 +171,8 @@ impl Ord for Order<Open> {
     }
 }
 
+/// partial_cmp 方法返回一个 Option<Ordering>，
+/// 它表示两个值的部分比较结果。Option<Ordering> 可以有以下几种可能的值：
 impl PartialOrd for Order<Open> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self.side, other.side) {
