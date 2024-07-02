@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 
 // 引入序列化和反序列化库
 
-/// [`Balance`] associated with a [`Symbol`].
 /// 与[`Symbol`]相关联的[`Balance`]。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct SymbolBalance {
@@ -13,7 +12,6 @@ pub struct SymbolBalance {
 }
 
 impl SymbolBalance {
-    /// Construct a new [`SymbolBalance`] from a [`Symbol`] and it's associated [`Balance`].
     /// 从一个[`Symbol`]和它关联的[`Balance`]构造一个新的[`SymbolBalance`]。
     pub fn new<S>(symbol: S, balance: Balance) -> Self
     where
@@ -34,19 +32,16 @@ pub struct Balance {
 }
 
 impl Balance {
-    /// Construct a new [`Balance`].
     /// 构造一个新的[`Balance`]。
     pub fn new(total: f64, available: f64) -> Self {
         Self { total, available }
     }
 
-    /// Calculate the used (`total` - `available`) balance.
     /// 计算使用过的余额（`total` - `available`）。
     pub fn used(&self) -> f64 {
         self.total - self.available
     }
 
-    /// Apply a [`BalanceDelta`] to this [`Balance`].
     /// 对这个[`Balance`]应用一个[`BalanceDelta`]。
     pub fn apply(&mut self, delta: BalanceDelta) {
         self.total += delta.total;
@@ -54,8 +49,7 @@ impl Balance {
     }
 }
 
-/// Communicates a change to be applied to a [`Balance`];
-/// 传达要应用于[`Balance`]的变更；
+/// 可应用于[`Balance`]的变更；
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct BalanceDelta {
     pub total: f64,     // 总额变化
