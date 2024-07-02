@@ -77,7 +77,7 @@ pub enum OrderKind {
     /// 优点：管理风险和锁定利润。
     /// 缺点：需要设置两个订单。
     /// 应用场景：设置止损和止盈点，同时管理风险和收益。
-    OneCancelsOther,
+    // OneCancelsOther,
 }
 
 impl Display for OrderKind {
@@ -94,7 +94,7 @@ impl Display for OrderKind {
             OrderKind::StopLimit => "stop_limit",
             OrderKind::TrailingStop => "trailing_stop",
             OrderKind::Iceberg => "iceberg",
-            OrderKind::OneCancelsOther => "one_cancels_other (OCO)",
+            // OrderKind::OneCancelsOther => "one_cancels_other (OCO)",
         })
     }
 }
