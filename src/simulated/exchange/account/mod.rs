@@ -62,23 +62,23 @@ impl ClientAccount {
     pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError> {
         Self::check_order_kind_support(request.state.kind)?;
 
-        // Calculate required available balance to open order
+        // 计算开仓订单所需的可用余额
         let (symbol, required_balance) = request.required_available_balance();
 
         // 计算开仓订单所需的可用余额，并检查余额是否充足。
         self.balances.has_sufficient_available_balance(symbol, required_balance)?;
 
-        // Build Open<Order>
+        // 构建 Open<Order>
         let open = self.orders.build_order_open(request);
 
-        // Retrieve client Instrument Orders
+        // 检索客户端的 Instrument Orders
         let orders = self.orders.orders_mut(&open.instrument)?;
 
-        // Now that fallible operations have succeeded, mutate ClientBalances & ClientOrders
+        // 由于易出错操作已成功，修改 ClientBalances 和 ClientOrders
         orders.add_order_open(open.clone());
         let balance_event = self.balances.update_from_open(&open, required_balance);
 
-        // Send AccountEvents to client
+        // 向客户端发送 AccountEvents
         self.event_account_tx
             .send(balance_event)
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Balance");
