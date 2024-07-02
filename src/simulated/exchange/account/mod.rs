@@ -39,17 +39,17 @@ impl ClientAccount {
         ClientAccountBuilder::new()
     }
 
-    /// 发送每个 [`Instrument`] 的每个 [`Order<Open>`] 给客户端。
+    /// 客户端发送每个 [`Instrument`] 的每个 [`Order<Open>`] 给客户端。
     pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>) {
         respond_with_latency(self.latency, response_tx, Ok(self.orders.fetch_all()));
     }
 
-    /// 发送每个 [`Symbol`](cerebro_integration::model::Symbol) 的 [`Balance`] 给客户端。
+    /// 客户端发送每个 [`Symbol`](cerebro_integration::model::Symbol) 的 [`Balance`] 给客户端。
     pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<SymbolBalance>, ExecutionError>>) {
         respond_with_latency(self.latency, response_tx, Ok(self.balances.fetch_all()));
     }
 
-    /// Execute open order requests and send the response via the provided [`oneshot::Sender`].
+    /// 执行开仓订单请求，并通过提供的 [`oneshot::Sender`] 发送响应。
     pub fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>) {
         let open_results = open_requests.into_iter().map(|request| self.try_open_order_atomic(request)).collect();
 
