@@ -2,21 +2,20 @@ use std::{
     cmp::Ordering,
     fmt::{Display, Formatter},
 };
-
 use cerebro_integration::model::{
     instrument::{symbol::Symbol, Instrument},
     Exchange, Side,
 };
 use serde::{Deserialize, Serialize};
-
 use super::ClientOrderId;
 
+/// 订单类型枚举
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub enum OrderKind {
-    Market,
-    Limit,
-    PostOnly,
-    ImmediateOrCancel,
+    Market,                // 市价单
+    Limit,                 // 限价单
+    PostOnly,              // 仅挂单
+    ImmediateOrCancel,     // 立即或取消
 }
 
 impl Display for OrderKind {
@@ -34,14 +33,15 @@ impl Display for OrderKind {
     }
 }
 
-/// Todo:
+
+/// 订单结构体，注意State在这里是泛型
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State> {
-    pub exchange: Exchange,
-    pub instrument: Instrument,
-    pub cid: ClientOrderId,
-    pub side: Side,
-    pub state: State,
+    pub exchange: Exchange,        // 交易所
+    pub instrument: Instrument,    // 交易工具
+    pub cid: ClientOrderId,        // 客户端订单ID
+    pub side: Side,                // 买卖方向
+    pub state: State,              // 订单状态
 }
 
 /// The initial state of an [`Order`]. Sent to the [`ExecutionClient`](crate::ExecutionClient) for
