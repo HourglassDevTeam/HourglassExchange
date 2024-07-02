@@ -72,12 +72,6 @@ pub enum OrderKind {
     /// 缺点：可能增加执行时间。
     /// 应用场景：希望大订单逐步执行，减少对市场影响时使用。
     Iceberg,
-    /// 互撤单 NOTE that this might not be plausible as OCO is  actually a dual order.
-    /// 行为：同时设置两个订单，如果其中一个被触发执行，另一个自动取消。
-    /// 优点：管理风险和锁定利润。
-    /// 缺点：需要设置两个订单。
-    /// 应用场景：设置止损和止盈点，同时管理风险和收益。
-    // OneCancelsOther,
 }
 
 impl Display for OrderKind {
@@ -94,7 +88,6 @@ impl Display for OrderKind {
             OrderKind::StopLimit => "stop_limit",
             OrderKind::TrailingStop => "trailing_stop",
             OrderKind::Iceberg => "iceberg",
-            // OrderKind::OneCancelsOther => "one_cancels_other (OCO)",
         })
     }
 }
