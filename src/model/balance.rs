@@ -26,12 +26,11 @@ impl SymbolBalance {
     }
 }
 
-/// Total and available balance values.
-/// 总余额和可用余额值。
+/// 总余额和可用余额。
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Balance {
     pub total: f64,     // 总额
-    pub available: f64, // 可用额
+    pub available: f64, // 可用余额
 }
 
 impl Balance {
