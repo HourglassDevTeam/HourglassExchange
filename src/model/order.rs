@@ -124,7 +124,7 @@ impl Order<RequestOpen> {
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct Pending;
 
-/// State of an [`Order`] after a request has been made for it to be [`Cancelled`].
+/// 请求取消订单的状态 NOTE 此处是否需要记录更多字段？
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct RequestCancel {
     pub id: OrderId,
@@ -139,7 +139,7 @@ where
     }
 }
 
-/// Todo:
+/// 打开状态的订单
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct Open {
     pub id: OrderId,
