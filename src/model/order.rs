@@ -124,7 +124,8 @@ impl Order<RequestOpen> {
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct Pending;
 
-/// 请求取消订单的状态 NOTE 此处是否需要记录更多字段？
+/// 在RequestCancel结构体中只记录OrderId的原因主要是因为取消订单操作通常只需要知道哪个订单需要被取消。
+/// 在大多数交易系统中，取消订单操作的主要任务是识别和定位要取消的订单，然后将取消请求发送给交易所或执行系统。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct RequestCancel {
     pub id: OrderId,
