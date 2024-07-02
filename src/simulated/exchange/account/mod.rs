@@ -7,7 +7,7 @@ use tracing::warn;
 
 use crate::{
     model::{
-        balance::{Balance, SymbolBalance},
+        balance::{Balance, TokenBalance},
         order::OrderKind,
         AccountEvent, AccountEventKind,
     },
@@ -45,7 +45,7 @@ impl ClientAccount {
     }
 
     /// 客户端发送每个 [`Symbol`](cerebro_integration::model::Symbol) 的 [`Balance`] 给客户端。
-    pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<SymbolBalance>, ExecutionError>>) {
+    pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>) {
         respond_with_latency(self.latency, response_tx, Ok(self.balances.fetch_all()));
     }
 

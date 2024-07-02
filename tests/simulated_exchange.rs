@@ -9,7 +9,7 @@ use uuid::Uuid;
 use tide_broker::{
     error::ExecutionError,
     model::{
-        balance::{Balance, SymbolBalance},
+        balance::{Balance, TokenBalance},
         order::OrderId,
         trade::{SymbolFees, Trade, TradeId},
         AccountEvent, AccountEventKind, ClientOrderId,
@@ -194,7 +194,7 @@ async fn test_3_open_limit_buy_order(client: &SimulatedExecution, test_3_ids: Id
         }) => {
             // 预期usdt Balance.available = 10_000 - (100.0 * 1.0)
             // Expected usdt Balance.available = 10_000 - (100.0 * 1.0)
-            let expected = SymbolBalance::new("usdt", Balance::new(10_000.0, 9_900.0));
+            let expected = TokenBalance::new("usdt", Balance::new(10_000.0, 9_900.0));
             assert_eq!(usdt_balance, expected);
         }
         | other => {
@@ -305,7 +305,7 @@ async fn test_5_cancel_buy_order(client: &SimulatedExecution, test_3_ids: Ids, e
         }) => {
             // 预期usdt Balance.available = 9_900 + (100.0 * 1.0)
             // Expected usdt Balance.available = 9_900 + (100.0 * 1.0)
-            let expected = SymbolBalance::new("usdt", Balance::new(10_000.0, 10_000.0));
+            let expected = TokenBalance::new("usdt", Balance::new(10_000.0, 10_000.0));
             assert_eq!(usdt_balance, expected);
         }
         | other => {
@@ -387,7 +387,7 @@ async fn test_6_open_2x_limit_buy_orders(
         }) => {
             // 预期usdt Balance.available = 10_000 - (100.0 * 1.0)
             // Expected usdt Balance.available = 10_000 - (100.0 * 1.0)
-            let expected = SymbolBalance::new("usdt", Balance::new(10_000.0, 9_900.0));
+            let expected = TokenBalance::new("usdt", Balance::new(10_000.0, 9_900.0));
             assert_eq!(usdt_balance, expected);
         }
         | other => {
@@ -419,7 +419,7 @@ async fn test_6_open_2x_limit_buy_orders(
         }) => {
             // 预期usdt Balance.available = 9_900 - (200.0 * 1.0)
             // Expected usdt Balance.available = 9_900 - (200.0 * 1.0)
-            let expected = SymbolBalance::new("usdt", Balance::new(10_000.0, 9_700.0));
+            let expected = TokenBalance::new("usdt", Balance::new(10_000.0, 9_700.0));
             assert_eq!(usdt_balance, expected);
         }
         | other => {
@@ -482,19 +482,19 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
             kind: AccountEventKind::Balances(balances),
             ..
         }) => {
-            // 应更新基础和报价SymbolBalances
-            // Base & Quote SymbolBalances should be updated
+            // 应更新基础和报价TokenBalances
+            // Base & Quote TokenBalances should be updated
             assert_eq!(balances.len(), 2);
 
             // 先检查基础余额：预期btc { total: 10.0 + 1.0 - 手续费, available: 10.0 + 1.0 - 手续费 }
             // Base Balance first: expected btc { total: 10.0 + 1.0 - fees, available: 10.0 + 1.0 - fees }
             let btc_fees = 1.0 * fees_50_percent();
-            let expected_btc = SymbolBalance::new("btc", Balance::new(10.0 + 1.0 - btc_fees, 10.0 + 1.0 - btc_fees));
+            let expected_btc = TokenBalance::new("btc", Balance::new(10.0 + 1.0 - btc_fees, 10.0 + 1.0 - btc_fees));
             assert_eq!(balances[0], expected_btc);
 
             // 然后检查报价余额：预期usdt Balance { total: 10_000 - 200, available: 9_700 }
             // Quote Balance second: expected usdt Balance { total: 10_000 - 200, available: 9_700 }
-            let expected_usdt = SymbolBalance::new("usdt", Balance::new(9_800.0, 9_700.0));
+            let expected_usdt = TokenBalance::new("usdt", Balance::new(9_800.0, 9_700.0));
             assert_eq!(balances[1], expected_usdt);
         }
         | other => {
@@ -614,7 +614,7 @@ async fn test_9_open_2x_limit_sell_orders(
         }) => {
             // 预期btc Balance.available = 10.5 - 1.0
             // Expected btc Balance.available = 10.5 - 1.0
-            let expected = SymbolBalance::new("btc", Balance::new(10.5, 10.5 - 1.0));
+            let expected = TokenBalance::new("btc", Balance::new(10.5, 10.5 - 1.0));
             assert_eq!(btc_balance, expected);
         }
         | other => {
@@ -646,7 +646,7 @@ async fn test_9_open_2x_limit_sell_orders(
         }) => {
             // 预期btc Balance.available = 9.5 - 1.0
             // Expected btc Balance.available = 9.5 - 1.0
-            let expected = SymbolBalance::new("btc", Balance::new(10.5, 9.5 - 1.0));
+            let expected = TokenBalance::new("btc", Balance::new(10.5, 9.5 - 1.0));
             assert_eq!(btc_balance, expected);
         }
         | other => {
@@ -712,20 +712,20 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
             kind: AccountEventKind::Balances(balances),
             ..
         }) => {
-            // 基础和报价SymbolBalances应该更新
-            // Base & Quote SymbolBalances should be updated
+            // 基础和报价TokenBalances应该更新
+            // Base & Quote TokenBalances should be updated
             assert_eq!(balances.len(), 2);
 
             // 首先检查基础余额：预期btc Balance { total: 10.5 - 1.0, available: 8.5 }
             // Base Balance first: expected btc Balance { total: 10.5 - 1.0, available: 8.5 }
-            let expected_btc = SymbolBalance::new("btc", Balance::new(10.5 - 1.0, 8.5));
+            let expected_btc = TokenBalance::new("btc", Balance::new(10.5 - 1.0, 8.5));
             assert_eq!(balances[0], expected_btc);
 
             // 然后检查报价余额：预期的usdt增加 = (500 * 1.0) - (500 * 1.0 * 0.5) = 500 - 250 = 250
             // Quote Balance second:
             // Expected usdt increase = (500 * 1.0) - (500 * 1.0 * 0.5) = 500 - 250 = 250
             // expected usdt Balance { total: 9_800 + 250, available: 9_700 + 250 }
-            let expected_usdt = SymbolBalance::new("usdt", Balance::new(10_050.0, 9_950.0));
+            let expected_usdt = TokenBalance::new("usdt", Balance::new(10_050.0, 9_950.0));
             assert_eq!(balances[1], expected_usdt);
         }
         | other => {
@@ -767,20 +767,20 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
             kind: AccountEventKind::Balances(balances),
             ..
         }) => {
-            // 基础和报价SymbolBalances应该更新
-            // Base & Quote SymbolBalances should be updated
+            // 基础和报价TokenBalances应该更新
+            // Base & Quote TokenBalances should be updated
             assert_eq!(balances.len(), 2);
 
             // 首先检查基础余额：预期btc Balance { total: 9.5 - 0.5, available: 8.5 }
             // Base Balance first: expected btc Balance { total: 9.5 - 0.5, available: 8.5 }
-            let expected_btc = SymbolBalance::new("btc", Balance::new(9.5 - 0.5, 8.5));
+            let expected_btc = TokenBalance::new("btc", Balance::new(9.5 - 0.5, 8.5));
             assert_eq!(balances[0], expected_btc);
 
             // 然后检查报价余额：预期的usdt增加 = (1000 * 0.5) - (1000 * 0.5 * 0.5) = 500 - 250 = 250
             // Quote Balance second:
             // Expected usdt increase = (1000 * 0.5) - (1000 * 0.5 * 0.5) = 500 - 250 = 250
             // expected usdt Balance { total: 10_050 + 250, available: 9_950 + 250 }
-            let expected_usdt = SymbolBalance::new("usdt", Balance::new(10_050.0 + 250.0, 9_950.0 + 250.0));
+            let expected_usdt = TokenBalance::new("usdt", Balance::new(10_050.0 + 250.0, 9_950.0 + 250.0));
             assert_eq!(balances[1], expected_usdt);
         }
         | other => {
@@ -880,22 +880,22 @@ async fn test_11_cancel_all_orders(
             kind: AccountEventKind::Balances(balances),
             ..
         }) => {
-            // 买单报价和卖单基础的SymbolBalances应更新
-            // SymbolBalances for Bid order quote, & ask order base should be updated
+            // 买单报价和卖单基础的TokenBalances应更新
+            // TokenBalances for Bid order quote, & ask order base should be updated
             assert_eq!(balances.len(), 2);
 
             // 先取消买单，因此首先更新余额
             // test_6_order_cid_1, Side::Buy, price=100.0, quantity=1.0
             // 因此，usdt Balance { total: 10_300, available: 10_200 + (100 * 1)
             // Bids are cancelled first, so balance is updated first
-            let expected_usdt = SymbolBalance::new("usdt", Balance::new(10_300.0, 10_200.0 + 100.0));
+            let expected_usdt = TokenBalance::new("usdt", Balance::new(10_300.0, 10_200.0 + 100.0));
             assert_eq!(balances[0], expected_usdt);
 
             // 然后取消卖单，因此随后更新余额
             // test_9_order_cid_2, Side::Sell, price=1000.0, quantity=1.0, filled=0.5
             // 因此，btc Balance { total: 9.0, available: 8.5 + 0.5 }
             // Asks are cancelled second, so balance is updated second
-            let expected_btc = SymbolBalance::new("btc", Balance::new(9.0, 8.5 + 0.5));
+            let expected_btc = TokenBalance::new("btc", Balance::new(9.0, 8.5 + 0.5));
             assert_eq!(balances[1], expected_btc);
         }
         | other => {
@@ -976,7 +976,7 @@ async fn test_13_fail_to_open_one_of_two_limits_with_insufficient_funds(
             ..
         }) => {
             // 预期btc Balance.available = 9.0 - 1.0
-            let expected = SymbolBalance::new("btc", Balance::new(9.0, 9.0 - 1.0));
+            let expected = TokenBalance::new("btc", Balance::new(9.0, 9.0 - 1.0));
             assert_eq!(btc_balance, expected);
         }
         | other => {

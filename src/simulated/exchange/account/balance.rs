@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     model::{
-        balance::{Balance, BalanceDelta, SymbolBalance},
+        balance::{Balance, BalanceDelta, TokenBalance},
         trade::Trade,
         AccountEvent, AccountEventKind,
     },
@@ -34,11 +34,11 @@ impl ClientBalances {
     }
 
     /// Fetch the client [`Balance`] for every [`Symbol``].
-    pub fn fetch_all(&self) -> Vec<SymbolBalance> {
+    pub fn fetch_all(&self) -> Vec<TokenBalance> {
         self.0
             .clone()
             .into_iter()
-            .map(|(symbol, balance)| SymbolBalance::new(symbol, balance))
+            .map(|(symbol, balance)| TokenBalance::new(symbol, balance))
             .collect()
     }
 
@@ -63,7 +63,7 @@ impl ClientBalances {
                     .expect("[UniLinkExecution] : Balance existence checked in has_sufficient_available_balance");
 
                 balance.available -= required_balance;
-                SymbolBalance::new(open.instrument.quote.clone(), *balance)
+                TokenBalance::new(open.instrument.quote.clone(), *balance)
             }
             | Side::Sell => {
                 let balance = self
@@ -71,7 +71,7 @@ impl ClientBalances {
                     .expect("[UniLinkExecution] : Balance existence checked in has_sufficient_available_balance");
 
                 balance.available -= required_balance;
-                SymbolBalance::new(open.instrument.base.clone(), *balance)
+                TokenBalance::new(open.instrument.base.clone(), *balance)
             }
         };
 
@@ -85,7 +85,7 @@ impl ClientBalances {
     /// Updates the associated [`Symbol`] [`Balance`] when a client cancels an [`Order<Open>`]. The
     /// nature of the [`Balance`] change will depend on if the [`Order<Open>`] was a
     /// [`Side::Buy`] or [`Side::Sell`].
-    pub fn update_from_cancel(&mut self, cancelled: &Order<Open>) -> SymbolBalance {
+    pub fn update_from_cancel(&mut self, cancelled: &Order<Open>) -> TokenBalance {
         match cancelled.side {
             | Side::Buy => {
                 let balance = self
@@ -93,7 +93,7 @@ impl ClientBalances {
                     .expect("[UniLinkExecution] : Balance existence checked when opening Order");
 
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
-                SymbolBalance::new(cancelled.instrument.quote.clone(), *balance)
+                TokenBalance::new(cancelled.instrument.quote.clone(), *balance)
             }
             | Side::Sell => {
                 let balance = self
@@ -101,7 +101,7 @@ impl ClientBalances {
                     .expect("[UniLinkExecution] : Balance existence checked when opening Order");
 
                 balance.available += cancelled.state.remaining_quantity();
-                SymbolBalance::new(cancelled.instrument.base.clone(), *balance)
+                TokenBalance::new(cancelled.instrument.base.clone(), *balance)
             }
         }
     }
@@ -164,8 +164,8 @@ impl ClientBalances {
             received_time: Utc::now(),
             exchange: Exchange::from(ExecutionId::Simulated),
             kind: AccountEventKind::Balances(vec![
-                SymbolBalance::new(base.clone(), base_balance),
-                SymbolBalance::new(quote.clone(), quote_balance),
+                TokenBalance::new(base.clone(), base_balance),
+                TokenBalance::new(quote.clone(), quote_balance),
             ]),
         }
     }

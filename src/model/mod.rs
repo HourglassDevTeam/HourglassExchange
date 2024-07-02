@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use self::{
-    balance::SymbolBalance,
+    balance::TokenBalance,
     order::{Cancelled, Open, Order},
     trade::Trade,
 };
@@ -34,11 +34,11 @@ pub enum AccountEventKind {
     OrdersCancelled(Vec<Order<Cancelled>>),
 
     // WebSocket Only - 仅限WebSocket
-    Balance(SymbolBalance),
+    Balance(TokenBalance),
     Trade(Trade),
 
     // HTTP & WebSocket - HTTP和WebSocket
-    Balances(Vec<SymbolBalance>),
+    Balances(Vec<TokenBalance>),
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]

@@ -9,7 +9,7 @@ use tokio::sync::{mpsc, oneshot};
 use crate::{
     model::order::{Cancelled, Open, Order},
     simulated::SimulatedEvent,
-    AccountEvent, ExecutionClient, ExecutionError, ExecutionId, RequestCancel, RequestOpen, SymbolBalance,
+    AccountEvent, ExecutionClient, ExecutionError, ExecutionId, RequestCancel, RequestOpen, TokenBalance,
 };
 
 /// 模拟[`ExecutionClient`]实现
@@ -37,7 +37,7 @@ impl ExecutionClient for SimulatedExecution {
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 接收获取开放订单 FetchOrdersOpen 响应失败")
     }
     // 从模拟交易所接收账户余额的响应。
-    async fn fetch_balances(&self) -> Result<Vec<SymbolBalance>, ExecutionError> {
+    async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError> {
         let (response_tx, response_rx) = oneshot::channel();
         self.request_tx
             .send(SimulatedEvent::FetchBalances(response_tx))
