@@ -192,7 +192,9 @@ impl PartialOrd for Order<Open> {
     }
 }
 
+// 为Order<Open>实现Eq
 impl Eq for Order<Open> {}
+
 /// 订单在被取消后的状态
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct Cancelled {
@@ -276,7 +278,7 @@ mod tests {
     #[test]
     fn test_open_order_remaining_quantity() {
         let order = order_open(ClientOrderId(Uuid::new_v4()), Side::Buy, 10.0, 10.0, 5.0);
-        assert_eq!(order.state.remaining_quantity(), 5.0)
+        assert_eq!(order.state.remaining_quantity(), 5.0) /// NOTE 直接减除合适吗？
     }
 
     #[test]
