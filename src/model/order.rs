@@ -278,7 +278,7 @@ mod tests {
     #[test]
     fn test_open_order_remaining_quantity() {
         let order = order_open(ClientOrderId(Uuid::new_v4()), Side::Buy, 10.0, 10.0, 5.0);
-        assert_eq!(order.state.remaining_quantity(), 5.0) /// NOTE 直接减除合适吗？
+        assert_eq!(order.state.remaining_quantity(), 5.0)
     }
 
     #[test]
