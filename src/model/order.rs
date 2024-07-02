@@ -54,6 +54,7 @@ pub struct RequestOpen {
 }
 
 impl Order<RequestOpen> {
+    /// 计算订单所需的可用余额
     pub fn required_available_balance(&self) -> (&Symbol, f64) {
         match self.side {
             | Side::Buy => (&self.instrument.quote, self.state.price * self.state.quantity),
