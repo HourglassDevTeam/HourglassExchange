@@ -1,9 +1,6 @@
 use cerebro_integration::model::instrument::symbol::Symbol;
 // 引入符号模型
 use serde::{Deserialize, Serialize};
-
-// 引入序列化和反序列化库
-
 /// 与[`Symbol`]相关联的[`Balance`]。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct SymbolBalance {
