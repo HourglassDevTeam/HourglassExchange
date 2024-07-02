@@ -44,8 +44,7 @@ pub struct Order<State> {
     pub state: State,              // 订单状态
 }
 
-/// The initial state of an [`Order`]. Sent to the [`ExecutionClient`](crate::ExecutionClient) for
-/// actioning.
+/// 订单初始状态。发送到ExecutionClient进行操作
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct RequestOpen {
     pub kind: OrderKind,
@@ -63,10 +62,9 @@ impl Order<RequestOpen> {
     }
 }
 
-/// State of an [`Order`] after a [`RequestOpen`] has been sent to the
-/// [`ExecutionClient`](crate::ExecutionClient), but a confirmation response has not been received.
+/// 订单在发送RequestOpen到ExecutionClient后尚未收到确认响应时的状态
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub struct InFlight;
+pub struct Pending;
 
 /// State of an [`Order`] after a request has been made for it to be [`Cancelled`].
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -160,14 +158,14 @@ where
     }
 }
 
-impl From<&Order<RequestOpen>> for Order<InFlight> {
+impl From<&Order<RequestOpen>> for Order<Pending> {
     fn from(request: &Order<RequestOpen>) -> Self {
         Self {
             exchange: request.exchange.clone(),
             instrument: request.instrument.clone(),
             cid: request.cid,
             side: request.side,
-            state: InFlight,
+            state: Pending,
         }
     }
 }
