@@ -49,15 +49,17 @@ impl ClientAccount {
         respond_with_latency(self.latency, response_tx, Ok(self.balances.fetch_all()));
     }
 
-    /// 执行开仓订单请求，并通过提供的 [`oneshot::Sender`] 发送响应。
+    /// open_orders是一个高层次的函数，用于处理一组开仓订单请求 (open_requests)，并通过 oneshot 通道发送响应。
+    /// 用于需要批量处理多个开仓订单请求的场景。
+    /// 可以模拟网络延迟（通过 respond_with_latency），提供更加真实的交易环境模拟。
     pub fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>) {
         let open_results = open_requests.into_iter().map(|request| self.try_open_order_atomic(request)).collect();
 
         respond_with_latency(self.latency, response_tx, open_results);
     }
 
-    /// Execute an open order request, adding it to [`ClientOrders`] and updating the associated
-    /// [`Balance`]. Sends an [`AccountEvent`] for both the new order and balance update.
+    /// 执行开仓订单请求，将其添加到 [`ClientOrders`] 并更新相关的
+    /// [`Balance`]。发送新订单和余额更新的 [`AccountEvent`]。
     pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError> {
         Self::check_order_kind_support(request.state.kind)?;
 
