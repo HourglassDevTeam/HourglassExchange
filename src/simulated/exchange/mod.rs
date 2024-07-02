@@ -54,7 +54,6 @@ pub struct ExchangeBuilder {
 }
 
 impl ExchangeBuilder {
-    // 构造函数，创建新的构建器实例。
     fn new() -> Self {
         Self { ..Default::default() }
     }
@@ -75,7 +74,6 @@ impl ExchangeBuilder {
         }
     }
 
-    // 构建并返回 `SimulatedExchange` 实例。
     pub fn build(self) -> Result<SimulatedExchange, ExecutionError> {
         Ok(SimulatedExchange {
             event_simulated_rx: self

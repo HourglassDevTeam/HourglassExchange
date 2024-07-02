@@ -1,5 +1,4 @@
 use std::{fmt::Debug, time::Duration};
-
 use cerebro_data::subscription::trade::PublicTrade;
 use cerebro_integration::model::{instrument::Instrument, Exchange, Side};
 use chrono::Utc;
@@ -17,15 +16,15 @@ use crate::{
 
 use self::{balance::ClientBalances, order::ClientOrders};
 
-/// [`ClientAccount`] [`Balance`] for each [`Symbol`](cerebro_integration::model::Symbol) and
-/// associated balance management logic.
+/// [`ClientAccount`] 每个 [`Symbol`](cerebro_integration::model::Symbol) 的 [`Balance`] 和
+/// 相关的余额管理逻辑。
 pub mod balance;
 
 /// [`ClientAccount`] [`ClientOrders`] management & matching logic.
 pub mod order;
 
-/// Simulated account state containing [`ClientBalances`] and [`ClientOrders`]. Details the
-/// simulated account fees and latency.
+/// 包含 [`ClientBalances`] 和 [`ClientOrders`] 的模拟账户状态。详细说明
+/// 模拟账户费用和账户延迟(是否要随即可变)
 #[derive(Clone, Debug)]
 pub struct ClientAccount {
     pub latency: Duration,
@@ -36,17 +35,16 @@ pub struct ClientAccount {
 }
 
 impl ClientAccount {
-    /// Construct a [`ClientAccountBuilder`] for configuring a new [`ClientAccount`].
     pub fn builder() -> ClientAccountBuilder {
         ClientAccountBuilder::new()
     }
 
-    /// Send every [`Order<Open>`] for every [`Instrument`] to the client.
+    /// 发送每个 [`Instrument`] 的每个 [`Order<Open>`] 给客户端。
     pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>) {
         respond_with_latency(self.latency, response_tx, Ok(self.orders.fetch_all()));
     }
 
-    /// Send the [`Balance`] for every [`Symbol`](cerebro_integration::model::Symbol) to the client.
+    /// 发送每个 [`Symbol`](cerebro_integration::model::Symbol) 的 [`Balance`] 给客户端。
     pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<SymbolBalance>, ExecutionError>>) {
         respond_with_latency(self.latency, response_tx, Ok(self.balances.fetch_all()));
     }
