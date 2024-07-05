@@ -13,7 +13,7 @@ use crate::{
         trade::Trade,
         AccountEvent, AccountEventKind,
     },
-    ExecutionError, ExecutionId, Open, Order,
+    ExecutionError, ExecutionKind, Open, Order,
 };
 
 /// [`ClientAccount`](super::ClientAccount) [`Balance`] for each [`Symbol`].
@@ -77,7 +77,7 @@ impl ClientBalances {
 
         AccountEvent {
             received_time: Utc::now(),
-            exchange: Exchange::from(ExecutionId::Simulated),
+            exchange: Exchange::from(ExecutionKind::Simulated),
             kind: AccountEventKind::Balance(updated_balance),
         }
     }
@@ -162,7 +162,7 @@ impl ClientBalances {
 
         AccountEvent {
             received_time: Utc::now(),
-            exchange: Exchange::from(ExecutionId::Simulated),
+            exchange: Exchange::from(ExecutionKind::Simulated),
             kind: AccountEventKind::Balances(vec![
                 TokenBalance::new(base.clone(), base_balance),
                 TokenBalance::new(quote.clone(), quote_balance),

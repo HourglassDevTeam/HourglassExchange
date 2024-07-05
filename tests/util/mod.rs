@@ -19,7 +19,7 @@ use tide_broker::{
         },
         SimulatedEvent,
     },
-    ExecutionId,
+    ExecutionKind,
 };
 
 pub(super) async fn run_default_exchange(
@@ -78,7 +78,7 @@ where
     I: Into<Instrument>,
 {
     Order {
-        exchange: Exchange::from(ExecutionId::Simulated),
+        exchange: Exchange::from(ExecutionKind::Simulated),
         instrument: instrument.into(),
         cid,
         side,
@@ -96,7 +96,7 @@ where
     I: Into<Instrument>,
 {
     Order {
-        exchange: Exchange::from(ExecutionId::Simulated),
+        exchange: Exchange::from(ExecutionKind::Simulated),
         instrument: instrument.into(),
         cid,
         side,
@@ -116,7 +116,7 @@ where
     Id: Into<OrderId>,
 {
     Order {
-        exchange: Exchange::from(ExecutionId::Simulated),
+        exchange: Exchange::from(ExecutionKind::Simulated),
         instrument: instrument.into(),
         cid,
         side,
@@ -131,7 +131,7 @@ where
     Id: Into<OrderId>,
 {
     Order {
-        exchange: Exchange::from(ExecutionId::Simulated),
+        exchange: Exchange::from(ExecutionKind::Simulated),
         instrument: instrument.into(),
         cid,
         side,

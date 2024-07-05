@@ -15,7 +15,7 @@ use tide_broker::{
         AccountEvent, AccountEventKind, ClientOrderId,
     },
     simulated::{execution::SimulatedClient, SimulatedEvent},
-    ExecutionClient,
+    ClientExecution,
 };
 
 use crate::util::{
@@ -42,7 +42,7 @@ impl Ids {
 #[tokio::test]
 async fn main() {
     // 创建通道:
-    //  - event_account_tx 发送AccountEvents到Cerebro Engine
+    //  - event_account_tx 发送AccountEvents到 Engine
     //  - event_simulated_tx 发送MarketEvents和执行请求到SimulatedExchange
     // Create channels:
     //  - event_account_tx sends AccountEvents to the Cerebro Engine

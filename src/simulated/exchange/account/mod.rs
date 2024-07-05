@@ -11,7 +11,7 @@ use crate::{
         order::OrderKind,
         AccountEvent, AccountEventKind,
     },
-    Cancelled, ExecutionError, ExecutionId, Open, Order, RequestCancel, RequestOpen,
+    Cancelled, ExecutionError, ExecutionKind, Open, Order, RequestCancel, RequestOpen,
 };
 
 use self::{balance::ClientBalances, order::ClientOrders};
@@ -86,7 +86,7 @@ impl ClientAccount {
         self.event_account_tx
             .send(AccountEvent {
                 received_time: Utc::now(),
-                exchange: Exchange::from(ExecutionId::Simulated),
+                exchange: Exchange::from(ExecutionKind::Simulated),
                 kind: AccountEventKind::OrdersNew(vec![open.clone()]),
             })
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Trade");
@@ -153,7 +153,7 @@ impl ClientAccount {
         self.event_account_tx
             .send(AccountEvent {
                 received_time: Utc::now(),
-                exchange: Exchange::from(ExecutionId::Simulated),
+                exchange: Exchange::from(ExecutionKind::Simulated),
                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
             })
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Trade");
@@ -161,7 +161,7 @@ impl ClientAccount {
         self.event_account_tx
             .send(AccountEvent {
                 received_time: Utc::now(),
-                exchange: Exchange::from(ExecutionId::Simulated),
+                exchange: Exchange::from(ExecutionKind::Simulated),
                 kind: AccountEventKind::Balance(balance_event),
             })
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Balance");
@@ -195,7 +195,7 @@ impl ClientAccount {
         self.event_account_tx
             .send(AccountEvent {
                 received_time: Utc::now(),
-                exchange: Exchange::from(ExecutionId::Simulated),
+                exchange: Exchange::from(ExecutionKind::Simulated),
                 kind: AccountEventKind::OrdersCancelled(cancelled_orders.clone()),
             })
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::OrdersCancelled");
@@ -203,7 +203,7 @@ impl ClientAccount {
         self.event_account_tx
             .send(AccountEvent {
                 received_time: Utc::now(),
-                exchange: Exchange::from(ExecutionId::Simulated),
+                exchange: Exchange::from(ExecutionKind::Simulated),
                 kind: AccountEventKind::Balances(balance_updates),
             })
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Balances");
@@ -248,7 +248,7 @@ impl ClientAccount {
             self.event_account_tx
                 .send(AccountEvent {
                     received_time: Utc::now(),
-                    exchange: Exchange::from(ExecutionId::Simulated),
+                    exchange: Exchange::from(ExecutionKind::Simulated),
                     kind: AccountEventKind::Trade(trade),
                 })
                 .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Trade");

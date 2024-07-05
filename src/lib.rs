@@ -1,5 +1,5 @@
-// 高性能和标准化的交易接口，能够在多个金融场所执行交易。同时提供一个功能丰富的模拟交易所，以协助进行回测和干式交易。通过初始化其关联的ExecutionClient实例与交易所进行通信。
-// ExecutionClient trait 提供了一个统一且简单的语言，用于与交易所进行交互。
+// 高性能和标准化的交易接口，能够在多个金融场所执行交易。同时提供一个功能丰富的模拟交易所，以协助进行回测和干式交易。通过初始化其关联的ClientExecution实例与交易所进行通信。
+// ClientExecution trait 提供了一个统一且简单的语言，用于与交易所进行交互。
 
 #![allow(clippy::type_complexity)]
 
@@ -27,11 +27,11 @@ pub mod model;
 pub mod simulated;
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
-pub trait ExecutionClient {
-    const CLIENT: ExecutionId;
+pub trait ClientExecution {
+    const CLIENT: ExecutionKind;
     type Config;
 
-    /// 使用提供的[`Self::Config`]和[`AccountEvent`]发送器初始化一个新的[`ExecutionClient`]。
+    /// 使用提供的[`Self::Config`]和[`AccountEvent`]发送器初始化一个新的[`ClientExecution`]。
     /// 通常包括启动一个异步WebSocket事件循环以从交易所接收[`AccountEvent`]，
     /// 同时返回HTTP客户端`Self`。
     async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<AccountEvent>) -> Self;
@@ -44,31 +44,31 @@ pub trait ExecutionClient {
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>;
 }
 
-/// Unique identifier for an [`ExecutionClient`] implementation.
+/// Unique identifier for an [`ClientExecution`] implementation.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 #[serde(rename = "execution", rename_all = "snake_case")]
-pub enum ExecutionId {
+pub enum ExecutionKind {
     Simulated,
     Ftx,
 }
 
-impl From<ExecutionId> for Exchange {
-    fn from(execution_id: ExecutionId) -> Self {
+impl From<ExecutionKind> for Exchange {
+    fn from(execution_id: ExecutionKind) -> Self {
         Exchange::from(execution_id.as_str())
     }
 }
 
-impl Display for ExecutionId {
+impl Display for ExecutionKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }
 
-impl ExecutionId {
+impl ExecutionKind {
     pub fn as_str(&self) -> &'static str {
         match self {
-            | ExecutionId::Simulated => "simulated",
-            | ExecutionId::Ftx => "okx",
+            | ExecutionKind::Simulated => "simulated",
+            | ExecutionKind::Ftx => "okx",
         }
     }
 }

@@ -102,7 +102,7 @@ pub struct Order<State> {
     pub state: State,           // 订单状态
 }
 
-/// 订单初始状态。发送到ExecutionClient进行操作
+/// 订单初始状态。发送到ClientExecution进行操作
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct RequestOpen {
     pub kind: OrderKind,
@@ -120,7 +120,7 @@ impl Order<RequestOpen> {
     }
 }
 
-/// 订单在发送RequestOpen到ExecutionClient后尚未收到确认响应时的状态
+/// 订单在发送RequestOpen到ClientExecution后尚未收到确认响应时的状态
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct Pending;
 
