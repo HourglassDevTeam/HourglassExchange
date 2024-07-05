@@ -53,8 +53,8 @@ pub enum ExecutionKind {
 }
 
 impl From<ExecutionKind> for Exchange {
-    fn from(execution_id: ExecutionKind) -> Self {
-        Exchange::from(execution_id.as_str())
+    fn from(execution_kind: ExecutionKind) -> Self {
+        Exchange::from(execution_kind.as_str())
     }
 }
 
@@ -68,7 +68,7 @@ impl ExecutionKind {
     pub fn as_str(&self) -> &'static str {
         match self {
             | ExecutionKind::Simulated => "simulated",
-            | ExecutionKind::Ftx => "okx",
+            | ExecutionKind::Ftx => "ftx",
         }
     }
 }
