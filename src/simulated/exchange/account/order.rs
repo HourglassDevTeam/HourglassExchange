@@ -9,11 +9,11 @@ use crate::{
     ExecutionError, Open, Order, OrderId, RequestOpen,
 };
 
-/// [`ClientAccount`](super::ClientAccount) [`Orders`] for each [`Instrument`].
+/// 每个 [`Instrument`] 的 [`ClientAccount`](super::ClientAccount) [`Orders`]。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct ClientOrders {
     pub request_counter: u64,
-    pub all: HashMap<Instrument, Orders>,
+    pub orders_by_instrument: HashMap<Instrument, Orders>,
 }
 
 impl ClientOrders {
@@ -21,20 +21,20 @@ impl ClientOrders {
     pub fn new(instruments: Vec<Instrument>) -> Self {
         Self {
             request_counter: 0,
-            all: instruments.into_iter().map(|instrument| (instrument, Orders::default())).collect(),
+            orders_by_instrument: instruments.into_iter().map(|instrument| (instrument, Orders::default())).collect(),
         }
     }
 
     /// Return a mutable reference to the client [`Orders`] of the specified [`Instrument`].
     pub fn orders_mut(&mut self, instrument: &Instrument) -> Result<&mut Orders, ExecutionError> {
-        self.all
+        self.orders_by_instrument
             .get_mut(instrument)
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Instrument: {instrument}")))
     }
 
     /// Fetch the bid and ask [`Order<Open>`]s for every [`Instrument`].
     pub fn fetch_all(&self) -> Vec<Order<Open>> {
-        self.all
+        self.orders_by_instrument
             .values()
             .flat_map(|market| [&market.bids, &market.asks])
             .flatten()

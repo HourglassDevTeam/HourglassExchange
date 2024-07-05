@@ -174,7 +174,7 @@ impl ClientAccount {
     pub fn cancel_orders_all(&mut self, response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>) {
         let removed_orders = self
             .orders
-            .all
+            .orders_by_instrument
             .values_mut()
             .flat_map(|orders| {
                 let bids = orders.bids.drain(..);
@@ -339,7 +339,7 @@ impl ClientAccountBuilder {
         // Validate each Instrument base & quote Symbol has an associated Balance
         client_account
             .orders
-            .all
+            .orders_by_instrument
             .keys()
             .flat_map(|instrument| [&instrument.base, &instrument.quote])
             .map(|symbol| client_account.balances.balance(symbol))
