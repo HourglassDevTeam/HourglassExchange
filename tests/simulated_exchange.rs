@@ -14,7 +14,7 @@ use tide_broker::{
         trade::{SymbolFees, Trade, TradeId},
         AccountEvent, AccountEventKind, ClientOrderId,
     },
-    simulated::{execution::SimulatedExecution, SimulatedEvent},
+    simulated::{execution::SimulatedClient, SimulatedEvent},
     ExecutionClient,
 };
 
@@ -54,9 +54,9 @@ async fn main() {
     // Build SimulatedExchange & run on it's own Tokio task
     tokio::spawn(run_default_exchange(event_account_tx, event_simulated_rx));
 
-    // 初始化SimulatedExecution执行，通过模拟通道与交易所交互
-    // Initialise SimulatedExecution execution to interact with the exchange via the simulated channel
-    let client = SimulatedExecution {
+    // 初始化SimulatedClient执行，通过模拟通道与交易所交互
+    // Initialise SimulatedClient execution to interact with the exchange via the simulated channel
+    let client = SimulatedClient {
         request_tx: event_simulated_tx.clone(),
     };
 
@@ -129,7 +129,7 @@ async fn main() {
 
 // 1. 当我们没有打开的订单时，获取初始OpenOrders。
 // 1. Fetch initial OpenOrders when we have no open Orders.
-async fn test_1_fetch_initial_orders_and_check_empty(client: &SimulatedExecution) {
+async fn test_1_fetch_initial_orders_and_check_empty(client: &SimulatedClient) {
     // 获取当前打开的订单
     let initial_orders = client.fetch_orders_open().await.unwrap();
     // 断言初始订单列表为空
@@ -138,7 +138,7 @@ async fn test_1_fetch_initial_orders_and_check_empty(client: &SimulatedExecution
 
 // 2. 当没有发生余额变化的事件时，获取初始Balances。
 // 2. Fetch initial Balances when there have been no balance changing events.
-async fn test_2_fetch_balances_and_check_same_as_initial(client: &SimulatedExecution) {
+async fn test_2_fetch_balances_and_check_same_as_initial(client: &SimulatedClient) {
     // 获取实际的余额
     let actual_balances = client.fetch_balances().await.unwrap();
     // 获取初始余额
@@ -158,7 +158,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SimulatedExecu
 
 // 3. 打开LIMIT Buy Order并检查报价货币(usdt)的AccountEvent Balance是否已发送。
 // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (usdt).
-async fn test_3_open_limit_buy_order(client: &SimulatedExecution, test_3_ids: Ids, event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>) {
+async fn test_3_open_limit_buy_order(client: &SimulatedClient, test_3_ids: Ids, event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>) {
     // 打开新的订单
     let new_orders = client
         .open_orders(vec![order_request_limit(
@@ -258,7 +258,7 @@ fn test_4_send_market_event_that_does_not_match_any_open_order(
 
 // 5. 取消打开的买单并检查已发送取消订单和余额的AccountEvents。
 // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent.
-async fn test_5_cancel_buy_order(client: &SimulatedExecution, test_3_ids: Ids, event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>) {
+async fn test_5_cancel_buy_order(client: &SimulatedClient, test_3_ids: Ids, event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>) {
     // 取消订单
     let cancelled = client
         .cancel_orders(vec![order_cancel_request(
@@ -326,7 +326,7 @@ async fn test_5_cancel_buy_order(client: &SimulatedExecution, test_3_ids: Ids, e
 // 6. 打开2x限价买单并检查是否发送了余额和订单新建的AccountEvents。
 // 6. Open 2x limit buy orders and check AccountEvents for balance & order new are sent.
 async fn test_6_open_2x_limit_buy_orders(
-    client: &SimulatedExecution,
+    client: &SimulatedClient,
     test_6_ids_1: Ids,
     test_6_ids_2: Ids,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
@@ -537,7 +537,7 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
 }
 // 8. 获取打开的订单并检查test_6_order_cid_1是否只剩一个限价买单。
 // 8. Fetch open orders & check there is only one limit buy order remaining from test_6_order_cid_1.
-async fn test_8_fetch_open_orders_and_check_test_6_order_cid_1_only(client: &SimulatedExecution, test_6_ids_1: Ids) {
+async fn test_8_fetch_open_orders_and_check_test_6_order_cid_1_only(client: &SimulatedClient, test_6_ids_1: Ids) {
     let open_orders = client.fetch_orders_open().await.unwrap();
     assert_eq!(open_orders.len(), 1);
     assert_eq!(
@@ -557,7 +557,7 @@ async fn test_8_fetch_open_orders_and_check_test_6_order_cid_1_only(client: &Sim
 // 9. 打开2x LIMIT Sell Order并检查是否发送了余额和订单新建的AccountEvents。
 // 9. Open 2x LIMIT Sell Order & check AccountEvents for balances and order news are sent.
 async fn test_9_open_2x_limit_sell_orders(
-    client: &SimulatedExecution,
+    client: &SimulatedClient,
     test_9_ids_1: Ids,
     test_9_ids_2: Ids,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
@@ -824,7 +824,7 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
 // 11. Cancel all open orders. Includes a partially filled sell order, and non-filled buy order.
 //     Check AccountEvents for orders cancelled and balances are sent.
 async fn test_11_cancel_all_orders(
-    client: &SimulatedExecution,
+    client: &SimulatedClient,
     test_6_ids_1: Ids,
     test_9_ids_2: Ids,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
@@ -915,7 +915,7 @@ async fn test_11_cancel_all_orders(
 
 // 12. 获取打开的订单（现在我们已经调用了cancel_all）并检查是否为空
 // 12. Fetch open orders (now that we've called cancel_all) and check it is empty.
-async fn test_12_fetch_open_orders_and_check_empty(client: &SimulatedExecution) {
+async fn test_12_fetch_open_orders_and_check_empty(client: &SimulatedClient) {
     let open_orders = client.fetch_orders_open().await.unwrap();
     // 确认打开的订单列表为空
     assert!(open_orders.is_empty());
@@ -924,7 +924,7 @@ async fn test_12_fetch_open_orders_and_check_empty(client: &SimulatedExecution) 
 // 13. 由于资金不足，未能打开限价买单
 // 13. Fail to open limit buy order with insufficient funds.
 async fn test_13_fail_to_open_one_of_two_limits_with_insufficient_funds(
-    client: &SimulatedExecution,
+    client: &SimulatedClient,
     test_13_ids_1: Ids,
     test_13_ids_2: Ids,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
@@ -1009,7 +1009,7 @@ async fn test_13_fail_to_open_one_of_two_limits_with_insufficient_funds(
 
 // 14. 使用错误的OrderId尝试取消限价订单并失败，因为找不到订单
 // 14. Fail to cancel limit order with OrderNotFound using incorrect OrderId.
-async fn test_14_fail_to_cancel_limit_with_order_not_found(client: &SimulatedExecution) {
+async fn test_14_fail_to_cancel_limit_with_order_not_found(client: &SimulatedClient) {
     // 生成一个新的客户端订单ID
     let cid = ClientOrderId(Uuid::new_v4());
     // 尝试取消一个不存在的订单

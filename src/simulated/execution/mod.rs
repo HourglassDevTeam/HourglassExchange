@@ -14,12 +14,12 @@ use crate::{
 /// 模拟[`ExecutionClient`]实现
 /// [`SimulatedExchange`](super::exchange::SimulatedExchange).
 #[derive(Clone, Debug)]
-pub struct SimulatedExecution {
+pub struct SimulatedClient {
     pub request_tx: mpsc::UnboundedSender<SimulatedEvent>,
 }
 
 #[async_trait]
-impl ExecutionClient for SimulatedExecution {
+impl ExecutionClient for SimulatedClient {
     type Config = mpsc::UnboundedSender<SimulatedEvent>;
 
     const CLIENT: ExecutionId = ExecutionId::Simulated;
