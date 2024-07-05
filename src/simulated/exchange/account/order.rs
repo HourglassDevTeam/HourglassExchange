@@ -15,6 +15,7 @@ pub struct ClientOrders {
     /// request_counter是一个计数器，用于生成唯一的订单ID。每当创建一个新订单时，这个计数器递增，并使用其当前值作为新订单的唯一标识符的一部分。这确保了订单ID的唯一性，避免了重复和冲突。
     /// NOTE 是否应该用原子计数？
     pub request_counter: u64,
+    /// 在一个包含多种金融工具的交易系统中，客户可能会同时下达多个不同金融工具的订单。将订单按金融工具分类存储，可以提高查找和管理效率。
     pub orders_by_instrument: HashMap<Instrument, Orders>,
 }
 
