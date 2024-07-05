@@ -19,8 +19,9 @@ pub struct ClientOrders {
     pub orders_by_instrument: HashMap<Instrument, Orders>,
 }
 
+
 impl ClientOrders {
-    /// Construct a new [`ClientOrders`] from the provided selection of [`Instrument`]s.
+    /// 从提供的 [`Instrument`] 集合构造新的 [`ClientOrders`]。
     pub fn new(instruments: Vec<Instrument>) -> Self {
         Self {
             request_counter: 0,
@@ -28,14 +29,14 @@ impl ClientOrders {
         }
     }
 
-    /// Return a mutable reference to the client [`Orders`] of the specified [`Instrument`].
+    /// 返回指定 [`Instrument`] 的客户端 [`Orders`] 的可变引用。
     pub fn orders_mut(&mut self, instrument: &Instrument) -> Result<&mut Orders, ExecutionError> {
         self.orders_by_instrument
             .get_mut(instrument)
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Instrument: {instrument}")))
     }
 
-    /// Fetch the bid and ask [`Order<Open>`]s for every [`Instrument`].
+    /// 获取每个 [`Instrument`] 的买单和卖单 [`Order<Open>`]。
     pub fn fetch_all(&self) -> Vec<Order<Open>> {
         self.orders_by_instrument
             .values()
@@ -45,25 +46,24 @@ impl ClientOrders {
             .collect()
     }
 
-    /// Build an [`Order<Open>`] from the provided [`Order<RequestOpen>`]. The request counter
-    /// is incremented and the new total is used as a unique [`OrderId`].
+    /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器
+    /// 递增，新总数用作唯一的 [`OrderId`]。
     pub fn build_generate_order_open(&mut self, request: Order<RequestOpen>) -> Order<Open> {
         self.increment_request_counter();
         Order::from((self.order_id(), request))
     }
 
-    /// Increment the [`Order<RequestOpen>`] counter by one to ensure the next generated
-    /// [`OrderId`] is unique.
+    /// 将 [`Order<RequestOpen>`] 计数器加一，以确保下一个生成的
+    /// [`OrderId`] 是唯一的。
     pub fn increment_request_counter(&mut self) {
         self.request_counter += 1;
     }
 
-    /// Generate a unique [`OrderId`].
+    /// 生成一个唯一的 [`OrderId`]。
     pub fn order_id(&self) -> OrderId {
         OrderId(self.request_counter.to_string())
     }
 }
-
 /// Client [`Orders`] for an [`Instrument`]. Simulates client orders in an real
 /// multi-participant OrderBook.
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
