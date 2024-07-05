@@ -12,6 +12,8 @@ use crate::{
 /// 每个 [`Instrument`] 的 [`ClientAccount`](super::ClientAccount) [`Orders`]。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct ClientOrders {
+    /// request_counter是一个计数器，用于生成唯一的订单ID。每当创建一个新订单时，这个计数器递增，并使用其当前值作为新订单的唯一标识符的一部分。这确保了订单ID的唯一性，避免了重复和冲突。
+    /// NOTE 是否应该用原子计数？
     pub request_counter: u64,
     pub orders_by_instrument: HashMap<Instrument, Orders>,
 }
