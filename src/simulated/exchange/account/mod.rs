@@ -69,13 +69,13 @@ impl ClientAccount {
         self.balances.has_sufficient_available_balance(symbol, required_balance)?;
 
         // 构建 Open<Order>
-        let open = self.orders.build_order_open(request);
+        let open = self.orders.build_generate_order_open(request);
 
         // 检索客户端的 Instrument Orders
         let orders = self.orders.orders_mut(&open.instrument)?;
 
         // 由于易出错操作已成功，修改 ClientBalances 和 ClientOrders
-        orders.add_order_open(open.clone());
+        orders.add_generate_order_open(open.clone());
         let balance_event = self.balances.update_from_open(&open, required_balance);
 
         // 向客户端发送 AccountEvents

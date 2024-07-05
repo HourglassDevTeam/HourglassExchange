@@ -271,18 +271,18 @@ impl From<Order<Open>> for Order<Cancelled> {
 mod tests {
     use uuid::Uuid;
 
-    use crate::test_util::order_open;
+    use crate::test_util::generate_order_open;
 
     use super::*;
 
     #[test]
     fn test_open_order_remaining_quantity() {
-        let order = order_open(ClientOrderId(Uuid::new_v4()), Side::Buy, 10.0, 10.0, 5.0);
+        let order = generate_order_open(ClientOrderId(Uuid::new_v4()), Side::Buy, 10.0, 10.0, 5.0);
         assert_eq!(order.state.remaining_quantity(), 5.0)
     }
 
     #[test]
-    fn test_partial_ord_order_open() {
+    fn test_partial_ord_generate_order_open() {
         struct TestCase {
             input_one: Order<Open>,
             input_two: Order<Open>,
@@ -295,118 +295,118 @@ mod tests {
             // -- Side::Buy Order<Open> --
             TestCase {
                 // TC0: Input One has higher price and higher quantity -> Greater
-                input_one: order_open(cid, Side::Buy, 1100.0, 2.0, 0.0),
-                input_two: order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
+                input_one: generate_order_open(cid, Side::Buy, 1100.0, 2.0, 0.0),
+                input_two: generate_order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
                 expected: Some(Ordering::Greater),
             },
             TestCase {
                 // TC1: Input One has higher price but same quantity -> Greater
-                input_one: order_open(cid, Side::Buy, 1100.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
+                input_one: generate_order_open(cid, Side::Buy, 1100.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
                 expected: Some(Ordering::Greater),
             },
             TestCase {
                 // TC2: Input One has higher price but lower quantity -> Greater
-                input_one: order_open(cid, Side::Buy, 1100.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Buy, 1000.0, 2.0, 0.0),
+                input_one: generate_order_open(cid, Side::Buy, 1100.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Buy, 1000.0, 2.0, 0.0),
                 expected: Some(Ordering::Greater),
             },
             TestCase {
                 // TC3: Input One has same price and higher quantity -> Greater
-                input_one: order_open(cid, Side::Buy, 1000.0, 2.0, 0.0),
-                input_two: order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
+                input_one: generate_order_open(cid, Side::Buy, 1000.0, 2.0, 0.0),
+                input_two: generate_order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
                 expected: Some(Ordering::Greater),
             },
             TestCase {
                 // TC4: Input One has same price and same quantity -> Equal
-                input_one: order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
+                input_one: generate_order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
                 expected: Some(Ordering::Equal),
             },
             TestCase {
                 // TC5: Input One has same price but lower quantity -> Less
-                input_one: order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Buy, 1000.0, 2.0, 0.0),
+                input_one: generate_order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Buy, 1000.0, 2.0, 0.0),
                 expected: Some(Ordering::Less),
             },
             TestCase {
                 // TC6: Input One has lower price but higher quantity -> Less
-                input_one: order_open(cid, Side::Buy, 1000.0, 2.0, 0.0),
-                input_two: order_open(cid, Side::Buy, 1100.0, 1.0, 0.0),
+                input_one: generate_order_open(cid, Side::Buy, 1000.0, 2.0, 0.0),
+                input_two: generate_order_open(cid, Side::Buy, 1100.0, 1.0, 0.0),
                 expected: Some(Ordering::Less),
             },
             TestCase {
                 // TC7: Input One has lower price and same quantity -> Less
-                input_one: order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Buy, 1100.0, 1.0, 0.0),
+                input_one: generate_order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Buy, 1100.0, 1.0, 0.0),
                 expected: Some(Ordering::Less),
             },
             TestCase {
                 // TC8: Input One has lower price but lower quantity -> Less
-                input_one: order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Buy, 1100.0, 2.0, 0.0),
+                input_one: generate_order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Buy, 1100.0, 2.0, 0.0),
                 expected: Some(Ordering::Less),
             },
             // -- Side::Sell Order<Open> --
             TestCase {
                 // TC9: Input One has higher price and higher quantity -> Lesser
-                input_one: order_open(cid, Side::Sell, 1100.0, 2.0, 0.0),
-                input_two: order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
+                input_one: generate_order_open(cid, Side::Sell, 1100.0, 2.0, 0.0),
+                input_two: generate_order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
                 expected: Some(Ordering::Less),
             },
             TestCase {
                 // TC10: Input One has higher price but same quantity -> Lesser
-                input_one: order_open(cid, Side::Sell, 1100.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
+                input_one: generate_order_open(cid, Side::Sell, 1100.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
                 expected: Some(Ordering::Less),
             },
             TestCase {
                 // T11: Input One has higher price but lower quantity -> Lesser
-                input_one: order_open(cid, Side::Sell, 1100.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Sell, 1000.0, 2.0, 0.0),
+                input_one: generate_order_open(cid, Side::Sell, 1100.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Sell, 1000.0, 2.0, 0.0),
                 expected: Some(Ordering::Less),
             },
             TestCase {
                 // TC12: Input One has same price and higher quantity -> Lesser
-                input_one: order_open(cid, Side::Sell, 1000.0, 2.0, 0.0),
-                input_two: order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
+                input_one: generate_order_open(cid, Side::Sell, 1000.0, 2.0, 0.0),
+                input_two: generate_order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
                 expected: Some(Ordering::Less),
             },
             TestCase {
                 // TC13: Input One has same price and same quantity -> Equal
-                input_one: order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
+                input_one: generate_order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
                 expected: Some(Ordering::Equal),
             },
             TestCase {
                 // TC14: Input One has same price but lower quantity -> Greater
-                input_one: order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Sell, 1000.0, 2.0, 0.0),
+                input_one: generate_order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Sell, 1000.0, 2.0, 0.0),
                 expected: Some(Ordering::Greater),
             },
             TestCase {
                 // TC15: Input One has lower price but higher quantity -> Greater
-                input_one: order_open(cid, Side::Sell, 1000.0, 2.0, 0.0),
-                input_two: order_open(cid, Side::Sell, 1100.0, 1.0, 0.0),
+                input_one: generate_order_open(cid, Side::Sell, 1000.0, 2.0, 0.0),
+                input_two: generate_order_open(cid, Side::Sell, 1100.0, 1.0, 0.0),
                 expected: Some(Ordering::Greater),
             },
             TestCase {
                 // TC16: Input One has lower price and same quantity -> Greater
-                input_one: order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Sell, 1100.0, 1.0, 0.0),
+                input_one: generate_order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Sell, 1100.0, 1.0, 0.0),
                 expected: Some(Ordering::Greater),
             },
             TestCase {
                 // TC17: Input One has lower price but lower quantity -> Greater
-                input_one: order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Sell, 1100.0, 2.0, 0.0),
+                input_one: generate_order_open(cid, Side::Sell, 1000.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Sell, 1100.0, 2.0, 0.0),
                 expected: Some(Ordering::Greater),
             },
             // -- Inputs Are Not Comparable Due To Different Sides
             TestCase {
                 // TC18: Input One has lower price but lower quantity -> Greater
-                input_one: order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
-                input_two: order_open(cid, Side::Sell, 1100.0, 2.0, 0.0),
+                input_one: generate_order_open(cid, Side::Buy, 1000.0, 1.0, 0.0),
+                input_two: generate_order_open(cid, Side::Sell, 1100.0, 2.0, 0.0),
                 expected: None,
             },
         ];
@@ -429,7 +429,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sort_vector_order_open() {
+    fn test_sort_vector_generate_order_open() {
         struct TestCase {
             input: Vec<Order<Open>>,
             expected: Vec<Order<Open>>,
@@ -447,80 +447,80 @@ mod tests {
             TestCase {
                 // TC1: Vector of Side::Buy Order<Open> already sorted
                 input: vec![
-                    order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
-                    order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
-                    order_open(cid, Side::Buy, 300.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 300.0, 1.0, 0.0),
                 ],
                 expected: vec![
-                    order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
-                    order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
-                    order_open(cid, Side::Buy, 300.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 300.0, 1.0, 0.0),
                 ],
             },
             TestCase {
                 // TC2: Vector of Side::Buy Order<Open> reverse sorted
                 input: vec![
-                    order_open(cid, Side::Buy, 300.0, 1.0, 0.0),
-                    order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
-                    order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 300.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
                 ],
                 expected: vec![
-                    order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
-                    order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
-                    order_open(cid, Side::Buy, 300.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 300.0, 1.0, 0.0),
                 ],
             },
             TestCase {
                 // TC3: Vector of Side::Buy Order<Open> unsorted sorted
                 input: vec![
-                    order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
-                    order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
-                    order_open(cid, Side::Buy, 300.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 300.0, 1.0, 0.0),
                 ],
                 expected: vec![
-                    order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
-                    order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
-                    order_open(cid, Side::Buy, 300.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Buy, 300.0, 1.0, 0.0),
                 ],
             },
             // -- Vector: Side::Sell Order<Open> --
             TestCase {
                 // TC1: Vector of Side::Sell Order<Open> already sorted
                 input: vec![
-                    order_open(cid, Side::Sell, 300.0, 1.0, 0.0),
-                    order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
-                    order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 300.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
                 ],
                 expected: vec![
-                    order_open(cid, Side::Sell, 300.0, 1.0, 0.0),
-                    order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
-                    order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 300.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
                 ],
             },
             TestCase {
                 // TC2: Vector of Side::Sell Order<Open> reverse sorted
                 input: vec![
-                    order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
-                    order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
-                    order_open(cid, Side::Sell, 300.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 300.0, 1.0, 0.0),
                 ],
                 expected: vec![
-                    order_open(cid, Side::Sell, 300.0, 1.0, 0.0),
-                    order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
-                    order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 300.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
                 ],
             },
             TestCase {
                 // TC3: Vector of Side::Sell Order<Open> unsorted sorted
                 input: vec![
-                    order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
-                    order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
-                    order_open(cid, Side::Sell, 300.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 300.0, 1.0, 0.0),
                 ],
                 expected: vec![
-                    order_open(cid, Side::Sell, 300.0, 1.0, 0.0),
-                    order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
-                    order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 300.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 200.0, 1.0, 0.0),
+                    generate_order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
                 ],
             },
         ];

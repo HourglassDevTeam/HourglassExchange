@@ -92,7 +92,7 @@ pub mod test_util {
 
     /// 生成客户端订单集合。
     /// 接收交易编号、买单和卖单向量，返回一个`Orders`实例。
-    pub fn client_orders(trade_number: u64, bids: Vec<Order<Open>>, asks: Vec<Order<Open>>) -> Orders {
+    pub fn generate_client_orders(trade_number: u64, bids: Vec<Order<Open>>, asks: Vec<Order<Open>>) -> Orders {
         Orders {
             trade_counter: trade_number,
             bids,
@@ -103,7 +103,7 @@ pub mod test_util {
     /// 创建一个开放状态的订单。
     /// 接收客户端订单ID、买卖方向、价格、数量和已成交量，
     /// 返回一个`Order<Open>`类型的实例。
-    pub fn order_open(cid: ClientOrderId, side: Side, price: f64, quantity: f64, filled: f64) -> Order<Open> {
+    pub fn generate_order_open(cid: ClientOrderId, side: Side, price: f64, quantity: f64, filled: f64) -> Order<Open> {
         Order {
             exchange: Exchange::from("exchange"),
             instrument: Instrument::from(("base", "quote", InstrumentKind::Perpetual)),
@@ -118,9 +118,9 @@ pub mod test_util {
         }
     }
 
-    /// 生成一个public_trade记录。
+    /// 生成一个generate_public_trade记录。
     /// 接收买卖方向、价格和数量，返回一个`PublicTrade`类型的实例。
-    pub fn public_trade(side: Side, price: f64, amount: f64) -> PublicTrade {
+    pub fn generate_public_trade(side: Side, price: f64, amount: f64) -> PublicTrade {
         PublicTrade {
             id: "trade_id".to_string(),
             price,
@@ -131,7 +131,7 @@ pub mod test_util {
 
     /// 创建一个trade实例。
     /// 接收交易ID、买卖方向、价格、数量和费用，返回一个`Trade`类型的实例。
-    pub fn trade(id: TradeId, side: Side, price: f64, quantity: f64, fees: SymbolFees) -> Trade {
+    pub fn generate_trade(id: TradeId, side: Side, price: f64, quantity: f64, fees: SymbolFees) -> Trade {
         Trade {
             id,
             order_id: OrderId::from("order_id"),
