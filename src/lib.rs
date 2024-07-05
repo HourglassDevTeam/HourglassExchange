@@ -73,7 +73,7 @@ impl ExecutionKind {
     }
 }
 
-/// Utilities for generating common data structures required for testing.
+/// 用于生成测试所需的订单、挂单、交易、的实用工具。
 pub mod test_util {
     use cerebro_data::subscription::trade::PublicTrade;
     use cerebro_integration::model::{
@@ -100,7 +100,7 @@ pub mod test_util {
         }
     }
 
-    /// 创建一个开放状态的订单。
+    /// 创建一个开放状态的挂单。
     /// 接收客户端订单ID、买卖方向、价格、数量和已成交量，
     /// 返回一个`Order<Open>`类型的实例。
     pub fn generate_order_open(cid: ClientOrderId, side: Side, price: f64, quantity: f64, filled: f64) -> Order<Open> {
