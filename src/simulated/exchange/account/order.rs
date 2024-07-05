@@ -65,7 +65,7 @@ impl ClientOrders {
 /// multi-participant OrderBook.
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct Orders {
-    pub trade_counter: u64,
+    pub order_batch_id: u64,
     pub bids: Vec<Order<Open>>,
     pub asks: Vec<Order<Open>>,
 }
@@ -155,7 +155,7 @@ impl Orders {
             }
 
             // Remaining liquidity is either a full-fill or a partial-fill
-            self.trade_counter += 1;
+            self.order_batch_id += 1;
             match OrderFill::kind(&best_bid, remaining_liquidity) {
                 // Full Order<Open> fill
                 | OrderFill::Full => {
@@ -211,10 +211,10 @@ impl Orders {
         }
     }
 
-    /// Use the `trade_counter` value to generate a unique [`TradeId`] for this [`Instrument`]
+    /// Use the `order_batch_id` value to generate a unique [`TradeId`] for this [`Instrument`]
     /// market.
     pub fn trade_id(&self) -> TradeId {
-        TradeId(self.trade_counter.to_string())
+        TradeId(self.order_batch_id.to_string())
     }
 
     /// Simulates [`Side::Sell`] trades by using the [`PublicTrade`] liquidity to match on open
@@ -239,7 +239,7 @@ impl Orders {
             }
 
             // Remaining liquidity is either a full-fill or a partial-fill
-            self.trade_counter += 1;
+            self.order_batch_id += 1;
             match OrderFill::kind(&best_ask, remaining_liquidity) {
                 // Full Order<Open> fill
                 | OrderFill::Full => {

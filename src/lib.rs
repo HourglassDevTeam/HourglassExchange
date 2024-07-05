@@ -92,9 +92,9 @@ pub mod test_util {
 
     /// 生成客户端订单集合。
     /// 接收交易编号、买单和卖单向量，返回一个`Orders`实例。
-    pub fn generate_client_orders(trade_number: u64, bids: Vec<Order<Open>>, asks: Vec<Order<Open>>) -> Orders {
+    pub fn generate_client_orders(batch_id: u64, bids: Vec<Order<Open>>, asks: Vec<Order<Open>>) -> Orders {
         Orders {
-            trade_counter: trade_number,
+            order_batch_id: batch_id,
             bids,
             asks,
         }
