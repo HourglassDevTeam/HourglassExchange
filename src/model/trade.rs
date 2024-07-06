@@ -11,12 +11,19 @@ use super::order::OrderId;
 /// 标准化 [`Trade`]（交易）模型。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Trade {
+    // 交易ID，由交易所生成，不能假定其唯一性。
     pub id: TradeId,
+    // 关联的订单ID。
     pub order_id: OrderId,
+    // 交易的工具/仪器。
     pub instrument: Instrument,
+    // 交易方向（买入或卖出）。
     pub side: Side,
+    // 交易价格。
     pub price: f64,
+    // 交易数量。
     pub quantity: f64,
+    // 交易费用，以符号表示。
     pub fees: SymbolFees,
 }
 
