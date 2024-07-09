@@ -18,9 +18,9 @@ pub struct SimulatedExchange {
 }
 
 impl SimulatedExchange {
-    /// 构造一个用于配置新 [`SimulatedExchange`] 的 [`ExchangeBuilder`]。
-    pub fn ini() -> ExchangeBuilder {
-        ExchangeBuilder::new()
+    /// 构造一个用于配置新 [`SimulatedExchange`] 的 [`ExchangeInitiator`]。
+    pub fn ini() -> ExchangeInitiator {
+        ExchangeInitiator::new()
     }
 
     /// 运行 [`SimulatedExchange`] 并响应 [`SimulatedEvent`]。
@@ -46,14 +46,14 @@ impl SimulatedExchange {
 }
 
 #[derive(Debug, Default)]
-pub struct ExchangeBuilder {
+pub struct ExchangeInitiator {
     // 模拟事件的无界接收器，用于构建器。
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
     // 客户账户，用于构建器。
     account: Option<ClientAccount>,
 }
 
-impl ExchangeBuilder {
+impl ExchangeInitiator {
     fn new() -> Self {
         Self { ..Default::default() }
     }
