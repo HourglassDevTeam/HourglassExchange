@@ -28,7 +28,7 @@ pub mod simulated;
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
 pub trait ClientExecution {
-    const CLIENT: ExecutionKind;
+    const CLIENT: ExchangeKind;
     type Config;
 
     /// 使用提供的[`Self::Config`]和[`AccountEvent`]发送器初始化一个新的[`ClientExecution`]。
@@ -47,28 +47,28 @@ pub trait ClientExecution {
 /// Unique identifier for an [`ClientExecution`] implementation.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 #[serde(rename = "execution", rename_all = "snake_case")]
-pub enum ExecutionKind {
+pub enum ExchangeKind {
     Simulated,
     Ftx,
 }
 
-impl From<ExecutionKind> for Exchange {
-    fn from(execution_kind: ExecutionKind) -> Self {
+impl From<ExchangeKind> for Exchange {
+    fn from(execution_kind: ExchangeKind) -> Self {
         Exchange::from(execution_kind.as_str())
     }
 }
 
-impl Display for ExecutionKind {
+impl Display for ExchangeKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }
 
-impl ExecutionKind {
+impl ExchangeKind {
     pub fn as_str(&self) -> &'static str {
         match self {
-            | ExecutionKind::Simulated => "simulated",
-            | ExecutionKind::Ftx => "ftx",
+            | ExchangeKind::Simulated => "simulated",
+            | ExchangeKind::Ftx => "ftx",
         }
     }
 }

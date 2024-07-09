@@ -8,7 +8,7 @@ use tokio::sync::{mpsc, oneshot};
 use crate::{
     model::order::{Cancelled, Open, Order},
     simulated::SimulatedEvent,
-    AccountEvent, ClientExecution, ExecutionError, ExecutionKind, RequestCancel, RequestOpen, TokenBalance,
+    AccountEvent, ClientExecution, ExecutionError, ExchangeKind, RequestCancel, RequestOpen, TokenBalance,
 };
 
 /// 模拟[`ClientExecution`]实现
@@ -22,7 +22,7 @@ pub struct SimulatedClient {
 impl ClientExecution for SimulatedClient {
     type Config = mpsc::UnboundedSender<SimulatedEvent>;
 
-    const CLIENT: ExecutionKind = ExecutionKind::Simulated;
+    const CLIENT: ExchangeKind = ExchangeKind::Simulated;
 
     async fn init(request_tx: Self::Config, _: mpsc::UnboundedSender<AccountEvent>) -> Self {
         Self { request_tx }
