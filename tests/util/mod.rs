@@ -33,7 +33,7 @@ pub(super) async fn run_default_exchange(
     let balances = initial_balances();
 
     // Build SimulatedExchange & run on it's own Tokio task
-    SimulatedExchange::builder()
+    SimulatedExchange::ini()
         .event_simulated_rx(event_simulated_rx)
         .account(
             ClientAccount::builder()

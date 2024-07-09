@@ -19,7 +19,7 @@ pub struct SimulatedExchange {
 
 impl SimulatedExchange {
     /// 构造一个用于配置新 [`SimulatedExchange`] 的 [`ExchangeBuilder`]。
-    pub fn builder() -> ExchangeBuilder {
+    pub fn ini() -> ExchangeBuilder {
         ExchangeBuilder::new()
     }
 
