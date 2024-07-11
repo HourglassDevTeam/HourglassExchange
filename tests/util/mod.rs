@@ -17,14 +17,14 @@ use tide_broker::{
             account::{balance::ClientBalances, ClientAccount},
             SimulatedExchange,
         },
-        SimulatedEvent,
+        SimulatedCommand,
     },
     ExchangeKind,
 };
 
 pub(super) async fn run_default_exchange(
     event_account_tx: mpsc::UnboundedSender<AccountEvent>,
-    event_simulated_rx: mpsc::UnboundedReceiver<SimulatedEvent>,
+    event_simulated_rx: mpsc::UnboundedReceiver<SimulatedCommand>,
 ) {
     // Define SimulatedExchange available Instruments
     let instruments = instruments();

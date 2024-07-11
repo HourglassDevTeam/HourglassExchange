@@ -3,16 +3,16 @@ use crate::ExecutionError;
 use tokio::sync::mpsc;
 
 // 引入上级模块中的客户账户和模拟事件类型。
-use super::{exchange::account::ClientAccount, SimulatedEvent};
+use super::{exchange::account::ClientAccount, SimulatedCommand};
 
 /// [`SimulatedExchange`] 的账户余额、开放订单、费用和延迟。
 pub mod account;
 
-/// 响应 [`SimulatedEvent`] 的 [`SimulatedExchange`]。
+/// 响应 [`SimulatedCommand`] 的 [`SimulatedExchange`]。
 #[derive(Debug)]
 pub struct SimulatedExchange {
     // 模拟事件的无界接收器。
-    pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedEvent>,
+    pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedCommand>,
     // 客户账户。
     pub account: ClientAccount,
 }
@@ -23,23 +23,23 @@ impl SimulatedExchange {
         ExchangeInitiator::new()
     }
 
-    /// 运行 [`SimulatedExchange`] 并响应 [`SimulatedEvent`]。
+    /// 运行 [`SimulatedExchange`] 并响应 [`SimulatedCommand`]。
     pub async fn run(mut self) {
         // 不断接收并处理模拟事件。
         while let Some(event) = self.event_simulated_rx.recv().await {
             match event {
                 // 处理获取开放订单请求。
-                | SimulatedEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx),
+                | SimulatedCommand::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx),
                 // 处理获取账户余额请求。
-                | SimulatedEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx),
+                | SimulatedCommand::FetchBalances(response_tx) => self.account.fetch_balances(response_tx),
                 // 处理开启订单请求。
-                | SimulatedEvent::OpenOrders((open_requests, response_tx)) => self.account.open_orders(open_requests, response_tx),
+                | SimulatedCommand::OpenOrders((open_requests, response_tx)) => self.account.open_orders(open_requests, response_tx),
                 // 处理取消订单请求。
-                | SimulatedEvent::CancelOrders((cancel_requests, response_tx)) => self.account.cancel_orders(cancel_requests, response_tx),
+                | SimulatedCommand::CancelOrders((cancel_requests, response_tx)) => self.account.cancel_orders(cancel_requests, response_tx),
                 // 处理取消所有订单请求。
-                | SimulatedEvent::CancelOrdersAll(response_tx) => self.account.cancel_orders_all(response_tx),
+                | SimulatedCommand::CancelOrdersAll(response_tx) => self.account.cancel_orders_all(response_tx),
                 // 处理市场交易事件。
-                | SimulatedEvent::MarketTrade((instrument, trade)) => self.account.match_orders(instrument, trade),
+                | SimulatedCommand::MarketTrade((instrument, trade)) => self.account.match_orders(instrument, trade),
             }
         }
     }
@@ -48,7 +48,7 @@ impl SimulatedExchange {
 #[derive(Debug, Default)]
 pub struct ExchangeInitiator {
     // 模拟事件的无界接收器，用于构建器。
-    event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
+    event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedCommand>>,
     // 客户账户，用于构建器。
     account: Option<ClientAccount>,
 }
@@ -59,7 +59,7 @@ impl ExchangeInitiator {
     }
 
     // 设置模拟事件的接收器。
-    pub fn event_simulated_rx(self, value: mpsc::UnboundedReceiver<SimulatedEvent>) -> Self {
+    pub fn event_simulated_rx(self, value: mpsc::UnboundedReceiver<SimulatedCommand>) -> Self {
         Self {
             event_simulated_rx: Some(value),
             ..self

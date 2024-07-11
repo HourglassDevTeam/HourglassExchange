@@ -8,7 +8,7 @@ pub mod exchange;
 pub mod execution;
 
 #[derive(Debug)]
-pub enum SimulatedEvent {
+pub enum SimulatedCommand {
     FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>),
     FetchBalances(oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>),
     OpenOrders((Vec<Order<RequestOpen>>, oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>)),

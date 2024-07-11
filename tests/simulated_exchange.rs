@@ -14,7 +14,7 @@ use tide_broker::{
         trade::{SymbolFees, Trade, TradeId},
         AccountEvent, AccountEventKind, ClientOrderId,
     },
-    simulated::{execution::SimulatedClient, SimulatedEvent},
+    simulated::{execution::SimulatedClient, SimulatedCommand},
     ClientExecution,
 };
 
@@ -230,12 +230,12 @@ async fn test_3_open_limit_buy_order(client: &SimulatedClient, test_3_ids: Ids, 
 // 4. 发送一个不匹配任何打开订单的MarketEvent，并检查是否没有发送AccountEvents。
 // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent.
 fn test_4_send_market_event_that_does_not_match_any_open_order(
-    event_simulated_tx: &mut mpsc::UnboundedSender<SimulatedEvent>,
+    event_simulated_tx: &mut mpsc::UnboundedSender<SimulatedCommand>,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
     // 发送不匹配任何订单的市场交易事件
     event_simulated_tx
-        .send(SimulatedEvent::MarketTrade((
+        .send(SimulatedCommand::MarketTrade((
             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
             PublicTrade {
                 id: "test_4".to_string(),
@@ -456,13 +456,13 @@ async fn test_6_open_2x_limit_buy_orders(
 // 7. Send MarketEvent that exactly full matches 1x open Order (trade) and check AccountEvents for
 // balances and trades are sent.
 async fn test_7_send_market_event_that_exact_full_matches_order(
-    event_simulated_tx: &mut mpsc::UnboundedSender<SimulatedEvent>,
+    event_simulated_tx: &mut mpsc::UnboundedSender<SimulatedCommand>,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
     // 发送匹配的MarketEvent
     // Send matching MarketEvent
     event_simulated_tx
-        .send(SimulatedEvent::MarketTrade((
+        .send(SimulatedCommand::MarketTrade((
             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
             PublicTrade {
                 id: "test_7".to_string(),
@@ -683,13 +683,13 @@ async fn test_9_open_2x_limit_sell_orders(
 // 10. Send MarketEvent that fully matches 1x sell Order (trade), and partially matches the another
 //    (trade). Check AccountEvents for balances and trades of both matches are sent.
 async fn test_10_send_market_event_that_full_and_partial_matches_orders(
-    event_simulated_tx: &mut mpsc::UnboundedSender<SimulatedEvent>,
+    event_simulated_tx: &mut mpsc::UnboundedSender<SimulatedCommand>,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
     // 发送一个完全匹配一个订单且部分匹配另一个订单的MarketEvent
     // Send MarketEvent that fully matches one order and partially matches another
     event_simulated_tx
-        .send(SimulatedEvent::MarketTrade((
+        .send(SimulatedCommand::MarketTrade((
             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
             PublicTrade {
                 id: "test_10".to_string(),
