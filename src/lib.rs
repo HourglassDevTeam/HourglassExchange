@@ -15,7 +15,7 @@ use crate::{
     universal::{
         balance::TokenBalance,
         order::{Cancelled, Open, Order, OrderId, RequestCancel, RequestOpen},
-        ClientAccountEvent,
+        event_and_status::ClientAccountEvent,
     },
 };
 
