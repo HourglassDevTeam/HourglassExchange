@@ -46,7 +46,7 @@ impl Balance {
     }
 }
 
-/// 可应用于[`Balance`]的变更；
+/// 可应用于[`Balance`]的增量变更；
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct BalanceDelta {
     pub total: f64,     // 总额变化
