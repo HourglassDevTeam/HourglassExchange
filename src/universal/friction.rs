@@ -1,7 +1,6 @@
 use serde::{Serialize,Deserialize};
 
 
-
 #[allow(dead_code)]
 /// 以 [`Symbol`]（符号）表示的 [`Trade`]（交易）费用。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
