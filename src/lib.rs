@@ -13,7 +13,7 @@ use tokio::sync::mpsc;
 use crate::{
     error::ExecutionError,
     universal::{
-        balance::TokenBalance,
+        balance::TokenPosition,
         event::ClientAccountEvent,
         order::{Cancelled, Opened, Order, RequestCancel, RequestOpen},
     },
@@ -38,7 +38,7 @@ pub trait ClientExecution {
     /// 同时返回HTTP客户端`Self`。
     async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<ClientAccountEvent>) -> Self;
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Opened>>, ExecutionError>;
-    async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>;
+    async fn fetch_balances(&self) -> Result<Vec<TokenPosition>, ExecutionError>;
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Opened>, ExecutionError>>;
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>>;
 

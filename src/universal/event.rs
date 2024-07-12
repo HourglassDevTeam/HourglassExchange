@@ -1,5 +1,5 @@
 use crate::universal::{
-    balance::TokenBalance,
+    balance::TokenPosition,
     order::{Cancelled, Opened, Order},
     trade::Trade,
 };
@@ -29,14 +29,14 @@ pub enum AccountEventKind {
     // OrdersPartiallyFilled(Vec<Order<PartiallyFilled>>),
     // ...
     // WebSocket Only - 仅限WebSocket
-    Balance(TokenBalance),
+    Balance(TokenPosition),
     Trade(Trade),
     // PriceUpdate(PriceUpdate),
     // OrderBookUpdate(OrderBookUpdate),
     // MarketStatus(MarketStatus),
     // ...
     // HTTP & WebSocket - HTTP和WebSocket
-    Balances(Vec<TokenBalance>),
+    Balances(Vec<TokenPosition>),
     // Positions(Vec<Position>),
     // AccountInfo(AccountInfo),
     // MarginUpdate(MarginUpdate),
