@@ -79,7 +79,7 @@ impl AccountModule {
         self.event_account_tx
             .send(AccountEvent {
                 received_ts: Utc::now(),
-                from_exchange: Exchange::from(ExchangeKind::Simulated),
+                exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::OrdersNew(vec![open.clone()]),
             })
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Trade");
@@ -146,7 +146,7 @@ impl AccountModule {
         self.event_account_tx
             .send(AccountEvent {
                 received_ts: Utc::now(),
-                from_exchange: Exchange::from(ExchangeKind::Simulated),
+                exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
             })
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Trade");
@@ -154,7 +154,7 @@ impl AccountModule {
         self.event_account_tx
             .send(AccountEvent {
                 received_ts: Utc::now(),
-                from_exchange: Exchange::from(ExchangeKind::Simulated),
+                exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::Balance(balance_event),
             })
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Balance");
@@ -188,7 +188,7 @@ impl AccountModule {
         self.event_account_tx
             .send(AccountEvent {
                 received_ts: Utc::now(),
-                from_exchange: Exchange::from(ExchangeKind::Simulated),
+                exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::OrdersCancelled(cancelled_orders.clone()),
             })
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::OrdersCancelled");
@@ -196,7 +196,7 @@ impl AccountModule {
         self.event_account_tx
             .send(AccountEvent {
                 received_ts: Utc::now(),
-                from_exchange: Exchange::from(ExchangeKind::Simulated),
+                exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::Balances(balance_updates),
             })
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Balances");
@@ -241,7 +241,7 @@ impl AccountModule {
             self.event_account_tx
                 .send(AccountEvent {
                     received_ts: Utc::now(),
-                    from_exchange: Exchange::from(ExchangeKind::Simulated),
+                    exchange: Exchange::from(ExchangeKind::Simulated),
                     kind: AccountEventKind::Trade(trade),
                 })
                 .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Trade");
