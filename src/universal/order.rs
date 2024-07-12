@@ -213,7 +213,7 @@ where
     }
 }
 
-/// 订单ID / OrderId，由交易所生成。注意其不一定是唯一的。
+/// 订单ID / OrderId，应当由交易所生成。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct OrderId(pub String);
 
