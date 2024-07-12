@@ -17,7 +17,7 @@ use tide_broker::{
     universal::{
         balance::Balance,
         order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
-        ClientAccountEvent, ClientOrderId,
+        event_and_status::{ClientAccountEvent, ClientOrderId},
     },
     ExchangeKind,
 };
