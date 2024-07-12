@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 pub struct Trade {
     // 交易ID，由交易所生成，不能假定其唯一性。
     pub id: TradeId,
-    // 交易的工具。
+    // 交易的金融工具。
     pub instrument: Instrument,
     // 交易方向（买入或卖出）。
     pub side: Side,
