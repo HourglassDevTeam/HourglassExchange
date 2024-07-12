@@ -98,6 +98,7 @@ impl Display for OrderKind {
 pub struct Order<State> {
     pub exchange: Exchange,     // 交易所
     pub instrument: Instrument, // 交易工具
+    // NOTE 需要记录 OrderId 吗
     pub cid: ClientOrderId,     // 客户端订单ID
     pub side: Side,             // 买卖方向
     pub state: State,           // 订单状态
