@@ -131,6 +131,8 @@ pub struct RequestCancel {
     pub id: OrderId, // Consider : 需要记录 CID 吗 ????
 }
 
+
+// 从Id直接生成RequestCancel
 impl<Id> From<Id> for RequestCancel
 where
     Id: Into<OrderId>,
