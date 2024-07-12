@@ -1,6 +1,3 @@
-
-
-
 #[derive(Clone, Debug)]
 pub struct AccountPositions {
     margin_pos: Vec<MarginPosition>,  // useless in backtest
