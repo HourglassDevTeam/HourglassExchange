@@ -22,7 +22,7 @@ pub struct Trade {
     // 交易价格。
     pub price: f64,
     // 交易数量。
-    pub amount: f64,
+    pub count: f64,
     // 交易费用，以符号表示。
     pub fees: SymbolFees, // NOTE 从ClientAccountInfo公共信息中继承
 }

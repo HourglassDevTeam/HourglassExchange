@@ -516,7 +516,7 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
                 instrument: Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
                 side: Side::Buy,
                 price: 200.0,
-                amount: 1.0,
+                count: 1.0,
                 fees: SymbolFees::new("btc", 1.0 * fees_50_percent()),
             };
             assert_eq!(trade, expected);
@@ -746,7 +746,7 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
                 instrument: Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
                 side: Side::Sell,
                 price: 500.0,
-                amount: 1.0,
+                count: 1.0,
                 fees: SymbolFees::new("usdt", first_full_fill_fees),
             };
             assert_eq!(trade, expected);
@@ -801,7 +801,7 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
                 instrument: Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
                 side: Side::Sell,
                 price: 1000.0,
-                amount: 0.5,
+                count: 0.5,
                 fees: SymbolFees::new("usdt", second_partial_fill_fees),
             };
             assert_eq!(trade, expected);
