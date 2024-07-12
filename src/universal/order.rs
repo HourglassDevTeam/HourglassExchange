@@ -74,7 +74,6 @@ pub struct RequestOpen {
     pub quantity: f64,
 }
 
-
 // NOTE that this needs to be adjusted according to the specifics of our trading instruments.
 impl Order<RequestOpen> {
     pub fn calculate_required_available_balance(&self) -> (&Symbol, f64) {
@@ -95,7 +94,6 @@ pub struct RequestCancel {
     pub id: OrderId, // Consider : 需要记录 CID 吗 ????
 }
 
-
 // 从Id直接生成RequestCancel
 impl<Id> From<Id> for RequestCancel
 where
@@ -112,8 +110,8 @@ pub struct Opened {
     pub id: OrderId,
     pub price: f64,
     pub quantity: f64,
-    pub filled_quantity: f64,// or remain
-    // or remaining quantity  , essentially the same.
+    pub filled_quantity: f64, /* or remain
+                               * or remaining quantity  , essentially the same. */
 }
 
 impl Opened {

@@ -1,8 +1,12 @@
+use crate::{
+    error::ExecutionError,
+    universal::{
+        balance::TokenBalance,
+        order::{Cancelled, Opened, Order, OrderKind, RequestCancel, RequestOpen},
+    },
+};
 use serde_json::ser::State;
 use tokio::sync::oneshot;
-use crate::error::ExecutionError;
-use crate::universal::balance::TokenBalance;
-use crate::universal::order::{Cancelled, Opened, Order, OrderKind, RequestCancel, RequestOpen};
 
 #[derive(Clone, Debug)]
 pub struct AccountInfo<State> {
@@ -30,7 +34,7 @@ pub enum MarginMode {
 #[derive(Clone, Debug)]
 pub enum PositionMode {
     LongShortMode, // Note long/short, only applicable to Futures/Swap
-    NetMode, // Note one side per token per position
+    NetMode,       // Note one side per token per position
 }
 
 #[derive(Clone, Debug)]
@@ -39,8 +43,6 @@ pub enum CommissionLevel {
     Lv2,
     // ..........
 }
-
-
 
 #[derive(Clone, Debug)]
 pub struct AccountBalances {
@@ -55,16 +57,14 @@ pub struct SpotBalance {
 
 #[derive(Clone, Debug)]
 pub struct AccountPositions {
-    margin_pos: Vec<MarginPosition>, // useless in backtest
-    swap_pos: Vec<SwapPosition>, // Note useful, and we gonna build it
+    margin_pos: Vec<MarginPosition>,  // useless in backtest
+    swap_pos: Vec<SwapPosition>,      // Note useful, and we gonna build it
     futures_pos: Vec<MarginPosition>, // useless
-    option_pos: Vec<OptionPosition>, // useless
+    option_pos: Vec<OptionPosition>,  // useless
 }
 
 #[derive(Clone, Debug)]
-pub struct MarginPosition {
-
-}
+pub struct MarginPosition {}
 
 #[derive(Clone, Debug)]
 pub struct SwapPosition {
@@ -94,16 +94,11 @@ pub enum PositionMarginMode {
 
 #[derive(Clone, Debug)]
 
-pub struct FuturesPosition {
-
-}
+pub struct FuturesPosition {}
 
 #[derive(Clone, Debug)]
 
-pub struct OptionPosition {
-
-}
-
+pub struct OptionPosition {}
 
 #[derive(Clone, Debug)]
 // NOTE wrap fields with option<> to yield support for initiation in a chained fashion
@@ -111,7 +106,6 @@ pub struct AccountBuilder {
     config: Option<AccountConfig>,
     balances: Option<AccountBalances>,
     positions: Option<AccountPositions>,
-
 }
 
 impl AccountBuilder {
@@ -133,18 +127,13 @@ impl AccountInfo<State> {
         todo!()
     }
 
-
     pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>) {
         todo!()
     }
 
-
-
     pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError> {
-    todo!()
+        todo!()
     }
-
-
 
     pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Opened>, ExecutionError> {
         Self::order_validity_check(request.state.kind).unwrap();
@@ -168,7 +157,5 @@ impl AccountInfo<State> {
 
     pub fn cancel_orders_all(&mut self, response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>) {
         todo!()
-    }   }
-
-
-
+    }
+}
