@@ -20,7 +20,7 @@ pub mod trade; // 定义交易模块
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AccountEvent {
     pub received_ts: DateTime<Utc>, // 客户端接收到事件的时间
-    pub exchange: Exchange,           // 交易所
+    pub from_exchange: Exchange,           // 交易所
     pub kind: AccountEventKind,       // 事件类型
 }
 
