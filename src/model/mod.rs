@@ -32,13 +32,24 @@ pub enum AccountEventKind {
     OrdersOpen(Vec<Order<Open>>),
     OrdersNew(Vec<Order<Open>>),
     OrdersCancelled(Vec<Order<Cancelled>>),
+    // OrdersFilled(Vec<Order<Filled>>),
+    // OrdersPartiallyFilled(Vec<Order<PartiallyFilled>>),
     // ...
     // WebSocket Only - 仅限WebSocket
     Balance(TokenBalance),
     Trade(Trade),
+    // PriceUpdate(PriceUpdate),
+    // OrderBookUpdate(OrderBookUpdate),
+    // MarketStatus(MarketStatus),
     // ...
     // HTTP & WebSocket - HTTP和WebSocket
     Balances(Vec<TokenBalance>),
+    // Positions(Vec<Position>),
+    // AccountInfo(AccountInfo),
+    // MarginUpdate(MarginUpdate),
+    // Transfer(Transfer),
+    // Deposit(Deposit),
+    // Withdrawal(Withdrawal),
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
