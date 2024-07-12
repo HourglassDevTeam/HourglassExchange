@@ -74,20 +74,18 @@ impl AccountBuilder {
         }
     }
 
-    pub fn config(mut self, value: AccountConfig) -> Self {
-        Self {
-            config: Some(value),
-            ..self
-        }
+    pub fn config(self, value: AccountConfig) -> Self {
+        Self { config: Some(value), ..self }
     }
 
-    pub fn balances(mut self, value: AccountBalances) -> Self {
+    pub fn balances(self, value: Vec<TokenBalance>) -> Self {
         Self {
             balances: Some(value),
             ..self
         }
     }
-    pub fn positions(mut self, value: AccountPositions) -> Self {
+
+    pub fn positions(self, value: AccountPositions) -> Self {
         Self {
             positions: Some(value),
             ..self
