@@ -31,11 +31,11 @@ pub enum AccountEventKind {
     OrdersOpen(Vec<Order<Open>>),
     OrdersNew(Vec<Order<Open>>),
     OrdersCancelled(Vec<Order<Cancelled>>),
-
+    // ...
     // WebSocket Only - 仅限WebSocket
     Balance(TokenBalance),
     Trade(Trade),
-
+    // ...
     // HTTP & WebSocket - HTTP和WebSocket
     Balances(Vec<TokenBalance>),
 }
