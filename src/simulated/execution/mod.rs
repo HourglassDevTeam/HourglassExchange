@@ -20,9 +20,9 @@ pub struct SimulatedClient {
 
 #[async_trait]
 impl ClientExecution for SimulatedClient {
-    type Config = mpsc::UnboundedSender<SimulatedCommand>;
-
     const CLIENT: ExchangeKind = ExchangeKind::Simulated;
+
+    type Config = mpsc::UnboundedSender<SimulatedCommand>;
 
     async fn init(request_tx: Self::Config, _: mpsc::UnboundedSender<ClientAccountEvent>) -> Self {
         Self { request_tx }
