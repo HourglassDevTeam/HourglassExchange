@@ -78,7 +78,7 @@ impl AccountModule {
 
         self.event_account_tx
             .send(AccountEvent {
-                received_time: Utc::now(),
+                received_ts: Utc::now(),
                 exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::OrdersNew(vec![open.clone()]),
             })
@@ -145,7 +145,7 @@ impl AccountModule {
         // Send AccountEvents to client
         self.event_account_tx
             .send(AccountEvent {
-                received_time: Utc::now(),
+                received_ts: Utc::now(),
                 exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
             })
@@ -153,7 +153,7 @@ impl AccountModule {
 
         self.event_account_tx
             .send(AccountEvent {
-                received_time: Utc::now(),
+                received_ts: Utc::now(),
                 exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::Balance(balance_event),
             })
@@ -187,7 +187,7 @@ impl AccountModule {
         // Send AccountEvents to client
         self.event_account_tx
             .send(AccountEvent {
-                received_time: Utc::now(),
+                received_ts: Utc::now(),
                 exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::OrdersCancelled(cancelled_orders.clone()),
             })
@@ -195,7 +195,7 @@ impl AccountModule {
 
         self.event_account_tx
             .send(AccountEvent {
-                received_time: Utc::now(),
+                received_ts: Utc::now(),
                 exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::Balances(balance_updates),
             })
@@ -240,7 +240,7 @@ impl AccountModule {
 
             self.event_account_tx
                 .send(AccountEvent {
-                    received_time: Utc::now(),
+                    received_ts: Utc::now(),
                     exchange: Exchange::from(ExchangeKind::Simulated),
                     kind: AccountEventKind::Trade(trade),
                 })

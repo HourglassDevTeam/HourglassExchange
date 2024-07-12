@@ -76,7 +76,7 @@ impl ClientBalances {
         };
 
         AccountEvent {
-            received_time: Utc::now(),
+            received_ts: Utc::now(),
             exchange: Exchange::from(ExchangeKind::Simulated),
             kind: AccountEventKind::Balance(updated_balance),
         }
@@ -161,7 +161,7 @@ impl ClientBalances {
         let quote_balance = self.update(quote, quote_delta);
 
         AccountEvent {
-            received_time: Utc::now(),
+            received_ts: Utc::now(),
             exchange: Exchange::from(ExchangeKind::Simulated),
             kind: AccountEventKind::Balances(vec![
                 TokenBalance::new(base.clone(), base_balance),
