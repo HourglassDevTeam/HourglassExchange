@@ -14,8 +14,8 @@ pub struct SymbolFees {
 impl SymbolFees {
     /// 构造一个新的 [`SymbolFees`]。
     pub fn new<S>(symbol: S, fees: f64) -> Self
-    where
-        S: Into<Symbol>,
+                  where
+                      S: Into<Symbol>,
     {
         Self { symbol: symbol.into(), fees }
     }

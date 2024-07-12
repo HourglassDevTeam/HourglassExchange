@@ -24,12 +24,6 @@ pub enum OrderKind {
     /// 优点：确保订单会作为挂单存在，通常用于提供流动性。
     /// 缺点：无法立即执行订单。
     /// 应用场景：当希望成为市场的流动性提供者，并且不希望订单立即执行时使用。
-    PostOnly,
-    /// 立即或取消
-    /// 行为：订单会尽快以指定价格或更好的价格部分或全部执行，未执行的部分会被取消。
-    /// 优点：确保订单能尽快执行，不会成为挂单。
-    /// 缺点：部分订单可能被取消，未能全部执行。
-    /// 应用场景：当希望订单尽快执行，但不希望部分订单留在订单簿上时使用。
     ImmediateOrCancel,
     /// 全成或全撤单
     /// 行为：订单必须立即完全执行，否则将被取消。
@@ -48,31 +42,25 @@ pub enum OrderKind {
     /// 优点：订单在当天有效，避免长期挂单。
     /// 缺点：如果当天未能执行，订单会被取消。
     /// 应用场景：当希望订单在当天被执行，如果未执行则自动取消时使用。
-    GoodForDay,
-    /// 止损单
-    /// 行为：当市场价格达到预设的触发价格时，订单会变成市价单。
-    /// 优点：帮助限制损失或保护利润。
-    /// 缺点：在市场剧烈波动时，执行价格可能会有所不同。
-    /// 应用场景：用于设置止损点，保护投资免受过大损失。
-    Stop,
+    // Stop,
     /// 止损限价单
     /// 行为：当市场价格达到预设的触发价格时，订单会变成限价单。
     /// 优点：结合了止损单和限价单的优点，控制执行价格。
     /// 缺点：如果市场价格快速波动，可能无法执行。
     /// 应用场景：希望在达到止损点时以特定价格或更好的价格执行订单。
-    StopLimit,
+    // StopLimit,
     /// 跟踪止损单
     /// 行为：止损价格会随着市场价格的变动而调整，保持一定的距离。
     /// 优点：在锁定利润的同时，随着市场价格的变动，调整止损价格。
     /// 缺点：可能在市场剧烈波动时触发。
     /// 应用场景：在市场趋势有利时保护利润。
-    TrailingStop,
+    // TrailingStop,
     /// 冰山订单
     /// 行为：大订单分成多个小订单逐步显示在市场上。
     /// 优点：隐藏大订单的实际规模，减少对市场价格的影响。
     /// 缺点：可能增加执行时间。
     /// 应用场景：希望大订单逐步执行，减少对市场影响时使用。
-    Iceberg,
+    // Iceberg,
 }
 
 impl Display for OrderKind {
@@ -80,15 +68,13 @@ impl Display for OrderKind {
         write!(f, "{}", match self {
             | OrderKind::Market => "market",
             | OrderKind::Limit => "limit",
-            | OrderKind::PostOnly => "post_only",
             | OrderKind::ImmediateOrCancel => "immediate_or_cancel (IOC)",
             | OrderKind::FillOrKill => "fill_or_kill (FOK)",
             | OrderKind::GoodTilCancelled => "good_til_cancelled (GTC)",
-            | OrderKind::GoodForDay => "good_for_day (GFD)",
-            | OrderKind::Stop => "stop",
-            | OrderKind::StopLimit => "stop_limit",
-            | OrderKind::TrailingStop => "trailing_stop",
-            | OrderKind::Iceberg => "iceberg",
+            // | OrderKind::Stop => "stop",
+            // | OrderKind::StopLimit => "stop_limit",
+            // | OrderKind::TrailingStop => "trailing_stop",
+            // | OrderKind::Iceberg => "iceberg",
         })
     }
 }
