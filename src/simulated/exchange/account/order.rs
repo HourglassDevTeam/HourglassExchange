@@ -90,7 +90,7 @@ impl Orders {
         }
     }
 
-    /// Check if an input [`PublicTrade`] matches an bid or ask client [`Open<Order>`].
+    /// Check if an input [`PublicTrade`] matches an bid or ask  [`Open<Order>`] of the client's orders..
     ///
     /// Note:
     ///  - In the event that the client has opened both a bid and ask [`Order<Open>`] at the same
