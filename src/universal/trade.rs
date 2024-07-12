@@ -5,8 +5,6 @@ use cerebro_integration::model::{
 };
 use serde::{Deserialize, Serialize};
 
-// 引入订单ID。
-use super::order::OrderId;
 
 /// 标准化 [`Trade`]（交易）模型。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
