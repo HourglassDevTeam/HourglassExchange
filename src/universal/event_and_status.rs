@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 use uuid::Uuid;
 
-/// 通用[`ClientAccountEvent`]，包含了相关[`AccountEventKind`]变体的元数据。由[`ClientExecutions`](crate::ClientExecution)trait的方法生成。
 /// NOTE: 如果需要记录交易所的时间戳，可以再添加一个专门的字段来表示交易所的时间，例如：    pub exchange_ts: DateTime<Utc> or i64
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ClientAccountEvent {
