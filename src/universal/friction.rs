@@ -1,4 +1,5 @@
 use serde::{Serialize,Deserialize};
+use cerebro_integration::model::instrument::symbol::Symbol;
 
 
 #[allow(dead_code)]
