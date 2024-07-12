@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 
 use crate::{
     error::ExecutionError,
-    model::{
+    universal::{
         balance::TokenBalance,
         order::{Cancelled, Open, Order, OrderId, RequestCancel, RequestOpen},
         ClientAccountEvent,
@@ -23,7 +23,7 @@ use crate::{
 pub mod error;
 /// 支持在交易所执行操作的核心数据结构。
 /// 例如：`Order`（订单）、`Balance`（余额）、`Trade`（交易）等。
-pub mod model;
+pub mod universal;
 pub mod simulated;
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
@@ -82,7 +82,7 @@ pub mod test_util {
     };
 
     use crate::{
-        model::{
+        universal::{
             trade::{SymbolFees, Trade, TradeId},
             ClientOrderId,
         },

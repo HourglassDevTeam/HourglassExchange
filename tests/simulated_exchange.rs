@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use tide_broker::{
     error::ExecutionError,
-    model::{
+    universal::{
         balance::{Balance, TokenBalance},
         order::OrderId,
         trade::{SymbolFees, Trade, TradeId},

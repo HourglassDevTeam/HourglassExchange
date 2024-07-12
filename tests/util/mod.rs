@@ -7,7 +7,7 @@ use cerebro_integration::model::{
 use tokio::sync::mpsc;
 
 use tide_broker::{
-    model::{
+    universal::{
         balance::Balance,
         order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
         ClientAccountEvent, ClientOrderId,

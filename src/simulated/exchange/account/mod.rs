@@ -6,7 +6,7 @@ use tokio::sync::{mpsc, oneshot};
 use tracing::warn;
 
 use crate::{
-    model::{
+    universal::{
         balance::{Balance, TokenBalance},
         order::OrderKind,
         ClientAccountEvent, AccountEventKind,

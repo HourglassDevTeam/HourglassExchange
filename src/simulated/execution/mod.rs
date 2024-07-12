@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
-    model::order::{Cancelled, Open, Order},
+    universal::order::{Cancelled, Open, Order},
     simulated::SimulatedCommand,
     ClientAccountEvent, ClientExecution, ExecutionError, ExchangeKind, RequestCancel, RequestOpen, TokenBalance,
 };

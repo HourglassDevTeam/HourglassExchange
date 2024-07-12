@@ -5,7 +5,7 @@ use cerebro_integration::model::{instrument::Instrument, Side};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    model::trade::{SymbolFees, Trade, TradeId},
+    universal::trade::{SymbolFees, Trade, TradeId},
     ExecutionError, Open, Order, OrderId, RequestOpen,
 };
 
@@ -319,7 +319,7 @@ mod tests {
     use uuid::Uuid;
 
     use crate::{
-        model::ClientOrderId,
+        universal::ClientOrderId,
         simulated::exchange::account::order::Orders,
         test_util::{generate_client_orders, generate_order_open, generate_public_trade, generate_trade},
     };

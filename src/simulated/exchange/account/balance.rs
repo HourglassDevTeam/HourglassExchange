@@ -8,7 +8,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    model::{
+    universal::{
         balance::{Balance, BalanceDelta, TokenBalance},
         trade::Trade,
         ClientAccountEvent, AccountEventKind,
