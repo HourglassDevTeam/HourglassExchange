@@ -151,7 +151,7 @@ pub struct Opened {
     pub price: f64,
     pub quantity: f64,
     pub filled_quantity: f64,// or remain
-    // ing quantity  , essentially the same.
+    // or remaining quantity  , essentially the same.
 }
 
 impl Opened {
