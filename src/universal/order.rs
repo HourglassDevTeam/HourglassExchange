@@ -99,9 +99,9 @@ pub struct Order<State> {
     pub exchange: Exchange,     // 交易所
     pub instrument: Instrument, // 交易工具
     // NOTE 需要记录 OrderId 吗
-    pub cid: ClientOrderId,     // 客户端订单ID
-    pub side: Side,             // 买卖方向
-    pub state: State,           // 订单状态
+    pub cid: ClientOrderId, // 客户端订单ID
+    pub side: Side,         // 买卖方向
+    pub state: State,       // 订单状态
 }
 
 /// 订单初始状态。发送到ClientExecution进行操作
@@ -196,7 +196,7 @@ impl PartialOrd for Order<Open> {
 // 为Order<Open>实现Eq
 impl Eq for Order<Open> {}
 
-/// 订单在被取消后的状态
+/// 构建订单在被取消后的状态
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct Cancelled {
     pub id: OrderId,
@@ -206,9 +206,7 @@ impl<Id> From<Id> for Cancelled
 where
     Id: Into<OrderId>,
 {
-    // 实现 from 函数，用于将类型 Id 转换为 Cancelled 结构体
     fn from(id: Id) -> Self {
-        // 使用 into 方法将 id 转换为 OrderId，并构建 Cancelled 结构体
         Self { id: id.into() }
     }
 }

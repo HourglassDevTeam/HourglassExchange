@@ -1,8 +1,5 @@
 // 引入相关模块和结构体。
-use cerebro_integration::model::{
-    instrument::{Instrument},
-    Side,
-};
+use cerebro_integration::model::{instrument::Instrument, Side};
 use serde::{Deserialize, Serialize};
 
 /// 标准化 [`Trade`]（交易）模型。

@@ -1,7 +1,7 @@
 // NOTE 滑点和摩擦成本的设计放在这里
 
-use serde::{Serialize,Deserialize};
 use cerebro_integration::model::instrument::symbol::Symbol;
+use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
 /// 以 [`Symbol`]（符号）表示的 [`Trade`]（交易）费用。
@@ -14,8 +14,8 @@ pub struct SymbolFees {
 impl SymbolFees {
     /// 构造一个新的 [`SymbolFees`]。
     pub fn new<S>(symbol: S, fees: f64) -> Self
-                  where
-                      S: Into<Symbol>,
+    where
+        S: Into<Symbol>,
     {
         Self { symbol: symbol.into(), fees }
     }

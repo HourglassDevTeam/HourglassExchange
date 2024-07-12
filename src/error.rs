@@ -27,7 +27,6 @@ pub enum ExecutionError {
     #[error("[UniLinkExecution] : 由于不支持的订单类型，无法开设订单: {0}")]
     UnsupportedOrderKind(OrderKind),
 
-
     /// 网络错误，无法连接到交易所。
     #[error("[UniLinkExecution] : 网络错误，无法连接到交易所: {0}")]
     NetworkError(String),

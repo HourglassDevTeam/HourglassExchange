@@ -54,4 +54,3 @@ impl std::fmt::Display for ClientOrderId {
         write!(f, "{}", self.0)
     }
 }
-
