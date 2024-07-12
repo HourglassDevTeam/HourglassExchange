@@ -13,7 +13,7 @@ use tide_broker::{
         balance::{Balance, TokenBalance},
         order::OrderId,
         trade::{SymbolFees, Trade, TradeId},
-        AccountEventKind, ClientAccountEvent, ClientOrderId,
+        event_and_status::{AccountEventKind, ClientAccountEvent, ClientOrderId},
     },
     ClientExecution,
 };

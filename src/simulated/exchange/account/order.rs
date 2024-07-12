@@ -320,8 +320,7 @@ mod tests {
     use crate::{
         simulated::exchange::account::order::Orders,
         test_util::{generate_client_orders, generate_order_open, generate_public_trade, generate_trade},
-        universal::ClientOrderId,
-    };
+        universal::event_and_status::ClientOrderId,    };
 
     use super::*;
 
