@@ -3,10 +3,12 @@
 
 #![allow(clippy::type_complexity)]
 
-use std::fmt::{Display, Formatter};
+use std::{
+    borrow::Cow,
+    fmt::{Debug, Display, Formatter},
+};
 
 use async_trait::async_trait;
-use cerebro_integration::model::Exchange;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -44,6 +46,30 @@ pub trait ClientExecution {
 
     /// 取消所有账户中的[`Order<Opened>`]（未完成订单）。
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>;
+}
+
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
+pub struct Exchange(Cow<'static, str>);
+
+impl<E> From<E> for Exchange
+where
+    E: Into<Cow<'static, str>>,
+{
+    fn from(exchange: E) -> Self {
+        Exchange(exchange.into())
+    }
+}
+
+impl Debug for Exchange {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Display for Exchange {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
 
 /// Unique identifier for an [`ClientExecution`] implementation.
