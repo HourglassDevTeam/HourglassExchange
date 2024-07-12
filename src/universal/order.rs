@@ -160,7 +160,7 @@ impl Opened {
     }
 }
 
-/// 打开状态的订单
+/// 完全成交状态的订单
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct FullyFilled {
     pub id: OrderId,
