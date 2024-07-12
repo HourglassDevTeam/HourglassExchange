@@ -54,9 +54,12 @@ pub struct AccountPositions {
     option_pos: Vec<OptionPosition>, // useless
 }
 
+#[derive(Clone, Debug)]
 pub struct MarginPosition {
 
 }
+
+#[derive(Clone, Debug)]
 
 pub struct SwapPosition {
     token: String,
@@ -70,6 +73,8 @@ pub struct SwapPosition {
     funding_fee: f64,
 }
 
+#[derive(Clone, Debug)]
+
 pub struct SwapPositionConfig {
     pos_margin_mode: PositionMarginMode,
     leverage: f64,
@@ -80,9 +85,13 @@ pub enum PositionMarginMode {
     Isolated,
 }
 
+#[derive(Clone, Debug)]
+
 pub struct FuturesPosition {
 
 }
+
+#[derive(Clone, Debug)]
 
 pub struct OptionPosition {
 
@@ -107,12 +116,12 @@ impl AccountInfo {
     pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>) {
         todo!()
     }
-    }
+
 
     pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>) {
         todo!()
     }
-    }
+
 
     pub fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Opened>, ExecutionError>>>) {
         let results = open_requests.into_iter().map(|request|self.order_validity_check(request)).collect();
@@ -145,7 +154,7 @@ impl AccountInfo {
 
     pub fn cancel_orders_all(&mut self, response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>) {
         todo!()
-    }
-}
+    }   }
+
 
 
