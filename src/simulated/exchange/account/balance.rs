@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     universal::{
         balance::{Balance, BalanceDelta, TokenBalance},
-        trade::Trade,
         event_and_status::{AccountEventKind, ClientAccountEvent},
+        trade::Trade,
     },
     ExchangeKind, ExecutionError, Open, Order,
 };

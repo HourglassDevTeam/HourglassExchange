@@ -84,8 +84,8 @@ pub mod test_util {
     use crate::{
         simulated::exchange::account::order::Orders,
         universal::{
-            trade::{SymbolFees, Trade, TradeId},
             event_and_status::ClientOrderId,
+            trade::{SymbolFees, Trade, TradeId},
         },
         Open, Order, OrderId,
     };
