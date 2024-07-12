@@ -1,12 +1,13 @@
-
-use crate::universal::order;
+use tokio::sync::oneshot;
+use crate::error::ExecutionError;
+use crate::universal::order::{Cancelled, Opened, Order, OrderKind, RequestCancel, RequestOpen};
 
 #[derive(Clone, Debug)]
 pub struct AccountInfo {
     config: AccountConfig,
     balances: AccountBalances,
     positions: AccountPositions,
-    orders: Order,
+    orders: Order<State>,
 }
 
 #[derive(Clone, Debug)]
@@ -16,6 +17,7 @@ pub struct AccountConfig {
     commission_level: CommissionLevel,
 }
 
+#[derive(Clone, Debug)]
 pub enum MarginMode {
     SimpleMode,
     SingleCurrencyMargin,
@@ -23,11 +25,13 @@ pub enum MarginMode {
     PortfolioMargin,
 }
 
+#[derive(Clone, Debug)]
 pub enum PositionMode {
     LongShortMode, // Note long/short, only applicable to Futures/Swap
     NetMode, // Note one side per token per position
 }
 
+#[derive(Clone, Debug)]
 pub enum CommissionLevel {
     Lv1,
     Lv2,
@@ -60,7 +64,6 @@ pub struct MarginPosition {
 }
 
 #[derive(Clone, Debug)]
-
 pub struct SwapPosition {
     token: String,
     pos_config: SwapPositionConfig,
@@ -80,6 +83,7 @@ pub struct SwapPositionConfig {
     leverage: f64,
 }
 
+#[derive(Clone, Debug)]
 pub enum PositionMarginMode {
     Cross,
     Isolated,
@@ -102,7 +106,7 @@ pub struct OptionPosition {
 // NOTE wrap fields with option<> to yield support for initiation in a chained fashion
 pub struct AccountBuilder {
     config: Option<AccountConfig>,
-    balance: Option<AccountBalance>,
+    balances: Option<AccountBalance>,
     positions: Option<AccountPositions>,
 
 }
@@ -123,17 +127,19 @@ impl AccountInfo {
     }
 
 
+
+    pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError> {
+    todo!()
+    }
+
+
     pub fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Opened>, ExecutionError>>>) {
         let results = open_requests.into_iter().map(|request|self.order_validity_check(request)).collect();
         // try to open the orders with an iterator
         todo!()
     }
 
-    pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError> {
-    todo!()
-    }
-
-    pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError> {
+    pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Opened>, ExecutionError> {
         Self::order_validity_check(request.state.kind).unwrap();
         todo!()
     }
@@ -147,10 +153,10 @@ impl AccountInfo {
         todo!()
     }
 
-    pub fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError> {
-        Self::order_validity_check(request.state.kind).unwrap();
-        todo!()
-    }
+    // pub fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError> {
+    //     Self::order_validity_check(request.state.kind).unwrap();
+    //     todo!()
+    // }
 
     pub fn cancel_orders_all(&mut self, response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>) {
         todo!()
