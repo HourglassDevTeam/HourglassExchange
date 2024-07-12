@@ -177,11 +177,6 @@ impl Ord for Order<Opened> {
     }
 }
 
-/// NOTE partial_cmp 方法返回一个 Option<Ordering>，它表示两个值的部分比较结果。Option<Ordering> 可以有以下几种可能的值：
-///      Some(Ordering::Less) - 表示第一个值小于第二个值。
-///      Some(Ordering::Equal) - 表示两个值相等。
-///      Some(Ordering::Greater) - 表示第一个值大于第二个值。
-///      None - 表示两个值不能比较（通常用于某些部分排序无法确定的情况）。
 impl PartialOrd for Order<Opened> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self.side, other.side) {
