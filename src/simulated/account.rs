@@ -6,7 +6,8 @@ use crate::{
     },
 };
 use serde_json::ser::State;
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
+use std::{fmt::Debug, time::Duration};
 
 #[derive(Clone, Debug)]
 pub struct AccountInfo<State> {
@@ -158,4 +159,17 @@ impl AccountInfo<State> {
     pub fn cancel_orders_all(&mut self, response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>) {
         todo!()
     }
+}
+
+
+pub fn respond_with_latency<Response>(latency: Duration, response_tx: oneshot::Sender<Response>, response: Response)
+                                      where
+                                          Response: Debug + Send + 'static,
+{
+    tokio::spawn(async move {
+        tokio::time::sleep(latency).await;
+        response_tx
+            .send(response)
+            .expect("[UniLinkExecution] : SimulatedExchange failed to send oneshot response to execution request")
+    });
 }
