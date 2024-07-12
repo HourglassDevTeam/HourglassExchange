@@ -3,13 +3,13 @@ use serde::{Deserialize, Serialize};
 
 /// 与[`Symbol`]相关联的[`Balance`]。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct TokenPosition {
+pub struct TokenBalance {
     pub symbol: Symbol,   // 符号
     pub balance: Balance, // 平衡
 }
 
-impl TokenPosition {
-    /// 从一个[`Symbol`]和它关联的[`Balance`]构造一个新的[`TokenPosition`]。
+impl TokenBalance {
+    /// 从一个[`Symbol`]和它关联的[`Balance`]构造一个新的[`TokenBalance`]。
     pub fn new<S>(symbol: S, balance: Balance) -> Self
     where
         S: Into<Symbol>,

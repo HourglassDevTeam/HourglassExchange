@@ -1,13 +1,15 @@
+use serde_json::ser::State;
 use tokio::sync::oneshot;
 use crate::error::ExecutionError;
+use crate::universal::balance::TokenBalance;
 use crate::universal::order::{Cancelled, Opened, Order, OrderKind, RequestCancel, RequestOpen};
 
 #[derive(Clone, Debug)]
-pub struct AccountInfo {
+pub struct AccountInfo<State> {
     config: AccountConfig,
     balances: AccountBalances,
     positions: AccountPositions,
-    orders: Order<State>,
+    orders: Vec<Order<State>>,
 }
 
 #[derive(Clone, Debug)]
@@ -45,6 +47,7 @@ pub struct AccountBalances {
     spot_bal: Vec<SpotBalance>,
 }
 
+#[derive(Clone, Debug)]
 pub struct SpotBalance {
     currency: String,
     size: f64,
@@ -106,18 +109,27 @@ pub struct OptionPosition {
 // NOTE wrap fields with option<> to yield support for initiation in a chained fashion
 pub struct AccountBuilder {
     config: Option<AccountConfig>,
-    balances: Option<AccountBalance>,
+    balances: Option<AccountBalances>,
     positions: Option<AccountPositions>,
 
 }
 
+impl AccountBuilder {
+    pub fn new() -> Self {
+        AccountBuilder {
+            config: None,
+            balances: None,
+            positions: None,
+        }
+    }
+}
 
-impl AccountInfo {
+impl AccountInfo<State> {
     pub fn initiator() -> AccountBuilder {
         AccountBuilder::new()
     }
 
-    pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>) {
+    pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Opened>>, ExecutionError>>) {
         todo!()
     }
 
@@ -133,11 +145,6 @@ impl AccountInfo {
     }
 
 
-    pub fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Opened>, ExecutionError>>>) {
-        let results = open_requests.into_iter().map(|request|self.order_validity_check(request)).collect();
-        // try to open the orders with an iterator
-        todo!()
-    }
 
     pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Opened>, ExecutionError> {
         Self::order_validity_check(request.state.kind).unwrap();
@@ -150,13 +157,14 @@ impl AccountInfo {
         response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>,
     ) {
         let cancel_results = cancel_requests.into_iter().map(|request| self.try_cancel_order_atomic(request)).collect();
-        todo!()
+        response_tx.send(cancel_results).unwrap_or_else(|_| {
+            // Handle the error if sending fails
+        });
     }
 
-    // pub fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError> {
-    //     Self::order_validity_check(request.state.kind).unwrap();
-    //     todo!()
-    // }
+    pub fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError> {
+        todo!()
+    }
 
     pub fn cancel_orders_all(&mut self, response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>) {
         todo!()
