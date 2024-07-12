@@ -36,23 +36,17 @@ impl ClientAccount {
     pub fn builder() -> AccountBuilder {
         AccountBuilder::new()
     }
-
-    /// 客户端发送每个 [`Instrument`] 的每个 [`Order<Open>`] 给客户端。
     pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>) {
         respond_with_latency(self.latency, response_tx, Ok(self.orders.fetch_all()));
     }
-
-    /// 客户端发送每个 [`Symbol`](cerebro_integration::model::Symbol) 的 [`Balance`] 给客户端。
     pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>) {
         respond_with_latency(self.latency, response_tx, Ok(self.balances.fetch_all()));
     }
 
-    /// open_orders是一个高层次的函数，用于处理一组开仓订单请求 (open_requests)，并通过 oneshot 通道发送响应。
-    /// 用于需要批量处理多个开仓订单请求的场景。
+    /// 用于处理一组开仓订单请求 (open_requests)，并通过 oneshot 通道发送响应。
     /// 可以模拟网络延迟（通过 respond_with_latency），提供更加真实的交易环境模拟。
     pub fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>) {
         let open_results = open_requests.into_iter().map(|request| self.try_open_order_atomic(request)).collect();
-
         respond_with_latency(self.latency, response_tx, open_results);
     }
 
