@@ -8,7 +8,7 @@ use tokio::sync::{mpsc, oneshot};
 use crate::{
     model::order::{Cancelled, Open, Order},
     simulated::SimulatedCommand,
-    AccountEvent, ClientExecution, ExecutionError, ExchangeKind, RequestCancel, RequestOpen, TokenBalance,
+    ClientAccountEvent, ClientExecution, ExecutionError, ExchangeKind, RequestCancel, RequestOpen, TokenBalance,
 };
 
 /// 模拟[`ClientExecution`]实现
@@ -24,7 +24,7 @@ impl ClientExecution for SimulatedClient {
 
     type Config = mpsc::UnboundedSender<SimulatedCommand>;
 
-    async fn init(request_tx: Self::Config, _: mpsc::UnboundedSender<AccountEvent>) -> Self {
+    async fn init(request_tx: Self::Config, _: mpsc::UnboundedSender<ClientAccountEvent>) -> Self {
         Self { request_tx }
     }
 

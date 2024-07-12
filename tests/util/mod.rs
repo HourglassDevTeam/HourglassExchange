@@ -10,7 +10,7 @@ use tide_broker::{
     model::{
         balance::Balance,
         order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
-        AccountEvent, ClientOrderId,
+        ClientAccountEvent, ClientOrderId,
     },
     simulated::{
         exchange::{
@@ -23,7 +23,7 @@ use tide_broker::{
 };
 
 pub(super) async fn run_default_exchange(
-    event_account_tx: mpsc::UnboundedSender<AccountEvent>,
+    event_account_tx: mpsc::UnboundedSender<ClientAccountEvent>,
     event_simulated_rx: mpsc::UnboundedReceiver<SimulatedCommand>,
 ) {
     // Define SimulatedExchange available Instruments

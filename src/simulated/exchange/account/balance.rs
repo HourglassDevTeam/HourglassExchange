@@ -11,7 +11,7 @@ use crate::{
     model::{
         balance::{Balance, BalanceDelta, TokenBalance},
         trade::Trade,
-        AccountEvent, AccountEventKind,
+        ClientAccountEvent, AccountEventKind,
     },
     ExecutionError, ExchangeKind, Open, Order,
 };
@@ -55,7 +55,7 @@ impl ClientBalances {
     /// Updates the associated [`Symbol`] [`Balance`] when a client creates an [`Order<Open>`]. The
     /// nature of the [`Balance`] change will depend on if the [`Order<Open>`] is a
     /// [`Side::Buy`] or [`Side::Sell`].
-    pub fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> AccountEvent {
+    pub fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> ClientAccountEvent {
         let updated_balance = match open.side {
             | Side::Buy => {
                 let balance = self
@@ -75,7 +75,7 @@ impl ClientBalances {
             }
         };
 
-        AccountEvent {
+        ClientAccountEvent {
             client_ts: Utc::now(),
             exchange: Exchange::from(ExchangeKind::Simulated),
             kind: AccountEventKind::Balance(updated_balance),
@@ -115,7 +115,7 @@ impl ClientBalances {
     ///
     /// A [`Side::Sell`] match causes the [`Symbol`] [`Balance`] of the base to decrease by the
     /// `trade_quantity`, and the quote to increase by the `trade_quantity * price`.
-    pub fn update_from_trade(&mut self, trade: &Trade) -> AccountEvent {
+    pub fn update_from_trade(&mut self, trade: &Trade) -> ClientAccountEvent {
         let Instrument { base, quote, .. } = &trade.instrument;
 
         // Calculate the base & quote Balance deltas
@@ -160,7 +160,7 @@ impl ClientBalances {
         let base_balance = self.update(base, base_delta);
         let quote_balance = self.update(quote, quote_delta);
 
-        AccountEvent {
+        ClientAccountEvent {
             client_ts: Utc::now(),
             exchange: Exchange::from(ExchangeKind::Simulated),
             kind: AccountEventKind::Balances(vec![

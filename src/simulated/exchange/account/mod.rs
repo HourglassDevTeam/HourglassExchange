@@ -9,7 +9,7 @@ use crate::{
     model::{
         balance::{Balance, TokenBalance},
         order::OrderKind,
-        AccountEvent, AccountEventKind,
+        ClientAccountEvent, AccountEventKind,
     },
     Cancelled, ExecutionError, ExchangeKind, Open, Order, RequestCancel, RequestOpen,
 };
@@ -27,7 +27,7 @@ pub mod order;
 pub struct AccountModule {
     pub latency: Duration,
     pub fees_percent: f64,
-    pub event_account_tx: mpsc::UnboundedSender<AccountEvent>,
+    pub event_account_tx: mpsc::UnboundedSender<ClientAccountEvent>,
     pub balances: ClientBalances,
     pub orders: ClientOrders,
 }
@@ -77,7 +77,7 @@ impl AccountModule {
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Balance");
 
         self.event_account_tx
-            .send(AccountEvent {
+            .send(ClientAccountEvent {
                 client_ts: Utc::now(),
                 exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::OrdersNew(vec![open.clone()]),
@@ -107,7 +107,7 @@ impl AccountModule {
     }
 
     /// Execute a cancel order request, removing it from the [`ClientOrders`] and updating the
-    /// associated [`Balance`]. Sends an [`AccountEvent`] for both the order cancel and balance
+    /// associated [`Balance`]. Sends an [`ClientAccountEvent`] for both the order cancel and balance
     /// update.
     pub fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError> {
         // Retrieve client Instrument Orders
@@ -144,7 +144,7 @@ impl AccountModule {
 
         // Send AccountEvents to client
         self.event_account_tx
-            .send(AccountEvent {
+            .send(ClientAccountEvent {
                 client_ts: Utc::now(),
                 exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
@@ -152,7 +152,7 @@ impl AccountModule {
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Trade");
 
         self.event_account_tx
-            .send(AccountEvent {
+            .send(ClientAccountEvent {
                 client_ts: Utc::now(),
                 exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::Balance(balance_event),
@@ -186,7 +186,7 @@ impl AccountModule {
 
         // Send AccountEvents to client
         self.event_account_tx
-            .send(AccountEvent {
+            .send(ClientAccountEvent {
                 client_ts: Utc::now(),
                 exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::OrdersCancelled(cancelled_orders.clone()),
@@ -194,7 +194,7 @@ impl AccountModule {
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::OrdersCancelled");
 
         self.event_account_tx
-            .send(AccountEvent {
+            .send(ClientAccountEvent {
                 client_ts: Utc::now(),
                 exchange: Exchange::from(ExchangeKind::Simulated),
                 kind: AccountEventKind::Balances(balance_updates),
@@ -239,7 +239,7 @@ impl AccountModule {
                 .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Balances");
 
             self.event_account_tx
-                .send(AccountEvent {
+                .send(ClientAccountEvent {
                     client_ts: Utc::now(),
                     exchange: Exchange::from(ExchangeKind::Simulated),
                     kind: AccountEventKind::Trade(trade),
@@ -267,7 +267,7 @@ where
 pub struct AccountBuilder {
     latency: Option<Duration>,
     fees_percent: Option<f64>,
-    event_account_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
+    event_account_tx: Option<mpsc::UnboundedSender<ClientAccountEvent>>,
     instruments: Option<Vec<Instrument>>,
     balances: Option<ClientBalances>,
 }
@@ -291,7 +291,7 @@ impl AccountBuilder {
         }
     }
 
-    pub fn event_account_tx(self, value: mpsc::UnboundedSender<AccountEvent>) -> Self {
+    pub fn event_account_tx(self, value: mpsc::UnboundedSender<ClientAccountEvent>) -> Self {
         Self {
             event_account_tx: Some(value),
             ..self

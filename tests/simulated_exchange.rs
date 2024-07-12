@@ -12,7 +12,7 @@ use tide_broker::{
         balance::{Balance, TokenBalance},
         order::OrderId,
         trade::{SymbolFees, Trade, TradeId},
-        AccountEvent, AccountEventKind, ClientOrderId,
+        ClientAccountEvent, AccountEventKind, ClientOrderId,
     },
     simulated::{execution::SimulatedClient, SimulatedCommand},
     ClientExecution,
@@ -158,7 +158,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SimulatedClien
 
 // 3. 打开LIMIT Buy Order并检查报价货币(usdt)的AccountEvent Balance是否已发送。
 // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (usdt).
-async fn test_3_open_limit_buy_order(client: &SimulatedClient, test_3_ids: Ids, event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>) {
+async fn test_3_open_limit_buy_order(client: &SimulatedClient, test_3_ids: Ids, event_account_rx: &mut mpsc::UnboundedReceiver<ClientAccountEvent>) {
     // 打开新的订单
     let new_orders = client
         .open_orders(vec![order_request_limit(
@@ -188,7 +188,7 @@ async fn test_3_open_limit_buy_order(client: &SimulatedClient, test_3_ids: Ids, 
     // 检查AccountEvent Balance，确认报价货币(usdt)的可用余额已减少
     // Check AccountEvent Balance for quote currency (usdt) has available balance decrease
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Balance(usdt_balance),
             ..
         }) => {
@@ -205,7 +205,7 @@ async fn test_3_open_limit_buy_order(client: &SimulatedClient, test_3_ids: Ids, 
     // 检查是否生成了AccountEvent OrderNew
     // Check AccountEvent OrderNew generated
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::OrdersNew(new_orders),
             ..
         }) => {
@@ -231,7 +231,7 @@ async fn test_3_open_limit_buy_order(client: &SimulatedClient, test_3_ids: Ids, 
 // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent.
 fn test_4_send_market_event_that_does_not_match_any_open_order(
     event_simulated_tx: &mut mpsc::UnboundedSender<SimulatedCommand>,
-    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+    event_account_rx: &mut mpsc::UnboundedReceiver<ClientAccountEvent>,
 ) {
     // 发送不匹配任何订单的市场交易事件
     event_simulated_tx
@@ -258,7 +258,7 @@ fn test_4_send_market_event_that_does_not_match_any_open_order(
 
 // 5. 取消打开的买单并检查已发送取消订单和余额的AccountEvents。
 // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent.
-async fn test_5_cancel_buy_order(client: &SimulatedClient, test_3_ids: Ids, event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>) {
+async fn test_5_cancel_buy_order(client: &SimulatedClient, test_3_ids: Ids, event_account_rx: &mut mpsc::UnboundedReceiver<ClientAccountEvent>) {
     // 取消订单
     let cancelled = client
         .cancel_orders(vec![order_cancel_request(
@@ -284,7 +284,7 @@ async fn test_5_cancel_buy_order(client: &SimulatedClient, test_3_ids: Ids, even
     // 检查AccountEvent Order是否被取消
     // Check AccountEvent Order cancelled
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::OrdersCancelled(cancelled),
             ..
         }) => {
@@ -299,7 +299,7 @@ async fn test_5_cancel_buy_order(client: &SimulatedClient, test_3_ids: Ids, even
     // 检查报价货币(usdt)的AccountEvent Balance是否显示可用余额增加
     // Check AccountEvent Balance for quote currency (usdt) has available balance increase
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Balance(usdt_balance),
             ..
         }) => {
@@ -329,7 +329,7 @@ async fn test_6_open_2x_limit_buy_orders(
     client: &SimulatedClient,
     test_6_ids_1: Ids,
     test_6_ids_2: Ids,
-    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+    event_account_rx: &mut mpsc::UnboundedReceiver<ClientAccountEvent>,
 ) {
     // 打开两个限价买单
     let opened_orders = client
@@ -381,7 +381,7 @@ async fn test_6_open_2x_limit_buy_orders(
     // 检查第一个订单的AccountEvent Balance - 报价货币的可用余额应该减少
     // Check AccountEvent Balance for first order - quote currency has available balance decrease
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Balance(usdt_balance),
             ..
         }) => {
@@ -398,7 +398,7 @@ async fn test_6_open_2x_limit_buy_orders(
     // 检查第一个订单的AccountEvent OrdersNew
     // Check AccountEvent OrdersNew for first order
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::OrdersNew(new_orders),
             ..
         }) => {
@@ -413,7 +413,7 @@ async fn test_6_open_2x_limit_buy_orders(
     // 检查第二个订单的AccountEvent Balance - 报价货币的可用余额应该减少
     // Check AccountEvent Balance for second order - quote currency has available balance decrease
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Balance(usdt_balance),
             ..
         }) => {
@@ -430,7 +430,7 @@ async fn test_6_open_2x_limit_buy_orders(
     // 检查第二个订单的AccountEvent OrdersNew
     // Check AccountEvent OrdersNew for second order
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::OrdersNew(new_orders),
             ..
         }) => {
@@ -457,7 +457,7 @@ async fn test_6_open_2x_limit_buy_orders(
 // balances and trades are sent.
 async fn test_7_send_market_event_that_exact_full_matches_order(
     event_simulated_tx: &mut mpsc::UnboundedSender<SimulatedCommand>,
-    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+    event_account_rx: &mut mpsc::UnboundedReceiver<ClientAccountEvent>,
 ) {
     // 发送匹配的MarketEvent
     // Send matching MarketEvent
@@ -478,7 +478,7 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
     // 检查与交易相关的基础和报价货币的AccountEvent Balances
     // Check AccountEvent Balances for base & quote currencies related to the trade
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Balances(balances),
             ..
         }) => {
@@ -505,7 +505,7 @@ async fn test_7_send_market_event_that_exact_full_matches_order(
     // 检查匹配MarketEvent的AccountEvent Trade
     // Check AccountEvent Trade for order matching MarketEvent
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Trade(trade),
             ..
         }) => {
@@ -560,7 +560,7 @@ async fn test_9_open_2x_limit_sell_orders(
     client: &SimulatedClient,
     test_9_ids_1: Ids,
     test_9_ids_2: Ids,
-    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+    event_account_rx: &mut mpsc::UnboundedReceiver<ClientAccountEvent>,
 ) {
     let opened_orders = client
         .open_orders(vec![
@@ -608,7 +608,7 @@ async fn test_9_open_2x_limit_sell_orders(
     // 检查第一个订单的AccountEvent Balance - 基础货币的可用余额减少
     // Check AccountEvent Balance for first order - base currency has available balance decrease
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Balance(btc_balance),
             ..
         }) => {
@@ -625,7 +625,7 @@ async fn test_9_open_2x_limit_sell_orders(
     // 检查第一个订单的AccountEvent OrdersNew
     // Check AccountEvent OrdersNew for first order
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::OrdersNew(new_orders),
             ..
         }) => {
@@ -640,7 +640,7 @@ async fn test_9_open_2x_limit_sell_orders(
     // 检查第二个订单的AccountEvent Balance - 基础货币的可用余额减少
     // Check AccountEvent Balance for second order - base currency has available balance decrease
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Balance(btc_balance),
             ..
         }) => {
@@ -657,7 +657,7 @@ async fn test_9_open_2x_limit_sell_orders(
     // 检查第二个订单的AccountEvent OrdersNew
     // Check AccountEvent OrdersNew for second order
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::OrdersNew(new_orders),
             ..
         }) => {
@@ -684,7 +684,7 @@ async fn test_9_open_2x_limit_sell_orders(
 //    (trade). Check AccountEvents for balances and trades of both matches are sent.
 async fn test_10_send_market_event_that_full_and_partial_matches_orders(
     event_simulated_tx: &mut mpsc::UnboundedSender<SimulatedCommand>,
-    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+    event_account_rx: &mut mpsc::UnboundedReceiver<ClientAccountEvent>,
 ) {
     // 发送一个完全匹配一个订单且部分匹配另一个订单的MarketEvent
     // Send MarketEvent that fully matches one order and partially matches another
@@ -708,7 +708,7 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
     // 检查与交易相关的基础和报价货币的AccountEvent Balances
     // Check AccountEvent Balances for base & quote currencies related to the trade
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Balances(balances),
             ..
         }) => {
@@ -736,7 +736,7 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
     // 检查匹配MarketEvent的AccountEvent Trade
     // Check AccountEvent Trade for order matching MarketEvent
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Trade(trade),
             ..
         }) => {
@@ -763,7 +763,7 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
     // 检查与交易相关的基础和报价货币的AccountEvent Balances
     // Check AccountEvent Balances for base & quote currencies related to the trade
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Balances(balances),
             ..
         }) => {
@@ -791,7 +791,7 @@ async fn test_10_send_market_event_that_full_and_partial_matches_orders(
     // 检查匹配MarketEvent的AccountEvent Trade
     // Check AccountEvent Trade for order matching MarketEvent
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Trade(trade),
             ..
         }) => {
@@ -827,7 +827,7 @@ async fn test_11_cancel_all_orders(
     client: &SimulatedClient,
     test_6_ids_1: Ids,
     test_9_ids_2: Ids,
-    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+    event_account_rx: &mut mpsc::UnboundedReceiver<ClientAccountEvent>,
 ) {
     // 取消所有订单
     let cancelled = client.cancel_orders_all().await.unwrap();
@@ -860,7 +860,7 @@ async fn test_11_cancel_all_orders(
     // 检查买卖单的AccountEvent Order是否已被取消
     // Check AccountEvent Order cancelled for both the bid & ask
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::OrdersCancelled(cancelled),
             ..
         }) => {
@@ -876,7 +876,7 @@ async fn test_11_cancel_all_orders(
     // 检查买卖单取消后的AccountEvent Balances
     // Check AccountEvent Balances for cancelled bid and ask orders
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Balances(balances),
             ..
         }) => {
@@ -927,7 +927,7 @@ async fn test_13_fail_to_open_one_of_two_limits_with_insufficient_funds(
     client: &SimulatedClient,
     test_13_ids_1: Ids,
     test_13_ids_2: Ids,
-    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+    event_account_rx: &mut mpsc::UnboundedReceiver<ClientAccountEvent>,
 ) {
     // 尝试打开两个限价订单，其中一个由于资金不足而失败
     let opened_orders = client
@@ -971,7 +971,7 @@ async fn test_13_fail_to_open_one_of_two_limits_with_insufficient_funds(
 
     // 检查第二个订单的AccountEvent Balance - 基础货币的可用余额减少
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::Balance(btc_balance),
             ..
         }) => {
@@ -986,7 +986,7 @@ async fn test_13_fail_to_open_one_of_two_limits_with_insufficient_funds(
 
     // 检查第二个订单的AccountEvent OrdersNew
     match event_account_rx.try_recv() {
-        | Ok(AccountEvent {
+        | Ok(ClientAccountEvent {
             kind: AccountEventKind::OrdersNew(new_orders),
             ..
         }) => {

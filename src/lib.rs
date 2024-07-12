@@ -15,7 +15,7 @@ use crate::{
     model::{
         balance::TokenBalance,
         order::{Cancelled, Open, Order, OrderId, RequestCancel, RequestOpen},
-        AccountEvent,
+        ClientAccountEvent,
     },
 };
 
@@ -31,10 +31,10 @@ pub trait ClientExecution {
     const CLIENT: ExchangeKind;
     type Config;
 
-    /// 使用提供的[`Self::Config`]和[`AccountEvent`]发送器初始化一个新的[`ClientExecution`]。
-    /// 通常包括启动一个异步WebSocket事件循环以从交易所接收[`AccountEvent`]，
+    /// 使用提供的[`Self::Config`]和[`ClientAccountEvent`]发送器初始化一个新的[`ClientExecution`]。
+    /// 通常包括启动一个异步WebSocket事件循环以从交易所接收[`ClientAccountEvent`]，
     /// 同时返回HTTP客户端`Self`。
-    async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<AccountEvent>) -> Self;
+    async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<ClientAccountEvent>) -> Self;
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>;
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>;
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>;
