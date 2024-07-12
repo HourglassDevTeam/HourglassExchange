@@ -158,11 +158,12 @@ impl Opened {
     }
 }
 
-/// 订单成交状态
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
-pub enum OrderFill {
-    Full,    // 完全成交
-    Partial, // 部分成交
+/// 打开状态的订单
+#[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
+pub struct FullyFilled {
+    pub id: OrderId,
+    pub price: f64,
+    pub quantity: f64,
 }
 
 /// NOTE: 此处Self 等同于 Order<Open>，表示 other 参数也是一个 Order<Open> 类型的引用。
