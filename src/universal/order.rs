@@ -168,6 +168,7 @@ pub struct FullyFilled {
     pub quantity: f64,
 }
 
+/// 使得Order<Open> 之间可以比较大小
 /// NOTE: 此处Self 等同于 Order<Open>，表示 other 参数也是一个 Order<Open> 类型的引用。
 impl Ord for Order<Opened> {
     fn cmp(&self, other: &Self) -> Ordering {
