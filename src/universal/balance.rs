@@ -1,6 +1,6 @@
-// 引入之前在cerebro_integration中做好的符号模型
 use cerebro_integration::model::instrument::symbol::Symbol;
 use serde::{Deserialize, Serialize};
+
 /// 与[`Symbol`]相关联的[`Balance`]。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct TokenBalance {
