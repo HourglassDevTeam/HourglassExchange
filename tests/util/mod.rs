@@ -7,7 +7,7 @@ use cerebro_integration::model::{
 use tokio::sync::mpsc;
 
 use tide_broker::{
-    simulated::{
+    r#mod::{
         exchange::{
             account::{balance::ClientBalances, AccountModule},
             SimulatedExchange,

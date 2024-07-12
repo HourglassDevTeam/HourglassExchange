@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use tide_broker::{
     error::ExecutionError,
-    simulated::{execution::SimulatedClient, SimulatedCommand},
+    r#mod::{execution::SimulatedClient, SimulatedCommand},
     universal::{
         balance::{Balance, TokenBalance},
         event::{AccountEventKind, ClientAccountEvent, ClientOrderId},
