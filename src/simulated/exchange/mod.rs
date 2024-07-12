@@ -3,7 +3,7 @@ use crate::ExecutionError;
 use tokio::sync::mpsc;
 
 // 引入上级模块中的客户账户和模拟事件类型。
-use super::{exchange::account::ClientAccount, SimulatedCommand};
+use super::{exchange::account::AccountModule, SimulatedCommand};
 
 /// [`SimulatedExchange`] 的账户余额、开放订单、费用和延迟。
 pub mod account;
@@ -14,7 +14,7 @@ pub struct SimulatedExchange {
     // 模拟事件的无界接收器。
     pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedCommand>,
     // 客户账户。
-    pub account: ClientAccount,
+    pub account: AccountModule,
 }
 
 impl SimulatedExchange {
@@ -50,7 +50,7 @@ pub struct ExchangeInitiator {
     // 模拟事件的无界接收器，用于构建器。
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedCommand>>,
     // 客户账户，用于构建器。
-    account: Option<ClientAccount>,
+    account: Option<AccountModule>,
 }
 
 impl ExchangeInitiator {
@@ -67,7 +67,7 @@ impl ExchangeInitiator {
     }
 
     // 设置客户账户。
-    pub fn account(self, value: ClientAccount) -> Self {
+    pub fn account(self, value: AccountModule) -> Self {
         Self {
             account: Some(value),
             ..self

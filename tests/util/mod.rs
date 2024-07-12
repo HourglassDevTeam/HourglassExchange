@@ -14,7 +14,7 @@ use tide_broker::{
     },
     simulated::{
         exchange::{
-            account::{balance::ClientBalances, ClientAccount},
+            account::{balance::ClientBalances, AccountModule},
             SimulatedExchange,
         },
         SimulatedCommand,
@@ -36,7 +36,7 @@ pub(super) async fn run_default_exchange(
     SimulatedExchange::ini()
         .event_simulated_rx(event_simulated_rx)
         .account(
-            ClientAccount::builder()
+            AccountModule::builder()
                 .latency(latency_50ms())
                 .fees_percent(fees_50_percent())
                 .event_account_tx(event_account_tx)

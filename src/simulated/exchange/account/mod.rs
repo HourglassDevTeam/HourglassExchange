@@ -16,7 +16,7 @@ use crate::{
 
 use self::{balance::ClientBalances, order::ClientOrders};
 
-/// [`ClientAccount`] 每个 [`Symbol`](cerebro_integration::model::Symbol) 的 [`Balance`] 和
+/// [`AccountModule`] 每个 [`Symbol`](cerebro_integration::model::Symbol) 的 [`Balance`] 和
 /// 相关的余额管理逻辑。
 pub mod balance;
 
@@ -24,7 +24,7 @@ pub mod balance;
 pub mod order;
 
 #[derive(Clone, Debug)]
-pub struct ClientAccount {
+pub struct AccountModule {
     pub latency: Duration,
     pub fees_percent: f64,
     pub event_account_tx: mpsc::UnboundedSender<AccountEvent>,
@@ -32,7 +32,7 @@ pub struct ClientAccount {
     pub orders: ClientOrders,
 }
 
-impl ClientAccount {
+impl AccountModule {
     pub fn builder() -> AccountBuilder {
         AccountBuilder::new()
     }
@@ -311,9 +311,9 @@ impl AccountBuilder {
         }
     }
 
-    pub fn build(self) -> Result<ClientAccount, ExecutionError> {
+    pub fn build(self) -> Result<AccountModule, ExecutionError> {
         // Construct ClientAccount
-        let client_account = ClientAccount {
+        let client_account = AccountModule {
             latency: self.latency.ok_or_else(|| ExecutionError::BuilderIncomplete("latency".to_string()))?,
             fees_percent: self
                 .fees_percent
@@ -376,7 +376,7 @@ mod tests {
         ];
 
         for (index, test) in tests.into_iter().enumerate() {
-            let actual = ClientAccount::check_order_kind_support(test.kind);
+            let actual = AccountModule::check_order_kind_support(test.kind);
             match test.expected {
                 | Ok(()) => assert!(actual.is_ok(), "TC{} failed", index),
                 | Err(_) => assert!(actual.is_err(), "TC{} failed", index),

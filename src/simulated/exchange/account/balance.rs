@@ -16,7 +16,7 @@ use crate::{
     ExecutionError, ExchangeKind, Open, Order,
 };
 
-/// [`ClientAccount`](super::ClientAccount) [`Balance`] for each [`Symbol`].
+/// [`ClientAccount`](super::AccountModule) [`Balance`] for each [`Symbol`].
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct ClientBalances(pub HashMap<Symbol, Balance>);
 
