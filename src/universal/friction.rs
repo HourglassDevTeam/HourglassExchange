@@ -1,6 +1,7 @@
+// NOTE 滑点和摩擦成本的设计放在这里
+
 use serde::{Serialize,Deserialize};
 use cerebro_integration::model::instrument::symbol::Symbol;
-
 
 #[allow(dead_code)]
 /// 以 [`Symbol`]（符号）表示的 [`Trade`]（交易）费用。
