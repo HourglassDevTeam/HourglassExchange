@@ -19,7 +19,6 @@ pub struct ClientOrders {
     pub orders_by_instrument: HashMap<Instrument, Orders>,
 }
 
-
 impl ClientOrders {
     /// 从提供的 [`Instrument`] 集合构造新的 [`ClientOrders`]。
     pub fn new(instruments: Vec<Instrument>) -> Self {
@@ -319,9 +318,9 @@ mod tests {
     use uuid::Uuid;
 
     use crate::{
-        universal::ClientOrderId,
         simulated::exchange::account::order::Orders,
         test_util::{generate_client_orders, generate_order_open, generate_public_trade, generate_trade},
+        universal::ClientOrderId,
     };
 
     use super::*;
@@ -381,13 +380,9 @@ mod tests {
             },
             TestCase {
                 // TC6: Trade matches bid & ask (same price), so take larger quantity bid
-                orders: generate_client_orders(0, vec![generate_order_open(cid, Side::Buy, 100.0, 100.0, 0.0)], vec![generate_order_open(
-                    cid,
-                    Side::Sell,
-                    100.0,
-                    1.0,
-                    0.0,
-                )]),
+                orders: generate_client_orders(0, vec![generate_order_open(cid, Side::Buy, 100.0, 100.0, 0.0)], vec![
+                    generate_order_open(cid, Side::Sell, 100.0, 1.0, 0.0),
+                ]),
                 input_trade: generate_public_trade(Side::Buy, 100.0, 1.0),
                 expected: Some(Side::Buy),
             },
@@ -428,19 +423,31 @@ mod tests {
                 // TC0: Best bid matches the PublicTrade w/ a full-fill
                 orders: generate_client_orders(
                     0,
-                    vec![generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0), generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0)],
+                    vec![
+                        generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
+                        generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
+                    ],
                     vec![],
                 ),
                 input_trade: generate_public_trade(Side::Buy, 200.0, 1.0),
                 input_fees_percent: 0.1,
                 expected_orders: generate_client_orders(1, vec![generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0)], vec![]),
-                expected_trades: vec![generate_trade(TradeId(1.to_string()), Side::Buy, 200.0, 1.0, SymbolFees::new("base", 0.1 * 1.0))],
+                expected_trades: vec![generate_trade(
+                    TradeId(1.to_string()),
+                    Side::Buy,
+                    200.0,
+                    1.0,
+                    SymbolFees::new("base", 0.1 * 1.0),
+                )],
             },
             TestCase {
                 // TC1: Two bids match the PublicTrade w/ two full-fills
                 orders: generate_client_orders(
                     0,
-                    vec![generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0), generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0)],
+                    vec![
+                        generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
+                        generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
+                    ],
                     vec![],
                 ),
                 input_trade: generate_public_trade(Side::Buy, 100.0, 2.0),
@@ -455,7 +462,10 @@ mod tests {
                 // TC2: Two bids match the PublicTrade w/ one full-fill & one partial-fill
                 orders: generate_client_orders(
                     0,
-                    vec![generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0), generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0)],
+                    vec![
+                        generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
+                        generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
+                    ],
                     vec![],
                 ),
                 input_trade: generate_public_trade(Side::Sell, 100.0, 1.5),
@@ -470,14 +480,20 @@ mod tests {
                 // TC3: No bids match the PublicTrade
                 orders: generate_client_orders(
                     0,
-                    vec![generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0), generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0)],
+                    vec![
+                        generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
+                        generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
+                    ],
                     vec![],
                 ),
                 input_trade: generate_public_trade(Side::Sell, 1_000_000_000.0, 1.0),
                 input_fees_percent: 0.1,
                 expected_orders: generate_client_orders(
                     0,
-                    vec![generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0), generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0)],
+                    vec![
+                        generate_order_open(cid, Side::Buy, 100.0, 1.0, 0.0),
+                        generate_order_open(cid, Side::Buy, 200.0, 1.0, 0.0),
+                    ],
                     vec![],
                 ),
                 expected_trades: vec![],
@@ -629,8 +645,14 @@ mod tests {
                 // TC2: many of each
                 orders: generate_client_orders(
                     0,
-                    vec![generate_order_open(cid, Side::Sell, 150.0, 1.0, 0.0), generate_order_open(cid, Side::Sell, 150.0, 1.0, 0.0)],
-                    vec![generate_order_open(cid, Side::Sell, 150.0, 1.0, 0.0), generate_order_open(cid, Side::Sell, 150.0, 1.0, 0.0)],
+                    vec![
+                        generate_order_open(cid, Side::Sell, 150.0, 1.0, 0.0),
+                        generate_order_open(cid, Side::Sell, 150.0, 1.0, 0.0),
+                    ],
+                    vec![
+                        generate_order_open(cid, Side::Sell, 150.0, 1.0, 0.0),
+                        generate_order_open(cid, Side::Sell, 150.0, 1.0, 0.0),
+                    ],
                 ),
                 expected_num: 4,
             },

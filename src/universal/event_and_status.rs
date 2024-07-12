@@ -1,11 +1,13 @@
-use std::fmt::Formatter;
+use crate::universal::{
+    balance::TokenBalance,
+    order::{Cancelled, Open, Order},
+    trade::Trade,
+};
 use cerebro_integration::model::Exchange;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fmt::Formatter;
 use uuid::Uuid;
-use crate::universal::balance::TokenBalance;
-use crate::universal::order::{Cancelled, Open, Order};
-use crate::universal::trade::Trade;
 
 /// 通用[`ClientAccountEvent`]，包含了相关[`AccountEventKind`]变体的元数据。由[`ClientExecutions`](crate::ClientExecution)trait的方法生成。
 /// NOTE: 如果需要记录交易所的时间戳，可以再添加一个专门的字段来表示交易所的时间，例如：    pub exchange_ts: DateTime<Utc> or i64
@@ -13,8 +15,8 @@ use crate::universal::trade::Trade;
 pub struct ClientAccountEvent {
     // pub exchange_ts: DateTime<Utc>, // 交易所接收到事件的时间,
     pub client_ts: DateTime<Utc>, // 客户端接收到事件的时间, NOTE 类型待定 i64
-    pub exchange: Exchange,           // 目标和源头交易所
-    pub kind: AccountEventKind,       // 事件类型
+    pub exchange: Exchange,       // 目标和源头交易所
+    pub kind: AccountEventKind,   // 事件类型
 }
 
 /// 定义账户事件[`ClientAccountEvent`]的类型。
@@ -56,14 +58,14 @@ impl std::fmt::Display for ClientOrderId {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ClientStatus {
-    Connected,    // 已连接
-    CancelOnly,   // 仅取消
-    Disconnected, // 已断开
-    // Pending,      // 待定，正在尝试连接
-    // Suspended,    // 已暂停，暂时禁止所有操作
-    // Reconnecting, // 正在重连
-    // Error,        // 发生错误，无法正常操作
-    // Maintenance,  // 维护模式，系统暂时不可用
-    // Authenticated, // 已认证，已通过身份验证
-    // Unauthorized, // 未授权，身份验证失败或权限不足
+    Connected,  // 已连接
+    CancelOnly, // 仅取消
+    Disconnected, /* 已断开
+                 * Pending,      // 待定，正在尝试连接
+                 * Suspended,    // 已暂停，暂时禁止所有操作
+                 * Reconnecting, // 正在重连
+                 * Error,        // 发生错误，无法正常操作
+                 * Maintenance,  // 维护模式，系统暂时不可用
+                 * Authenticated, // 已认证，已通过身份验证
+                 * Unauthorized, // 未授权，身份验证失败或权限不足 */
 }

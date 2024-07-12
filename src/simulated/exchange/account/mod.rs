@@ -9,9 +9,9 @@ use crate::{
     universal::{
         balance::{Balance, TokenBalance},
         order::OrderKind,
-        ClientAccountEvent, AccountEventKind,
+        event_and_status::{AccountEventKind, ClientAccountEvent},
     },
-    Cancelled, ExecutionError, ExchangeKind, Open, Order, RequestCancel, RequestOpen,
+    Cancelled, ExchangeKind, ExecutionError, Open, Order, RequestCancel, RequestOpen,
 };
 
 use self::{balance::ClientBalances, order::ClientOrders};
@@ -40,6 +40,7 @@ impl AccountModule {
     pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>) {
         respond_with_latency(self.latency, response_tx, Ok(self.orders.fetch_all()));
     }
+
     pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>) {
         respond_with_latency(self.latency, response_tx, Ok(self.balances.fetch_all()));
     }

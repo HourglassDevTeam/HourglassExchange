@@ -1,4 +1,5 @@
-use super::ClientOrderId;
+use crate::universal::event_and_status::ClientOrderId;
+
 use cerebro_integration::model::{
     instrument::{symbol::Symbol, Instrument},
     Exchange, Side,
@@ -162,7 +163,6 @@ pub enum OrderFill {
     Partial, // 部分成交
 }
 
-
 /// NOTE: 此处Self 等同于 Order<Open>，表示 other 参数也是一个 Order<Open> 类型的引用。
 impl Ord for Order<Open> {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -211,7 +211,6 @@ where
         Self { id: id.into() }
     }
 }
-
 
 /// 订单ID / OrderId，由交易所生成。注意其不一定是唯一的。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]

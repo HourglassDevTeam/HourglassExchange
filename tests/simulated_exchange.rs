@@ -8,13 +8,13 @@ use uuid::Uuid;
 
 use tide_broker::{
     error::ExecutionError,
+    simulated::{execution::SimulatedClient, SimulatedCommand},
     universal::{
         balance::{Balance, TokenBalance},
         order::OrderId,
         trade::{SymbolFees, Trade, TradeId},
-        ClientAccountEvent, AccountEventKind, ClientOrderId,
+        AccountEventKind, ClientAccountEvent, ClientOrderId,
     },
-    simulated::{execution::SimulatedClient, SimulatedCommand},
     ClientExecution,
 };
 

@@ -11,9 +11,9 @@ use crate::{
     universal::{
         balance::{Balance, BalanceDelta, TokenBalance},
         trade::Trade,
-        ClientAccountEvent, AccountEventKind,
+        event_and_status::{AccountEventKind, ClientAccountEvent},
     },
-    ExecutionError, ExchangeKind, Open, Order,
+    ExchangeKind, ExecutionError, Open, Order,
 };
 
 /// [`ClientAccount`](super::AccountModule) [`Balance`] for each [`Symbol`].

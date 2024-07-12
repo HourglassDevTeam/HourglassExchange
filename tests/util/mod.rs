@@ -7,17 +7,17 @@ use cerebro_integration::model::{
 use tokio::sync::mpsc;
 
 use tide_broker::{
-    universal::{
-        balance::Balance,
-        order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
-        ClientAccountEvent, ClientOrderId,
-    },
     simulated::{
         exchange::{
             account::{balance::ClientBalances, AccountModule},
             SimulatedExchange,
         },
         SimulatedCommand,
+    },
+    universal::{
+        balance::Balance,
+        order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
+        ClientAccountEvent, ClientOrderId,
     },
     ExchangeKind,
 };
