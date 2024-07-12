@@ -15,13 +15,13 @@ use crate::{
     universal::{
         balance::TokenBalance,
         event::ClientAccountEvent,
-        order::{Cancelled, Open, Order, OrderId, RequestCancel, RequestOpen},
+        order::{Cancelled, Open, Order, RequestCancel, RequestOpen},
     },
 };
 
 /// 在实时、干运行或模拟执行过程中产生的错误。
 pub mod error;
-pub mod simulated;
+// pub mod simulated;
 /// 支持在交易所执行操作的核心数据结构。
 /// 例如：`Order`（订单）、`Balance`（余额）、`Trade`（交易）等。
 pub mod universal;
@@ -69,77 +69,6 @@ impl ExchangeKind {
         match self {
             | ExchangeKind::Simulated => "simulated",
             | ExchangeKind::Ftx => "ftx",
-        }
-    }
-}
-
-/// 用于生成测试所需的订单、挂单、交易、的实用工具。
-pub mod test_util {
-    use cerebro_data::subscription::trade::PublicTrade;
-    use cerebro_integration::model::{
-        instrument::{kind::InstrumentKind, Instrument},
-        Exchange, Side,
-    };
-
-    use crate::{
-        simulated::exchange::account::order::Orders,
-        universal::{
-            event::ClientOrderId,
-            trade::{SymbolFees, Trade, TradeId},
-        },
-        Open, Order, OrderId,
-    };
-
-    /// 生成客户端订单集合。
-    /// 接收交易编号、买单和卖单向量，返回一个`Orders`实例。
-    pub fn generate_client_orders(batch_id: u64, bids: Vec<Order<Open>>, asks: Vec<Order<Open>>) -> Orders {
-        Orders {
-            order_batch_id: batch_id,
-            bids,
-            asks,
-        }
-    }
-
-    /// 创建一个开放状态的挂单。
-    /// 接收客户端订单ID、买卖方向、价格、数量和已成交量，
-    /// 返回一个`Order<Open>`类型的实例。
-    pub fn generate_order_open(cid: ClientOrderId, side: Side, price: f64, quantity: f64, filled: f64) -> Order<Open> {
-        Order {
-            exchange: Exchange::from("exchange"),
-            instrument: Instrument::from(("base", "quote", InstrumentKind::Perpetual)),
-            cid,
-            side,
-            state: Open {
-                id: OrderId::from("order_id"),
-                price,
-                quantity,
-                filled_quantity: filled,
-            },
-        }
-    }
-
-    /// 生成一个generate_public_trade记录。
-    /// 接收买卖方向、价格和数量，返回一个`PublicTrade`类型的实例。
-    pub fn generate_public_trade(side: Side, price: f64, amount: f64) -> PublicTrade {
-        PublicTrade {
-            id: "trade_id".to_string(),
-            price,
-            amount,
-            side,
-        }
-    }
-
-    /// 创建一个trade实例。
-    /// 接收交易ID、买卖方向、价格、数量和费用，返回一个`Trade`类型的实例。
-    pub fn generate_trade(id: TradeId, side: Side, price: f64, quantity: f64, fees: SymbolFees) -> Trade {
-        Trade {
-            id,
-            order_id: OrderId::from("order_id"),
-            instrument: Instrument::from(("base", "quote", InstrumentKind::Perpetual)),
-            side,
-            price,
-            quantity,
-            fees,
         }
     }
 }
