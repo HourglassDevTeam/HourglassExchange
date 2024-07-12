@@ -17,7 +17,7 @@ use tide_broker::{
     universal::{
         balance::Balance,
         event::{ClientAccountEvent, ClientOrderId},
-        order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
+        order::{Cancelled, Opened, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
     },
     ExchangeKind,
 };
@@ -91,7 +91,7 @@ where
 }
 
 // Utility for creating an Open Order
-pub(super) fn open_order<I>(instrument: I, cid: ClientOrderId, id: OrderId, side: Side, price: f64, quantity: f64, filled: f64) -> Order<Open>
+pub(super) fn open_order<I>(instrument: I, cid: ClientOrderId, id: OrderId, side: Side, price: f64, quantity: f64, filled: f64) -> Order<Opened>
 where
     I: Into<Instrument>,
 {
@@ -100,7 +100,7 @@ where
         instrument: instrument.into(),
         cid,
         side,
-        state: Open {
+        state: Opened {
             id,
             price,
             quantity,

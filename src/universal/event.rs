@@ -1,6 +1,6 @@
 use crate::universal::{
     balance::TokenBalance,
-    order::{Cancelled, Open, Order},
+    order::{Cancelled, Opened, Order},
     trade::Trade,
 };
 use cerebro_integration::model::Exchange;
@@ -22,8 +22,8 @@ pub struct ClientAccountEvent {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum AccountEventKind {
     // HTTP Events
-    OrdersOpen(Vec<Order<Open>>),
-    OrdersNew(Vec<Order<Open>>),
+    OrdersOpen(Vec<Order<Opened>>),
+    OrdersNew(Vec<Order<Opened>>),
     OrdersCancelled(Vec<Order<Cancelled>>),
     // OrdersFilled(Vec<Order<Filled>>),
     // OrdersPartiallyFilled(Vec<Order<PartiallyFilled>>),

@@ -15,7 +15,7 @@ use crate::{
     universal::{
         balance::TokenBalance,
         event::ClientAccountEvent,
-        order::{Cancelled, Open, Order, RequestCancel, RequestOpen},
+        order::{Cancelled, Opened, Order, RequestCancel, RequestOpen},
     },
 };
 
@@ -37,12 +37,12 @@ pub trait ClientExecution {
     /// 通常包括启动一个异步WebSocket事件循环以从交易所接收[`ClientAccountEvent`]，
     /// 同时返回HTTP客户端`Self`。
     async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<ClientAccountEvent>) -> Self;
-    async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>;
+    async fn fetch_orders_open(&self) -> Result<Vec<Order<Opened>>, ExecutionError>;
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>;
-    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>;
+    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Opened>, ExecutionError>>;
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>>;
 
-    /// 取消所有账户中的[`Order<Open>`]（未完成订单）。
+    /// 取消所有账户中的[`Order<Opened>`]（未完成订单）。
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>;
 }
 
