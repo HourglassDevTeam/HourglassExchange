@@ -112,6 +112,8 @@ pub struct RequestOpen {
     pub quantity: f64,
 }
 
+
+// NOTE that this needs to be adjusted according to the specifics of our trading instruments.
 impl Order<RequestOpen> {
     pub fn calculate_required_available_balance(&self) -> (&Symbol, f64) {
         match self.side {
