@@ -4,4 +4,5 @@ pub mod friction;
 pub mod order; // 通用订单模块
 pub mod status;
 pub mod trade;
+pub mod position;
 // 通用交易模块

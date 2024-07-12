@@ -12,17 +12,18 @@ use rand::{Rng, thread_rng};
 
 #[derive(Clone, Debug)]
 pub struct AccountInfo<State> {
-    config: AccountConfig,
-    balances: AccountBalances,
-    positions: AccountPositions,
-    orders: Vec<Order<State>>,
+    pub latency: Duration,
+    pub config: AccountConfig,
+    pub balances: AccountBalances,
+    pub positions: AccountPositions,
+    pub orders: Vec<Order<State>>,
 }
 
 #[derive(Clone, Debug)]
 pub struct AccountConfig {
-    margin_mode: MarginMode,
-    position_mode: PositionMode,
-    commission_level: CommissionLevel,
+    pub margin_mode: MarginMode,
+    pub position_mode: PositionMode,
+    pub commission_level: CommissionLevel,
 }
 
 #[derive(Clone, Debug)]
@@ -46,61 +47,6 @@ pub enum CommissionLevel {
     // ..........
 }
 
-#[derive(Clone, Debug)]
-pub struct AccountBalances {
-    spot_bal: Vec<SpotBalance>,
-}
-
-#[derive(Clone, Debug)]
-pub struct SpotBalance {
-    currency: String,
-    size: f64,
-}
-
-#[derive(Clone, Debug)]
-pub struct AccountPositions {
-    margin_pos: Vec<MarginPosition>,  // useless in backtest
-    swap_pos: Vec<SwapPosition>,      // Note useful, and we gonna build it
-    futures_pos: Vec<MarginPosition>, // useless
-    option_pos: Vec<OptionPosition>,  // useless
-}
-
-#[derive(Clone, Debug)]
-pub struct MarginPosition {}
-
-#[derive(Clone, Debug)]
-pub struct SwapPosition {
-    token: String,
-    pos_config: SwapPositionConfig,
-    pos_size: f64,
-    average_price: f64,
-    liquidation_price: f64,
-    margin: f64,
-    pnl: f64,
-    fee: f64,
-    funding_fee: f64,
-}
-
-#[derive(Clone, Debug)]
-
-pub struct SwapPositionConfig {
-    pos_margin_mode: PositionMarginMode,
-    leverage: f64,
-}
-
-#[derive(Clone, Debug)]
-pub enum PositionMarginMode {
-    Cross,
-    Isolated,
-}
-
-#[derive(Clone, Debug)]
-
-pub struct FuturesPosition {}
-
-#[derive(Clone, Debug)]
-
-pub struct OptionPosition {}
 
 #[derive(Clone, Debug)]
 // NOTE wrap fields with option<> to yield support for initiation in a chained fashion
@@ -108,6 +54,7 @@ pub struct AccountBuilder {
     config: Option<AccountConfig>,
     balances: Option<AccountBalances>,
     positions: Option<AccountPositions>,
+    latency: Option<Duration>,
 }
 
 impl AccountBuilder {
@@ -116,8 +63,38 @@ impl AccountBuilder {
             config: None,
             balances: None,
             positions: None,
+            latency: None,
         }
     }
+
+    pub fn latency(self, value: Duration) -> Self {
+        Self {
+            latency: Some(value),
+            ..self
+        }
+    }
+
+    pub fn config(mut self, value: AccountConfig) -> Self {
+        Self {
+            config: Some(value),
+            ..self
+        }
+    }
+
+    pub fn balances(mut self, value: AccountBalances) -> Self {
+        Self {
+            balances: Some(value),
+            ..self
+        }
+    }
+    pub fn positions(mut self, value: AccountPositions) -> Self {
+        Self {
+            positions: Some(value),
+            ..self
+        }
+    }
+
+
 }
 
 impl AccountInfo<State> {
