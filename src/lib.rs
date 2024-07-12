@@ -14,7 +14,7 @@ use crate::{
     error::ExecutionError,
     universal::{
         balance::TokenBalance,
-        event_and_status::ClientAccountEvent,
+        event::ClientAccountEvent,
         order::{Cancelled, Open, Order, OrderId, RequestCancel, RequestOpen},
     },
 };
@@ -84,7 +84,7 @@ pub mod test_util {
     use crate::{
         simulated::exchange::account::order::Orders,
         universal::{
-            event_and_status::ClientOrderId,
+            event::ClientOrderId,
             trade::{SymbolFees, Trade, TradeId},
         },
         Open, Order, OrderId,

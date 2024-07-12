@@ -8,7 +8,7 @@ use tracing::warn;
 use crate::{
     universal::{
         balance::{Balance, TokenBalance},
-        event_and_status::{AccountEventKind, ClientAccountEvent},
+        event::{AccountEventKind, ClientAccountEvent},
         order::OrderKind,
     },
     Cancelled, ExchangeKind, ExecutionError, Open, Order, RequestCancel, RequestOpen,

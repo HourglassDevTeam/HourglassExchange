@@ -1,4 +1,4 @@
-use crate::universal::event_and_status::ClientOrderId;
+use crate::universal::event::ClientOrderId;
 
 use cerebro_integration::model::{
     instrument::{symbol::Symbol, Instrument},

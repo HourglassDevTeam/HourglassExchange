@@ -11,7 +11,7 @@ use tide_broker::{
     simulated::{execution::SimulatedClient, SimulatedCommand},
     universal::{
         balance::{Balance, TokenBalance},
-        event_and_status::{AccountEventKind, ClientAccountEvent, ClientOrderId},
+        event::{AccountEventKind, ClientAccountEvent, ClientOrderId},
         order::OrderId,
         trade::{SymbolFees, Trade, TradeId},
     },
