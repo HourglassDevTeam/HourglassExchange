@@ -19,8 +19,8 @@ pub mod trade; // 定义交易模块
 /// NOTE: 如果需要记录交易所的时间戳，可以在 AccountEvent 结构中添加一个专门的字段来表示交易所的时间，例如：    pub exchange: Exchange
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AccountEvent {
-    pub client_ts: DateTime<Utc>, // 客户端接收到事件的时间
-    pub exchange: Exchange,           // 交易所
+    pub client_ts: DateTime<Utc>, // 客户端发出和接收到事件的时间
+    pub exchange: Exchange,           // 目标和源头交易所
     pub kind: AccountEventKind,       // 事件类型
 }
 
