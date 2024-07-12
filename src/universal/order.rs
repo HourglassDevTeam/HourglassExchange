@@ -98,13 +98,13 @@ impl Display for OrderKind {
 pub struct Order<State> {
     pub exchange: Exchange,     // 交易所
     pub instrument: Instrument, // 交易工具
-    // NOTE 需要记录 OrderId 吗
+    // Consider : 需要记录 OrderId 吗 ????
     pub cid: ClientOrderId, // 客户端订单ID
     pub side: Side,         // 买卖方向
     pub state: State,       // 订单状态
 }
 
-/// 订单初始状态。发送到ClientExecution进行操作
+/// 订单初始状态。发送到client进行操作
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct RequestOpen {
     pub kind: OrderKind,
@@ -122,7 +122,7 @@ impl Order<RequestOpen> {
     }
 }
 
-/// 订单在发送RequestOpen到ClientExecution后尚未收到确认响应时的状态
+/// 订单在发送RequestOpen到client后尚未收到确认响应时的状态
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct Pending;
 
