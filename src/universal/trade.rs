@@ -24,7 +24,7 @@ pub struct Trade {
     // 交易标的的数量。
     pub size: f64,
     // 交易订单数量。
-    pub count: f64,
+    pub count: i64,
     // 交易费用，以符号表示。
     pub fees: SymbolFees, // NOTE 从ClientAccount公共信息中继承， 也可能移除。
 }
