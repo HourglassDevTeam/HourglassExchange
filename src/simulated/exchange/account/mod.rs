@@ -23,8 +23,6 @@ pub mod balance;
 /// [`ClientAccount`] [`ClientOrders`] management & matching logic.
 pub mod order;
 
-/// 包含 [`ClientBalances`] 和 [`ClientOrders`] 的模拟账户状态。详细说明
-/// 模拟账户费用和账户延迟(是否要随即可变)
 #[derive(Clone, Debug)]
 pub struct ClientAccount {
     pub latency: Duration,
@@ -35,8 +33,8 @@ pub struct ClientAccount {
 }
 
 impl ClientAccount {
-    pub fn builder() -> ClientAccountBuilder {
-        ClientAccountBuilder::new()
+    pub fn builder() -> AccountBuilder {
+        AccountBuilder::new()
     }
 
     /// 客户端发送每个 [`Instrument`] 的每个 [`Order<Open>`] 给客户端。
@@ -271,7 +269,7 @@ where
 }
 
 #[derive(Debug, Default)]
-pub struct ClientAccountBuilder {
+pub struct AccountBuilder {
     latency: Option<Duration>,
     fees_percent: Option<f64>,
     event_account_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
@@ -279,7 +277,7 @@ pub struct ClientAccountBuilder {
     balances: Option<ClientBalances>,
 }
 
-impl ClientAccountBuilder {
+impl AccountBuilder {
     fn new() -> Self {
         Self { ..Default::default() }
     }
