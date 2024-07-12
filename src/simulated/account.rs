@@ -8,6 +8,7 @@ use crate::{
 use serde_json::ser::State;
 use tokio::sync::{mpsc, oneshot};
 use std::{fmt::Debug, time::Duration};
+use rand::{Rng, thread_rng};
 
 #[derive(Clone, Debug)]
 pub struct AccountInfo<State> {
@@ -161,7 +162,7 @@ impl AccountInfo<State> {
     }
 }
 
-
+// send oneshot response to execution request
 pub fn respond_with_latency<Response>(latency: Duration, response_tx: oneshot::Sender<Response>, response: Response)
                                       where
                                           Response: Debug + Send + 'static,
@@ -172,4 +173,12 @@ pub fn respond_with_latency<Response>(latency: Duration, response_tx: oneshot::S
             .send(response)
             .expect("[UniLinkExecution] : SimulatedExchange failed to send oneshot response to execution request")
     });
+}
+
+
+// Generate a random duration between min_millis and max_millis (inclusive)
+pub fn random_duration(min_millis: u64, max_millis: u64) -> Duration {
+    let mut rng = thread_rng();
+    let random_millis = rng.gen_range(min_millis..=max_millis);
+    Duration::from_millis(random_millis)
 }
