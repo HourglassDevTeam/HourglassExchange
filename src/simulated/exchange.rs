@@ -42,7 +42,6 @@ impl<Data, Event> Default for ExchangeBuilder<Data, Event> {
 #[derive(Debug)]
 pub struct ExchangeBuilder<Data, Event> {
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
-    // 客户账户，用于构建器。
     account: Option<Account<Data, Event>>,
 }
 
