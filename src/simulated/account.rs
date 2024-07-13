@@ -53,7 +53,8 @@ pub struct Account<Data>
 
 {
     pub data: AccountFeedData<Data>,
-    pub event_account_tx: mpsc::UnboundedSender<AccountEvent>,
+    pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,
+    pub market_event_tx: mpsc::UnboundedSender<AccountEvent>,
     pub latency: Duration,
     pub config: AccountConfig,
     pub balances: AccountBalances,
