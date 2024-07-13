@@ -29,6 +29,7 @@ pub enum SubscriptionKind {
     ClickHouse,
     // Kafka,
     // DolphinDB,
+    // RedisCache
     WebSocket,
     HTTP,
 }
