@@ -417,7 +417,7 @@ where
 }
 
 // Generate a random duration between min_millis and max_millis (inclusive)
-// NOTE Exercise careful handling with timestamp unit conversions!!!
+// NOTE Exercise careful handling with timestamp unit conversions!
 pub fn random_duration(min_millis: u64, max_millis: u64) -> i64 {
     let mut rng = thread_rng();
     let random_millis = rng.gen_range(min_millis..=max_millis);
