@@ -1,29 +1,28 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use rand::{thread_rng, Rng};
+use rand::{Rng, thread_rng};
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
-use tracing::Event;
 use uuid::Uuid;
 
 use ExchangeKind::Simulated;
 
-use crate::universal::data::event::MarketEvent;
 use crate::{
     error::ExecutionError,
-    simulated::instrument_orders::InstrumentOrders,
-    universal::{
+    Exchange,
+    ExchangeKind,
+    simulated::instrument_orders::InstrumentOrders, universal::{
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
         instrument::Instrument,
         order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
         position::AccountPositions,
+        Side,
         token::Token,
         trade::Trade,
-        Side,
     },
-    Exchange, ExchangeKind,
 };
+use crate::universal::data::event::MarketEvent;
 
 // 订阅方式
 #[derive(Clone, Debug)]
