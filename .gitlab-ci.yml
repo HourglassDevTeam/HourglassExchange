@@ -3,16 +3,18 @@ stages:
 
 .sync_template: &sync_template
   script:
-    - mkdir -p /root/.ssh
-    - echo "$GIT_SSH_PRIVATE_KEY" > /root/.ssh/id_rsa
-    - chmod 600 /root/.ssh/id_rsa
-    - ssh-keyscan gitee.com >> /root/.ssh/known_hosts
+    - mkdir -p /home/gitlab-runner/.ssh
+    - echo "$GIT_SSH_PRIVATE_KEY" | tr -d '\r' > /home/gitlab-runner/.ssh/id_rsa
+    - chmod 600 /home/gitlab-runner/.ssh/id_rsa
+    - ssh-keyscan gitee.com >> /home/gitlab-runner/.ssh/known_hosts
     - git config --global user.email "arthur@ciuyat.com"
     - git config --global user.name "arthur"
+    - git remote remove gitee || true
     - git remote add gitee git@gitee.com:unilink_1/UnilinkExecution.git
+    - git checkout -b master || git checkout master
     - git push -f gitee master
   tags:
-    - sync_ta
+    - sync_task
 
 sync_to_gitee:
   stage: sync
