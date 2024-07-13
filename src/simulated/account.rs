@@ -1,6 +1,7 @@
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug, time::Duration};
+use cerebro_data::event::{DataKind, MarketEvent};
 use tokio::sync::{mpsc, oneshot};
 use ExchangeKind::Simulated;
 
@@ -19,12 +20,12 @@ use crate::{
     },
     Exchange, ExchangeKind,
 };
-use crate::universal::r#mod::{DataKind, MarketEvent};
+use crate::universal::data::FeedGenerator;
 
 #[derive(Clone, Debug)]
 pub struct Account<Data>
 where
-    Data: MarketGenerator<MarketEvent<DataKind>> + Send,
+    Data: FeedGenerator<MarketEvent<DataKind>> + Send,
 {
     pub data: Data,
     pub event_account_tx: mpsc::UnboundedSender<AccountEvent>,
