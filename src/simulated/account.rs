@@ -212,9 +212,8 @@ pub struct AccountOrders {
     pub request_counter: u64,
     pub all: HashMap<Instrument, Orders>,
 }
-
 impl AccountOrders {
-    /// Construct a new [`AccountOrders`] from the provided selection of [`Instrument`]s.
+    /// 从提供的 [`Instrument`] 选择构造一个新的 [`AccountOrders`]。
     pub fn new(instruments: Vec<Instrument>) -> Self {
         Self {
             request_counter: 0,
@@ -222,14 +221,14 @@ impl AccountOrders {
         }
     }
 
-    /// Return a mutable reference to the client [`Orders`] of the specified [`Instrument`].
+    /// 返回指定 [`Instrument`] 的客户端 [`Orders`] 的可变引用。
     pub fn orders_mut(&mut self, instrument: &Instrument) -> Result<&mut Orders, ExecutionError> {
         self.all
             .get_mut(instrument)
-            .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Instrument: {instrument}")))
+            .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange 没有为 Instrument: {instrument} 配置")))
     }
 
-    /// Fetch the bid and ask [`Order<Opened>`]s for every [`Instrument`].
+    /// 为每个 [`Instrument`] 获取出价和要价 [`Order<Opened>`]。
     pub fn fetch_all(&self) -> Vec<Order<Opened>> {
         self.all
             .values()
@@ -239,32 +238,32 @@ impl AccountOrders {
             .collect()
     }
 
-    /// Build an [`Order<Opened>`] from the provided [`Order<RequestOpen>`]. The request counter
-    /// is incremented and the new total is used as a unique [`OrderId`].
+    /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Opened>`]。请求计数器递增，
+    /// 并且新的总数被用作唯一的 [`OrderId`]。
     pub fn build_order_open(&mut self, request: Order<RequestOpen>) -> Order<Opened> {
         self.increment_request_counter();
         Order::from((self.order_id(), request))
     }
 
-    /// Increment the [`Order<RequestOpen>`] counter by one to ensure the next generated
-    /// [`OrderId`] is unique.
+    /// 将 [`Order<RequestOpen>`] 计数器递增一以确保下一个生成的 [`OrderId`] 是唯一的。
     pub fn increment_request_counter(&mut self) {
         self.request_counter += 1;
     }
 
-    /// Generate a unique [`OrderId`].
+    /// 生成一个唯一的 [`OrderId`]。
     pub fn order_id(&self) -> OrderId {
         OrderId(self.request_counter.to_string())
     }
 }
 
-/// Client [`Orders`] for an [`Instrument`]. Simulates client orders in an real multi-participant OrderBook.
+/// 客户端针对一个 [`Instrument`] 的 [`Orders`]。模拟在真实多参与者订单簿中的客户端订单。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct Orders {
     pub trade_counter: u64,
     pub bids: Vec<Order<Opened>>,
     pub asks: Vec<Order<Opened>>,
 }
+
 
 #[derive(Clone, Debug)]
 pub struct AccountConfig {
@@ -358,7 +357,6 @@ impl AccountInfo {
     pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError> {
         match kind {
             | OrderKind::Market | OrderKind::Limit | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill | OrderKind::GoodTilCancelled =>
-            // Add logic to validate market order
             {
                 Ok(())
             } /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
