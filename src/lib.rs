@@ -1,8 +1,3 @@
-// 高性能和标准化的交易接口，能够在多个金融场所执行交易。同时提供一个功能丰富的模拟交易所，以协助进行回测和干式交易。通过初始化其关联的ClientExecution实例与交易所进行通信。
-// ClientExecution trait 提供了一个统一且简单的语言，用于与交易所进行交互。
-
-#![allow(clippy::type_complexity)]
-
 use std::{
     borrow::Cow,
     fmt::{Debug, Display, Formatter},
@@ -20,15 +15,11 @@ use crate::{
         order::{Cancelled, Open, Order, RequestCancel, RequestOpen},
     },
 };
-
-/// 在实时、干运行或模拟执行过程中产生的错误。
 pub mod error;
-// pub simulated simulated;
+// 模拟交易所的实现
 pub mod simulated;
-/// 支持在交易所执行操作的核心数据结构。
-/// 例如：`Order`（订单）、`Balance`（余额）、`Trade`（交易）等。
+// 交易所的通用骨架模块
 pub mod universal;
-mod example;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
