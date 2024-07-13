@@ -3,6 +3,7 @@ use std::{collections::HashMap, fmt::Debug};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
+use tracing::Event;
 use uuid::Uuid;
 
 use ExchangeKind::Simulated;
@@ -24,6 +25,7 @@ use crate::{
     Exchange, ExchangeKind,
 };
 
+// 订阅方式
 #[derive(Clone, Debug)]
 pub enum SubscriptionKind {
     ClickHouse,
@@ -48,10 +50,10 @@ pub struct AccountFeedData<Data> {
 }
 
 #[derive(Clone, Debug)]
-pub struct Account<Data> {
+pub struct Account<Data,Event> {
     pub data: AccountFeedData<Data>,
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,
-    pub market_event_tx: mpsc::UnboundedSender<AccountEvent>,
+    pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>,
     pub latency: i64,
     pub config: AccountConfig,
     pub balances: AccountBalances,
@@ -75,7 +77,7 @@ impl AccountBalances {
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
     }
 
-    /// 获取每个[`Token`]的[`Balance`]。
+    /// 获取所有[`Token`]的[`Balance`]。
     pub fn fetch_all(&self) -> Vec<TokenBalance> {
         self.0
             .clone()
