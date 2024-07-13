@@ -93,6 +93,7 @@ impl AccountBalances {
     }
 
 
+
     /// 当client取消[`Order<Opened>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Opened>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub fn update_from_cancel(&mut self, cancelled: &Order<Opened>) -> TokenBalance {
