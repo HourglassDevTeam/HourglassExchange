@@ -1,29 +1,28 @@
-use rand::{thread_rng, Rng};
-use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug, time::i64};
+
+use rand::{Rng, thread_rng};
+use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
-use ExchangeKind::Simulated;
-use crate::universal::data::event::{DataKind, MarketEvent};
 
+use ExchangeKind::Simulated;
 
 use crate::{
     error::ExecutionError,
-    simulated::instrument_orders::InstrumentOrders,
-    universal::{
+    Exchange,
+    ExchangeKind,
+    simulated::instrument_orders::InstrumentOrders, universal::{
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
         instrument::Instrument,
         order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
         position::AccountPositions,
+        Side,
         token::Token,
         trade::Trade,
-        Side,
     },
-    Exchange, ExchangeKind,
 };
-use crate::universal::data::FeedGenerator;
-
+use crate::universal::data::event::MarketEvent;
 
 #[derive(Clone, Debug)]
 pub enum SubscriptionKind {
