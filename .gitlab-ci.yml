@@ -12,7 +12,7 @@ stages:
     - git remote remove gitee || true
     - git remote add gitee git@gitee.com:unilink_1/UnilinkExecution.git
     - git checkout -b master || git checkout master
-    - git push -f gitee master
+    - git push -f gitee master 
   tags:
     - sync_task
 
