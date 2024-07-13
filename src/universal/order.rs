@@ -69,15 +69,15 @@ pub struct Order<State> {
 pub struct RequestOpen {
     pub kind: OrderKind,
     pub price: f64,
-    pub quantity: f64,
+    pub size: f64,
 }
 
 // NOTE that this needs to be adjusted according to the specifics of our trading instruments.
 impl Order<RequestOpen> {
     pub fn calculate_required_available_balance(&self) -> (&Token, f64) {
         match self.side {
-            | Side::Buy => (&self.instrument.quote, self.state.price * self.state.quantity),
-            | Side::Sell => (&self.instrument.base, self.state.quantity),
+            | Side::Buy => (&self.instrument.quote, self.state.price * self.state.size),
+            | Side::Sell => (&self.instrument.base, self.state.size),
         }
     }
 }
@@ -107,14 +107,14 @@ where
 pub struct Opened {
     pub id: OrderId,
     pub price: f64,
-    pub quantity: f64,
+    pub size: f64,
     pub filled_quantity: f64, /* or remain
-                               * or remaining quantity  , essentially the same. */
+                               * or remaining size  , essentially the same. */
 }
 
 impl Opened {
     pub fn remaining_quantity(&self) -> f64 {
-        self.quantity - self.filled_quantity
+        self.size - self.filled_quantity
     }
 }
 
@@ -123,11 +123,11 @@ impl Opened {
 pub struct FullyFilled {
     pub id: OrderId,
     pub price: f64,
-    pub quantity: f64,
+    pub size: f64,
 }
 
-/// 使得Order<Open> 之间可以比较大小
-/// NOTE: 此处Self 等同于 Order<Open>，表示 other 参数也是一个 Order<Open> 类型的引用。
+/// 使得Order<Opened> 之间可以比较大小
+/// NOTE: 此处Self 等同于 Order<Opened>，表示 other 参数也是一个 Order<Opened> 类型的引用。
 impl Ord for Order<Opened> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other)
@@ -151,7 +151,7 @@ impl PartialOrd for Order<Opened> {
     }
 }
 
-// 为Order<Open>实现Eq
+// 为Order<Opened>实现Eq
 impl Eq for Order<Opened> {}
 
 /// 构建订单在被取消后的状态
@@ -204,7 +204,7 @@ impl From<(OrderId, Order<RequestOpen>)> for Order<Opened> {
             state: Opened {
                 id,
                 price: request.state.price,
-                quantity: request.state.quantity,
+                size: request.state.size,
                 filled_quantity: 0.0,
             },
         }

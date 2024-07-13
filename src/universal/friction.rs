@@ -7,16 +7,16 @@ use serde::{Deserialize, Serialize};
 /// 以 [`Token`]（符号）表示的 [`Trade`]（交易）费用。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct TokenFees {
-    pub symbol: Token,
+    pub token: Token,
     pub fees: f64,
 }
 
 impl TokenFees {
     /// 构造一个新的 [`TokenFees`]。
-    pub fn new<S>(symbol: S, fees: f64) -> Self
+    pub fn new<S>(token: S, fees: f64) -> Self
     where
         S: Into<Token>,
     {
-        Self { symbol: symbol.into(), fees }
+        Self { token: token.into(), fees }
     }
 }

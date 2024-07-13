@@ -1,23 +1,21 @@
 use serde::{Deserialize, Serialize};
+use crate::universal::token::Token;
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, PartialOrd)]
-pub struct Token(String);
 
 /// 与[`Token`]相关联的[`Balance`]。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct TokenBalance {
-    pub symbol: Token,    // 符号
+    pub token: Token,     // 符号
     pub balance: Balance, // 平衡
 }
 
 impl TokenBalance {
-    /// 从一个[`Token`]和它关联的[`Balance`]构造一个新的[`TokenBalance`]。
-    pub fn new<S>(symbol: S, balance: Balance) -> Self
+    pub fn new<S>(token: S, balance: Balance) -> Self
     where
         S: Into<Token>,
     {
         Self {
-            symbol: symbol.into(),
+            token: token.into(),
             balance,
         }
     }

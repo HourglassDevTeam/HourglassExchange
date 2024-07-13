@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// eg/ "btc", "eth", "usdt", etc
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
