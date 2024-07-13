@@ -2,9 +2,7 @@ use crate::universal::event::ClientOrderId;
 use crate::universal::token::Token;
 use crate::universal::instrument::Instrument;
 use crate::universal::Side;
-use cerebro_integration::model::{
-    Exchange,
-};
+use crate::Exchange;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,

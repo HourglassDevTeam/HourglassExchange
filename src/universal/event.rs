@@ -3,7 +3,7 @@ use crate::universal::{
     order::{Cancelled, Opened, Order},
     trade::Trade,
 };
-use cerebro_integration::model::Exchange;
+use crate::Exchange;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;

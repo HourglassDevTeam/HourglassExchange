@@ -6,7 +6,6 @@ edition = "2021"
 
 [dependencies]
 # Cerebro Ecosystem
-cerebro-integration ={ path = "../cerebro-integration"}
 cerebro-data ={ path = "../cerebro-data"}
 
 # Logging
