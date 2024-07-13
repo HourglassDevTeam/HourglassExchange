@@ -1,0 +1,27 @@
+stages:
+  - sync
+
+.sync_template: &sync_template
+  script:
+    - mkdir -p /root/.ssh
+    - echo "$GIT_SSH_PRIVATE_KEY" > /root/.ssh/id_rsa
+    - chmod 600 /root/.ssh/id_rsa
+    - ssh-keyscan gitee.com >> /root/.ssh/known_hosts
+    - git config --global user.email "arthur@ciuyat.com"
+    - git config --global user.name "arthur"
+    - git remote add gitee git@gitee.com:unilink_1/UnilinkExecution.git
+    - git push -f gitee master
+  tags:
+    - sync_ta
+
+sync_to_gitee:
+  stage: sync
+  <<: *sync_template
+  only:
+    - master
+
+sync_schedule:
+  stage: sync
+  <<: *sync_template
+  only:
+    - schedules
