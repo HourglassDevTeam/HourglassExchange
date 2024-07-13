@@ -29,6 +29,17 @@ impl <Data, Event>SimulatedExchange<Data, Event> {
     }
 }
 
+
+
+impl<Data, Event> Default for ExchangeBuilder<Data, Event> {
+    fn default() -> Self {
+        let (_tx, rx) = mpsc::unbounded_channel();
+        Self {
+            event_simulated_rx: Some(rx),
+            account: None,
+        }
+    }
+}
 #[derive(Debug, Default)]
 pub struct ExchangeBuilder<Data, Event> {
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
