@@ -11,6 +11,9 @@ pub mod client;
 pub mod exchange;
 pub mod instrument_orders;
 mod ws_trade_converter;
+mod account_orders;
+mod account_balances;
+mod account_config;
 
 #[derive(Debug)]
 pub enum SimulatedEvent {
