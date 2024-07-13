@@ -56,9 +56,7 @@ impl Display for Exchange {
     }
 }
 
-/// Unique identifier for an [`ClientExecution`] implementation.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-#[serde(rename = "execution", rename_all = "snake_case")]
 pub enum ExchangeKind {
     Simulated,
     Ftx,
