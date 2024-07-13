@@ -46,7 +46,6 @@ pub struct AccountFeedData<Data>{
     pub data_source: DataSource,
     pub batch_id: Uuid,
     pub data: Vec<MarketEvent<Data>>,
-
 }
 
 #[derive(Clone, Debug)]
