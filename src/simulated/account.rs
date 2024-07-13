@@ -141,7 +141,7 @@ impl AccountInfo<State> {
 }
 
 // send oneshot response to execution request
-pub fn respond_with_latency<Response>(latency: u64, response_tx: oneshot::Sender<Response>, response: Response)
+pub fn respond_with_latency<Response>(latency: Duration, response_tx: oneshot::Sender<Response>, response: Response)
 where
     Response: Debug + Send + 'static,
 {
@@ -150,8 +150,8 @@ where
 
 
 // Generate a random duration between min_millis and max_millis (inclusive)
-pub fn random_duration(min_millis: u64, max_millis: u64) -> u64 {
+pub fn random_duration(min_millis: u64, max_millis: u64) -> Duration {
     let mut rng = thread_rng();
     let random_millis = rng.gen_range(min_millis..=max_millis);
-    random_millis
+    Duration::from_millis(random_millis)
 }
