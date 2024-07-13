@@ -205,19 +205,19 @@ impl std::ops::DerefMut for AccountBalances {
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct AccountOrders {
     pub request_counter: u64,
-    pub all: HashMap<Instrument, Orders>,
+    pub all: HashMap<Instrument, InstrumentOrders>,
 }
 impl AccountOrders {
     /// 从提供的 [`Instrument`] 选择构造一个新的 [`AccountOrders`]。
     pub fn new(instruments: Vec<Instrument>) -> Self {
         Self {
             request_counter: 0,
-            all: instruments.into_iter().map(|instrument| (instrument, Orders::default())).collect(),
+            all: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
         }
     }
 
-    /// 返回指定 [`Instrument`] 的客户端 [`Orders`] 的可变引用。
-    pub fn orders_mut(&mut self, instrument: &Instrument) -> Result<&mut Orders, ExecutionError> {
+    /// 返回指定 [`Instrument`] 的客户端 [`InstrumentOrders`] 的可变引用。
+    pub fn orders_mut(&mut self, instrument: &Instrument) -> Result<&mut InstrumentOrders, ExecutionError> {
         self.all
             .get_mut(instrument)
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange 没有为 Instrument: {instrument} 配置")))
@@ -251,9 +251,9 @@ impl AccountOrders {
     }
 }
 
-/// 客户端针对一个 [`Instrument`] 的 [`Orders`]。模拟在真实多参与者订单簿中的客户端订单。
+/// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
-pub struct Orders {
+pub struct InstrumentOrders {
     pub trade_counter: u64,
     pub bids: Vec<Order<Opened>>,
     pub asks: Vec<Order<Opened>>,
