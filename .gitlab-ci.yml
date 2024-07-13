@@ -24,4 +24,4 @@ sync_schedule:
   stage: sync
   <<: *sync_template
   only:
-    - schedules
+    - pushes
