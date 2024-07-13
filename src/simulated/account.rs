@@ -412,7 +412,7 @@ where
     tokio::spawn(async move {
         response_tx
             .send(response)
-            .expect("[TideBroker] : SimulatedExchange failed to send oneshot response to execution request")
+            .expect("[UnilinkExecution] : SimulatedExchange failed to send oneshot response to execution request")
     });
 }
 
