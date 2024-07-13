@@ -1,7 +1,6 @@
 // 引入相关模块和结构体。
 use crate::universal::{instrument::Instrument, Side};
 use serde::{Deserialize, Serialize};
-use crate::universal::Side;
 
 /// 标准化 [`Trade`]（交易）模型。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]

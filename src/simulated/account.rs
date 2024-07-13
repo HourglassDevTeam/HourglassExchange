@@ -319,7 +319,7 @@ impl AccountBuilder {
         Self { config: Some(value), ..self }
     }
 
-    pub fn balances(self, value: Vec<TokenBalance>) -> Self {
+    pub fn balances(self, value: AccountBalances) -> Self {
         Self {
             balances: Some(value),
             ..self
