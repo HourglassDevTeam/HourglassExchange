@@ -1,6 +1,6 @@
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Debug, time::Duration};
+use std::{collections::HashMap, fmt::Debug, time::i64};
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 use ExchangeKind::Simulated;
@@ -54,7 +54,7 @@ pub struct Account<Data>
     pub data: AccountFeedData<Data>,
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,
     pub market_event_tx: mpsc::UnboundedSender<AccountEvent>,
-    pub latency: Duration,
+    pub latency: i64,
     pub config: AccountConfig,
     pub balances: AccountBalances,
     pub positions: Vec<AccountPositions>,
@@ -318,7 +318,7 @@ pub struct AccountBuilder {
     config: Option<AccountConfig>,
     balances: Option<AccountBalances>,
     positions: Option<AccountPositions>,
-    latency: Option<Duration>,
+    latency: Option<i64>,
 }
 
 impl AccountBuilder {
@@ -331,7 +331,7 @@ impl AccountBuilder {
         }
     }
 
-    pub fn latency(self, value: Duration) -> Self {
+    pub fn latency(self, value: i64) -> Self {
         Self {
             latency: Some(value),
             ..self
@@ -403,7 +403,7 @@ impl<Data>Account<Data> {
 }
 
 // send oneshot response to execution request
-pub fn respond_with_latency<Response>(latency: Duration, response_tx: oneshot::Sender<Response>, response: Response)
+pub fn respond_with_latency<Response>(latency: i64, response_tx: oneshot::Sender<Response>, response: Response)
 where
     Response: Debug + Send + 'static,
 {
@@ -415,8 +415,8 @@ where
 }
 
 // Generate a random duration between min_millis and max_millis (inclusive)
-pub fn random_duration(min_millis: u64, max_millis: u64) -> Duration {
+pub fn random_duration(min_millis: u64, max_millis: u64) -> i64 {
     let mut rng = thread_rng();
     let random_millis = rng.gen_range(min_millis..=max_millis);
-    Duration::from_millis(random_millis)
+    i64::from_millis(random_millis)
 }
