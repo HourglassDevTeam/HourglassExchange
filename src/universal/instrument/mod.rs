@@ -1,9 +1,11 @@
-pub mod builder;
-pub mod kind;
+use std::fmt::{Display, Formatter};
+
+use serde::{Deserialize, Serialize};
 
 use crate::universal::{instrument::kind::InstrumentKind, token::Token};
-use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
+
+pub mod builder;
+pub mod kind;
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]

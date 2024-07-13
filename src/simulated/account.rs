@@ -1,25 +1,23 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::fmt::Debug;
+
 use num_traits::FromPrimitive;
 use rand::{Rng, thread_rng};
-use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
-use ExchangeKind::Simulated;
-
 use crate::{
-    error::ExecutionError,
-    Exchange,
-    ExchangeKind,
-    simulated::instrument_orders::InstrumentOrders, universal::{
-        balance::{Balance, BalanceDelta, TokenBalance},
-        event::{AccountEvent, AccountEventKind},
-        instrument::Instrument,
-        order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
-        position::AccountPositions,
-        Side,
-        token::Token,
-        trade::Trade,
+    error::ExecutionError
+    ,
+    ExchangeKind
+    , universal::{
+        balance::TokenBalance,
+        event::AccountEvent
+        ,
+        order::{Cancelled, Open, Order, OrderKind, RequestCancel, RequestOpen},
+        position::AccountPositions
+
+
+        ,
     },
 };
 use crate::simulated::account_balances::AccountBalances;
@@ -52,7 +50,7 @@ pub struct AccountFeedData<Data> {
 }
 
 #[derive(Clone, Debug)]
-pub struct Account<Data,Event> {
+pub struct Account<Data, Event> {
     pub data: AccountFeedData<Data>,
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>,

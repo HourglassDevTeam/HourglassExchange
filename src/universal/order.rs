@@ -1,11 +1,13 @@
-use crate::{
-    universal::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
-    Exchange,
-};
-use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
     fmt::{Display, Formatter},
+};
+
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    Exchange,
+    universal::{event::ClientOrderId, instrument::Instrument, Side, token::Token},
 };
 
 /// 订单类型枚举

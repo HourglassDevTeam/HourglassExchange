@@ -1,6 +1,8 @@
-use super::{account::Account, SimulatedEvent};
-use crate::ExecutionError;
 use tokio::sync::mpsc;
+
+use crate::ExecutionError;
+
+use super::{account::Account, SimulatedEvent};
 
 /// 响应 [`SimulatedEvent`] 的 [`SimulatedExchange`]。
 #[derive(Debug)]
@@ -9,7 +11,7 @@ pub struct SimulatedExchange<Data, Event> {
     pub account: Account<Data, Event>,
 }
 
-impl <Data, Event>SimulatedExchange<Data, Event> {
+impl<Data, Event> SimulatedExchange<Data, Event> {
     pub fn builder() -> ExchangeBuilder<Data, Event> {
         ExchangeBuilder::new()
     }
@@ -29,7 +31,6 @@ impl <Data, Event>SimulatedExchange<Data, Event> {
     }
 }
 
-
 impl<Data, Event> Default for ExchangeBuilder<Data, Event> {
     fn default() -> Self {
         let (_tx, rx) = mpsc::unbounded_channel();
@@ -45,7 +46,7 @@ pub struct ExchangeBuilder<Data, Event> {
     account: Option<Account<Data, Event>>,
 }
 
-impl <Data, Event>ExchangeBuilder<Data, Event> {
+impl<Data, Event> ExchangeBuilder<Data, Event> {
     fn new() -> Self {
         Self { ..Default::default() }
     }

@@ -15,6 +15,7 @@ use crate::{
         order::{Cancelled, Open, Order, RequestCancel, RequestOpen},
     },
 };
+
 pub mod error;
 // 模拟交易所的实现
 pub mod simulated;

@@ -1,5 +1,7 @@
 use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
+
 use crate::error::ExecutionError;
 use crate::simulated::instrument_orders::InstrumentOrders;
 use crate::universal::instrument::Instrument;

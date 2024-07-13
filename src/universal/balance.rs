@@ -1,5 +1,6 @@
-use crate::universal::token::Token;
 use serde::{Deserialize, Serialize};
+
+use crate::universal::token::Token;
 
 /// 与[`Token`]相关联的[`Balance`]。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]

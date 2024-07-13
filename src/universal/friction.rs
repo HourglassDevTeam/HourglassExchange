@@ -1,7 +1,8 @@
 // NOTE 滑点和摩擦成本的设计放在这里
 
-use crate::universal::token::Token;
 use serde::{Deserialize, Serialize};
+
+use crate::universal::token::Token;
 
 #[allow(dead_code)]
 /// 以 [`Token`]（符号）表示的 [`Trade`]（交易）费用。
