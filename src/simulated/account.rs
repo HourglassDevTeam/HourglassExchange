@@ -104,16 +104,7 @@ impl AccountInfo<State> {
     }
 
     pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Opened>>, ExecutionError>>) {
-        let result = Ok(self.orders.iter().filter_map(|order| {
-            Some(Order {
-                exchange: order.exchange.clone(),
-                instrument: order.instrument.clone(),
-                cid: order.cid,
-                side: order.side,
-                state: order.state.clone(),
-            })
-        }).collect());
-        response_tx.send(result).unwrap();
+        todo!()
     }
 
     pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>) {
@@ -149,11 +140,18 @@ impl AccountInfo<State> {
     }
 }
 
+// send oneshot response to execution request
+pub fn respond_with_latency<Response>(latency: u64, response_tx: oneshot::Sender<Response>, response: Response)
+where
+    Response: Debug + Send + 'static,
+{
+    todo!()
+}
 
 
 // Generate a random duration between min_millis and max_millis (inclusive)
-pub fn random_duration(min_millis: u64, max_millis: u64) -> Duration {
+pub fn random_duration(min_millis: u64, max_millis: u64) -> u64 {
     let mut rng = thread_rng();
     let random_millis = rng.gen_range(min_millis..=max_millis);
-    Duration::from_millis(random_millis)
+    random_millis
 }
