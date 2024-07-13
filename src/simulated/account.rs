@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug, time::Duration};
 use cerebro_data::event::MarketEvent;
 use tokio::sync::{mpsc, oneshot};
+use uuid::Uuid;
 use ExchangeKind::Simulated;
 use crate::universal::data::event::DataKind;
 
@@ -24,10 +25,17 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct Account
-where
-{
+pub struct AccountFeedData{
+    pub batch_id: Uuid,
     pub data: Vec<Trade>,
+
+}
+
+#[derive(Clone, Debug)]
+pub struct Account
+
+{
+    pub data: AccountFeedData,
     pub event_account_tx: mpsc::UnboundedSender<AccountEvent>,
     pub latency: Duration,
     pub config: AccountConfig,
