@@ -14,6 +14,8 @@ use std::collections::HashMap;
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct AccountBalances(pub HashMap<Token, Balance>);
 
+
+// CONSIDER 在哪个环节打上时间戳？
 impl AccountBalances {
     /// 返回指定[`Token`]的[`Balance`]的引用。
     pub fn balance(&self, token: &Token) -> Result<&Balance, ExecutionError> {
