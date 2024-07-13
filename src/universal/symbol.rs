@@ -27,8 +27,8 @@ impl AsRef<str> for Symbol {
 
 impl<'de> Deserialize<'de> for Symbol {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-                      where
-                          D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         String::deserialize(deserializer).map(Symbol::new)
     }
@@ -47,8 +47,8 @@ impl Symbol {
     /// Construct a new [`Symbol`] new type using the provided `Into<Symbol>` value.
 
     pub fn new<S>(input: S) -> Self
-                  where
-                      S: Into<String>,
+    where
+        S: Into<String>,
     {
         Self(input.into().to_lowercase())
     }
