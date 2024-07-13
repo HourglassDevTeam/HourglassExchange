@@ -20,7 +20,7 @@ use crate::{
 use crate::universal::trade::Trade;
 
 #[derive(Clone, Debug)]
-pub struct AccountInfo {
+pub struct Account {
     pub event_account_tx: mpsc::UnboundedSender<AccountEvent>,
     pub latency: Duration,
     pub config: AccountConfig,
@@ -341,7 +341,7 @@ impl AccountBuilder {
 
 }
 
-impl AccountInfo {
+impl Account {
     pub fn initiator() -> AccountBuilder {
         AccountBuilder::new()
     }
