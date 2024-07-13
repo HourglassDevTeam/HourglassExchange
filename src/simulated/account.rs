@@ -87,6 +87,7 @@ impl AccountBalances {
     }
 
     /// 判断client是否有足够的可用[`Balance`]来执行[`Order<RequestOpen>`]。
+    /// NOTE 这个方法不应该导致panic,Client要能妥善处理这种状况。
     pub fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExecutionError> {
         let available = self.balance(token)?.available;
         match available >= required_balance {
