@@ -104,7 +104,16 @@ impl AccountInfo<State> {
     }
 
     pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Opened>>, ExecutionError>>) {
-        todo!()
+        let result = Ok(self.orders.iter().filter_map(|order| {
+            Some(Order {
+                exchange: order.exchange.clone(),
+                instrument: order.instrument.clone(),
+                cid: order.cid,
+                side: order.side,
+                state: order.state.clone(),
+            })
+        }).collect());
+        response_tx.send(result).unwrap();
     }
 
     pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>) {
@@ -140,18 +149,6 @@ impl AccountInfo<State> {
     }
 }
 
-// send oneshot response to execution request
-pub fn respond_with_latency<Response>(latency: Duration, response_tx: oneshot::Sender<Response>, response: Response)
-                                      where
-                                          Response: Debug + Send + 'static,
-{
-    tokio::spawn(async move {
-        tokio::time::sleep(latency).await;
-        response_tx
-            .send(response)
-            .expect("[UniLinkExecution] : SimulatedExchange failed to send oneshot response to execution request")
-    });
-}
 
 
 // Generate a random duration between min_millis and max_millis (inclusive)

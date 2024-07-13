@@ -48,7 +48,7 @@ pub trait ClientExecution {
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>;
 }
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize, Debug)]
 pub struct Exchange(Cow<'static, str>);
 
 impl<E> From<E> for Exchange
@@ -57,12 +57,6 @@ where
 {
     fn from(exchange: E) -> Self {
         Exchange(exchange.into())
-    }
-}
-
-impl Debug for Exchange {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 
