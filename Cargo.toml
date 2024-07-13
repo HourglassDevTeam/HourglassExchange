@@ -5,8 +5,6 @@ edition = "2021"
 
 
 [dependencies]
-cerebro-data ={ path = "../cerebro-data"}
-
 # Logging
 tracing = "0.1.36"
 

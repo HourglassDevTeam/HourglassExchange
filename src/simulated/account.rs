@@ -1,7 +1,6 @@
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug, time::Duration};
-use cerebro_data::event::MarketEvent;
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 use ExchangeKind::Simulated;
