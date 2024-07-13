@@ -254,7 +254,7 @@ impl AccountOrders {
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct InstrumentOrders {
-    pub trade_counter: u64,
+    pub batch_id: u64,
     pub bids: Vec<Order<Opened>>,
     pub asks: Vec<Order<Opened>>,
 }
