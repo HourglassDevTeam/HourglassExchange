@@ -19,6 +19,8 @@ use crate::{
 use account_balances::AccountBalances;
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
+use crate::universal::instrument::Instrument;
+use crate::universal::trade::Trade;
 
 mod account_balances;
 mod account_config;
@@ -128,7 +130,7 @@ impl<Data, Event> Account<Data, Event> {
         respond_with_latency(self.latency, response_tx, Ok(self.positions.clone()));
     }
 
-    pub fn match_orders(&mut self, instrument: Uuid, trade: MarketEvent<Event>) {
+    pub fn match_orders(&mut self, instrument: Instrument, trade: Trade) {
         todo!()
     }
 
