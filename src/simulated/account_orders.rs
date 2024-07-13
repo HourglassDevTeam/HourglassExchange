@@ -14,6 +14,7 @@ pub struct AccountOrders {
 }
 impl AccountOrders {
     /// 从提供的 [`Instrument`] 选择构造一个新的 [`AccountOrders`]。
+    /// NOTE 在新的场景下怎么初始化比较好？
     pub fn new(instruments: Vec<Instrument>) -> Self {
         Self {
             request_counter: 0,
