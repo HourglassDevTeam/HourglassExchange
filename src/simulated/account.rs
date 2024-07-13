@@ -54,7 +54,7 @@ pub struct Account<Data>
     pub data: AccountFeedData<Data>,
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,
     pub market_event_tx: mpsc::UnboundedSender<AccountEvent>,
-    pub latency: i64,
+    pub latency: u64,
     pub config: AccountConfig,
     pub balances: AccountBalances,
     pub positions: Vec<AccountPositions>,
@@ -415,7 +415,7 @@ where
 }
 
 // Generate a random duration between min_millis and max_millis (inclusive)
-pub fn random_duration(min_millis: u64, max_millis: u64) -> i64 {
+pub fn random_duration(min_millis: u64, max_millis: u64) -> u64 {
     let mut rng = thread_rng();
     let random_millis = rng.gen_range(min_millis..=max_millis);
     i64::from_millis(random_millis)
