@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::universal::trade::Trade;
@@ -7,8 +6,8 @@ use crate::{universal::instrument::Instrument, Exchange};
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
 
 pub struct MarketEvent<T> {
-    pub exchange_time: DateTime<Utc>,
-    pub received_time: DateTime<Utc>,
+    pub exchange_time: i64,
+    pub received_time: i64,
     pub exchange: Exchange,
     pub instrument: Instrument,
     pub kind: T,
