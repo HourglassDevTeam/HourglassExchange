@@ -30,7 +30,6 @@ impl <Data, Event>SimulatedExchange<Data, Event> {
 }
 
 
-// 默认实现一个带 `event_simulated_rx` 的构建器
 impl<Data, Event> Default for ExchangeBuilder<Data, Event> {
     fn default() -> Self {
         let (_tx, rx) = mpsc::unbounded_channel();
@@ -40,7 +39,7 @@ impl<Data, Event> Default for ExchangeBuilder<Data, Event> {
         }
     }
 }
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ExchangeBuilder<Data, Event> {
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
     // 客户账户，用于构建器。
