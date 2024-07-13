@@ -1,12 +1,8 @@
 // 引入多生产者单消费者通道模块和执行错误类型。
 use crate::ExecutionError;
 use tokio::sync::mpsc;
-
 // 引入上级模块中的客户账户和模拟事件类型。
 use super::{account::Account, SimulatedEvent};
-
-/// [`SimulatedExchange`] 的账户余额、开放订单、费用和延迟。
-pub mod account;
 
 /// 响应 [`SimulatedEvent`] 的 [`SimulatedExchange`]。
 #[derive(Debug)]
@@ -44,7 +40,7 @@ pub struct ExchangeBuilder {
     // 模拟事件的无界接收器，用于构建器。
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
     // 客户账户，用于构建器。
-    account: Option<ClientAccount>,
+    account: Option<Account<Data>>,
 }
 
 impl ExchangeBuilder {
