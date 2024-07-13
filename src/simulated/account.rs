@@ -33,19 +33,19 @@ pub struct Account {
 pub struct AccountBalances(pub HashMap<Token, Balance>);
 
 impl AccountBalances {
-    /// Return a reference to the [`Balance`] of the specified [`Token`].
+    /// 返回指定[`Token`]的[`Balance`]的引用。
     pub fn balance(&self, token: &Token) -> Result<&Balance, ExecutionError> {
         self.get(token)
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
     }
 
-    /// Return a mutable reference to the [`Balance`] of the specified [`Token`].
+    /// 返回指定[`Token`]的[`Balance`]的可变引用。
     pub fn balance_mut(&mut self, token: &Token) -> Result<&mut Balance, ExecutionError> {
         self.get_mut(token)
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
     }
 
-    /// Fetch the client [`Balance`] for every [`Token``].
+    /// 获取每个[`Token`]的[`Balance`]。
     pub fn fetch_all(&self) -> Vec<TokenBalance> {
         self.0
             .clone()
@@ -54,8 +54,7 @@ impl AccountBalances {
             .collect()
     }
 
-    /// Determine if the client has sufficient available [`Balance`] to execute an
-    /// [`Order<RequestOpen>`].
+    /// 判断客户是否有足够的可用[`Balance`]来执行[`Order<RequestOpen>`]。
     pub fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExecutionError> {
         let available = self.balance(token)?.available;
         match available >= required_balance {
@@ -64,9 +63,8 @@ impl AccountBalances {
         }
     }
 
-    /// Updates the associated [`Token`] [`Balance`] when a client creates an [`Order<Opened>`]. The
-    /// nature of the [`Balance`] change will depend on if the [`Order<Opened>`] is a
-    /// [`Side::Buy`] or [`Side::Sell`].
+    /// 当客户创建[`Order<Opened>`]时，更新相关的[`Token`] [`Balance`]。
+    /// [`Balance`]的变化取决于[`Order<Opened>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub fn update_from_open(&mut self, open: &Order<Opened>, required_balance: f64) -> AccountEvent {
         let updated_balance = match open.side {
             | Side::Buy => {
