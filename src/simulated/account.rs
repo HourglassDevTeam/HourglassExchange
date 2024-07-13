@@ -309,6 +309,9 @@ pub enum PositionMode {
 pub enum CommissionLevel {
     Lv1,
     Lv2,
+    Lv3,
+    Lv4,
+    Lv5,
     // ..........
 }
 
