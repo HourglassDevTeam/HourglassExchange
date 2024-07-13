@@ -13,7 +13,7 @@ impl SimulatedExchange {
     pub fn builder() -> ExchangeBuilder {
         ExchangeBuilder::new()
     }
-    /// 运行 [`SimulatedExchange`] 并响应 [`SimulatedEvent`]各种请求。
+    /// 运行 [`SimulatedExchange`] 并响应各种[`SimulatedEvent`]。
     pub async fn run(mut self) {
         // 不断接收并处理模拟事件。
         while let Some(event) = self.event_simulated_rx.recv().await {
@@ -37,12 +37,10 @@ pub struct ExchangeBuilder {
 }
 
 impl ExchangeBuilder {
-    // 构造函数，创建新的构建器实例。
     fn new() -> Self {
         Self { ..Default::default() }
     }
 
-    // 设置模拟事件的接收器。
     pub fn event_simulated_rx(self, value: mpsc::UnboundedReceiver<SimulatedEvent>) -> Self {
         Self {
             event_simulated_rx: Some(value),
@@ -50,7 +48,6 @@ impl ExchangeBuilder {
         }
     }
 
-    // 设置客户账户。
     pub fn account(self, value: Account<Data>) -> Self {
         Self {
             account: Some(value),
@@ -58,7 +55,6 @@ impl ExchangeBuilder {
         }
     }
 
-    // 构建并返回 `SimulatedExchange` 实例。
     pub fn build(self) -> Result<SimulatedExchange, ExecutionError> {
         Ok(SimulatedExchange {
             event_simulated_rx: self
