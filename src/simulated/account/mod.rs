@@ -124,6 +124,25 @@ impl<Data, Event> Account<Data, Event> {
         }
     }
 
+    pub fn fetch_positions(&self, response_tx: oneshot::Sender<Result<Vec<AccountPositions>, ExecutionError>>) {
+        respond_with_latency(self.latency, response_tx, Ok(self.positions.clone()));
+    }
+
+    pub fn match_orders(&mut self, instrument: Uuid, trade: MarketEvent<Event>) {
+        todo!()
+    }
+
+    pub fn open_orders(
+        &mut self,
+        open_requests: Vec<Order<RequestOpen>>,
+        response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>,
+    ) {
+        let open_results = open_requests.into_iter().map(|request| self.try_open_order_atomic(request)).collect();
+        response_tx.send(open_results).unwrap_or_else(|_| {
+            // Handle the error if sending fails
+        });
+    }
+
     pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError> {
         Self::order_validity_check(request.state.kind).unwrap();
         todo!()
