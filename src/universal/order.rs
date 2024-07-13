@@ -83,7 +83,7 @@ where
     }
 }
 
-/// 打开状态的订单
+/// open状态的订单
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct Open {
     pub id: OrderId,
