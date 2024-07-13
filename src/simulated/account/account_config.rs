@@ -29,7 +29,6 @@ pub enum CommissionLevel {
     // ..........
 }
 
-
 pub struct AccountConfigBuilder {
     margin_mode: Option<MarginMode>,
     position_mode: Option<PositionMode>,

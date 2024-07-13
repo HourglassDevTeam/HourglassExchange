@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{Exchange, universal::instrument::Instrument};
 use crate::universal::trade::Trade;
+use crate::{universal::instrument::Instrument, Exchange};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
 

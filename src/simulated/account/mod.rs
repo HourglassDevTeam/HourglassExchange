@@ -1,29 +1,24 @@
 use std::fmt::Debug;
 
 use num_traits::FromPrimitive;
-use rand::{Rng, thread_rng};
+use rand::{thread_rng, Rng};
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
+use crate::universal::data::event::MarketEvent;
 use crate::{
-    error::ExecutionError
-    ,
-    ExchangeKind
-    , universal::{
+    error::ExecutionError,
+    universal::{
         balance::TokenBalance,
-        event::AccountEvent
-        ,
+        event::AccountEvent,
         order::{Cancelled, Open, Order, OrderKind, RequestCancel, RequestOpen},
-        position::AccountPositions
-
-
-        ,
+        position::AccountPositions,
     },
+    ExchangeKind,
 };
 use account_balances::AccountBalances;
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
-use crate::universal::data::event::MarketEvent;
 
 mod account_balances;
 mod account_config;
@@ -124,8 +119,8 @@ impl<Data, Event> Account<Data, Event> {
 
     pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError> {
         match kind {
-            OrderKind::Market | OrderKind::Limit | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill | OrderKind::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
-                                                                                                                                                  * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
+            | OrderKind::Market | OrderKind::Limit | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill | OrderKind::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
+                                                                                                                                                    * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
     }
 

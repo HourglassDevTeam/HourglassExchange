@@ -6,8 +6,8 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    universal::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
     Exchange,
-    universal::{event::ClientOrderId, instrument::Instrument, Side, token::Token},
 };
 
 /// 订单类型枚举
@@ -26,11 +26,11 @@ impl Display for OrderKind {
             f,
             "{}",
             match self {
-                OrderKind::Market => "market",
-                OrderKind::Limit => "limit",
-                OrderKind::ImmediateOrCancel => "immediate_or_cancel (IOC)",
-                OrderKind::FillOrKill => "fill_or_kill (FOK)",
-                OrderKind::GoodTilCancelled => "good_til_cancelled (GTC)",
+                | OrderKind::Market => "market",
+                | OrderKind::Limit => "limit",
+                | OrderKind::ImmediateOrCancel => "immediate_or_cancel (IOC)",
+                | OrderKind::FillOrKill => "fill_or_kill (FOK)",
+                | OrderKind::GoodTilCancelled => "good_til_cancelled (GTC)",
                 // | OrderKind::Stop => "stop",
                 // | OrderKind::StopLimit => "stop_limit",
                 // | OrderKind::TrailingStop => "trailing_stop",
@@ -63,8 +63,8 @@ pub struct RequestOpen {
 impl Order<RequestOpen> {
     pub fn calculate_required_available_balance(&self) -> (&Token, f64) {
         match self.side {
-            Side::Buy => (&self.instrument.quote, self.state.price * self.state.size),
-            Side::Sell => (&self.instrument.base, self.state.size),
+            | Side::Buy => (&self.instrument.quote, self.state.price * self.state.size),
+            | Side::Sell => (&self.instrument.base, self.state.size),
         }
     }
 }
@@ -125,15 +125,15 @@ impl Ord for Order<Open> {
 impl PartialOrd for Order<Open> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self.side, other.side) {
-            (Side::Buy, Side::Buy) => match self.state.price.partial_cmp(&other.state.price)? {
-                Ordering::Equal => self.state.remaining_quantity().partial_cmp(&other.state.remaining_quantity()),
-                non_equal => Some(non_equal),
+            | (Side::Buy, Side::Buy) => match self.state.price.partial_cmp(&other.state.price)? {
+                | Ordering::Equal => self.state.remaining_quantity().partial_cmp(&other.state.remaining_quantity()),
+                | non_equal => Some(non_equal),
             },
-            (Side::Sell, Side::Sell) => match other.state.price.partial_cmp(&self.state.price)? {
-                Ordering::Equal => other.state.remaining_quantity().partial_cmp(&self.state.remaining_quantity()),
-                non_equal => Some(non_equal),
+            | (Side::Sell, Side::Sell) => match other.state.price.partial_cmp(&self.state.price)? {
+                | Ordering::Equal => other.state.remaining_quantity().partial_cmp(&self.state.remaining_quantity()),
+                | non_equal => Some(non_equal),
             },
-            _ => None,
+            | _ => None,
         }
     }
 }

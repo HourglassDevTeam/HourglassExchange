@@ -19,12 +19,12 @@ impl InstrumentOrders {
     /// Add an [`Order<Open>`] to the bids or asks depending on it's [`Side`].
     pub fn add_order_open(&mut self, new_open_order: Order<Open>) {
         match new_open_order.side {
-            Side::Buy => {
+            | Side::Buy => {
                 // Add Order<Opened> to open bids
                 self.bids.push(new_open_order);
                 self.bids.sort();
             }
-            Side::Sell => {
+            | Side::Sell => {
                 // Add Order<Opened> to open asks
                 self.asks.push(new_open_order);
                 self.asks.sort();

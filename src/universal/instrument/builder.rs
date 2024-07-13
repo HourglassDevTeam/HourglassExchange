@@ -1,5 +1,5 @@
 use crate::universal::{
-    instrument::{Instrument, kind::InstrumentKind},
+    instrument::{kind::InstrumentKind, Instrument},
     token::Token,
 };
 

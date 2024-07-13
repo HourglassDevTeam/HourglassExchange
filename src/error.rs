@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::universal::{event::ClientOrderId, order::OrderKind};
 use crate::universal::token::Token;
+use crate::universal::{event::ClientOrderId, order::OrderKind};
 
 /// 执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, Eq, PartialOrd, Debug, Clone, Deserialize, Serialize)]

@@ -28,8 +28,8 @@ impl Display for Side {
             f,
             "{}",
             match self {
-                Side::Buy => "buy",
-                Side::Sell => "sell",
+                | Side::Buy => "buy",
+                | Side::Sell => "sell",
             }
         )
     }

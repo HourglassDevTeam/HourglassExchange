@@ -6,12 +6,11 @@ use crate::universal::instrument::Instrument;
 use crate::universal::order::{Cancelled, Open, Order, RequestCancel, RequestOpen};
 use crate::universal::trade::Trade;
 
-
-pub mod client;
-pub mod simulated_exchange;
-pub mod instrument_orders;
-mod ws_trade_converter;
 pub mod account;
+pub mod client;
+pub mod instrument_orders;
+pub mod simulated_exchange;
+mod ws_trade_converter;
 
 #[derive(Debug)]
 pub enum SimulatedEvent {

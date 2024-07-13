@@ -4,12 +4,12 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    Exchange,
     universal::{
         balance::TokenBalance,
         order::{Cancelled, Open, Order},
         trade::Trade,
     },
+    Exchange,
 };
 
 /// NOTE: 如果需要记录交易所的时间戳，可以再添加一个专门的字段来表示交易所的时间，例如：    pub exchange_ts: DateTime<Utc> or i64
