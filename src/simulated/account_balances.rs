@@ -1,7 +1,5 @@
 use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
-
 use crate::error::ExecutionError;
 use crate::Exchange;
 use crate::ExchangeKind::Simulated;
