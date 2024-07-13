@@ -158,7 +158,7 @@ impl AccountBalances {
                 };
 
                 // Quote total & available increase by (trade.size * price) minus quote fees
-                let quote_increase = (trade.size * trade.price) - trade.fees.fees;
+                let quote_increase = (trade.size * trade.price) - trade.fees;
                 let quote_delta = BalanceDelta {
                     total: quote_increase,
                     available: quote_increase,
