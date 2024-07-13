@@ -1,21 +1,21 @@
 // NOTE 滑点和摩擦成本的设计放在这里
 
-use cerebro_integration::model::instrument::symbol::Symbol;
+use crate::universal::token::Token;
 use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
-/// 以 [`Symbol`]（符号）表示的 [`Trade`]（交易）费用。
+/// 以 [`Token`]（符号）表示的 [`Trade`]（交易）费用。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct SymbolFees {
-    pub symbol: Symbol,
+pub struct TokenFees {
+    pub symbol: Token,
     pub fees: f64,
 }
 
-impl SymbolFees {
-    /// 构造一个新的 [`SymbolFees`]。
+impl TokenFees {
+    /// 构造一个新的 [`TokenFees`]。
     pub fn new<S>(symbol: S, fees: f64) -> Self
     where
-        S: Into<Symbol>,
+        S: Into<Token>,
     {
         Self { symbol: symbol.into(), fees }
     }

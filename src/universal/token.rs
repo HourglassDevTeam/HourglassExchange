@@ -31,7 +31,7 @@ where
 }
 
 impl Token {
-    /// Construct a new [`Token`] new type using the provided `Into<Symbol>` value.
+    /// Construct a new [`Token`] new type using the provided `Into<Token>` value.
 
     pub fn new<S>(input: S) -> Self
     where

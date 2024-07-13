@@ -1,4 +1,4 @@
-use cerebro_integration::model::instrument::symbol::Symbol;
+use crate::universal::token::Token;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -17,7 +17,7 @@ pub enum ExecutionError {
 
     /// 余额不足，无法开单。
     #[error("[UniLinkExecution] : 符号{0}的余额不足，无法开单")]
-    InsufficientBalance(Symbol),
+    InsufficientBalance(Token),
 
     /// 找不到特定客户端订单ID的订单。
     #[error("[UniLinkExecution] : 未能找到具有客户端订单ID的订单: {0}")]

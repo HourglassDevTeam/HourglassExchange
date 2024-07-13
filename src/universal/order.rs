@@ -1,7 +1,7 @@
 use crate::universal::event::ClientOrderId;
-
+use crate::universal::token::Token;
+use crate::universal::instrument::Instrument;
 use cerebro_integration::model::{
-    instrument::{symbol::Symbol, Instrument},
     Exchange, Side,
 };
 use serde::{Deserialize, Serialize};
@@ -76,7 +76,7 @@ pub struct RequestOpen {
 
 // NOTE that this needs to be adjusted according to the specifics of our trading instruments.
 impl Order<RequestOpen> {
-    pub fn calculate_required_available_balance(&self) -> (&Symbol, f64) {
+    pub fn calculate_required_available_balance(&self) -> (&Token, f64) {
         match self.side {
             | Side::Buy => (&self.instrument.quote, self.state.price * self.state.quantity),
             | Side::Sell => (&self.instrument.base, self.state.quantity),
