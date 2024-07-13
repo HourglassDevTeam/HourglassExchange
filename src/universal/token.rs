@@ -3,15 +3,10 @@ use std::fmt::{Debug, Display, Formatter};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// eg/ "btc", "eth", "usdt", etc
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize,Deserialize)]
 
 pub struct Token(String);
 
-impl Debug for Token {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
 
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -25,14 +20,6 @@ impl AsRef<str> for Token {
     }
 }
 
-impl<'de> Deserialize<'de> for Token {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        String::deserialize(deserializer).map(Token::new)
-    }
-}
 
 impl<S> From<S> for Token
 where
@@ -50,6 +37,6 @@ impl Token {
     where
         S: Into<String>,
     {
-        Self(input.into().to_lowercase())
+        Self(input.into().to_uppercase())
     }
 }

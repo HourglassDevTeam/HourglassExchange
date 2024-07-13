@@ -1,6 +1,7 @@
-use crate::universal::instrument::Instrument;
-use crate::universal::instrument::kind::InstrumentKind;
-use crate::universal::token::Token;
+use crate::universal::{
+    instrument::{kind::InstrumentKind, Instrument},
+    token::Token,
+};
 
 pub struct InstrumentBuilder {
     base: Option<Token>,
@@ -18,16 +19,16 @@ impl InstrumentBuilder {
     }
 
     pub fn base<S>(mut self, base: S) -> Self
-                   where
-                       S: Into<Token>,
+    where
+        S: Into<Token>,
     {
         self.base = Some(base.into());
         self
     }
 
     pub fn quote<S>(mut self, quote: S) -> Self
-                    where
-                        S: Into<Token>,
+    where
+        S: Into<Token>,
     {
         self.quote = Some(quote.into());
         self
