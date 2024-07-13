@@ -316,7 +316,6 @@ pub enum CommissionLevel {
 }
 
 #[derive(Clone, Debug)]
-// NOTE wrap fields with option<> to yield support for initiation in a chained fashion
 pub struct AccountBuilder {
     config: Option<AccountConfig>,
     balances: Option<AccountBalances>,
