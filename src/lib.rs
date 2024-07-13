@@ -89,8 +89,8 @@ impl Display for ExchangeKind {
 impl ExchangeKind {
     pub fn as_str(&self) -> &'static str {
         match self {
-            | ExchangeKind::Simulated => "simulated",
-            | ExchangeKind::Ftx => "ftx",
+            ExchangeKind::Simulated => "simulated",
+            ExchangeKind::Ftx => "ftx",
         }
     }
 }

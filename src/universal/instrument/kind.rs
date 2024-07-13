@@ -22,12 +22,12 @@ impl Default for InstrumentKind {
 impl Display for InstrumentKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            | InstrumentKind::Spot => write!(f, "spot"),
-            | InstrumentKind::Future(future) => {
+            InstrumentKind::Spot => write!(f, "spot"),
+            InstrumentKind::Future(future) => {
                 write!(f, "{}_{}", future.future_code, future.multiplier,)
             }
-            | InstrumentKind::Perpetual => write!(f, "perpetual"),
-            | InstrumentKind::Option(option) => {
+            InstrumentKind::Perpetual => write!(f, "perpetual"),
+            InstrumentKind::Option(option) => {
                 write!(f, "{}_{}", option.option_code, option.multiplier,)
             }
         }
@@ -70,10 +70,14 @@ pub enum OptionSide {
 
 impl Display for OptionSide {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            | OptionSide::Call => "call",
-            | OptionSide::Put => "put",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                OptionSide::Call => "call",
+                OptionSide::Put => "put",
+            }
+        )
     }
 }
 
@@ -90,9 +94,13 @@ pub enum OptionExercise {
 
 impl Display for OptionExercise {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            | OptionExercise::American => "american",
-            | OptionExercise::European => "european",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                OptionExercise::American => "american",
+                OptionExercise::European => "european",
+            }
+        )
     }
 }

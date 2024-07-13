@@ -1,28 +1,28 @@
 use std::{collections::HashMap, fmt::Debug, time::i64};
 
-use rand::{Rng, thread_rng};
+use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
 use ExchangeKind::Simulated;
 
+use crate::universal::data::event::MarketEvent;
 use crate::{
     error::ExecutionError,
-    Exchange,
-    ExchangeKind,
-    simulated::instrument_orders::InstrumentOrders, universal::{
+    simulated::instrument_orders::InstrumentOrders,
+    universal::{
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
         instrument::Instrument,
         order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
         position::AccountPositions,
-        Side,
         token::Token,
         trade::Trade,
+        Side,
     },
+    Exchange, ExchangeKind,
 };
-use crate::universal::data::event::MarketEvent;
 
 #[derive(Clone, Debug)]
 pub enum SubscriptionKind {
@@ -30,26 +30,24 @@ pub enum SubscriptionKind {
     // Kafka,
     // DolphinDB,
     WebSocket,
-    HTTP
+    HTTP,
 }
 
 #[derive(Clone, Debug)]
 pub struct DataSource {
     pub subscription: SubscriptionKind,
-    pub exchange_kind: ExchangeKind
+    pub exchange_kind: ExchangeKind,
 }
 
-
 #[derive(Clone, Debug)]
-pub struct AccountFeedData<Data>{
+pub struct AccountFeedData<Data> {
     pub data_source: DataSource,
     pub batch_id: Uuid,
     pub data: Vec<MarketEvent<Data>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct Account<Data>
- {
+pub struct Account<Data> {
     pub data: AccountFeedData<Data>,
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,
     pub market_event_tx: mpsc::UnboundedSender<AccountEvent>,
@@ -89,8 +87,8 @@ impl AccountBalances {
     pub fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExecutionError> {
         let available = self.balance(token)?.available;
         match available >= required_balance {
-            | true => Ok(()),
-            | false => Err(ExecutionError::InsufficientBalance(token.clone())),
+            true => Ok(()),
+            false => Err(ExecutionError::InsufficientBalance(token.clone())),
         }
     }
 
@@ -98,7 +96,7 @@ impl AccountBalances {
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> AccountEvent {
         let updated_balance = match open.side {
-            | Side::Buy => {
+            Side::Buy => {
                 let balance = self
                     .balance_mut(&open.instrument.quote)
                     .expect("[UniLinkExecution] : Balance existence is questionable");
@@ -106,7 +104,7 @@ impl AccountBalances {
                 balance.available -= required_balance;
                 TokenBalance::new(open.instrument.quote.clone(), *balance)
             }
-            | Side::Sell => {
+            Side::Sell => {
                 let balance = self
                     .balance_mut(&open.instrument.base)
                     .expect("[UniLinkExecution] : Balance existence is questionable");
@@ -127,7 +125,7 @@ impl AccountBalances {
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub fn update_from_cancel(&mut self, cancelled: &Order<Open>) -> TokenBalance {
         match cancelled.side {
-            | Side::Buy => {
+            Side::Buy => {
                 let balance = self
                     .balance_mut(&cancelled.instrument.quote)
                     .expect("[UniLinkExecution] : Balance existence checked when opening Order");
@@ -135,7 +133,7 @@ impl AccountBalances {
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
                 TokenBalance::new(cancelled.instrument.quote.clone(), *balance)
             }
-            | Side::Sell => {
+            Side::Sell => {
                 let balance = self
                     .balance_mut(&cancelled.instrument.base)
                     .expect("[UniLinkExecution] : Balance existence checked when opening Order");
@@ -156,7 +154,7 @@ impl AccountBalances {
 
         // Calculate the base & quote Balance deltas
         let (base_delta, quote_delta) = match trade.side {
-            | Side::Buy => {
+            Side::Buy => {
                 // Base total & available increase by trade.size minus base trade.fees
                 let base_increase = trade.size - trade.fees;
                 let base_delta = BalanceDelta {
@@ -173,7 +171,7 @@ impl AccountBalances {
 
                 (base_delta, quote_delta)
             }
-            | Side::Sell => {
+            Side::Sell => {
                 // Base total decreases by trade.size
                 // Note: available was already decreased by the opening of the Side::Sell order
                 let base_delta = BalanceDelta {
@@ -356,7 +354,7 @@ impl AccountBuilder {
     }
 }
 
-impl<Data>Account<Data> {
+impl<Data> Account<Data> {
     pub fn initiator() -> AccountBuilder {
         AccountBuilder::new()
     }
@@ -371,8 +369,8 @@ impl<Data>Account<Data> {
 
     pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError> {
         match kind {
-            | OrderKind::Market | OrderKind::Limit | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill | OrderKind::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
-                                                                                                                                                    * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
+            OrderKind::Market | OrderKind::Limit | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill | OrderKind::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
+                                                                                                                                                  * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
     }
 

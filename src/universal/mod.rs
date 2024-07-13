@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 pub mod balance; // 通用balance模块
+pub mod data;
 pub mod event; // 定义通用事件和状态
 pub mod friction;
 pub mod instrument;
@@ -10,7 +11,6 @@ pub mod position;
 pub mod status;
 pub mod token;
 pub mod trade;
-pub mod data;
 
 // 通用交易模块
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -23,9 +23,13 @@ pub enum Side {
 
 impl Display for Side {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            | Side::Buy => "buy",
-            | Side::Sell => "sell",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Side::Buy => "buy",
+                Side::Sell => "sell",
+            }
+        )
     }
 }

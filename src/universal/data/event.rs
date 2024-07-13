@@ -1,7 +1,7 @@
+use crate::universal::trade::Trade;
 use crate::{universal::instrument::Instrument, Exchange};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::universal::trade::Trade;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
 
@@ -22,7 +22,6 @@ pub enum DataKind {
     // Liquidation(Liquidation),
 }
 
-
 impl From<MarketEvent<Trade>> for MarketEvent<DataKind> {
     fn from(event: MarketEvent<Trade>) -> Self {
         Self {
@@ -34,4 +33,3 @@ impl From<MarketEvent<Trade>> for MarketEvent<DataKind> {
         }
     }
 }
-
