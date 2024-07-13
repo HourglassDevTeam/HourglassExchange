@@ -10,7 +10,7 @@ pub struct SimulatedExchange<Data, Event> {
 }
 
 impl <Data, Event>SimulatedExchange<Data, Event> {
-    pub fn builder() -> ExchangeBuilder {
+    pub fn builder() -> ExchangeBuilder<Data, Event> {
         ExchangeBuilder::new()
     }
     /// 运行 [`SimulatedExchange`] 并响应各种[`SimulatedEvent`]。

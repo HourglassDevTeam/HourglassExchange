@@ -1,5 +1,5 @@
 use std::{collections::HashMap, fmt::Debug};
-
+use num_traits::FromPrimitive;
 use rand::{Rng, thread_rng};
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
@@ -357,7 +357,7 @@ impl AccountBuilder {
     }
 }
 
-impl<Data> Account<Data> {
+impl<Data, Event> Account<Data, Event> {
     pub fn initiator() -> AccountBuilder {
         AccountBuilder::new()
     }
@@ -418,5 +418,5 @@ where
 pub fn random_duration(min_millis: u64, max_millis: u64) -> i64 {
     let mut rng = thread_rng();
     let random_millis = rng.gen_range(min_millis..=max_millis);
-    i64::from_millis(random_millis)
+    i64::from_u64(random_millis).unwrap()
 }
