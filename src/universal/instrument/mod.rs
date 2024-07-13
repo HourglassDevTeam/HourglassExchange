@@ -1,7 +1,7 @@
 pub mod kind;
 mod builder;
 
-use crate::universal::{instrument::kind::InstrumentKind, symbol::Symbol};
+use crate::universal::{instrument::kind::InstrumentKind, token::Token};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
@@ -9,8 +9,8 @@ use std::fmt::{Display, Formatter};
 #[serde(rename_all = "snake_case")]
 
 pub struct Instrument {
-    pub base: Symbol,
-    pub quote: Symbol,
+    pub base: Token,
+    pub quote: Token,
     #[serde(rename = "instrument_kind")]
     pub kind: InstrumentKind,
 }
@@ -23,7 +23,7 @@ impl Display for Instrument {
 
 impl<S> From<(S, S, InstrumentKind)> for Instrument
 where
-    S: Into<Symbol>,
+    S: Into<Token>,
 {
     fn from((base, quote, kind): (S, S, InstrumentKind)) -> Self {
         Self {
@@ -38,7 +38,7 @@ impl Instrument {
     // Constructor function to create a new Instrument
     pub fn new<S>(base: S, quote: S, kind: InstrumentKind) -> Self
     where
-        S: Into<Symbol>,
+        S: Into<Token>,
     {
         Self {
             base: base.into(),
