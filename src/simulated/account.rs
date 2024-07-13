@@ -22,13 +22,14 @@ use crate::{
     },
     Exchange, ExchangeKind,
 };
-
+use crate::universal::data::FeedGenerator;
 
 
 #[derive(Clone, Debug)]
 pub enum SubscriptionKind {
     Clickhouse,
-    Kafka,
+    // Kafka,
+    // DolphinDB,
     WebSocket,
     HTTP
 }
@@ -50,8 +51,7 @@ pub struct AccountFeedData<Data>{
 
 #[derive(Clone, Debug)]
 pub struct Account<Data>
-
-{
+ {
     pub data: AccountFeedData<Data>,
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,
     pub market_event_tx: mpsc::UnboundedSender<AccountEvent>,
@@ -358,7 +358,7 @@ impl AccountBuilder {
     }
 }
 
-impl Account {
+impl<Data>Account<Data> {
     pub fn initiator() -> AccountBuilder {
         AccountBuilder::new()
     }
