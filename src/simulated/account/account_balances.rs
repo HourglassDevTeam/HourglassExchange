@@ -6,7 +6,7 @@ use crate::ExchangeKind::Simulated;
 use crate::universal::balance::{Balance, BalanceDelta, TokenBalance};
 use crate::universal::event::{AccountEvent, AccountEventKind};
 use crate::universal::instrument::Instrument;
-use crate::universal::order::{Open, Order, RequestOpen};
+use crate::universal::order::{Open, Order};
 use crate::universal::Side;
 use crate::universal::token::Token;
 use crate::universal::trade::Trade;
