@@ -102,7 +102,7 @@ impl AccountBalances {
             | Side::Buy => {
                 let balance = self
                     .balance_mut(&open.instrument.quote)
-                    .expect("[UniLinkExecution] : Balance existence checked in has_sufficient_available_balance");
+                    .expect("[UniLinkExecution] : Balance existence is questionable");
 
                 balance.available -= required_balance;
                 TokenBalance::new(open.instrument.quote.clone(), *balance)
@@ -110,7 +110,7 @@ impl AccountBalances {
             | Side::Sell => {
                 let balance = self
                     .balance_mut(&open.instrument.base)
-                    .expect("[UniLinkExecution] : Balance existence checked in has_sufficient_available_balance");
+                    .expect("[UniLinkExecution] : Balance existence is questionable");
 
                 balance.available -= required_balance;
                 TokenBalance::new(open.instrument.base.clone(), *balance)
