@@ -104,15 +104,23 @@ impl AccountInfo<State> {
     }
 
     pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Opened>>, ExecutionError>>) {
-        todo!()
+        respond_with_latency(self.latency, response_tx, Ok(self.orders.fetch_all()));
     }
 
     pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>) {
-        todo!()
+        respond_with_latency(self.latency, response_tx, Ok(self.balances.fetch_all()));
     }
 
     pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError> {
-        todo!()
+        match kind {
+            | OrderKind::Market | OrderKind::Limit | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill | OrderKind::GoodTilCancelled =>
+            // Add logic to validate market order
+            {
+                Ok(())
+            }
+            // NOTE 不同交易所支持的订单种类不同，要在此处特殊设计
+            | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)),
+        }
     }
 
     pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Opened>, ExecutionError> {
@@ -142,8 +150,8 @@ impl AccountInfo<State> {
 
 // send oneshot response to execution request
 pub fn respond_with_latency<Response>(latency: Duration, response_tx: oneshot::Sender<Response>, response: Response)
-                                      where
-                                          Response: Debug + Send + 'static,
+where
+    Response: Debug + Send + 'static,
 {
     tokio::spawn(async move {
         response_tx
@@ -151,7 +159,6 @@ pub fn respond_with_latency<Response>(latency: Duration, response_tx: oneshot::S
             .expect("[TideBroker] : SimulatedExchange failed to send oneshot response to execution request")
     });
 }
-
 
 
 // Generate a random duration between min_millis and max_millis (inclusive)
