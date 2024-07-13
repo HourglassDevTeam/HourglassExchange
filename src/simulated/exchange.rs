@@ -4,12 +4,12 @@ use tokio::sync::mpsc;
 
 /// 响应 [`SimulatedEvent`] 的 [`SimulatedExchange`]。
 #[derive(Debug)]
-pub struct SimulatedExchange {
+pub struct SimulatedExchange<Data, Event> {
     pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedEvent>,
-    pub account: Account<Data>,
+    pub account: Account<Data, Event>,
 }
 
-impl SimulatedExchange {
+impl <Data, Event>SimulatedExchange<Data, Event> {
     pub fn builder() -> ExchangeBuilder {
         ExchangeBuilder::new()
     }
@@ -30,13 +30,13 @@ impl SimulatedExchange {
 }
 
 #[derive(Debug, Default)]
-pub struct ExchangeBuilder {
+pub struct ExchangeBuilder<Data, Event> {
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
     // 客户账户，用于构建器。
-    account: Option<Account<Data>>,
+    account: Option<Account<Data, Event>>,
 }
 
-impl ExchangeBuilder {
+impl <Data, Event>ExchangeBuilder<Data, Event> {
     fn new() -> Self {
         Self { ..Default::default() }
     }
@@ -48,14 +48,14 @@ impl ExchangeBuilder {
         }
     }
 
-    pub fn account(self, value: Account<Data>) -> Self {
+    pub fn account(self, value: Account<Data, Event>) -> Self {
         Self {
             account: Some(value),
             ..self
         }
     }
 
-    pub fn build(self) -> Result<SimulatedExchange, ExecutionError> {
+    pub fn build(self) -> Result<SimulatedExchange<Data, Event>, ExecutionError> {
         Ok(SimulatedExchange {
             event_simulated_rx: self
                 .event_simulated_rx
