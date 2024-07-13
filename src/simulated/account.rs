@@ -4,7 +4,7 @@ use std::{collections::HashMap, fmt::Debug, time::Duration};
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 use ExchangeKind::Simulated;
-use crate::universal::data::event::DataKind;
+use crate::universal::data::event::{DataKind, MarketEvent};
 
 
 use crate::{
@@ -23,18 +23,36 @@ use crate::{
     Exchange, ExchangeKind,
 };
 
+
+
 #[derive(Clone, Debug)]
-pub struct AccountFeedData{
+pub enum SubscriptionKind {
+    Clickhouse,
+    Kafka,
+    WebSocket,
+    HTTP
+}
+
+#[derive(Clone, Debug)]
+pub struct DataSource {
+    pub subscription_bind: SubscriptionKind,
+    pub exchange_kind: ExchangeKind
+}
+
+
+#[derive(Clone, Debug)]
+pub struct AccountFeedData<Data>{
+    pub data_source: DataSource,
     pub batch_id: Uuid,
-    pub data: Vec<Trade>,
+    pub data: Vec<MarketEvent<Data>>,
 
 }
 
 #[derive(Clone, Debug)]
-pub struct Account
+pub struct Account<Data>
 
 {
-    pub data: AccountFeedData,
+    pub data: AccountFeedData<Data>,
     pub event_account_tx: mpsc::UnboundedSender<AccountEvent>,
     pub latency: Duration,
     pub config: AccountConfig,
