@@ -142,11 +142,16 @@ impl AccountInfo<State> {
 
 // send oneshot response to execution request
 pub fn respond_with_latency<Response>(latency: Duration, response_tx: oneshot::Sender<Response>, response: Response)
-where
-    Response: Debug + Send + 'static,
+                                      where
+                                          Response: Debug + Send + 'static,
 {
-    todo!()
+    tokio::spawn(async move {
+        response_tx
+            .send(response)
+            .expect("[TideBroker] : SimulatedExchange failed to send oneshot response to execution request")
+    });
 }
+
 
 
 // Generate a random duration between min_millis and max_millis (inclusive)
