@@ -35,16 +35,3 @@ impl From<MarketEvent<Trade>> for MarketEvent<DataKind> {
     }
 }
 
-
-
-// impl From<MarketEvent<OrderBook>> for MarketEvent<DataKind> {
-//     fn from(event: MarketEvent<OrderBook>) -> Self {
-//         Self {
-//             exchange_time: event.exchange_time,
-//             received_time: event.received_time,
-//             exchange: event.exchange,
-//             instrument: event.instrument,
-//             kind: DataKind::OrderBook(event.kind),
-//         }
-//     }
-// }

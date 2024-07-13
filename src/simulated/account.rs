@@ -1,9 +1,11 @@
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug, time::Duration};
-use cerebro_data::event::{DataKind, MarketEvent};
+use cerebro_data::event::MarketEvent;
 use tokio::sync::{mpsc, oneshot};
 use ExchangeKind::Simulated;
+use crate::universal::data::event::DataKind;
+
 
 use crate::{
     error::ExecutionError,
@@ -20,14 +22,12 @@ use crate::{
     },
     Exchange, ExchangeKind,
 };
-use crate::universal::data::FeedGenerator;
 
 #[derive(Clone, Debug)]
-pub struct Account<Data>
+pub struct Account
 where
-    Data: FeedGenerator<MarketEvent<DataKind>> + Send,
 {
-    pub data: Data,
+    pub data: Vec<Trade>,
     pub event_account_tx: mpsc::UnboundedSender<AccountEvent>,
     pub latency: Duration,
     pub config: AccountConfig,
