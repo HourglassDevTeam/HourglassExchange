@@ -31,7 +31,6 @@ impl SimulatedExchange {
 
 #[derive(Debug, Default)]
 pub struct ExchangeBuilder {
-    // 模拟事件的无界接收器，用于构建器。
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
     // 客户账户，用于构建器。
     account: Option<Account<Data>>,
