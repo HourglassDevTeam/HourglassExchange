@@ -8,6 +8,8 @@ pub mod order; // 通用订单模块
 pub mod position;
 pub mod status;
 pub mod trade;
+pub mod symbol;
+pub mod instrument;
 
 
 // 通用交易模块

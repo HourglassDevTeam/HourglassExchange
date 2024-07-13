@@ -34,4 +34,4 @@ chrono = {version = "0.4.22", features = ["serde"]}
 parking_lot = "0.12.1"
 num-traits = "0.2.15"
 rand = "0.8.5"
-
+rust_decimal = "1.35.0"
