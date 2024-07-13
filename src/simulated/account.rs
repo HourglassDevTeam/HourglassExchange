@@ -1,8 +1,9 @@
 use std::{fmt::Debug, time::Duration};
+use std::collections::HashMap;
 
 use rand::{thread_rng, Rng};
-use serde_json::ser::State;
-use tokio::sync::oneshot;
+use serde::{Deserialize, Serialize};
+use tokio::sync::{mpsc, oneshot};
 
 use crate::{
     error::ExecutionError,
@@ -12,9 +13,12 @@ use crate::{
         position::AccountPositions,
     },
 };
+use crate::universal::event::ClientAccountEvent;
+use crate::universal::instrument::Instrument;
 
 #[derive(Clone, Debug)]
 pub struct AccountInfo<State> {
+    pub event_account_tx: mpsc::UnboundedSender<ClientAccountEvent>,
     pub latency: Duration,
     pub config: AccountConfig,
     pub balances: AccountBalances,
@@ -22,6 +26,19 @@ pub struct AccountInfo<State> {
     pub orders: Vec<Order<State>>,
 }
 
+#[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
+pub struct ClientOrders {
+    pub request_counter: u64,
+    pub all: HashMap<Instrument, Orders>,
+}
+/// Client [`Orders`] for an [`Instrument`]. Simulates client orders in an real
+/// multi-participant OrderBook.
+#[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
+pub struct Orders {
+    pub trade_counter: u64,
+    pub bids: Vec<Order<Opened>>,
+    pub asks: Vec<Order<Opened>>,
+}
 #[derive(Clone, Debug)]
 pub struct AccountConfig {
     pub margin_mode: MarginMode,
@@ -117,9 +134,8 @@ impl AccountInfo<State> {
             // Add logic to validate market order
             {
                 Ok(())
-            }
-            // NOTE 不同交易所支持的订单种类不同，要在此处特殊设计
-            | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)),
+            } /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
+               * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
     }
 
