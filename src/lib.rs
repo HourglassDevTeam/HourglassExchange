@@ -34,7 +34,6 @@ pub trait ClientExecution {
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>;
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>;
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>>;
-
     /// 取消所有账户中的[`Order<Open>`]（未完成订单）。
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>;
 }
