@@ -90,7 +90,6 @@ impl AccountBalances {
             exchange: Exchange::from(Simulated),
             kind: AccountEventKind::Balance(updated_balance),
         }
-
     }
 
 
