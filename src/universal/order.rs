@@ -1,8 +1,7 @@
-use crate::universal::event::ClientOrderId;
-use crate::universal::token::Token;
-use crate::universal::instrument::Instrument;
-use crate::universal::Side;
-use crate::Exchange;
+use crate::{
+    universal::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
+    Exchange,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,

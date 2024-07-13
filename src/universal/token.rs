@@ -3,10 +3,9 @@ use std::fmt::{Debug, Display, Formatter};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// eg/ "btc", "eth", "usdt", etc
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize,Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 
 pub struct Token(String);
-
 
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -19,7 +18,6 @@ impl AsRef<str> for Token {
         &self.0
     }
 }
-
 
 impl<S> From<S> for Token
 where

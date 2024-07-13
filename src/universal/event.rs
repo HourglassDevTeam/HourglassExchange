@@ -1,9 +1,11 @@
-use crate::universal::{
-    balance::TokenBalance,
-    order::{Cancelled, Opened, Order},
-    trade::Trade,
+use crate::{
+    universal::{
+        balance::TokenBalance,
+        order::{Cancelled, Opened, Order},
+        trade::Trade,
+    },
+    Exchange,
 };
-use crate::Exchange;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;

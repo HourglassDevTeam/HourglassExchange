@@ -1,14 +1,17 @@
+use std::{fmt::Debug, time::Duration};
+
+use rand::{thread_rng, Rng};
+use serde_json::ser::State;
+use tokio::sync::oneshot;
+
 use crate::{
     error::ExecutionError,
     universal::{
         balance::TokenBalance,
         order::{Cancelled, Opened, Order, OrderKind, RequestCancel, RequestOpen},
+        position::AccountPositions,
     },
 };
-use serde_json::ser::State;
-use tokio::sync::{mpsc, oneshot};
-use std::{fmt::Debug, time::Duration};
-use rand::{Rng, thread_rng};
 
 #[derive(Clone, Debug)]
 pub struct AccountInfo<State> {
