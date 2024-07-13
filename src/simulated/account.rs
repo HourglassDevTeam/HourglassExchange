@@ -31,14 +31,14 @@ pub struct ClientOrders {
     pub request_counter: u64,
     pub all: HashMap<Instrument, Orders>,
 }
-/// Client [`Orders`] for an [`Instrument`]. Simulates client orders in an real
-/// multi-participant OrderBook.
+/// Client [`Orders`] for an [`Instrument`]. Simulates client orders in an real multi-participant OrderBook.
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct Orders {
     pub trade_counter: u64,
     pub bids: Vec<Order<Opened>>,
     pub asks: Vec<Order<Opened>>,
 }
+
 #[derive(Clone, Debug)]
 pub struct AccountConfig {
     pub margin_mode: MarginMode,
