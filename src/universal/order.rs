@@ -85,7 +85,7 @@ where
 
 /// 打开状态的订单
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
-pub struct Opened {
+pub struct Open {
     pub id: OrderId,
     pub price: f64,
     pub size: f64,
@@ -93,7 +93,7 @@ pub struct Opened {
                                * or remaining size  , essentially the same. */
 }
 
-impl Opened {
+impl Open {
     pub fn remaining_quantity(&self) -> f64 {
         self.size - self.filled_quantity
     }
@@ -109,14 +109,14 @@ pub struct FullyFilled {
 
 /// 使得Order<Opened> 之间可以比较大小
 /// NOTE: 此处Self 等同于 Order<Opened>，表示 other 参数也是一个 Order<Opened> 类型的引用。
-impl Ord for Order<Opened> {
+impl Ord for Order<Open> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other)
             .unwrap_or_else(|| panic!("[UniLinkExecution] : {:?}.partial_cmp({:?}) impossible", self, other))
     }
 }
 
-impl PartialOrd for Order<Opened> {
+impl PartialOrd for Order<Open> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self.side, other.side) {
             | (Side::Buy, Side::Buy) => match self.state.price.partial_cmp(&other.state.price)? {
@@ -133,7 +133,7 @@ impl PartialOrd for Order<Opened> {
 }
 
 // 为Order<Opened>实现Eq
-impl Eq for Order<Opened> {}
+impl Eq for Order<Open> {}
 
 /// 构建订单在被取消后的状态
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -175,14 +175,14 @@ impl From<&Order<RequestOpen>> for Order<Pending> {
     }
 }
 
-impl From<(OrderId, Order<RequestOpen>)> for Order<Opened> {
+impl From<(OrderId, Order<RequestOpen>)> for Order<Open> {
     fn from((id, request): (OrderId, Order<RequestOpen>)) -> Self {
         Self {
             exchange: request.exchange.clone(),
             instrument: request.instrument.clone(),
             cid: request.cid,
             side: request.side,
-            state: Opened {
+            state: Open {
                 id,
                 price: request.state.price,
                 size: request.state.size,
@@ -192,8 +192,8 @@ impl From<(OrderId, Order<RequestOpen>)> for Order<Opened> {
     }
 }
 
-impl From<Order<Opened>> for Order<Cancelled> {
-    fn from(order: Order<Opened>) -> Self {
+impl From<Order<Open>> for Order<Cancelled> {
+    fn from(order: Order<Open>) -> Self {
         Self {
             exchange: order.exchange.clone(),
             instrument: order.instrument.clone(),

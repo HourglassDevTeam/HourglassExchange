@@ -1,7 +1,7 @@
 use crate::{
     universal::{
         balance::TokenBalance,
-        order::{Cancelled, Opened, Order},
+        order::{Cancelled, Open, Order},
         trade::Trade,
     },
     Exchange,
@@ -14,17 +14,17 @@ use uuid::Uuid;
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AccountEvent {
     // pub exchange_ts: DateTime<Utc>, // 交易所接收到事件的时间,
-    pub client_ts: i64, // 客户端接收到事件的时间, NOTE 类型待定 i64
-    pub exchange: Exchange,       // 目标和源头交易所
-    pub kind: AccountEventKind,   // 事件类型
+    pub client_ts: i64,         // 客户端接收到事件的时间, NOTE 类型待定 i64
+    pub exchange: Exchange,     // 目标和源头交易所
+    pub kind: AccountEventKind, // 事件类型
 }
 
 /// 定义账户事件[`AccountEvent`]的类型。
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum AccountEventKind {
     // HTTP Events
-    OrdersOpen(Vec<Order<Opened>>),
-    OrdersNew(Vec<Order<Opened>>),
+    OrdersOpen(Vec<Order<Open>>),
+    OrdersNew(Vec<Order<Open>>),
     OrdersCancelled(Vec<Order<Cancelled>>),
     // OrdersFilled(Vec<Order<Filled>>),
     // OrdersPartiallyFilled(Vec<Order<PartiallyFilled>>),

@@ -1,26 +1,32 @@
-use std::{collections::HashMap, fmt::Debug, time::Duration};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, fmt::Debug, time::Duration};
 use tokio::sync::{mpsc, oneshot};
 use ExchangeKind::Simulated;
 
 use crate::{
     error::ExecutionError,
+    simulated::instrument_orders::InstrumentOrders,
     universal::{
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
         instrument::Instrument,
-        order::{Cancelled, Opened, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
+        order::{Cancelled, Open, Order, OrderId, OrderKind, RequestCancel, RequestOpen},
         position::AccountPositions,
         token::Token,
+        trade::Trade,
         Side,
     },
     Exchange, ExchangeKind,
 };
-use crate::universal::trade::Trade;
+use crate::simulated::data::{DataKind, MarketEvent};
 
 #[derive(Clone, Debug)]
-pub struct Account {
+pub struct Account<Data>
+where
+    Data: MarketGenerator<MarketEvent<DataKind>> + Send,
+{
+    pub data: Data,
     pub event_account_tx: mpsc::UnboundedSender<AccountEvent>,
     pub latency: Duration,
     pub config: AccountConfig,
@@ -63,9 +69,9 @@ impl AccountBalances {
         }
     }
 
-    /// 当client创建[`Order<Opened>`]时，更新相关的[`Token`] [`Balance`]。
-    /// [`Balance`]的变化取决于[`Order<Opened>`]是[`Side::Buy`]还是[`Side::Sell`]。
-    pub fn update_from_open(&mut self, open: &Order<Opened>, required_balance: f64) -> AccountEvent {
+    /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
+    /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
+    pub fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> AccountEvent {
         let updated_balance = match open.side {
             | Side::Buy => {
                 let balance = self
@@ -92,11 +98,9 @@ impl AccountBalances {
         }
     }
 
-
-
-    /// 当client取消[`Order<Opened>`]时，更新相关的[`Token`] [`Balance`]。
-    /// [`Balance`]的变化取决于[`Order<Opened>`]是[`Side::Buy`]还是[`Side::Sell`]。
-    pub fn update_from_cancel(&mut self, cancelled: &Order<Opened>) -> TokenBalance {
+    /// 当client取消[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
+    /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
+    pub fn update_from_cancel(&mut self, cancelled: &Order<Open>) -> TokenBalance {
         match cancelled.side {
             | Side::Buy => {
                 let balance = self
@@ -118,7 +122,7 @@ impl AccountBalances {
     }
 
     /// 当client[`Trade`]发生时，会导致base和quote[`Token`]的[`Balance`]发生变化。
-    /// 每个[`Balance`]变化的性质取决于匹配的[`Order<Opened>`]是[`Side::Buy`]还是[`Side::Sell`]。
+    /// 每个[`Balance`]变化的性质取决于匹配的[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     /// [`Side::Buy`]匹配会导致基础[`Token`] [`Balance`]增加`trade_quantity`，报价[`Token`]减少`trade_quantity * price`。
     /// [`Side::Sell`]匹配会导致基础[`Token`] [`Balance`]减少`trade_quantity`，报价[`Token`]增加`trade_quantity * price`。
 
@@ -212,7 +216,10 @@ impl AccountOrders {
     pub fn new(instruments: Vec<Instrument>) -> Self {
         Self {
             request_counter: 0,
-            all: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
+            all: instruments
+                .into_iter()
+                .map(|instrument| (instrument, InstrumentOrders::default()))
+                .collect(),
         }
     }
 
@@ -223,8 +230,8 @@ impl AccountOrders {
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange 没有为 Instrument: {instrument} 配置")))
     }
 
-    /// 为每个 [`Instrument`] 获取出价和要价 [`Order<Opened>`]。
-    pub fn fetch_all(&self) -> Vec<Order<Opened>> {
+    /// 为每个 [`Instrument`] 获取出价和要价 [`Order<Open>`]。
+    pub fn fetch_all(&self) -> Vec<Order<Open>> {
         self.all
             .values()
             .flat_map(|market| [&market.bids, &market.asks])
@@ -233,9 +240,9 @@ impl AccountOrders {
             .collect()
     }
 
-    /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Opened>`]。请求计数器递增，
+    /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
     /// 并且新的总数被用作唯一的 [`OrderId`]。
-    pub fn build_order_open(&mut self, request: Order<RequestOpen>) -> Order<Opened> {
+    pub fn build_order_open(&mut self, request: Order<RequestOpen>) -> Order<Open> {
         self.increment_request_counter();
         Order::from((self.order_id(), request))
     }
@@ -250,15 +257,6 @@ impl AccountOrders {
         OrderId(self.request_counter.to_string())
     }
 }
-
-/// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
-#[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
-pub struct InstrumentOrders {
-    pub batch_id: u64,
-    pub bids: Vec<Order<Opened>>,
-    pub asks: Vec<Order<Opened>>,
-}
-
 
 #[derive(Clone, Debug)]
 pub struct AccountConfig {
@@ -287,7 +285,6 @@ pub enum CommissionLevel {
     Lv2,
     // ..........
 }
-
 
 #[derive(Clone, Debug)]
 // NOTE wrap fields with option<> to yield support for initiation in a chained fashion
@@ -332,8 +329,6 @@ impl AccountBuilder {
             ..self
         }
     }
-
-
 }
 
 impl Account {
@@ -341,7 +336,7 @@ impl Account {
         AccountBuilder::new()
     }
 
-    pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Opened>>, ExecutionError>>) {
+    pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>) {
         respond_with_latency(self.latency, response_tx, Ok(self.orders.fetch_all()));
     }
 
@@ -351,15 +346,12 @@ impl Account {
 
     pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError> {
         match kind {
-            | OrderKind::Market | OrderKind::Limit | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill | OrderKind::GoodTilCancelled =>
-            {
-                Ok(())
-            } /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
-               * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
+            | OrderKind::Market | OrderKind::Limit | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill | OrderKind::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
+                                                                                                                                                    * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
     }
 
-    pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Opened>, ExecutionError> {
+    pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError> {
         Self::order_validity_check(request.state.kind).unwrap();
         todo!()
     }
@@ -395,7 +387,6 @@ where
             .expect("[TideBroker] : SimulatedExchange failed to send oneshot response to execution request")
     });
 }
-
 
 // Generate a random duration between min_millis and max_millis (inclusive)
 pub fn random_duration(min_millis: u64, max_millis: u64) -> Duration {
