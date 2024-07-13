@@ -27,7 +27,7 @@ use crate::universal::data::FeedGenerator;
 
 #[derive(Clone, Debug)]
 pub enum SubscriptionKind {
-    Clickhouse,
+    ClickHouse,
     // Kafka,
     // DolphinDB,
     WebSocket,
