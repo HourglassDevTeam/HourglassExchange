@@ -30,7 +30,7 @@ impl <Data, Event>SimulatedExchange<Data, Event> {
 }
 
 
-
+// 默认实现一个带 `event_simulated_rx` 的构建器
 impl<Data, Event> Default for ExchangeBuilder<Data, Event> {
     fn default() -> Self {
         let (_tx, rx) = mpsc::unbounded_channel();
