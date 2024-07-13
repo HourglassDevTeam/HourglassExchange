@@ -10,6 +10,7 @@ pub mod position;
 pub mod status;
 pub mod token;
 pub mod trade;
+pub mod data;
 
 // 通用交易模块
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]

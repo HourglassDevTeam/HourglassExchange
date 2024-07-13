@@ -19,7 +19,7 @@ use crate::{
     },
     Exchange, ExchangeKind,
 };
-use crate::simulated::data::{DataKind, MarketEvent};
+use crate::universal::r#mod::{DataKind, MarketEvent};
 
 #[derive(Clone, Debug)]
 pub struct Account<Data>
