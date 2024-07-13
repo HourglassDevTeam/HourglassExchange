@@ -36,7 +36,7 @@ pub enum SubscriptionKind {
 
 #[derive(Clone, Debug)]
 pub struct DataSource {
-    pub subscription_bind: SubscriptionKind,
+    pub subscription: SubscriptionKind,
     pub exchange_kind: ExchangeKind
 }
 
