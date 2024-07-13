@@ -1,7 +1,6 @@
 use crate::universal::data::{Feed, FeedGenerator};
 
 /// 历史市场事件的 [`Feed`]。
-///
 /// 这是一个标准的批处理方案。
 /// MarketFeed 接受一个迭代器 Iter，并允许用户按需逐个获取历史市场事件。
 /// 这种方式适合处理离线数据或在内存中加载整个历史数据集的情况。
@@ -18,8 +17,6 @@ impl<Iter, Event> FeedGenerator<Event> for MarketFeed<Iter, Event>
 where
     Iter: Iterator<Item = Event>,
 {
-    /// 实现 MarketGenerator trait，用于生成下一个市场 `Event`。
-
     fn next(&mut self) -> Feed<Event> {
         self.market_iterator.next().map_or(Feed::Finished, Feed::Next)
     }
