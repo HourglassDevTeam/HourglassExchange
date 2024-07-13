@@ -134,7 +134,7 @@ impl AccountBalances {
         let (base_delta, quote_delta) = match trade.side {
             | Side::Buy => {
                 // Base total & available increase by trade.size minus base trade.fees
-                let base_increase = trade.size - trade.fees.fees;
+                let base_increase = trade.size - trade.fees;
                 let base_delta = BalanceDelta {
                     total: base_increase,
                     available: base_increase,
