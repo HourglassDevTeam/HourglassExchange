@@ -1,4 +1,5 @@
 pub mod kind;
+mod builder;
 
 use crate::universal::{instrument::kind::InstrumentKind, symbol::Symbol};
 use serde::{Deserialize, Serialize};
