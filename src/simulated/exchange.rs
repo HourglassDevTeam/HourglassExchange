@@ -1,24 +1,18 @@
-// 引入多生产者单消费者通道模块和执行错误类型。
+use super::{account::Account, SimulatedEvent};
 use crate::ExecutionError;
 use tokio::sync::mpsc;
-// 引入上级模块中的客户账户和模拟事件类型。
-use super::{account::Account, SimulatedEvent};
 
 /// 响应 [`SimulatedEvent`] 的 [`SimulatedExchange`]。
 #[derive(Debug)]
 pub struct SimulatedExchange {
-    // 模拟事件的无界接收器。
     pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedEvent>,
-    // 客户账户。
     pub account: Account<Data>,
 }
 
 impl SimulatedExchange {
-    /// 构造一个用于配置新 [`SimulatedExchange`] 的 [`ExchangeBuilder`]。
     pub fn builder() -> ExchangeBuilder {
         ExchangeBuilder::new()
     }
-
     /// 运行 [`SimulatedExchange`] 并响应 [`SimulatedEvent`]各种请求。
     pub async fn run(mut self) {
         // 不断接收并处理模拟事件。
