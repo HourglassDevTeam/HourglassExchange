@@ -26,7 +26,6 @@ pub mod universal;
 pub trait ClientExecution {
     const CLIENT: ExchangeKind;
     type Config;
-
     /// 使用提供的[`Self::Config`]和[`AccountEvent`]发送器初始化一个新的[`ClientExecution`]。
     /// 通常包括启动一个异步WebSocket事件循环以从交易所接收[`AccountEvent`]，
     /// 同时返回HTTP客户端`Self`。
