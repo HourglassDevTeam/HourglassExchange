@@ -21,6 +21,8 @@ pub mod error;
 pub mod simulated;
 // 交易所的通用骨架模块
 pub mod universal;
+mod binance;
+mod okex;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
