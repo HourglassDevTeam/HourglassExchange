@@ -12,7 +12,7 @@ stages:
     - git remote add gitee git@gitee.com:unilink_1/UnilinkExecution.git
     - git push -f gitee master
   tags:
-    - sync_ta
+    - sync_task
 
 sync_to_gitee:
   stage: sync
