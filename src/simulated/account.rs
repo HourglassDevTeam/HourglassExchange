@@ -54,7 +54,7 @@ impl AccountBalances {
             .collect()
     }
 
-    /// 判断客户是否有足够的可用[`Balance`]来执行[`Order<RequestOpen>`]。
+    /// 判断client是否有足够的可用[`Balance`]来执行[`Order<RequestOpen>`]。
     pub fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExecutionError> {
         let available = self.balance(token)?.available;
         match available >= required_balance {
@@ -63,7 +63,7 @@ impl AccountBalances {
         }
     }
 
-    /// 当客户创建[`Order<Opened>`]时，更新相关的[`Token`] [`Balance`]。
+    /// 当client创建[`Order<Opened>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Opened>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub fn update_from_open(&mut self, open: &Order<Opened>, required_balance: f64) -> AccountEvent {
         let updated_balance = match open.side {
@@ -93,7 +93,7 @@ impl AccountBalances {
     }
 
 
-    /// 当客户取消[`Order<Opened>`]时，更新相关的[`Token`] [`Balance`]。
+    /// 当client取消[`Order<Opened>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Opened>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub fn update_from_cancel(&mut self, cancelled: &Order<Opened>) -> TokenBalance {
         match cancelled.side {
@@ -116,15 +116,11 @@ impl AccountBalances {
         }
     }
 
-    /// When a client [`Trade`] occurs, it causes a change in the [`Balance`] of the base & quote
-    /// [`Token`]. The nature of each [`Balance`] change will depend on if the matched
-    /// [`Order<Opened>`] was a [`Side::Buy`] or [`Side::Sell`].
-    ///
-    /// A [`Side::Buy`] match causes the [`Token`] [`Balance`] of the base to increase by the
-    /// `trade_quantity`, and the quote to decrease by the `trade_quantity * price`.
-    ///
-    /// A [`Side::Sell`] match causes the [`Token`] [`Balance`] of the base to decrease by the
-    /// `trade_quantity`, and the quote to increase by the `trade_quantity * price`.
+    /// 当client[`Trade`]发生时，会导致base和quote[`Token`]的[`Balance`]发生变化。
+    /// 每个[`Balance`]变化的性质取决于匹配的[`Order<Opened>`]是[`Side::Buy`]还是[`Side::Sell`]。
+    /// [`Side::Buy`]匹配会导致基础[`Token`] [`Balance`]增加`trade_quantity`，报价[`Token`]减少`trade_quantity * price`。
+    /// [`Side::Sell`]匹配会导致基础[`Token`] [`Balance`]减少`trade_quantity`，报价[`Token`]增加`trade_quantity * price`。
+
     pub fn update_from_trade(&mut self, trade: &Trade) -> AccountEvent {
         let Instrument { base, quote, .. } = &trade.instrument;
 
