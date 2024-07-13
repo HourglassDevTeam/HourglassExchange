@@ -28,6 +28,7 @@ pub mod simulated;
 /// 支持在交易所执行操作的核心数据结构。
 /// 例如：`Order`（订单）、`Balance`（余额）、`Trade`（交易）等。
 pub mod universal;
+mod example;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
