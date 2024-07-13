@@ -51,7 +51,7 @@ pub struct Account<Data> {
     pub data: AccountFeedData<Data>,
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,
     pub market_event_tx: mpsc::UnboundedSender<AccountEvent>,
-    pub latency: u64,
+    pub latency: i64,
     pub config: AccountConfig,
     pub balances: AccountBalances,
     pub positions: Vec<AccountPositions>,
@@ -115,7 +115,7 @@ impl AccountBalances {
         };
 
         AccountEvent {
-            client_ts: todo!(),
+            exchange_ts: todo!(),
             exchange: Exchange::from(Simulated),
             kind: AccountEventKind::Balance(updated_balance),
         }
@@ -195,7 +195,7 @@ impl AccountBalances {
         let quote_balance = self.update(quote, quote_delta);
 
         AccountEvent {
-            client_ts: todo!(),
+            exchange_ts: todo!(),
             exchange: Exchange::from(Simulated),
             kind: AccountEventKind::Balances(vec![
                 TokenBalance::new(base.clone(), base_balance),
@@ -412,7 +412,7 @@ where
 }
 
 // Generate a random duration between min_millis and max_millis (inclusive)
-pub fn random_duration(min_millis: u64, max_millis: u64) -> u64 {
+pub fn random_duration(min_millis: u64, max_millis: u64) -> i64 {
     let mut rng = thread_rng();
     let random_millis = rng.gen_range(min_millis..=max_millis);
     i64::from_millis(random_millis)
