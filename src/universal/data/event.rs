@@ -17,7 +17,7 @@ pub struct MarketEvent<T> {
 
 pub enum DataKind {
     Trade(Trade),
-    // OrderBook(OrderBook),
+    // OrderBook25(OrderBook25),
     // Candle(Candle),
     // Liquidation(Liquidation),
 }
