@@ -9,7 +9,7 @@ use crate::universal::order::{Open, Order, OrderId, RequestOpen};
 
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct AccountOrders {
-    pub request_counter: u64, // 用来生成一个唯一的 [`OrderId`]。
+    pub request_counter: u64, // 用来生成一个唯一的 [`OrderId`]。 NOTE：注意原子性
     pub all: HashMap<Instrument, InstrumentOrders>,
 }
 impl AccountOrders {
