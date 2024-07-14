@@ -1,7 +1,7 @@
 use std::fmt::Debug;
+
 use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
-use uuid::Uuid;
 
 use account_balances::AccountBalances;
 use account_config::AccountConfig;
@@ -18,27 +18,21 @@ use crate::{
         trade::Trade,
     },
     error::ExecutionError,
-    simulated::account::account_latency::{fluctuate_latency, AccountLatency},
+    simulated::account::account_latency::{AccountLatency, fluctuate_latency},
 };
+use crate::simulated::account::account_datafeed::AccountDataFeed;
 
 pub mod account_balances;
 pub mod account_config;
 mod account_latency;
 pub mod account_orders;
+mod account_datafeed;
 
-// 鉴于Data的种类可能会很多，规避避开enum的开销和维护成本，使用泛型来定义AccountFeedData类型。
-#[derive(Clone, Debug, Serialize)]
-pub struct AccountFeedData<Data>
-{
-    #[serde(alias = "counter", alias = "batch_counter")]
-    pub batch_id: Uuid,
-    pub data: Vec<MarketEvent<Data>>,
-}
 
 #[derive(Clone, Debug)]
 pub struct Account<Data, Event>
 {
-    pub data: AccountFeedData<Data>,                                // 帐户数据
+    pub data: AccountDataFeed<Data>,                                // 帐户数据
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub latency: AccountLatency,                                    // 帐户延迟
@@ -51,7 +45,7 @@ pub struct Account<Data, Event>
 #[derive(Clone, Debug)]
 pub struct AccountInitiator<Data, Event>
 {
-    data: Option<AccountFeedData<Data>>,
+    data: Option<AccountDataFeed<Data>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
     market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
     latency: Option<AccountLatency>,
@@ -75,7 +69,7 @@ impl<Data, Event> AccountInitiator<Data, Event>
                            orders: None }
     }
 
-    pub fn data(mut self, value: AccountFeedData<Data>) -> Self
+    pub fn data(mut self, value: AccountDataFeed<Data>) -> Self
     {
         self.data = Some(value);
         self
