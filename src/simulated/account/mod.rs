@@ -160,6 +160,7 @@ impl<Data, Event> Account<Data, Event> {
         &mut self,
         open_requests: Vec<Order<RequestOpen>>,
         response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>,
+        current_timestamp: i64,
     ) {
         let open_results = open_requests.into_iter().map(|request| self.try_open_order_atomic(request)).collect();
         response_tx.send(open_results).unwrap_or_else(|_| {
@@ -167,7 +168,7 @@ impl<Data, Event> Account<Data, Event> {
         });
     }
 
-    pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError> {
+    pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>,current_timestamp: i64) -> Result<Order<Open>, ExecutionError> {
         Self::order_validity_check(request.state.kind).unwrap();
         todo!()
     }
@@ -176,6 +177,7 @@ impl<Data, Event> Account<Data, Event> {
         &mut self,
         cancel_requests: Vec<Order<RequestCancel>>,
         response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>,
+        current_timestamp: i64,
     ) {
         let cancel_results = cancel_requests.into_iter().map(|request| self.try_cancel_order_atomic(request)).collect();
         response_tx.send(cancel_results).unwrap_or_else(|_| {
@@ -183,15 +185,15 @@ impl<Data, Event> Account<Data, Event> {
         });
     }
 
-    pub fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError> {
+    pub fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>,current_timestamp: i64) -> Result<Order<Cancelled>, ExecutionError> {
         todo!()
     }
 
-    pub fn cancel_orders_all(&mut self, response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>) {
+    pub fn cancel_orders_all(&mut self, response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>,current_timestamp: i64) {
         todo!()
     }
 
-    pub fn update_latency(&mut self, current_time: f64) {
+    pub fn update_latency(&mut self, current_time: i64) {
         fluctuate_latency(&mut self.latency, current_time);
     }
 }
