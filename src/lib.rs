@@ -23,7 +23,7 @@ pub mod simulated;
 pub mod common_skeleton;
 mod binance;
 mod okex;
-mod subscriber;
+pub mod subscriber;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
