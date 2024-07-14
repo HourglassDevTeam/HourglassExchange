@@ -23,7 +23,7 @@ impl<Data, Event> SimulatedExchange<Data, Event> {
                 | SimulatedEvent::FetchBalances(response_tx,current_timestamp) => self.account.fetch_balances(response_tx),
                 | SimulatedEvent::OpenOrders((open_requests, response_tx),current_timestamp) => self.account.open_orders(open_requests, response_tx,current_timestamp),
                 | SimulatedEvent::CancelOrders((cancel_requests, response_tx),current_timestamp) => self.account.cancel_orders(cancel_requests, response_tx,current_timestamp),
-                | SimulatedEvent::CancelOrdersAll(response_txm,current_timestamp) => self.account.cancel_orders_all(response_tx,current_timestamp),
+                | SimulatedEvent::CancelOrdersAll(response_tx,current_timestamp) => self.account.cancel_orders_all(response_tx,current_timestamp),
                 | SimulatedEvent::MarketTrade((instrument, trade),current_timestamp) => self.account.match_orders(instrument, trade),
             }
         }

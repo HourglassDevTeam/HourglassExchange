@@ -51,7 +51,7 @@ pub struct AccountInitiator<Data, Event> {
     data: Option<AccountFeedData<Data>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
     market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
-    latency: Option<i64>,
+    latency: Option<AccountLatency>,
     config: Option<AccountConfig>,
     balances: Option<AccountBalances>,
     positions: Option<Vec<AccountPositions>>,
