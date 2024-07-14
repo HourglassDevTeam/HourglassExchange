@@ -1,9 +1,3 @@
-use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    ops::{Deref, DerefMut},
-};
-
 use crate::{
     common_skeleton::{
         balance::{Balance, BalanceDelta, TokenBalance},
@@ -15,19 +9,40 @@ use crate::{
         Side,
     },
     error::ExecutionError,
+    simulated_exchange::account::Account,
     Exchange,
     ExchangeKind::Simulated,
 };
+use std::{
+    collections::HashMap,
+    ops::{Deref, DerefMut},
+    sync::Arc,
+};
+use tokio::sync::RwLock;
 
-#[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
-pub struct AccountBalances
+#[derive(Clone, Debug)]
+pub struct AccountBalances<Data, Event>
+    where Data: Clone,
+          Event: Clone
 {
     pub balance_map: HashMap<Token, Balance>,
-    // pub account_ref: &Account
+    pub account_ref: Option<Arc<RwLock<Account<Data, Event>>>>,
 }
 
+impl<Data, Event> PartialEq for AccountBalances<Data, Event>
+    where Data: Clone,
+          Event: Clone
+{
+    fn eq(&self, other: &Self) -> bool
+    {
+        self.balance_map == other.balance_map
+        // account_ref 是 Arc<RwLock<>>，一般不会比较其内容
+    }
+}
 // CONSIDER 在哪个环节打上时间戳？
-impl AccountBalances
+impl<Data, Event> AccountBalances<Data, Event>
+    where Data: Clone,
+          Event: Clone
 {
     /// 返回指定[`Token`]的[`Balance`]的引用。
     pub fn balance(&self, token: &Token) -> Result<&Balance, ExecutionError>
@@ -41,6 +56,23 @@ impl AccountBalances
     {
         self.get_mut(token)
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
+    }
+
+    pub fn set_account(&mut self, account: Arc<RwLock<Account<Data, Event>>>)
+    {
+        self.account_ref = Some(account);
+    }
+
+    // 异步方法来获取 Account 的某个字段
+    pub async fn get_exchange_ts(&self) -> Option<i64>
+    {
+        if let Some(account) = &self.account_ref {
+            let account_read = account.read().await;
+            Some(account_read.exchange_timestamp)
+        }
+        else {
+            None
+        }
     }
 
     /// 获取所有[`Token`]的[`Balance`]。
@@ -66,7 +98,7 @@ impl AccountBalances
 
     /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
-    pub fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> AccountEvent
+    pub async fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> AccountEvent
     {
         let _updated_balance = match open.side {
             | Side::Buy => {
@@ -85,7 +117,7 @@ impl AccountBalances
             }
         };
 
-        AccountEvent { exchange_ts: todo!(),
+        AccountEvent { exchange_timestamp: self.get_exchange_ts().await.unwrap(),
                        exchange: Exchange::from(Simulated),
                        kind: AccountEventKind::Balance(_updated_balance) }
     }
@@ -117,7 +149,7 @@ impl AccountBalances
     /// [`Side::Buy`]匹配会导致基础[`Token`] [`Balance`]增加`trade_quantity`，报价[`Token`]减少`trade_quantity * price`。
     /// [`Side::Sell`]匹配会导致基础[`Token`] [`Balance`]减少`trade_quantity`，报价[`Token`]增加`trade_quantity * price`。
 
-    pub fn update_from_trade(&mut self, trade: &Trade) -> AccountEvent
+    pub async fn update_from_trade(&mut self, trade: &Trade) -> AccountEvent
     {
         let Instrument { base, quote, .. } = &trade.instrument;
 
@@ -155,7 +187,7 @@ impl AccountBalances
         let _base_balance = self.update(base, base_delta);
         let _quote_balance = self.update(quote, quote_delta);
 
-        AccountEvent { exchange_ts: todo!(),
+        AccountEvent { exchange_timestamp: self.get_exchange_ts().await.unwrap(),
                        exchange: Exchange::from(Simulated),
                        kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), _base_balance),
                                                              TokenBalance::new(quote.clone(), _quote_balance),]) }
@@ -173,7 +205,9 @@ impl AccountBalances
     }
 }
 
-impl Deref for AccountBalances
+impl<Data, Event> Deref for AccountBalances<Data, Event>
+    where Data: Clone,
+          Event: Clone
 {
     type Target = HashMap<Token, Balance>;
 
@@ -183,7 +217,9 @@ impl Deref for AccountBalances
     }
 }
 
-impl DerefMut for AccountBalances
+impl<Data, Event> DerefMut for AccountBalances<Data, Event>
+    where Data: Clone,
+          Event: Clone
 {
     fn deref_mut(&mut self) -> &mut Self::Target
     {

@@ -40,7 +40,7 @@ pub struct Account<Data, Event>
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub latency: Arc<RwLock<AccountLatency>>,                       // 帐户延迟
     pub config: Arc<RwLock<AccountConfig>>,                         // 帐户配置
-    pub balances: Arc<RwLock<AccountBalances>>,                     // 帐户余额
+    pub balances: Arc<RwLock<AccountBalances<Data, Event>>>,        // 帐户余额
     pub positions: Arc<RwLock<Vec<AccountPositions>>>,              // 帐户头寸
     pub orders: Arc<RwLock<AccountOrders>>,                         // 帐户订单
 }
@@ -54,7 +54,7 @@ pub struct AccountInitiator<Data, Event>
     market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
     latency: Option<Arc<RwLock<AccountLatency>>>,
     config: Option<Arc<RwLock<AccountConfig>>>,
-    balances: Option<Arc<RwLock<AccountBalances>>>,
+    balances: Option<Arc<RwLock<AccountBalances<Data, Event>>>>,
     positions: Option<Arc<RwLock<Vec<AccountPositions>>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
@@ -105,7 +105,7 @@ impl<Data, Event> AccountInitiator<Data, Event>
         self
     }
 
-    pub fn balances(mut self, value: AccountBalances) -> Self
+    pub fn balances(mut self, value: AccountBalances<Data, Event>) -> Self
     {
         self.balances = Some(Arc::new(RwLock::new(value)));
         self
