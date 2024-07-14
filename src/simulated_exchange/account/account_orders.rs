@@ -8,7 +8,7 @@ use crate::{
         order::{Open, Order, OrderId, RequestOpen},
     },
     error::ExecutionError,
-    simulated::instrument_orders::InstrumentOrders,
+    simulated_exchange::instrument_orders::InstrumentOrders,
 };
 
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]

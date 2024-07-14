@@ -18,11 +18,11 @@ use crate::{
 
 pub mod error;
 // 模拟交易所的实现
-pub mod simulated;
+pub mod simulated_exchange;
 // 交易所的通用骨架模块
-mod binance;
+mod binance_exchange;
 pub mod common_skeleton;
-pub mod okex;
+pub mod okex_exchange;
 pub mod subscriber;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
@@ -90,7 +90,7 @@ impl ExchangeKind
     pub fn as_str(&self) -> &'static str
     {
         match self {
-            | ExchangeKind::Simulated => "simulated",
+            | ExchangeKind::Simulated => "simulated_exchange",
             | ExchangeKind::Ftx => "ftx",
         }
     }

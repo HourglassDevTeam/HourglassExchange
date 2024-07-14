@@ -18,9 +18,9 @@ use crate::{
         trade::Trade,
     },
     error::ExecutionError,
-    simulated::account::account_latency::{AccountLatency, fluctuate_latency},
+    simulated_exchange::account::account_latency::{AccountLatency, fluctuate_latency},
 };
-use crate::simulated::account::account_datafeed::AccountDataFeed;
+use crate::simulated_exchange::account::account_datafeed::AccountDataFeed;
 
 pub mod account_balances;
 pub mod account_config;
