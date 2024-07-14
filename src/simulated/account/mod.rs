@@ -22,9 +22,9 @@ use account_orders::AccountOrders;
 use crate::common_skeleton::instrument::Instrument;
 use crate::common_skeleton::trade::Trade;
 
-mod account_balances;
-mod account_config;
-mod account_orders;
+pub mod account_balances;
+pub mod account_config;
+pub mod account_orders;
 
 // 订阅方式
 #[derive(Clone, Debug)]
@@ -144,7 +144,7 @@ impl<Data, Event> AccountInitiator<Data, Event> {
 
 // NOTE 未完成
 impl<Data, Event> Account<Data, Event> {
-    pub fn initiate() -> AccountInitiator {
+    pub fn initiate() -> AccountInitiator<Data, Event> {
         AccountInitiator::new()
     }
 
