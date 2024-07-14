@@ -6,7 +6,6 @@ use crate::{
 };
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
-
 pub struct MarketEvent<T>
 {
     pub exchange_time: i64,
@@ -17,7 +16,6 @@ pub struct MarketEvent<T>
 }
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-
 pub enum DataKind
 {
     Trade(Trade),

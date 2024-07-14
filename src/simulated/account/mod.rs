@@ -1,9 +1,13 @@
 use std::fmt::Debug;
 
-use num_traits::FromPrimitive;
-use rand::{thread_rng, Rng};
+use rand::Rng;
+use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
+
+use account_balances::AccountBalances;
+use account_config::AccountConfig;
+use account_orders::AccountOrders;
 
 use crate::{
     common_skeleton::{
@@ -17,11 +21,7 @@ use crate::{
     },
     error::ExecutionError,
     simulated::account::account_latency::{fluctuate_latency, AccountLatency},
-    ExchangeKind,
 };
-use account_balances::AccountBalances;
-use account_config::AccountConfig;
-use account_orders::AccountOrders;
 
 pub mod account_balances;
 pub mod account_config;
@@ -29,7 +29,7 @@ mod account_latency;
 pub mod account_orders;
 
 // 鉴于Data的种类可能会很多，规避避开enum的开销和维护成本，使用泛型来定义AccountFeedData类型。
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct AccountFeedData<Data>
 {
     #[serde(alias = "counter", alias = "batch_counter")]
@@ -134,7 +134,8 @@ impl<Data, Event> AccountInitiator<Data, Event>
                      config: self.config.ok_or("config is required")?,                               // 检查并获取config
                      balances: self.balances.ok_or("balances is required")?,                         // 检查并获取balances
                      positions: self.positions.ok_or("positions are required")?,                     // 检查并获取positions
-                     orders: self.orders.ok_or("orders are required")?                               /* 检查并获取orders */ })
+                     orders: self.orders.ok_or("orders are required")?
+                     /* 检查并获取orders */ })
     }
 }
 

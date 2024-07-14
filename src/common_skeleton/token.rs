@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 
 /// eg/ "btc", "eth", "usdt", etc
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-
 pub struct Token(String);
 
 impl Display for Token

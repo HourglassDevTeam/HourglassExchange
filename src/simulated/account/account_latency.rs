@@ -1,5 +1,8 @@
-use rand::Rng; // 引入随机数生成器
-use rand_distr::{Distribution, Normal}; // 引入随机分布库，包括常态分布
+use rand::Rng;
+// 引入随机数生成器
+use rand_distr::{Distribution, Normal};
+
+// 引入随机分布库，包括常态分布
 
 #[derive(Clone, Debug)] // 派生Clone和Debug特性
 pub struct AccountLatency

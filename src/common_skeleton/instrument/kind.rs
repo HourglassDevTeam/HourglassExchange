@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-
 pub enum InstrumentKind
 {
     Spot,      // [NOTE] 注意：Spot 指的是即期合约，此处现在缺乏合约细节字段，不适合MarketID的唯一识别。
@@ -42,7 +41,6 @@ impl Display for InstrumentKind
 
 /// [InstrumentKind::Option] 合约的配置。
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Deserialize, Serialize)]
-
 pub struct OptionContract
 {
     pub option_code: String,
@@ -58,7 +56,6 @@ pub struct OptionContract
 
 /// [InstrumentKind::Future] 合约的配置。
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Deserialize, Serialize)]
-
 pub struct FutureContract
 {
     pub future_code: String,
@@ -68,7 +65,6 @@ pub struct FutureContract
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
-
 pub enum OptionSide
 {
     #[serde(alias = "CALL", alias = "Call", alias = "C")]
@@ -91,7 +87,6 @@ impl Display for OptionSide
 /// [OptionContract] 行权方式。
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
-
 pub enum OptionExercise
 {
     #[serde(alias = "AMERICAN", alias = "American", alias = "美式", alias = "美式期权")]

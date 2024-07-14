@@ -9,7 +9,6 @@ pub mod kind;
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-
 pub struct Instrument
 {
     pub base: Token,

@@ -16,4 +16,4 @@ overflow_delimited_expr = true
 reorder_impl_items = true
 trailing_semicolon = false
 imports_granularity = "Crate"
-imports_layout  = "Mixed"
+imports_layout = "Mixed"

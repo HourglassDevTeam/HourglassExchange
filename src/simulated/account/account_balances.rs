@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
+
 use crate::{
     common_skeleton::{
         balance::{Balance, BalanceDelta, TokenBalance},
@@ -12,8 +16,6 @@ use crate::{
     Exchange,
     ExchangeKind::Simulated,
 };
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct AccountBalances(pub HashMap<Token, Balance>);
