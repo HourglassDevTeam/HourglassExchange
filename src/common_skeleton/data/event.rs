@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common_skeleton::{instrument::Instrument, trade::Trade},
+    simulated_exchange::ws_trade::WsTrade,
     Exchange,
 };
 
@@ -18,6 +19,7 @@ pub struct MarketEvent<T>
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub enum DataKind
 {
+    WsTrade(WsTrade),
     Trade(Trade),
     // OrderBook25(OrderBook25),
     // Candle(Candle),
