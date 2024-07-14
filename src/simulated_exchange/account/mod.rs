@@ -240,7 +240,7 @@ impl<Data, Event> Account<Data, Event>
     }
 }
 
-// send oneshot response to execution request
+// FIXME: currently erratic
 pub fn respond_with_latency<Response>(_latency: i64, response_tx: oneshot::Sender<Response>, response: Response)
     where Response: Debug + Send + 'static
 {
