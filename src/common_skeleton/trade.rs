@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 // 引入相关模块和结构体。
 use crate::common_skeleton::{instrument::Instrument, Side};
 
-/// 标准化 [`Trade`]（交易）模型。
+/// 标准化 [`Trade`]。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Trade
 {

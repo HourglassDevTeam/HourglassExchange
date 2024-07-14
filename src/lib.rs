@@ -22,7 +22,7 @@ pub mod simulated;
 // 交易所的通用骨架模块
 mod binance;
 pub mod common_skeleton;
-mod okex;
+pub mod okex;
 pub mod subscriber;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
