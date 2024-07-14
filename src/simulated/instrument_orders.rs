@@ -9,15 +9,18 @@ use crate::common_skeleton::{
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
-pub struct InstrumentOrders {
+pub struct InstrumentOrders
+{
     pub batch_id: u64,
     pub bids: Vec<Order<Open>>,
     pub asks: Vec<Order<Open>>,
 }
 
-impl InstrumentOrders {
+impl InstrumentOrders
+{
     /// Add an [`Order<Open>`] to the bids or asks depending on it's [`Side`].
-    pub fn add_order_open(&mut self, new_open_order: Order<Open>) {
+    pub fn add_order_open(&mut self, new_open_order: Order<Open>)
+    {
         match new_open_order.side {
             | Side::Buy => {
                 // Add Order<Opened> to open bids

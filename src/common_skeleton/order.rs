@@ -12,7 +12,8 @@ use crate::{
 
 /// 订单类型枚举
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub enum OrderKind {
+pub enum OrderKind
+{
     Market,
     Limit,
     ImmediateOrCancel,
@@ -20,29 +21,28 @@ pub enum OrderKind {
     GoodTilCancelled,
 }
 
-impl Display for OrderKind {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                | OrderKind::Market => "market",
-                | OrderKind::Limit => "limit",
-                | OrderKind::ImmediateOrCancel => "immediate_or_cancel (IOC)",
-                | OrderKind::FillOrKill => "fill_or_kill (FOK)",
-                | OrderKind::GoodTilCancelled => "good_til_cancelled (GTC)",
-                // | OrderKind::Stop => "stop",
-                // | OrderKind::StopLimit => "stop_limit",
-                // | OrderKind::TrailingStop => "trailing_stop",
-                // | OrderKind::Iceberg => "iceberg",
-            }
-        )
+impl Display for OrderKind
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        write!(f, "{}", match self {
+            | OrderKind::Market => "market",
+            | OrderKind::Limit => "limit",
+            | OrderKind::ImmediateOrCancel => "immediate_or_cancel (IOC)",
+            | OrderKind::FillOrKill => "fill_or_kill (FOK)",
+            | OrderKind::GoodTilCancelled => "good_til_cancelled (GTC)",
+            // | OrderKind::Stop => "stop",
+            // | OrderKind::StopLimit => "stop_limit",
+            // | OrderKind::TrailingStop => "trailing_stop",
+            // | OrderKind::Iceberg => "iceberg",
+        })
     }
 }
 
 /// 订单结构体，注意State在这里是泛型
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct Order<State> {
+pub struct Order<State>
+{
     pub exchange: Exchange,     // 交易所
     pub instrument: Instrument, // 交易工具
     // Consider : 需要记录 OrderId 吗 ????
@@ -53,15 +53,18 @@ pub struct Order<State> {
 
 /// 订单初始状态。发送到client进行操作
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct RequestOpen {
+pub struct RequestOpen
+{
     pub kind: OrderKind,
     pub price: f64,
     pub size: f64,
 }
 
 // NOTE that this needs to be adjusted according to the specifics of our trading instruments.
-impl Order<RequestOpen> {
-    pub fn calculate_required_available_balance(&self) -> (&Token, f64) {
+impl Order<RequestOpen>
+{
+    pub fn calculate_required_available_balance(&self) -> (&Token, f64)
+    {
         match self.side {
             | Side::Buy => (&self.instrument.quote, self.state.price * self.state.size),
             | Side::Sell => (&self.instrument.base, self.state.size),
@@ -75,23 +78,24 @@ pub struct Pending;
 
 /// 在RequestCancel结构体中只记录OrderId的原因主要是因为取消订单操作通常只需要知道哪个订单需要被取消。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub struct RequestCancel {
+pub struct RequestCancel
+{
     pub id: OrderId, // Consider : 需要记录 CID 吗 ????
 }
 
 // 从Id直接生成RequestCancel
-impl<Id> From<Id> for RequestCancel
-where
-    Id: Into<OrderId>,
+impl<Id> From<Id> for RequestCancel where Id: Into<OrderId>
 {
-    fn from(id: Id) -> Self {
+    fn from(id: Id) -> Self
+    {
         Self { id: id.into() }
     }
 }
 
 /// 开放状态的订单
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
-pub struct Open {
+pub struct Open
+{
     pub id: OrderId,
     pub price: f64,
     pub size: f64,
@@ -99,15 +103,18 @@ pub struct Open {
                                * or remaining size  , essentially the same. */
 }
 
-impl Open {
-    pub fn remaining_quantity(&self) -> f64 {
+impl Open
+{
+    pub fn remaining_quantity(&self) -> f64
+    {
         self.size - self.filled_quantity
     }
 }
 
 /// 完全成交状态的订单
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
-pub struct FullyFilled {
+pub struct FullyFilled
+{
     pub id: OrderId,
     pub price: f64,
     pub size: f64,
@@ -115,15 +122,19 @@ pub struct FullyFilled {
 
 /// 使得Order<Opened> 之间可以比较大小
 /// NOTE: 此处Self 等同于 Order<Opened>，表示 other 参数也是一个 Order<Opened> 类型的引用。
-impl Ord for Order<Open> {
-    fn cmp(&self, other: &Self) -> Ordering {
+impl Ord for Order<Open>
+{
+    fn cmp(&self, other: &Self) -> Ordering
+    {
         self.partial_cmp(other)
             .unwrap_or_else(|| panic!("[UniLinkExecution] : {:?}.partial_cmp({:?}) impossible", self, other))
     }
 }
 
-impl PartialOrd for Order<Open> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+impl PartialOrd for Order<Open>
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering>
+    {
         match (self.side, other.side) {
             | (Side::Buy, Side::Buy) => match self.state.price.partial_cmp(&other.state.price)? {
                 | Ordering::Equal => self.state.remaining_quantity().partial_cmp(&other.state.remaining_quantity()),
@@ -143,15 +154,15 @@ impl Eq for Order<Open> {}
 
 /// 构建订单在被取消后的状态
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub struct Cancelled {
+pub struct Cancelled
+{
     pub id: OrderId,
 }
 
-impl<Id> From<Id> for Cancelled
-where
-    Id: Into<OrderId>,
+impl<Id> From<Id> for Cancelled where Id: Into<OrderId>
 {
-    fn from(id: Id) -> Self {
+    fn from(id: Id) -> Self
+    {
         Self { id: id.into() }
     }
 }
@@ -160,52 +171,49 @@ where
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct OrderId(pub String);
 
-impl<Id> From<Id> for OrderId
-where
-    Id: Display,
+impl<Id> From<Id> for OrderId where Id: Display
 {
-    fn from(id: Id) -> Self {
+    fn from(id: Id) -> Self
+    {
         Self(id.to_string())
     }
 }
 
-impl From<&Order<RequestOpen>> for Order<Pending> {
-    fn from(request: &Order<RequestOpen>) -> Self {
-        Self {
-            exchange: request.exchange.clone(),
-            instrument: request.instrument.clone(),
-            cid: request.cid,
-            side: request.side,
-            state: Pending,
-        }
+impl From<&Order<RequestOpen>> for Order<Pending>
+{
+    fn from(request: &Order<RequestOpen>) -> Self
+    {
+        Self { exchange: request.exchange.clone(),
+               instrument: request.instrument.clone(),
+               cid: request.cid,
+               side: request.side,
+               state: Pending }
     }
 }
 
-impl From<(OrderId, Order<RequestOpen>)> for Order<Open> {
-    fn from((id, request): (OrderId, Order<RequestOpen>)) -> Self {
-        Self {
-            exchange: request.exchange.clone(),
-            instrument: request.instrument.clone(),
-            cid: request.cid,
-            side: request.side,
-            state: Open {
-                id,
-                price: request.state.price,
-                size: request.state.size,
-                filled_quantity: 0.0,
-            },
-        }
+impl From<(OrderId, Order<RequestOpen>)> for Order<Open>
+{
+    fn from((id, request): (OrderId, Order<RequestOpen>)) -> Self
+    {
+        Self { exchange: request.exchange.clone(),
+               instrument: request.instrument.clone(),
+               cid: request.cid,
+               side: request.side,
+               state: Open { id,
+                             price: request.state.price,
+                             size: request.state.size,
+                             filled_quantity: 0.0 } }
     }
 }
 
-impl From<Order<Open>> for Order<Cancelled> {
-    fn from(order: Order<Open>) -> Self {
-        Self {
-            exchange: order.exchange.clone(),
-            instrument: order.instrument.clone(),
-            cid: order.cid,
-            side: order.side,
-            state: Cancelled { id: order.state.id },
-        }
+impl From<Order<Open>> for Order<Cancelled>
+{
+    fn from(order: Order<Open>) -> Self
+    {
+        Self { exchange: order.exchange.clone(),
+               instrument: order.instrument.clone(),
+               cid: order.cid,
+               side: order.side,
+               state: Cancelled { id: order.state.id } }
     }
 }

@@ -14,22 +14,21 @@ pub mod token;
 pub mod trade;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub enum Side {
+pub enum Side
+{
     #[serde(alias = "buy", alias = "BUY", alias = "b")]
     Buy,
     #[serde(alias = "sell", alias = "SELL", alias = "s")]
     Sell,
 }
 
-impl Display for Side {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                | Side::Buy => "buy",
-                | Side::Sell => "sell",
-            }
-        )
+impl Display for Side
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        write!(f, "{}", match self {
+            | Side::Buy => "buy",
+            | Side::Sell => "sell",
+        })
     }
 }

@@ -1,5 +1,6 @@
 #[derive(Clone, Debug)]
-pub struct AccountPositions {
+pub struct AccountPositions
+{
     margin_pos: Vec<MarginPosition>,  // useless in backtest
     swap_pos: Vec<SwapPosition>,      // Note useful, and we gonna build it
     futures_pos: Vec<MarginPosition>, // useless
@@ -10,7 +11,8 @@ pub struct AccountPositions {
 pub struct MarginPosition {}
 
 #[derive(Clone, Debug)]
-pub struct SwapPosition {
+pub struct SwapPosition
+{
     token: String,
     pos_config: SwapPositionConfig,
     pos_size: f64,
@@ -24,13 +26,15 @@ pub struct SwapPosition {
 }
 
 #[derive(Clone, Debug)]
-pub struct SwapPositionConfig {
+pub struct SwapPositionConfig
+{
     pos_margin_mode: PositionMarginMode,
     leverage: f64,
 }
 
 #[derive(Clone, Debug)]
-pub enum PositionMarginMode {
+pub enum PositionMarginMode
+{
     Cross,
     Isolated,
 }

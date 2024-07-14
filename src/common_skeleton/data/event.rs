@@ -1,11 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common_skeleton::trade::Trade;
-use crate::{common_skeleton::instrument::Instrument, Exchange};
+use crate::{
+    common_skeleton::{instrument::Instrument, trade::Trade},
+    Exchange,
+};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
 
-pub struct MarketEvent<T> {
+pub struct MarketEvent<T>
+{
     pub exchange_time: i64,
     pub received_time: i64,
     pub exchange: Exchange,
@@ -15,21 +18,22 @@ pub struct MarketEvent<T> {
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 
-pub enum DataKind {
+pub enum DataKind
+{
     Trade(Trade),
     // OrderBook25(OrderBook25),
     // Candle(Candle),
     // Liquidation(Liquidation),
 }
 
-impl From<MarketEvent<Trade>> for MarketEvent<DataKind> {
-    fn from(event: MarketEvent<Trade>) -> Self {
-        Self {
-            exchange_time: event.exchange_time,
-            received_time: event.received_time,
-            exchange: event.exchange,
-            instrument: event.instrument,
-            kind: DataKind::Trade(event.kind),
-        }
+impl From<MarketEvent<Trade>> for MarketEvent<DataKind>
+{
+    fn from(event: MarketEvent<Trade>) -> Self
+    {
+        Self { exchange_time: event.exchange_time,
+               received_time: event.received_time,
+               exchange: event.exchange,
+               instrument: event.instrument,
+               kind: DataKind::Trade(event.kind) }
     }
 }

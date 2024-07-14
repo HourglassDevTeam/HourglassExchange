@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::common_skeleton::token::Token;
-use crate::common_skeleton::{event::ClientOrderId, order::OrderKind};
+use crate::common_skeleton::{event::ClientOrderId, order::OrderKind, token::Token};
 
 /// 执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, Eq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
-pub enum ExecutionError {
+pub enum ExecutionError
+{
     /// 缺少属性，无法构建组件。
     #[error("[UniLinkExecution] : 由于缺少属性，无法构建组件: {0}")]
     InitiatorIncomplete(String),

@@ -6,35 +6,28 @@ use crate::common_skeleton::data::{Feed, FeedGenerator};
 /// 这种方式适合处理离线数据或在内存中加载整个历史数据集的情况。
 #[derive(Debug)]
 pub struct MarketFeed<Iter, Event>
-where
-    Iter: Iterator<Item = Event>,
+    where Iter: Iterator<Item = Event>
 {
     /// struct的字段定义。 market_iterator 公共字段，类型为 Iter，它是一个迭代器。
     pub market_iterator: Iter,
 }
 
-impl<Iter, Event> FeedGenerator<Event> for MarketFeed<Iter, Event>
-where
-    Iter: Iterator<Item = Event>,
+impl<Iter, Event> FeedGenerator<Event> for MarketFeed<Iter, Event> where Iter: Iterator<Item = Event>
 {
-    fn next(&mut self) -> Feed<Event> {
+    fn next(&mut self) -> Feed<Event>
+    {
         self.market_iterator.next().map_or(Feed::Finished, Feed::Next)
     }
 }
 
-impl<Iter, Event> MarketFeed<Iter, Event>
-where
-    Iter: Iterator<Item = Event>,
+impl<Iter, Event> MarketFeed<Iter, Event> where Iter: Iterator<Item = Event>
 {
     /// 从 `IntoIterator`构造一个产生市场事件的、历史的 [`MarketFeed`] 。
 
     pub fn new<IntoIter>(market_iterator: IntoIter) -> Self
-    where
-        IntoIter: IntoIterator<Item = Event, IntoIter = Iter>,
+        where IntoIter: IntoIterator<Item = Event, IntoIter = Iter>
     {
         // 使用提供的事件迭代器创建一个新的 `MarketFeed` 实例
-        Self {
-            market_iterator: market_iterator.into_iter(),
-        }
+        Self { market_iterator: market_iterator.into_iter() }
     }
 }

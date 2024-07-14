@@ -15,6 +15,5 @@ normalize_comments = true
 overflow_delimited_expr = true
 reorder_impl_items = true
 trailing_semicolon = false
-merge_imports = true
 imports_granularity = "Crate"
 imports_layout  = "Mixed"

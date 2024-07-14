@@ -8,26 +8,27 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
 use crate::{
-    error::ExecutionError,
     common_skeleton::{
         balance::TokenBalance,
         event::AccountEvent,
         order::{Cancelled, Open, Order, RequestCancel, RequestOpen},
     },
+    error::ExecutionError,
 };
 
 pub mod error;
 // 模拟交易所的实现
 pub mod simulated;
 // 交易所的通用骨架模块
-pub mod common_skeleton;
 mod binance;
+pub mod common_skeleton;
 mod okex;
 pub mod subscriber;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
-pub trait ClientExecution {
+pub trait ClientExecution
+{
     const CLIENT: ExchangeKind;
     type Config;
     /// 使用提供的[`Self::Config`]和[`AccountEvent`]发送器初始化一个新的[`ClientExecution`]。
@@ -45,41 +46,49 @@ pub trait ClientExecution {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize, Debug)]
 pub struct Exchange(Cow<'static, str>);
 
-impl<E> From<E> for Exchange
-where
-    E: Into<Cow<'static, str>>,
+impl<E> From<E> for Exchange where E: Into<Cow<'static, str>>
 {
-    fn from(exchange: E) -> Self {
+    fn from(exchange: E) -> Self
+    {
         Exchange(exchange.into())
     }
 }
 
-impl Display for Exchange {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl Display for Exchange
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
         write!(f, "{}", self.0)
     }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub enum ExchangeKind {
+pub enum ExchangeKind
+{
     Simulated,
     Ftx,
 }
 
-impl From<ExchangeKind> for Exchange {
-    fn from(execution_kind: ExchangeKind) -> Self {
+impl From<ExchangeKind> for Exchange
+{
+    fn from(execution_kind: ExchangeKind) -> Self
+    {
         Exchange::from(execution_kind.as_str())
     }
 }
 
-impl Display for ExchangeKind {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl Display for ExchangeKind
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
         write!(f, "{}", self.as_str())
     }
 }
 
-impl ExchangeKind {
-    pub fn as_str(&self) -> &'static str {
+impl ExchangeKind
+{
+    pub fn as_str(&self) -> &'static str
+    {
         match self {
             | ExchangeKind::Simulated => "simulated",
             | ExchangeKind::Ftx => "ftx",
