@@ -206,8 +206,10 @@ impl<Data, Event> Account<Data, Event> {
         todo!()
     }
 
-    pub fn update_latency(&mut self, min_millis: u64, max_millis: u64) {
-        self.latency = random_duration(min_millis, max_millis);
+    pub fn update_latency(&mut self, min_millis: i64, max_millis: i64) {
+        let mut rng = thread_rng();
+        let random_millis = rng.gen_range(min_millis..=max_millis);
+        self.latency = random_millis;
     }
 }
 
@@ -221,12 +223,4 @@ where
             .send(response)
             .expect("[UnilinkExecution] : SimulatedExchange failed to send oneshot response to execution request")
     });
-}
-
-// Generate a random duration between min_millis and max_millis (inclusive)
-// NOTE Exercise careful handling with timestamp unit conversions! digits！
-pub fn random_duration(min_millis: u64, max_millis: u64) -> i64 {
-    let mut rng = thread_rng();
-    let random_millis = rng.gen_range(min_millis..=max_millis);
-    i64::from_u64(random_millis).unwrap()
 }
