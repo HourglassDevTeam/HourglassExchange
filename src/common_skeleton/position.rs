@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct AccountPositions
 {
@@ -9,7 +10,7 @@ pub struct AccountPositions
 
 #[derive(Clone, Debug)]
 pub struct MarginPosition {}
-
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct SwapPosition
 {
@@ -24,7 +25,7 @@ pub struct SwapPosition
     funding_fee: f64,
     update_time_stamp: i64,
 }
-
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct SwapPositionConfig
 {

@@ -18,7 +18,10 @@ use crate::{
 };
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
-pub struct AccountBalances(pub HashMap<Token, Balance>);
+pub struct AccountBalances{
+    pub balance_map:HashMap<Token, Balance>,
+    // pub account_ref: &Account
+}
 
 // CONSIDER 在哪个环节打上时间戳？
 impl AccountBalances
@@ -40,7 +43,7 @@ impl AccountBalances
     /// 获取所有[`Token`]的[`Balance`]。
     pub fn fetch_all(&self) -> Vec<TokenBalance>
     {
-        self.0
+        self.balance_map
             .clone()
             .into_iter()
             .map(|(token, balance)| TokenBalance::new(token, balance))
@@ -62,7 +65,7 @@ impl AccountBalances
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> AccountEvent
     {
-        let updated_balance = match open.side {
+        let _updated_balance = match open.side {
             | Side::Buy => {
                 let balance = self.balance_mut(&open.instrument.quote)
                                   .expect("[UniLinkExecution] : Balance existence is questionable");
@@ -81,7 +84,7 @@ impl AccountBalances
 
         AccountEvent { exchange_ts: todo!(),
                        exchange: Exchange::from(Simulated),
-                       kind: AccountEventKind::Balance(updated_balance) }
+                       kind: AccountEventKind::Balance(_updated_balance) }
     }
 
     /// 当client取消[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
@@ -146,13 +149,13 @@ impl AccountBalances
         };
 
         // Apply BalanceDelta & return updated Balance
-        let base_balance = self.update(base, base_delta);
-        let quote_balance = self.update(quote, quote_delta);
+        let _base_balance = self.update(base, base_delta);
+        let _quote_balance = self.update(quote, quote_delta);
 
         AccountEvent { exchange_ts: todo!(),
                        exchange: Exchange::from(Simulated),
-                       kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance),
-                                                             TokenBalance::new(quote.clone(), quote_balance),]) }
+                       kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), _base_balance),
+                                                             TokenBalance::new(quote.clone(), _quote_balance),]) }
     }
 
     /// Apply the [`BalanceDelta`] to the [`Balance`] of the specified [`Token`], returning a
@@ -173,7 +176,7 @@ impl std::ops::Deref for AccountBalances
 
     fn deref(&self) -> &Self::Target
     {
-        &self.0
+        &self.balance_map
     }
 }
 
@@ -181,6 +184,6 @@ impl std::ops::DerefMut for AccountBalances
 {
     fn deref_mut(&mut self) -> &mut Self::Target
     {
-        &mut self.0
+        &mut self.balance_map
     }
 }
