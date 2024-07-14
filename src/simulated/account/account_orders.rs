@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::ExecutionError;
 use crate::simulated::instrument_orders::InstrumentOrders;
-use crate::universal::instrument::Instrument;
-use crate::universal::order::{Open, Order, OrderId, RequestOpen};
+use crate::common_skeleton::instrument::Instrument;
+use crate::common_skeleton::order::{Open, Order, OrderId, RequestOpen};
 
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct AccountOrders {

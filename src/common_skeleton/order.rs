@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    universal::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
+    common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
     Exchange,
 };
 

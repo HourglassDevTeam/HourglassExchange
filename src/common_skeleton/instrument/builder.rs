@@ -1,4 +1,4 @@
-use crate::universal::{
+use crate::common_skeleton::{
     instrument::{kind::InstrumentKind, Instrument},
     token::Token,
 };

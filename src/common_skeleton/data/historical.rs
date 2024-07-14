@@ -1,4 +1,4 @@
-use crate::universal::data::{Feed, FeedGenerator};
+use crate::common_skeleton::data::{Feed, FeedGenerator};
 
 /// 历史市场事件的 [`Feed`]。
 /// 这是一个标准的批处理方案。

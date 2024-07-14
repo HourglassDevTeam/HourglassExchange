@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::universal::trade::Trade;
-use crate::{universal::instrument::Instrument, Exchange};
+use crate::common_skeleton::trade::Trade;
+use crate::{common_skeleton::instrument::Instrument, Exchange};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
 

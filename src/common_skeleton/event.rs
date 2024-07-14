@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    universal::{
+    common_skeleton::{
         balance::TokenBalance,
         order::{Cancelled, Open, Order},
         trade::Trade,

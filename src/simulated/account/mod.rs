@@ -5,10 +5,10 @@ use rand::{thread_rng, Rng};
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
-use crate::universal::data::event::MarketEvent;
+use crate::common_skeleton::data::event::MarketEvent;
 use crate::{
     error::ExecutionError,
-    universal::{
+    common_skeleton::{
         balance::TokenBalance,
         event::AccountEvent,
         order::{Cancelled, Open, Order, OrderKind, RequestCancel, RequestOpen},
@@ -19,8 +19,8 @@ use crate::{
 use account_balances::AccountBalances;
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
-use crate::universal::instrument::Instrument;
-use crate::universal::trade::Trade;
+use crate::common_skeleton::instrument::Instrument;
+use crate::common_skeleton::trade::Trade;
 
 mod account_balances;
 mod account_config;

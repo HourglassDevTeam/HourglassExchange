@@ -1,11 +1,11 @@
 use crate::error::ExecutionError;
-use crate::universal::balance::{Balance, BalanceDelta, TokenBalance};
-use crate::universal::event::{AccountEvent, AccountEventKind};
-use crate::universal::instrument::Instrument;
-use crate::universal::order::{Open, Order};
-use crate::universal::token::Token;
-use crate::universal::trade::Trade;
-use crate::universal::Side;
+use crate::common_skeleton::balance::{Balance, BalanceDelta, TokenBalance};
+use crate::common_skeleton::event::{AccountEvent, AccountEventKind};
+use crate::common_skeleton::instrument::Instrument;
+use crate::common_skeleton::order::{Open, Order};
+use crate::common_skeleton::token::Token;
+use crate::common_skeleton::trade::Trade;
+use crate::common_skeleton::Side;
 use crate::Exchange;
 use crate::ExchangeKind::Simulated;
 use serde::{Deserialize, Serialize};

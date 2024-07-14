@@ -1,10 +1,10 @@
 use tokio::sync::oneshot;
 
 use crate::error::ExecutionError;
-use crate::universal::balance::TokenBalance;
-use crate::universal::instrument::Instrument;
-use crate::universal::order::{Cancelled, Open, Order, RequestCancel, RequestOpen};
-use crate::universal::trade::Trade;
+use crate::common_skeleton::balance::TokenBalance;
+use crate::common_skeleton::instrument::Instrument;
+use crate::common_skeleton::order::{Cancelled, Open, Order, RequestCancel, RequestOpen};
+use crate::common_skeleton::trade::Trade;
 
 pub mod account;
 pub mod client;

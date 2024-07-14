@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::universal::token::Token;
+use crate::common_skeleton::token::Token;
 
 #[allow(dead_code)]
 /// 以 [`Token`]（符号）表示的 [`Trade`]（交易）费用。

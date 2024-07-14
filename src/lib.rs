@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 
 use crate::{
     error::ExecutionError,
-    universal::{
+    common_skeleton::{
         balance::TokenBalance,
         event::AccountEvent,
         order::{Cancelled, Open, Order, RequestCancel, RequestOpen},
@@ -20,9 +20,10 @@ pub mod error;
 // 模拟交易所的实现
 pub mod simulated;
 // 交易所的通用骨架模块
-pub mod universal;
+pub mod common_skeleton;
 mod binance;
 mod okex;
+mod subscriber;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
