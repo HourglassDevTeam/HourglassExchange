@@ -29,7 +29,7 @@ mod account_orders;
 // 订阅方式
 #[derive(Clone, Debug)]
 pub enum SubscriptionKind {
-    ClickHouse,
+    Database,
     // Kafka,
     // DolphinDB,
     // RedisCache
@@ -55,7 +55,8 @@ pub struct Account<Data, Event> {
     pub data: AccountFeedData<Data>,
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>,
-    pub latency: i64, // changing latency in milliseconds, specific to each account.
+    // changing latency in milliseconds, specific to each account.
+    pub latency: i64,
     pub config: AccountConfig,
     pub balances: AccountBalances,
     pub positions: Vec<AccountPositions>,
@@ -189,7 +190,7 @@ where
 }
 
 // Generate a random duration between min_millis and max_millis (inclusive)
-// NOTE Exercise careful handling with timestamp unit conversions!
+// NOTE Exercise careful handling with timestamp unit conversions! digits！
 pub fn random_duration(min_millis: u64, max_millis: u64) -> i64 {
     let mut rng = thread_rng();
     let random_millis = rng.gen_range(min_millis..=max_millis);
