@@ -106,6 +106,8 @@ impl AccountInitiator {
     }
 }
 
+
+// NOTE 未完成
 impl<Data, Event> Account<Data, Event> {
     pub fn initiate() -> AccountInitiator {
         AccountInitiator::new()
