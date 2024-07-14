@@ -47,7 +47,7 @@ pub struct ExchangeBuilder<Data, Event> {
 }
 
 impl<Data, Event> ExchangeBuilder<Data, Event> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { ..Default::default() }
     }
 
