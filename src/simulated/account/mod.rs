@@ -49,7 +49,6 @@ pub struct AccountFeedData<Data> {
     pub batch_id: Uuid,
     pub data: Vec<MarketEvent<Data>>,
 }
-
 #[derive(Clone, Debug)]
 pub struct Account<Data, Event> {
     pub data: AccountFeedData<Data>,
@@ -64,49 +63,84 @@ pub struct Account<Data, Event> {
 }
 
 #[derive(Clone, Debug)]
-pub struct AccountInitiator {
+pub struct AccountInitiator<Data, Event> {
+    data: Option<AccountFeedData<Data>>,
+    account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
+    market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
+    latency: Option<i64>,
     config: Option<AccountConfig>,
     balances: Option<AccountBalances>,
-    positions: Option<AccountPositions>,
-    latency: Option<i64>,
+    positions: Option<Vec<AccountPositions>>,
+    orders: Option<AccountOrders>,
 }
 
-impl AccountInitiator {
+impl<Data, Event> AccountInitiator<Data, Event> {
     pub fn new() -> Self {
         AccountInitiator {
+            data: None,
+            account_event_tx: None,
+            market_event_tx: None,
+            latency: None,
             config: None,
             balances: None,
             positions: None,
-            latency: None,
+            orders: None,
         }
     }
 
-    pub fn latency(self, value: i64) -> Self {
-        Self {
-            latency: Some(value),
-            ..self
-        }
+    pub fn data(mut self, value: AccountFeedData<Data>) -> Self {
+        self.data = Some(value);
+        self
     }
 
-    pub fn config(self, value: AccountConfig) -> Self {
-        Self { config: Some(value), ..self }
+    pub fn account_event_tx(mut self, value: mpsc::UnboundedSender<AccountEvent>) -> Self {
+        self.account_event_tx = Some(value);
+        self
     }
 
-    pub fn balances(self, value: AccountBalances) -> Self {
-        Self {
-            balances: Some(value),
-            ..self
-        }
+    pub fn market_event_tx(mut self, value: mpsc::UnboundedSender<MarketEvent<Event>>) -> Self {
+        self.market_event_tx = Some(value);
+        self
     }
 
-    pub fn positions(self, value: AccountPositions) -> Self {
-        Self {
-            positions: Some(value),
-            ..self
-        }
+    pub fn latency(mut self, value: i64) -> Self {
+        self.latency = Some(value);
+        self
+    }
+
+    pub fn config(mut self, value: AccountConfig) -> Self {
+        self.config = Some(value);
+        self
+    }
+
+    pub fn balances(mut self, value: AccountBalances) -> Self {
+        self.balances = Some(value);
+        self
+    }
+
+    pub fn positions(mut self, value: Vec<AccountPositions>) -> Self {
+        self.positions = Some(value);
+        self
+    }
+
+    pub fn orders(mut self, value: AccountOrders) -> Self {
+        self.orders = Some(value);
+        self
+    }
+
+    pub fn build(self) -> Result<Account<Data, Event>, String> {
+        Ok(Account {
+            data: self.data.ok_or("data is required")?,
+            account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?,
+            market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,
+            latency: self.latency.ok_or("latency is required")?,
+            config: self.config.ok_or("config is required")?,
+            balances: self.balances.ok_or("balances is required")?,
+            positions: self.positions.ok_or("positions are required")?,
+            orders: self.orders.ok_or("orders are required")?,
+        })
     }
 }
-
 
 // NOTE 未完成
 impl<Data, Event> Account<Data, Event> {
