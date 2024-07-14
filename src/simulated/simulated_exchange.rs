@@ -4,7 +4,6 @@ use crate::ExecutionError;
 
 use super::{account::Account, SimulatedEvent};
 
-/// 响应 [`SimulatedEvent`] 的 [`SimulatedExchange`]。
 #[derive(Debug)]
 pub struct SimulatedExchange<Data, Event> {
     pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedEvent>,
@@ -12,8 +11,8 @@ pub struct SimulatedExchange<Data, Event> {
 }
 
 impl<Data, Event> SimulatedExchange<Data, Event> {
-    pub fn builder() -> ExchangeBuilder<Data, Event> {
-        ExchangeBuilder::new()
+    pub fn Initiator() -> ExchangeInitiator<Data, Event> {
+        ExchangeInitiator::new()
     }
     /// 运行 [`SimulatedExchange`] 并响应各种[`SimulatedEvent`]。
     pub async fn run(mut self) {
@@ -31,7 +30,7 @@ impl<Data, Event> SimulatedExchange<Data, Event> {
     }
 }
 
-impl<Data, Event> Default for ExchangeBuilder<Data, Event> {
+impl<Data, Event> Default for ExchangeInitiator<Data, Event> {
     fn default() -> Self {
         let (_tx, rx) = mpsc::unbounded_channel();
         Self {
@@ -41,12 +40,12 @@ impl<Data, Event> Default for ExchangeBuilder<Data, Event> {
     }
 }
 #[derive(Debug)]
-pub struct ExchangeBuilder<Data, Event> {
+pub struct ExchangeInitiator<Data, Event> {
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
     account: Option<Account<Data, Event>>,
 }
 
-impl<Data, Event> ExchangeBuilder<Data, Event> {
+impl<Data, Event> ExchangeInitiator<Data, Event> {
     pub fn new() -> Self {
         Self { ..Default::default() }
     }
@@ -65,12 +64,12 @@ impl<Data, Event> ExchangeBuilder<Data, Event> {
         }
     }
 
-    pub fn build(self) -> Result<SimulatedExchange<Data, Event>, ExecutionError> {
+    pub fn initiate(self) -> Result<SimulatedExchange<Data, Event>, ExecutionError> {
         Ok(SimulatedExchange {
             event_simulated_rx: self
                 .event_simulated_rx
-                .ok_or_else(|| ExecutionError::BuilderIncomplete("event_simulated_rx".to_string()))?,
-            account: self.account.ok_or_else(|| ExecutionError::BuilderIncomplete("account".to_string()))?,
+                .ok_or_else(|| ExecutionError::InitiatorIncomplete("event_simulated_rx".to_string()))?,
+            account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))?,
         })
     }
 }

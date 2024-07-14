@@ -9,7 +9,7 @@ use crate::common_skeleton::{event::ClientOrderId, order::OrderKind};
 pub enum ExecutionError {
     /// 缺少属性，无法构建组件。
     #[error("[UniLinkExecution] : 由于缺少属性，无法构建组件: {0}")]
-    BuilderIncomplete(String),
+    InitiatorIncomplete(String),
 
     /// 模拟交易所出错。
     #[error("[UniLinkExecution] : 模拟交易所错误: {0}")]

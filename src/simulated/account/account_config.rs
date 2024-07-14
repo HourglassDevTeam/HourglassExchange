@@ -29,13 +29,13 @@ pub enum CommissionLevel {
     // ..........
 }
 
-pub struct AccountConfigBuilder {
+pub struct AccountConfigInitiator {
     margin_mode: Option<MarginMode>,
     position_mode: Option<PositionMode>,
     commission_level: Option<CommissionLevel>,
 }
 
-impl AccountConfigBuilder {
+impl AccountConfigInitiator {
     pub fn new() -> Self {
         Self {
             margin_mode: None,
@@ -59,7 +59,7 @@ impl AccountConfigBuilder {
         self
     }
 
-    pub fn build(self) -> Result<AccountConfig, &'static str> {
+    pub fn initiate(self) -> Result<AccountConfig, &'static str> {
         Ok(AccountConfig {
             margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
             position_mode: self.position_mode.ok_or("position_mode is required")?,

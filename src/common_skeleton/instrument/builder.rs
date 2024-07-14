@@ -3,15 +3,15 @@ use crate::common_skeleton::{
     token::Token,
 };
 
-pub struct InstrumentBuilder {
+pub struct InstrumentInitiator {
     base: Option<Token>,
     quote: Option<Token>,
     kind: Option<InstrumentKind>,
 }
 
-impl InstrumentBuilder {
+impl InstrumentInitiator {
     pub fn new() -> Self {
-        InstrumentBuilder {
+        InstrumentInitiator {
             base: None,
             quote: None,
             kind: None,
@@ -39,7 +39,7 @@ impl InstrumentBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Instrument, &'static str> {
+    pub fn initiate(self) -> Result<Instrument, &'static str> {
         Ok(Instrument {
             base: self.base.ok_or("Base is missing")?,
             quote: self.quote.ok_or("Quote is missing")?,

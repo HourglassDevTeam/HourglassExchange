@@ -63,16 +63,16 @@ pub struct Account<Data, Event> {
 }
 
 #[derive(Clone, Debug)]
-pub struct AccountBuilder {
+pub struct AccountInitiator {
     config: Option<AccountConfig>,
     balances: Option<AccountBalances>,
     positions: Option<AccountPositions>,
     latency: Option<i64>,
 }
 
-impl AccountBuilder {
+impl AccountInitiator {
     pub fn new() -> Self {
-        AccountBuilder {
+        AccountInitiator {
             config: None,
             balances: None,
             positions: None,
@@ -107,8 +107,8 @@ impl AccountBuilder {
 }
 
 impl<Data, Event> Account<Data, Event> {
-    pub fn initiator() -> AccountBuilder {
-        AccountBuilder::new()
+    pub fn initiate() -> AccountInitiator {
+        AccountInitiator::new()
     }
 
     pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>) {

@@ -44,7 +44,7 @@ impl AccountOrders {
 
     /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
     /// 并且新的总数被用作唯一的 [`OrderId`]。
-    pub fn build_order_open(&mut self, request: Order<RequestOpen>) -> Order<Open> {
+    pub fn initiate_order_open(&mut self, request: Order<RequestOpen>) -> Order<Open> {
         self.increment_request_counter();
         Order::from((self.order_id(), request))
     }

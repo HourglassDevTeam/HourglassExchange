@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::common_skeleton::{instrument::kind::InstrumentKind, token::Token};
 
-pub mod builder;
+pub mod Initiator;
 pub mod kind;
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
