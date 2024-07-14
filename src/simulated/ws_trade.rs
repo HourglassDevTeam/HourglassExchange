@@ -2,7 +2,8 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct WsTrade {
+pub struct WsTrade
+{
     #[serde(alias = "instrument_id", alias = "inst_id")]
     instId: String,
     #[serde(alias = "side")]

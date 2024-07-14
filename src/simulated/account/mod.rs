@@ -32,6 +32,7 @@ pub mod account_orders;
 #[derive(Clone, Debug)]
 pub struct AccountFeedData<Data>
 {
+    #[serde(alias = "counter", alias = "batch_counter")]
     pub batch_id: Uuid,
     pub data: Vec<MarketEvent<Data>>,
 }
