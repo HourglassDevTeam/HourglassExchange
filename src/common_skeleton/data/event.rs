@@ -37,3 +37,17 @@ impl From<MarketEvent<Trade>> for MarketEvent<DataKind>
                kind: DataKind::Trade(event.kind) }
     }
 }
+
+
+impl From<MarketEvent<WsTrade>> for MarketEvent<DataKind>
+{
+    fn from(event: MarketEvent<WsTrade>) -> Self
+    {
+        Self { exchange_time: event.exchange_time,
+            received_time: event.received_time,
+            exchange: event.exchange,
+            instrument: event.instrument,
+            kind: DataKind::WsTrade(event.kind) }
+    }
+}
+
