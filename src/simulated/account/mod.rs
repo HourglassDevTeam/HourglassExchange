@@ -28,6 +28,7 @@ pub mod account_config;
 mod account_latency;
 pub mod account_orders;
 
+// 鉴于Data的种类可能会很多，规避避开enum的开销和维护成本，使用泛型来定义。
 #[derive(Clone, Debug)]
 pub struct AccountFeedData<Data>
 {
