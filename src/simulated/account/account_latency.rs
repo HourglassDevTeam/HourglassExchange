@@ -3,10 +3,25 @@ use rand_distr::{Distribution, Normal}; // 引入随机分布库，包括常态�
 
 #[derive(Clone, Debug)] // 派生Clone和Debug特性
 pub struct AccountLatency {
-    pub fluctuation_mode: FluctuationMode, // 波动模式
-    pub maximum: i64, // 最大延迟值
-    pub minimum: i64, // 最小延迟值
-    pub current_value: i64, // 当前延迟值
+    pub fluctuation_mode: FluctuationMode,
+    pub maximum: i64,
+    pub minimum: i64,
+    pub current_value: i64,
+}
+
+#[derive(Clone, Debug)]
+pub enum FluctuationMode {
+    Sine,
+    Cosine,
+    NormalDistribution,
+    Uniform,
+    Exponential,
+    Logarithmic,
+    LinearIncrease,
+    LinearDecrease,
+    StepFunction,
+    RandomWalk,
+    None,
 }
 
 pub fn fluctuate_latency(latency: &mut AccountLatency, current_time: i64) {

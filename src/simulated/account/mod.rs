@@ -36,15 +36,14 @@ pub struct AccountFeedData<Data> {
 
 #[derive(Clone, Debug)]
 pub struct Account<Data, Event> {
-    pub data: AccountFeedData<Data>,
-    pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,
-    pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>,
-    // changing latency in milliseconds, specific to each account.
-    pub latency: AccountLatency,
-    pub config: AccountConfig,
-    pub balances: AccountBalances,
-    pub positions: Vec<AccountPositions>,
-    pub orders: AccountOrders,
+    pub data: AccountFeedData<Data>, // 帐户数据
+    pub account_event_tx: mpsc::UnboundedSender<AccountEvent>, // 帐户事件发送器
+    pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
+    pub latency: AccountLatency, // 帐户延迟
+    pub config: AccountConfig, // 帐户配置
+    pub balances: AccountBalances, // 帐户余额
+    pub positions: Vec<AccountPositions>, // 帐户头寸
+    pub orders: AccountOrders, // 帐户订单
 }
 
 #[derive(Clone, Debug)]
@@ -115,15 +114,15 @@ impl<Data, Event> AccountInitiator<Data, Event> {
 
     pub fn build(self) -> Result<Account<Data, Event>, String> {
         Ok(Account {
-            data: self.data.ok_or("data is required")?,
-            account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?,
-            market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,
-            latency: self.latency.ok_or("latency is required")?,
-            config: self.config.ok_or("config is required")?,
-            balances: self.balances.ok_or("balances is required")?,
-            positions: self.positions.ok_or("positions are required")?,
-            orders: self.orders.ok_or("orders are required")?,
-        })
+        data: self.data.ok_or("data is required")?, // 检查并获取data
+        account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
+        market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?, // 检查并获取market_event_tx
+        latency: self.latency.ok_or("latency is required")?, // 检查并获取latency
+        config: self.config.ok_or("config is required")?, // 检查并获取config
+        balances: self.balances.ok_or("balances is required")?, // 检查并获取balances
+        positions: self.positions.ok_or("positions are required")?, // 检查并获取positions
+        orders: self.orders.ok_or("orders are required")?, // 检查并获取orders
+    })
     }
 }
 

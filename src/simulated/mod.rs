@@ -14,10 +14,10 @@ mod ws_trade_converter;
 
 #[derive(Debug)]
 pub enum SimulatedEvent {
-    FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>),
-    FetchBalances(oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>),
-    OpenOrders((Vec<Order<RequestOpen>>, oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>)),
-    CancelOrders((Vec<Order<RequestCancel>>, oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)),
-    CancelOrdersAll(oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>),
-    MarketTrade((Instrument, Trade)),
+    FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>,current_timestamp),
+    FetchBalances(oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>,current_timestamp),
+    OpenOrders((Vec<Order<RequestOpen>>, oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>),current_timestamp),
+    CancelOrders((Vec<Order<RequestCancel>>, oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>),current_timestamp),
+    CancelOrdersAll(oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>,current_timestamp),
+    MarketTrade((Instrument, Trade),current_timestamp),
 }

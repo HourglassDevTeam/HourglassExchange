@@ -19,12 +19,12 @@ impl<Data, Event> SimulatedExchange<Data, Event> {
         // 不断接收并处理模拟事件。
         while let Some(event) = self.event_simulated_rx.recv().await {
             match event {
-                | SimulatedEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx),
-                | SimulatedEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx),
-                | SimulatedEvent::OpenOrders((open_requests, response_tx)) => self.account.open_orders(open_requests, response_tx),
-                | SimulatedEvent::CancelOrders((cancel_requests, response_tx)) => self.account.cancel_orders(cancel_requests, response_tx),
-                | SimulatedEvent::CancelOrdersAll(response_tx) => self.account.cancel_orders_all(response_tx),
-                | SimulatedEvent::MarketTrade((instrument, trade)) => self.account.match_orders(instrument, trade),
+                | SimulatedEvent::FetchOrdersOpen(response_tx,current_timestamp) => self.account.fetch_orders_open(response_tx),
+                | SimulatedEvent::FetchBalances(response_tx,current_timestamp) => self.account.fetch_balances(response_tx),
+                | SimulatedEvent::OpenOrders((open_requests, response_tx),current_timestamp) => self.account.open_orders(open_requests, response_tx,current_timestamp),
+                | SimulatedEvent::CancelOrders((cancel_requests, response_tx),current_timestamp) => self.account.cancel_orders(cancel_requests, response_tx,current_timestamp),
+                | SimulatedEvent::CancelOrdersAll(response_txm,current_timestamp) => self.account.cancel_orders_all(response_tx,current_timestamp),
+                | SimulatedEvent::MarketTrade((instrument, trade),current_timestamp) => self.account.match_orders(instrument, trade),
             }
         }
     }

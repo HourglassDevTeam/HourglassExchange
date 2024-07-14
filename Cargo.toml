@@ -7,6 +7,9 @@ edition = "2021"
 # Logging
 tracing = "0.1.36"
 
+
+# Rand
+rand_distr = "0.4.3"
 # Async
 tokio = { version = "1.17.0", features = ["sync", "macros", "rt-multi-thread"] }
 tokio-stream = { version = "0.1.9", features = ["sync"] }
