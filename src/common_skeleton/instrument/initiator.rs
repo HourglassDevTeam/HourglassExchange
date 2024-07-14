@@ -1,5 +1,5 @@
 use crate::common_skeleton::{
-    instrument::{Instrument, kind::InstrumentKind},
+    instrument::{kind::InstrumentKind, Instrument},
     token::Token,
 };
 

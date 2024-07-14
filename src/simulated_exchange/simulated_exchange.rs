@@ -6,16 +6,16 @@ use super::{account::Account, SimulatedEvent};
 
 #[derive(Debug)]
 pub struct SimulatedExchange<Data, Event>
-where Data: Clone,
-      Event: Clone
+    where Data: Clone,
+          Event: Clone
 {
     pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedEvent>,
     pub account: Account<Data, Event>,
 }
 
 impl<Data, Event> SimulatedExchange<Data, Event>
-where Data: Clone,
-      Event: Clone
+    where Data: Clone,
+          Event: Clone
 {
     pub fn initiator() -> ExchangeInitiator<Data, Event>
     {
@@ -36,7 +36,9 @@ where Data: Clone,
                 | SimulatedEvent::CancelOrders((cancel_requests, response_tx), current_timestamp) => {
                     self.account.cancel_orders(cancel_requests, response_tx, current_timestamp).await
                 }
-                | SimulatedEvent::CancelOrdersAll(response_tx, current_timestamp) => self.account.cancel_orders_all(response_tx, current_timestamp).await,
+                | SimulatedEvent::CancelOrdersAll(response_tx, current_timestamp) => {
+                    self.account.cancel_orders_all(response_tx, current_timestamp).await
+                }
                 | SimulatedEvent::MarketTrade((instrument, trade), _current_timestamp) => self.account.match_orders(instrument, trade).await,
             }
         }
@@ -44,8 +46,8 @@ where Data: Clone,
 }
 
 impl<Data, Event> Default for ExchangeInitiator<Data, Event>
-where Data: Clone,
-      Event: Clone
+    where Data: Clone,
+          Event: Clone
 {
     fn default() -> Self
     {
@@ -56,16 +58,16 @@ where Data: Clone,
 }
 #[derive(Debug)]
 pub struct ExchangeInitiator<Data, Event>
-where Data: Clone,
-      Event: Clone
+    where Data: Clone,
+          Event: Clone
 {
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
     account: Option<Account<Data, Event>>,
 }
 
 impl<Data, Event> ExchangeInitiator<Data, Event>
-where Data: Clone,
-      Event: Clone
+    where Data: Clone,
+          Event: Clone
 {
     pub fn new() -> Self
     {

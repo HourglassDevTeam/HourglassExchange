@@ -1,6 +1,8 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
+use std::{
+    collections::HashMap,
+    ops::{Deref, DerefMut},
+};
 
 use crate::{
     common_skeleton::{
@@ -8,9 +10,9 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::Instrument,
         order::{Open, Order},
-        Side,
         token::Token,
         trade::Trade,
+        Side,
     },
     error::ExecutionError,
     Exchange,
@@ -18,8 +20,9 @@ use crate::{
 };
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
-pub struct AccountBalances{
-    pub balance_map:HashMap<Token, Balance>,
+pub struct AccountBalances
+{
+    pub balance_map: HashMap<Token, Balance>,
     // pub account_ref: &Account
 }
 
@@ -170,7 +173,7 @@ impl AccountBalances
     }
 }
 
-impl std::ops::Deref for AccountBalances
+impl Deref for AccountBalances
 {
     type Target = HashMap<Token, Balance>;
 
@@ -180,7 +183,7 @@ impl std::ops::Deref for AccountBalances
     }
 }
 
-impl std::ops::DerefMut for AccountBalances
+impl DerefMut for AccountBalances
 {
     fn deref_mut(&mut self) -> &mut Self::Target
     {

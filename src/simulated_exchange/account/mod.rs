@@ -1,6 +1,5 @@
-use std::fmt::Debug;
-use std::sync::Arc;
 use futures::future::join_all;
+use std::{fmt::Debug, sync::Arc};
 use tokio::sync::{mpsc, oneshot, RwLock};
 
 use account_balances::AccountBalances;
@@ -18,34 +17,37 @@ use crate::{
         trade::Trade,
     },
     error::ExecutionError,
-    simulated_exchange::account::account_latency::{AccountLatency, fluctuate_latency},
+    simulated_exchange::account::{
+        account_datafeed::AccountDataFeed,
+        account_latency::{fluctuate_latency, AccountLatency},
+    },
 };
-use crate::simulated_exchange::account::account_datafeed::AccountDataFeed;
 
 pub mod account_balances;
 pub mod account_config;
+mod account_datafeed;
 mod account_latency;
 pub mod account_orders;
-mod account_datafeed;
-
 
 #[derive(Clone, Debug)]
 pub struct Account<Data, Event>
-where Data:Clone,Event:Clone
+    where Data: Clone,
+          Event: Clone
 {
-    pub data: Arc<RwLock<AccountDataFeed<Data>>>,                                // 帐户数据
-    pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,                  // 帐户事件发送器
-    pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>,             // 市场事件发送器
-    pub latency: Arc<RwLock<AccountLatency>>,                                    // 帐户延迟
-    pub config: Arc<RwLock<AccountConfig>>,                                      // 帐户配置
-    pub balances: Arc<RwLock<AccountBalances>>,                                  // 帐户余额
-    pub positions: Arc<RwLock<Vec<AccountPositions>>>,                           // 帐户头寸
-    pub orders: Arc<RwLock<AccountOrders>>,                                      // 帐户订单
+    pub exchange_timestamp: i64,
+    pub data: Arc<RwLock<AccountDataFeed<Data>>>,                   // 帐户数据
+    pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
+    pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
+    pub latency: Arc<RwLock<AccountLatency>>,                       // 帐户延迟
+    pub config: Arc<RwLock<AccountConfig>>,                         // 帐户配置
+    pub balances: Arc<RwLock<AccountBalances>>,                     // 帐户余额
+    pub positions: Arc<RwLock<Vec<AccountPositions>>>,              // 帐户头寸
+    pub orders: Arc<RwLock<AccountOrders>>,                         // 帐户订单
 }
 #[derive(Clone, Debug)]
 pub struct AccountInitiator<Data, Event>
-where Data: Clone,
-      Event: Clone
+    where Data: Clone,
+          Event: Clone
 {
     data: Option<Arc<RwLock<AccountDataFeed<Data>>>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
@@ -58,8 +60,8 @@ where Data: Clone,
 }
 
 impl<Data, Event> AccountInitiator<Data, Event>
-where Data: Clone,
-      Event: Clone
+    where Data: Clone,
+          Event: Clone
 {
     pub fn new() -> Self
     {
@@ -123,23 +125,23 @@ where Data: Clone,
 
     pub fn build(self) -> Result<Account<Data, Event>, String>
     {
-        Ok(Account { data: self.data.ok_or("data is required")?,                                     // 检查并获取data
+        Ok(Account { exchange_timestamp: 0,
+                     data: self.data.ok_or("data is required")?, // 检查并获取data
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
-                     market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
-                     latency: self.latency.ok_or("latency is required")?,                            // 检查并获取latency
-                     config: self.config.ok_or("config is required")?,                               // 检查并获取config
-                     balances: self.balances.ok_or("balances is required")?,                         // 检查并获取balances
-                     positions: self.positions.ok_or("positions are required")?,                     // 检查并获取positions
-                     orders: self.orders.ok_or("orders are required")?
-                     /* 检查并获取orders */ })
+                     market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?, // 检查并获取market_event_tx
+                     latency: self.latency.ok_or("latency is required")?, // 检查并获取latency
+                     config: self.config.ok_or("config is required")?, // 检查并获取config
+                     balances: self.balances.ok_or("balances is required")?, // 检查并获取balances
+                     positions: self.positions.ok_or("positions are required")?, // 检查并获取positions
+                     orders: self.orders.ok_or("orders are required")?  /* 检查并获取orders */ })
     }
 }
 
 // NOTE 未完成
 #[allow(dead_code)]
 impl<Data, Event> Account<Data, Event>
-where Data: Clone,
-      Event: Clone
+    where Data: Clone,
+          Event: Clone
 {
     pub fn initiate() -> AccountInitiator<Data, Event>
     {
@@ -180,27 +182,21 @@ where Data: Clone,
         todo!()
     }
 
-
     pub async fn open_orders(&mut self,
                              open_requests: Vec<Order<RequestOpen>>,
                              response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>,
                              current_timestamp: i64)
     {
-        let open_futures = open_requests.into_iter()
-            .map(|request| {
-                let mut this = self.clone();
-                async move {
-                    this.try_open_order_atomic(request, current_timestamp).await
-                }
-            });
+        let open_futures = open_requests.into_iter().map(|request| {
+                                                        let mut this = self.clone();
+                                                        async move { this.try_open_order_atomic(request, current_timestamp).await }
+                                                    });
 
         let open_results = join_all(open_futures).await;
         response_tx.send(open_results).unwrap_or_else(|_| {
-            // Handle the error if sending fails
-        });
+                                          // Handle the error if sending fails
+                                      });
     }
-
-
 
     pub async fn try_open_order_atomic(&mut self, request: Order<RequestOpen>, _current_timestamp: i64) -> Result<Order<Open>, ExecutionError>
     {
@@ -208,27 +204,26 @@ where Data: Clone,
         todo!()
     }
 
-
     pub async fn cancel_orders(&mut self,
                                cancel_requests: Vec<Order<RequestCancel>>,
                                response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>,
                                current_timestamp: i64)
     {
-        let cancel_futures = cancel_requests.into_iter()
-            .map(|request| {
-                let mut this = self.clone();
-                async move {
-                    this.try_cancel_order_atomic(request, current_timestamp).await
-                }
-            });
+        let cancel_futures = cancel_requests.into_iter().map(|request| {
+                                                            let mut this = self.clone();
+                                                            async move { this.try_cancel_order_atomic(request, current_timestamp).await }
+                                                        });
 
         let cancel_results = join_all(cancel_futures).await;
         response_tx.send(cancel_results).unwrap_or_else(|_| {
-            // Handle the error if sending fails
-        });
+                                            // Handle the error if sending fails
+                                        });
     }
 
-    pub async fn try_cancel_order_atomic(&mut self, _request: Order<RequestCancel>, _current_timestamp: i64) -> Result<Order<Cancelled>, ExecutionError>
+    pub async fn try_cancel_order_atomic(&mut self,
+                                         _request: Order<RequestCancel>,
+                                         _current_timestamp: i64)
+                                         -> Result<Order<Cancelled>, ExecutionError>
     {
         todo!()
     }

@@ -22,8 +22,8 @@ pub mod simulated_exchange;
 // 交易所的通用骨架模块
 mod binance_exchange;
 pub mod common_skeleton;
-pub mod okex_exchange;
 pub mod data_subscriber;
+pub mod okex_exchange;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
