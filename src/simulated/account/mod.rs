@@ -55,7 +55,7 @@ pub struct Account<Data, Event> {
     pub data: AccountFeedData<Data>,
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>,
-    pub latency: i64,
+    pub latency: i64, // changing latency in milliseconds, specific to each account.
     pub config: AccountConfig,
     pub balances: AccountBalances,
     pub positions: Vec<AccountPositions>,
