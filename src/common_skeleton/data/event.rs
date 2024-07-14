@@ -23,9 +23,9 @@ pub enum DataKind
 {
     WsTrade(WsTrade), // WebSocket 交易数据
     Trade(Trade),     // 普通交易数据
-    // OrderBook25(OrderBook25), // 订单簿数据（注释掉的部分）
-    // Candle(Candle),           // 蜡烛图数据（注释掉的部分）
-    // Liquidation(Liquidation), // 清算数据（注释掉的部分）
+    // OrderBook25(OrderBook25), // 订单簿数据
+    // Candle(Candle),           // 蜡烛图数据
+    // Liquidation(Liquidation), // 清算数据
 }
 
 // 为 MarketEvent<Trade> 实现转换为 MarketEvent<DataKind> 的方法
