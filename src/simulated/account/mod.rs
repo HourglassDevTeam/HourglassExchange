@@ -87,7 +87,7 @@ impl<Data, Event> AccountInitiator<Data, Event> {
         self
     }
 
-    pub fn latency(mut self, value: i64) -> Self {
+    pub fn latency(mut self, value: AccountLatency) -> Self {
         self.latency = Some(value);
         self
     }
@@ -133,11 +133,11 @@ impl<Data, Event> Account<Data, Event> {
     }
 
     pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>) {
-        respond_with_latency(self.latency, response_tx, Ok(self.orders.fetch_all()));
+        respond_with_latency(self.latency.current_value, response_tx, Ok(self.orders.fetch_all()));
     }
 
     pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>) {
-        respond_with_latency(self.latency, response_tx, Ok(self.balances.fetch_all()));
+        respond_with_latency(self.latency.current_value, response_tx, Ok(self.balances.fetch_all()));
     }
 
     pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError> {
@@ -148,7 +148,7 @@ impl<Data, Event> Account<Data, Event> {
     }
 
     pub fn fetch_positions(&self, response_tx: oneshot::Sender<Result<Vec<AccountPositions>, ExecutionError>>) {
-        respond_with_latency(self.latency, response_tx, Ok(self.positions.clone()));
+        respond_with_latency(self.latency.current_value, response_tx, Ok(self.positions.clone()));
     }
 
     pub fn match_orders(&mut self, instrument: Instrument, trade: Trade) {
@@ -161,7 +161,7 @@ impl<Data, Event> Account<Data, Event> {
         response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>,
         current_timestamp: i64,
     ) {
-        let open_results = open_requests.into_iter().map(|request| self.try_open_order_atomic(request)).collect();
+        let open_results = open_requests.into_iter().map(|request| self.try_open_order_atomic(request,current_timestamp)).collect();
         response_tx.send(open_results).unwrap_or_else(|_| {
             // Handle the error if sending fails
         });
@@ -178,7 +178,7 @@ impl<Data, Event> Account<Data, Event> {
         response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>,
         current_timestamp: i64,
     ) {
-        let cancel_results = cancel_requests.into_iter().map(|request| self.try_cancel_order_atomic(request)).collect();
+        let cancel_results = cancel_requests.into_iter().map(|request| self.try_cancel_order_atomic(request,current_timestamp)).collect();
         response_tx.send(cancel_results).unwrap_or_else(|_| {
             // Handle the error if sending fails
         });
