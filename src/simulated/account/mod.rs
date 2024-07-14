@@ -21,41 +21,26 @@ use account_config::AccountConfig;
 use account_orders::AccountOrders;
 use crate::common_skeleton::instrument::Instrument;
 use crate::common_skeleton::trade::Trade;
+use crate::simulated::account::account_latency::{AccountLatency, fluctuate_latency};
 
 pub mod account_balances;
 pub mod account_config;
 pub mod account_orders;
-
-// 订阅方式
-#[derive(Clone, Debug)]
-pub enum SubscriptionKind {
-    Database,
-    // Kafka,
-    // DolphinDB,
-    // RedisCache
-    WebSocket,
-    HTTP,
-}
-
-#[derive(Clone, Debug)]
-pub struct DataSource {
-    pub subscription: SubscriptionKind,
-    pub exchange_kind: ExchangeKind,
-}
+mod account_latency;
 
 #[derive(Clone, Debug)]
 pub struct AccountFeedData<Data> {
-    pub data_source: DataSource,
     pub batch_id: Uuid,
     pub data: Vec<MarketEvent<Data>>,
 }
+
 #[derive(Clone, Debug)]
 pub struct Account<Data, Event> {
     pub data: AccountFeedData<Data>,
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>,
     // changing latency in milliseconds, specific to each account.
-    pub latency: i64,
+    pub latency: AccountLatency,
     pub config: AccountConfig,
     pub balances: AccountBalances,
     pub positions: Vec<AccountPositions>,
@@ -206,10 +191,8 @@ impl<Data, Event> Account<Data, Event> {
         todo!()
     }
 
-    pub fn update_latency(&mut self, min_millis: i64, max_millis: i64) {
-        let mut rng = thread_rng();
-        let random_millis = rng.gen_range(min_millis..=max_millis);
-        self.latency = random_millis;
+    pub fn update_latency(&mut self, current_time: f64) {
+        fluctuate_latency(&mut self.latency, current_time);
     }
 }
 
