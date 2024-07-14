@@ -1,7 +1,7 @@
 use std::fmt::Debug;
-
-use serde::Serialize;
-use tokio::sync::{mpsc, oneshot};
+use std::sync::Arc;
+use futures::future::join_all;
+use tokio::sync::{mpsc, oneshot, RwLock};
 
 use account_balances::AccountBalances;
 use account_config::AccountConfig;
@@ -31,31 +31,35 @@ mod account_datafeed;
 
 #[derive(Clone, Debug)]
 pub struct Account<Data, Event>
+where Data:Clone,Event:Clone
 {
-    pub data: AccountDataFeed<Data>,                                // 帐户数据
-    pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
-    pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
-    pub latency: AccountLatency,                                    // 帐户延迟
-    pub config: AccountConfig,                                      // 帐户配置
-    pub balances: AccountBalances,                                  // 帐户余额
-    pub positions: Vec<AccountPositions>,                           // 帐户头寸
-    pub orders: AccountOrders,                                      // 帐户订单
+    pub data: Arc<RwLock<AccountDataFeed<Data>>>,                                // 帐户数据
+    pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,                  // 帐户事件发送器
+    pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>,             // 市场事件发送器
+    pub latency: Arc<RwLock<AccountLatency>>,                                    // 帐户延迟
+    pub config: Arc<RwLock<AccountConfig>>,                                      // 帐户配置
+    pub balances: Arc<RwLock<AccountBalances>>,                                  // 帐户余额
+    pub positions: Arc<RwLock<Vec<AccountPositions>>>,                           // 帐户头寸
+    pub orders: Arc<RwLock<AccountOrders>>,                                      // 帐户订单
 }
-
 #[derive(Clone, Debug)]
 pub struct AccountInitiator<Data, Event>
+where Data: Clone,
+      Event: Clone
 {
-    data: Option<AccountDataFeed<Data>>,
+    data: Option<Arc<RwLock<AccountDataFeed<Data>>>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
     market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
-    latency: Option<AccountLatency>,
-    config: Option<AccountConfig>,
-    balances: Option<AccountBalances>,
-    positions: Option<Vec<AccountPositions>>,
-    orders: Option<AccountOrders>,
+    latency: Option<Arc<RwLock<AccountLatency>>>,
+    config: Option<Arc<RwLock<AccountConfig>>>,
+    balances: Option<Arc<RwLock<AccountBalances>>>,
+    positions: Option<Arc<RwLock<Vec<AccountPositions>>>>,
+    orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
 impl<Data, Event> AccountInitiator<Data, Event>
+where Data: Clone,
+      Event: Clone
 {
     pub fn new() -> Self
     {
@@ -71,7 +75,7 @@ impl<Data, Event> AccountInitiator<Data, Event>
 
     pub fn data(mut self, value: AccountDataFeed<Data>) -> Self
     {
-        self.data = Some(value);
+        self.data = Some(Arc::new(RwLock::new(value)));
         self
     }
 
@@ -89,31 +93,31 @@ impl<Data, Event> AccountInitiator<Data, Event>
 
     pub fn latency(mut self, value: AccountLatency) -> Self
     {
-        self.latency = Some(value);
+        self.latency = Some(Arc::new(RwLock::new(value)));
         self
     }
 
     pub fn config(mut self, value: AccountConfig) -> Self
     {
-        self.config = Some(value);
+        self.config = Some(Arc::new(RwLock::new(value)));
         self
     }
 
     pub fn balances(mut self, value: AccountBalances) -> Self
     {
-        self.balances = Some(value);
+        self.balances = Some(Arc::new(RwLock::new(value)));
         self
     }
 
     pub fn positions(mut self, value: Vec<AccountPositions>) -> Self
     {
-        self.positions = Some(value);
+        self.positions = Some(Arc::new(RwLock::new(value)));
         self
     }
 
     pub fn orders(mut self, value: AccountOrders) -> Self
     {
-        self.orders = Some(value);
+        self.orders = Some(Arc::new(RwLock::new(value)));
         self
     }
 
@@ -134,20 +138,26 @@ impl<Data, Event> AccountInitiator<Data, Event>
 // NOTE 未完成
 #[allow(dead_code)]
 impl<Data, Event> Account<Data, Event>
+where Data: Clone,
+      Event: Clone
 {
     pub fn initiate() -> AccountInitiator<Data, Event>
     {
         AccountInitiator::new()
     }
 
-    pub fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>)
+    pub async fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>)
     {
-        respond_with_latency(self.latency.current_value, response_tx, Ok(self.orders.fetch_all()));
+        let latency = self.latency.read().await.current_value;
+        let orders = self.orders.read().await.fetch_all();
+        respond_with_latency(latency, response_tx, Ok(orders));
     }
 
-    pub fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>)
+    pub async fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>)
     {
-        respond_with_latency(self.latency.current_value, response_tx, Ok(self.balances.fetch_all()));
+        let latency = self.latency.read().await.current_value;
+        let balances = self.balances.read().await.fetch_all();
+        respond_with_latency(latency, response_tx, Ok(balances));
     }
 
     pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError>
@@ -158,60 +168,80 @@ impl<Data, Event> Account<Data, Event>
         }
     }
 
-    pub fn fetch_positions(&self, response_tx: oneshot::Sender<Result<Vec<AccountPositions>, ExecutionError>>)
+    pub async fn fetch_positions(&self, response_tx: oneshot::Sender<Result<Vec<AccountPositions>, ExecutionError>>)
     {
-        respond_with_latency(self.latency.current_value, response_tx, Ok(self.positions.clone()));
+        let latency = self.latency.read().await.current_value;
+        let positions = self.positions.read().await.clone();
+        respond_with_latency(latency, response_tx, Ok(positions));
     }
-    pub fn match_orders(&mut self, _instrument: Instrument, _trade: Trade)
+
+    pub async fn match_orders(&mut self, _instrument: Instrument, _trade: Trade)
     {
         todo!()
     }
 
-    pub fn open_orders(&mut self,
-                       open_requests: Vec<Order<RequestOpen>>,
-                       response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>,
-                       current_timestamp: i64)
+
+    pub async fn open_orders(&mut self,
+                             open_requests: Vec<Order<RequestOpen>>,
+                             response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>,
+                             current_timestamp: i64)
     {
-        let open_results = open_requests.into_iter()
-                                        .map(|request| self.try_open_order_atomic(request, current_timestamp))
-                                        .collect();
+        let open_futures = open_requests.into_iter()
+            .map(|request| {
+                let mut this = self.clone();
+                async move {
+                    this.try_open_order_atomic(request, current_timestamp).await
+                }
+            });
+
+        let open_results = join_all(open_futures).await;
         response_tx.send(open_results).unwrap_or_else(|_| {
-                                          // Handle the error if sending fails
-                                      });
+            // Handle the error if sending fails
+        });
     }
 
-    pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>, _current_timestamp: i64) -> Result<Order<Open>, ExecutionError>
+
+
+    pub async fn try_open_order_atomic(&mut self, request: Order<RequestOpen>, _current_timestamp: i64) -> Result<Order<Open>, ExecutionError>
     {
         Self::order_validity_check(request.state.kind).unwrap();
         todo!()
     }
 
-    pub fn cancel_orders(&mut self,
-                         cancel_requests: Vec<Order<RequestCancel>>,
-                         response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>,
-                         current_timestamp: i64)
+
+    pub async fn cancel_orders(&mut self,
+                               cancel_requests: Vec<Order<RequestCancel>>,
+                               response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>,
+                               current_timestamp: i64)
     {
-        let cancel_results = cancel_requests.into_iter()
-                                            .map(|request| self.try_cancel_order_atomic(request, current_timestamp))
-                                            .collect();
+        let cancel_futures = cancel_requests.into_iter()
+            .map(|request| {
+                let mut this = self.clone();
+                async move {
+                    this.try_cancel_order_atomic(request, current_timestamp).await
+                }
+            });
+
+        let cancel_results = join_all(cancel_futures).await;
         response_tx.send(cancel_results).unwrap_or_else(|_| {
-                                            // Handle the error if sending fails
-                                        });
+            // Handle the error if sending fails
+        });
     }
 
-    pub fn try_cancel_order_atomic(&mut self, _request: Order<RequestCancel>, _current_timestamp: i64) -> Result<Order<Cancelled>, ExecutionError>
+    pub async fn try_cancel_order_atomic(&mut self, _request: Order<RequestCancel>, _current_timestamp: i64) -> Result<Order<Cancelled>, ExecutionError>
     {
         todo!()
     }
 
-    pub fn cancel_orders_all(&mut self, _response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, _current_timestamp: i64)
+    pub async fn cancel_orders_all(&mut self, _response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, _current_timestamp: i64)
     {
         todo!()
     }
 
-    pub fn update_latency(&mut self, current_time: i64)
+    pub async fn update_latency(&mut self, current_time: i64)
     {
-        fluctuate_latency(&mut self.latency, current_time);
+        let mut latency = self.latency.write().await;
+        fluctuate_latency(&mut *latency, current_time);
     }
 }
 
