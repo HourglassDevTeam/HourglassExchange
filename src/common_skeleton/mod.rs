@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 use serde::{Deserialize, Serialize};
 
 pub mod balance; // 通用balance模块
-pub mod data;
+pub mod datafeed;
 pub mod event; // 定义通用事件和状态
 pub mod friction;
 pub mod instrument;

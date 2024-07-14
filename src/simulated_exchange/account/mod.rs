@@ -9,7 +9,7 @@ use account_orders::AccountOrders;
 use crate::{
     common_skeleton::{
         balance::TokenBalance,
-        data::event::MarketEvent,
+        datafeed::event::MarketEvent,
         event::AccountEvent,
         instrument::Instrument,
         order::{Cancelled, Open, Order, OrderKind, RequestCancel, RequestOpen},
@@ -126,7 +126,7 @@ impl<Data, Event> AccountInitiator<Data, Event>
     pub fn build(self) -> Result<Account<Data, Event>, String>
     {
         Ok(Account { exchange_timestamp: 0,
-                     data: self.data.ok_or("data is required")?, // 检查并获取data
+                     data: self.data.ok_or("datafeed is required")?, // 检查并获取data
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
                      market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?, // 检查并获取market_event_tx
                      latency: self.latency.ok_or("latency is required")?, // 检查并获取latency

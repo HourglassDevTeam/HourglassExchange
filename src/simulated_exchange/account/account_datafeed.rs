@@ -1,4 +1,4 @@
-use crate::common_skeleton::data::event::MarketEvent;
+use crate::common_skeleton::datafeed::event::MarketEvent;
 use serde::Serialize;
 use uuid::Uuid;
 
