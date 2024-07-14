@@ -1,15 +1,20 @@
-use crate::error::ExecutionError;
-use crate::common_skeleton::balance::{Balance, BalanceDelta, TokenBalance};
-use crate::common_skeleton::event::{AccountEvent, AccountEventKind};
-use crate::common_skeleton::instrument::Instrument;
-use crate::common_skeleton::order::{Open, Order};
-use crate::common_skeleton::token::Token;
-use crate::common_skeleton::trade::Trade;
-use crate::common_skeleton::Side;
-use crate::Exchange;
-use crate::ExchangeKind::Simulated;
+use crate::{
+    common_skeleton::{
+        balance::{Balance, BalanceDelta, TokenBalance},
+        event::{AccountEvent, AccountEventKind},
+        instrument::Instrument,
+        order::{Open, Order},
+        token::Token,
+        trade::Trade,
+        Side,
+    },
+    error::ExecutionError,
+    Exchange,
+    ExchangeKind::Simulated,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct AccountBalances(pub HashMap<Token, Balance>);
