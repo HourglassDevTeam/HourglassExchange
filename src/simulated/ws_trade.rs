@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct WsTrade
 {
     #[serde(alias = "instrument_id", alias = "inst_id")]

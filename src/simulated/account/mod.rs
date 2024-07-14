@@ -1,6 +1,4 @@
 use std::fmt::Debug;
-
-use rand::Rng;
 use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
@@ -140,6 +138,7 @@ impl<Data, Event> AccountInitiator<Data, Event>
 }
 
 // NOTE 未完成
+#[allow(dead_code)]
 impl<Data, Event> Account<Data, Event>
 {
     pub fn initiate() -> AccountInitiator<Data, Event>
@@ -169,8 +168,7 @@ impl<Data, Event> Account<Data, Event>
     {
         respond_with_latency(self.latency.current_value, response_tx, Ok(self.positions.clone()));
     }
-
-    pub fn match_orders(&mut self, instrument: Instrument, trade: Trade)
+    pub fn match_orders(&mut self, _instrument: Instrument, _trade: Trade)
     {
         todo!()
     }
@@ -188,7 +186,7 @@ impl<Data, Event> Account<Data, Event>
                                       });
     }
 
-    pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>, current_timestamp: i64) -> Result<Order<Open>, ExecutionError>
+    pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>, _current_timestamp: i64) -> Result<Order<Open>, ExecutionError>
     {
         Self::order_validity_check(request.state.kind).unwrap();
         todo!()
@@ -207,12 +205,12 @@ impl<Data, Event> Account<Data, Event>
                                         });
     }
 
-    pub fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>, current_timestamp: i64) -> Result<Order<Cancelled>, ExecutionError>
+    pub fn try_cancel_order_atomic(&mut self, _request: Order<RequestCancel>, _current_timestamp: i64) -> Result<Order<Cancelled>, ExecutionError>
     {
         todo!()
     }
 
-    pub fn cancel_orders_all(&mut self, response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, current_timestamp: i64)
+    pub fn cancel_orders_all(&mut self, _response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, _current_timestamp: i64)
     {
         todo!()
     }
@@ -224,7 +222,7 @@ impl<Data, Event> Account<Data, Event>
 }
 
 // send oneshot response to execution request
-pub fn respond_with_latency<Response>(latency: i64, response_tx: oneshot::Sender<Response>, response: Response)
+pub fn respond_with_latency<Response>(_latency: i64, response_tx: oneshot::Sender<Response>, response: Response)
     where Response: Debug + Send + 'static
 {
     tokio::spawn(async move {
