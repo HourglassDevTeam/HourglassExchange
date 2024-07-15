@@ -1,5 +1,4 @@
 // 滑点和摩擦成本的设计放在这里
-
 use crate::common_skeleton::instrument::kind::InstrumentKind;
 use serde::{Deserialize, Serialize};
 
@@ -12,6 +11,10 @@ pub struct InstrumentFees
     pub fees: Fees,
 }
 
+
+
+// NOTE 根据 OKEx 交易所的 API 和交易费用结构，我们可以为每种费用类型创建单独的结构体来表示不同的费用属性。
+//      以下是构建 SpotFees、PerpetualFees 和 OptionFees 变种的一个示例：
 // 现货交易费用结构体
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct SpotFees
@@ -38,8 +41,6 @@ pub struct OptionFees
                               * 期权可能还有其他费用，如行权费等，根据需要添加 */
 }
 
-// NOTE 根据 OKEx 交易所的 API 和交易费用结构，我们可以为每种费用类型创建单独的结构体来表示不同的费用属性。
-//      以下是构建 SpotFees、PerpetualFees 和 OptionFees 变种的一个示例：
 
 #[derive(Debug, Copy, Clone, PartialOrd, Serialize, Deserialize, PartialEq)]
 pub enum Fees
