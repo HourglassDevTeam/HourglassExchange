@@ -1,4 +1,4 @@
-// 滑点和摩擦成本的设计放在这里
+// NOTE 滑点和摩擦成本的设计放在这里
 use crate::common_skeleton::instrument::kind::InstrumentKind;
 use serde::{Deserialize, Serialize};
 
@@ -17,7 +17,7 @@ pub struct InstrumentFees
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct SpotFees
 {
-    // 这里假设费用为固定值，实际情况可能更复杂，可能包括 maker 和 taker 费率等
+    // 这里假设费用为固定值，实际情况可能更复杂。
     pub maker_fee_rate: f64, // 制造流动性的费率
     pub taker_fee_rate: f64, // 消耗流动性的费率
 }
@@ -38,7 +38,6 @@ pub struct OptionFees
     pub trade_fee_rate: f64, /* 交易费率
                               * 期权可能还有其他费用，如行权费等，根据需要添加 */
 }
-
 
 #[derive(Debug, Copy, Clone, PartialOrd, Serialize, Deserialize, PartialEq)]
 pub enum Fees

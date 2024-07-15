@@ -4,6 +4,63 @@ pub struct AccountConfig
     pub margin_mode: MarginMode,
     pub position_mode: PositionMode,
     pub commission_level: CommissionLevel,
+    pub current_commission_rate: CommissionRates,
+}
+
+// NOTE 增加假设的佣金费率结构
+#[derive(Clone, Debug)]
+pub struct CommissionRates
+{
+    pub spot_maker: f64,
+    pub spot_taker: f64,
+    pub perpetual_open: f64,
+    pub perpetual_close: f64,
+    pub perpetual_funding: f64,
+}
+
+// NOTE 更新费率函数的样本：为 AccountConfig 添加一个关联函数来更新佣金费率
+impl AccountConfig {
+    // 更新当前佣金费率
+    pub fn update_commission_rate(mut self, commission_rates: &CommissionRates) -> Self {
+        self.current_commission_rate = match self.commission_level {
+            CommissionLevel::Lv1 => CommissionRates {
+                spot_maker: commission_rates.spot_maker * 0.9,
+                spot_taker: commission_rates.spot_taker * 0.9,
+                perpetual_open: commission_rates.perpetual_open * 0.9,
+                perpetual_close: commission_rates.perpetual_close * 0.9,
+                perpetual_funding: commission_rates.perpetual_funding * 0.9,
+            },
+            CommissionLevel::Lv2 => CommissionRates {
+                spot_maker: commission_rates.spot_maker * 0.8,
+                spot_taker: commission_rates.spot_taker * 0.8,
+                perpetual_open: commission_rates.perpetual_open * 0.8,
+                perpetual_close: commission_rates.perpetual_close * 0.8,
+                perpetual_funding: commission_rates.perpetual_funding * 0.8,
+            },
+            CommissionLevel::Lv3 => CommissionRates {
+                spot_maker: commission_rates.spot_maker * 0.7,
+                spot_taker: commission_rates.spot_taker * 0.7,
+                perpetual_open: commission_rates.perpetual_open * 0.7,
+                perpetual_close: commission_rates.perpetual_close * 0.7,
+                perpetual_funding: commission_rates.perpetual_funding * 0.7,
+            },
+            CommissionLevel::Lv4 => CommissionRates {
+                spot_maker: commission_rates.spot_maker * 0.6,
+                spot_taker: commission_rates.spot_taker * 0.6,
+                perpetual_open: commission_rates.perpetual_open * 0.6,
+                perpetual_close: commission_rates.perpetual_close * 0.6,
+                perpetual_funding: commission_rates.perpetual_funding * 0.6,
+            },
+            CommissionLevel::Lv5 => CommissionRates {
+                spot_maker: commission_rates.spot_maker * 0.5,
+                spot_taker: commission_rates.spot_taker * 0.5,
+                perpetual_open: commission_rates.perpetual_open * 0.5,
+                perpetual_close: commission_rates.perpetual_close * 0.5,
+                perpetual_funding: commission_rates.perpetual_funding * 0.5,
+            },
+        };
+        self
+    }
 }
 
 #[derive(Clone, Debug)]
