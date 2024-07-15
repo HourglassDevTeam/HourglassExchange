@@ -18,9 +18,10 @@ impl<Iter, Event> MarketFeedDistributor<Event> for HistoricalFeed<Iter, Event> w
     }
 }
 
+// HistoricalFeed生成的办法，新建一个接受Event泛型的历史市场事件迭代器
 impl<Iter, Event> HistoricalFeed<Iter, Event> where Iter: Iterator<Item = Event>
 {
-    pub fn new<IntoIter>(market_iterator: IntoIter) -> Self
+    pub fn initiate<IntoIter>(market_iterator: IntoIter) -> Self
         where IntoIter: IntoIterator<Item = Event, IntoIter = Iter>
     {
         Self { market_iterator: market_iterator.into_iter() }
