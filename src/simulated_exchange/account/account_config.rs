@@ -19,6 +19,7 @@ pub struct CommissionRates
     pub perpetual_funding: f64,
 }
 
+
 #[derive(Clone, Debug)]
 pub struct CommissionRatesBuilder
 {
