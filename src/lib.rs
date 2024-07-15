@@ -28,6 +28,7 @@ pub mod okex_exchange;
 pub trait ClientExecution
 {
     const CLIENT: ExchangeKind;
+    // NOTE 这个类型关联项表示配置类型，不同的交易所可能需要不同的配置。例如，API 密钥、API 密码、或其他初始化参数。
     type Config;
 
     async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<AccountEvent>) -> Self;
