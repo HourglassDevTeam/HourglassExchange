@@ -4,7 +4,6 @@ pub mod event;
 pub mod historical;
 pub mod live;
 
-
 pub trait MarketFeedDistributor<Event>
 {
     // NOTE 历史市场事件迭代器和直接市场事件迭代器都会实现 MarketFeedDistributor，

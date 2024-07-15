@@ -7,15 +7,14 @@ use crate::common_skeleton::datafeed::{Feed, MarketFeedDistributor};
 /// 这种方式适合处理离线数据或在内存中加载整个历史数据集的情况。
 #[derive(Debug)]
 pub struct HistoricalFeed<Iter, Event>
-where Iter: Iterator<Item = Event>
+    where Iter: Iterator<Item = Event>
 {
     // 定义一个结构体 HistoricalFeed，带有两个泛型参数 Iter 和 Event
     // Iter 必须是一个迭代器，且其迭代项是 Event 类型的元素
     pub market_iterator: Iter, // 这个字段是一个迭代器，用于按需获取历史市场事件
 }
 
-impl<Iter, Event> MarketFeedDistributor<Event> for HistoricalFeed<Iter, Event>
-where Iter: Iterator<Item = Event>
+impl<Iter, Event> MarketFeedDistributor<Event> for HistoricalFeed<Iter, Event> where Iter: Iterator<Item = Event>
 {
     // 为 HistoricalFeed 实现 MarketFeedDistributor 特性
     fn fetch_next(&mut self) -> Feed<Event>
@@ -33,7 +32,7 @@ impl<Iter, Event> HistoricalFeed<Iter, Event> where Iter: Iterator<Item = Event>
     // 为 HistoricalFeed 实现一个新的关联函数 initiate
     // 这个函数用于从一个实现了 IntoIterator 特性的类型创建 HistoricalFeed
     pub fn initiate<IntoIter>(market_iterator: IntoIter) -> Self
-    where IntoIter: IntoIterator<Item = Event, IntoIter = Iter>
+        where IntoIter: IntoIterator<Item = Event, IntoIter = Iter>
     {
         // 使用提供的迭代器创建一个新的 HistoricalFeed 实例
         Self { market_iterator: market_iterator.into_iter() }

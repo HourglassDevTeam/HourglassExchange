@@ -1,12 +1,12 @@
-use tokio::sync::mpsc;
 use crate::common_skeleton::datafeed::{Feed, MarketFeedDistributor};
+use tokio::sync::mpsc;
 
 #[derive(Debug)]
 pub struct LiveFeed<Event>
-{   // 此处不设发送端，发送端由subscriber实现
+{
+    // 此处不设发送端，发送端由subscriber实现
     pub market_rx: mpsc::UnboundedReceiver<Event>,
 }
-
 
 impl<Event> MarketFeedDistributor<Event> for LiveFeed<Event>
 {
