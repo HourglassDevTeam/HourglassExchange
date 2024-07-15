@@ -32,3 +32,14 @@ impl Display for Side
         })
     }
 }
+
+
+impl Side {
+    // 定义一个方法来切换交易方向
+    pub fn toggle(&self) -> Self {
+        match self {
+            Side::Buy => Side::Sell,
+            Side::Sell => Side::Buy,
+        }
+    }
+}
