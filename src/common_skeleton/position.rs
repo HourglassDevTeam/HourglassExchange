@@ -1,3 +1,5 @@
+// FIXME to be restructured and fitted to the framework.
+
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct AccountPositions
