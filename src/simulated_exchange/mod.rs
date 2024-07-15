@@ -16,15 +16,3 @@ mod data_from_clickhouse;
 pub mod instrument_orders;
 pub mod simulated_exchange;
 pub(crate) mod ws_trade;
-
-#[derive(Debug)]
-pub enum SimulatedEvent
-{
-    FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>, i64),
-    FetchBalances(oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>, i64),
-    OpenOrders((Vec<Order<RequestOpen>>, oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>), i64),
-    CancelOrders((Vec<Order<RequestCancel>>, oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>),
-                 i64),
-    CancelOrdersAll(oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, i64),
-    MarketTrade((Instrument, Trade), i64),
-}

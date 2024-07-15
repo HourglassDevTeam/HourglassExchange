@@ -2,7 +2,7 @@ use tokio::sync::mpsc;
 
 use crate::ExecutionError;
 
-use super::{account::Account, SimulatedEvent};
+use super::{account::Account, ClientEvent};
 
 #[derive(Debug)]
 pub struct SimulatedExchange<Data, Iter, Event>
@@ -10,7 +10,7 @@ pub struct SimulatedExchange<Data, Iter, Event>
           Event: Clone,
           Iter: Iterator<Item = Event> + Clone
 {
-    pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedEvent>,
+    pub event_simulated_rx: mpsc::UnboundedReceiver<ClientEvent>,
     pub account: Account<Data, Iter, Event>,
 }
 
@@ -24,24 +24,24 @@ impl<Data, Iter, Event> SimulatedExchange<Data, Iter, Event>
         ExchangeInitiator::new()
     }
 
-    /// 运行 [`SimulatedExchange`] 并响应各种[`SimulatedEvent`]。
+    /// 运行 [`SimulatedExchange`] 并响应各种[`ClientEvent`]。
     pub async fn run(mut self)
     {
         // 不断接收并处理模拟事件。
         while let Some(event) = self.event_simulated_rx.recv().await {
             match event {
-                | SimulatedEvent::FetchOrdersOpen(response_tx, _current_timestamp) => self.account.fetch_orders_open(response_tx).await,
-                | SimulatedEvent::FetchBalances(response_tx, _current_timestamp) => self.account.fetch_balances(response_tx).await,
-                | SimulatedEvent::OpenOrders((open_requests, response_tx), current_timestamp) => {
+                | ClientEvent::FetchOrdersOpen(response_tx, _current_timestamp) => self.account.fetch_orders_open(response_tx).await,
+                | ClientEvent::FetchBalances(response_tx, _current_timestamp) => self.account.fetch_balances(response_tx).await,
+                | ClientEvent::OpenOrders((open_requests, response_tx), current_timestamp) => {
                     self.account.open_orders(open_requests, response_tx, current_timestamp).await
                 }
-                | SimulatedEvent::CancelOrders((cancel_requests, response_tx), current_timestamp) => {
+                | ClientEvent::CancelOrders((cancel_requests, response_tx), current_timestamp) => {
                     self.account.cancel_orders(cancel_requests, response_tx, current_timestamp).await
                 }
-                | SimulatedEvent::CancelOrdersAll(response_tx, current_timestamp) => {
+                | ClientEvent::CancelOrdersAll(response_tx, current_timestamp) => {
                     self.account.cancel_orders_all(response_tx, current_timestamp).await
                 }
-                | SimulatedEvent::MarketTrade((instrument, trade), _current_timestamp) => self.account.match_orders(instrument, trade).await,
+                | ClientEvent::MarketTrade((instrument, trade), _current_timestamp) => self.account.match_orders(instrument, trade).await,
             }
         }
     }
@@ -65,7 +65,7 @@ pub struct ExchangeInitiator<Data, Iter, Event>
           Event: Clone,
           Iter: Iterator<Item = Event> + Clone
 {
-    event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
+    event_simulated_rx: Option<mpsc::UnboundedReceiver<ClientEvent>>,
     account: Option<Account<Data, Iter, Event>>,
 }
 
@@ -79,7 +79,7 @@ impl<Data, Iter, Event> ExchangeInitiator<Data, Iter, Event>
         Self { ..Default::default() }
     }
 
-    pub fn event_simulated_rx(self, value: mpsc::UnboundedReceiver<SimulatedEvent>) -> Self
+    pub fn event_simulated_rx(self, value: mpsc::UnboundedReceiver<ClientEvent>) -> Self
     {
         Self { event_simulated_rx: Some(value),
                ..self }
