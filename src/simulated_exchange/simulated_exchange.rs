@@ -6,17 +6,21 @@ use super::{account::Account, SimulatedEvent};
 
 #[derive(Debug)]
 pub struct SimulatedExchange<Data, Iter, Event>
-    where Data: Clone,
-          Event: Clone,
-    Iter: Iterator<Item = Event> +Clone{
+where
+    Data: Clone,
+    Event: Clone,
+    Iter: Iterator<Item=Event> + Clone,
+{
     pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedEvent>,
     pub account: Account<Data, Iter, Event>,
 }
 
 impl<Data, Iter, Event> SimulatedExchange<Data, Iter, Event>
-    where Data: Clone,
-          Event: Clone,
-    Iter: Iterator<Item = Event> +Clone{
+where
+    Data: Clone,
+    Event: Clone,
+    Iter: Iterator<Item=Event> + Clone,
+{
     pub fn initiator() -> ExchangeInitiator<Data, Iter, Event>
     {
         ExchangeInitiator::new()
@@ -46,29 +50,37 @@ impl<Data, Iter, Event> SimulatedExchange<Data, Iter, Event>
 }
 
 impl<Data, Iter, Event> Default for ExchangeInitiator<Data, Iter, Event>
-    where Data: Clone,
-          Event: Clone,
-    Iter: Iterator<Item = Event> +Clone{
+where
+    Data: Clone,
+    Event: Clone,
+    Iter: Iterator<Item=Event> + Clone,
+{
     fn default() -> Self
     {
         let (_tx, rx) = mpsc::unbounded_channel();
-        Self { event_simulated_rx: Some(rx),
-               account: None }
+        Self {
+            event_simulated_rx: Some(rx),
+            account: None,
+        }
     }
 }
 #[derive(Debug)]
 pub struct ExchangeInitiator<Data, Iter, Event>
-    where Data: Clone,
-          Event: Clone,
-    Iter: Iterator<Item = Event> +Clone{
+where
+    Data: Clone,
+    Event: Clone,
+    Iter: Iterator<Item=Event> + Clone,
+{
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
     account: Option<Account<Data, Iter, Event>>,
 }
 
 impl<Data, Iter, Event> ExchangeInitiator<Data, Iter, Event>
-    where Data: Clone,
-          Event: Clone,
-    Iter: Iterator<Item = Event> +Clone{
+where
+    Data: Clone,
+    Event: Clone,
+    Iter: Iterator<Item=Event> + Clone,
+{
     pub fn new() -> Self
     {
         Self { ..Default::default() }
@@ -76,20 +88,26 @@ impl<Data, Iter, Event> ExchangeInitiator<Data, Iter, Event>
 
     pub fn event_simulated_rx(self, value: mpsc::UnboundedReceiver<SimulatedEvent>) -> Self
     {
-        Self { event_simulated_rx: Some(value),
-               ..self }
+        Self {
+            event_simulated_rx: Some(value),
+            ..self
+        }
     }
 
     pub fn account(self, value: Account<Data, Iter, Event>) -> Self
     {
-        Self { account: Some(value),
-               ..self }
+        Self {
+            account: Some(value),
+            ..self
+        }
     }
 
     pub fn initiate(self) -> Result<SimulatedExchange<Data, Iter, Event>, ExecutionError>
     {
-        Ok(SimulatedExchange { event_simulated_rx: self.event_simulated_rx
-                                                       .ok_or_else(|| ExecutionError::InitiatorIncomplete("event_simulated_rx".to_string()))?,
-                               account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
+        Ok(SimulatedExchange {
+            event_simulated_rx: self.event_simulated_rx
+                .ok_or_else(|| ExecutionError::InitiatorIncomplete("event_simulated_rx".to_string()))?,
+            account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))?,
+        })
     }
 }

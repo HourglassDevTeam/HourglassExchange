@@ -25,13 +25,17 @@ impl Display for Instrument
     }
 }
 
-impl<S> From<(S, S, InstrumentKind)> for Instrument where S: Into<Token>
+impl<S> From<(S, S, InstrumentKind)> for Instrument
+where
+    S: Into<Token>,
 {
     fn from((base, quote, kind): (S, S, InstrumentKind)) -> Self
     {
-        Self { base: base.into(),
-               quote: quote.into(),
-               kind }
+        Self {
+            base: base.into(),
+            quote: quote.into(),
+            kind,
+        }
     }
 }
 
@@ -39,10 +43,13 @@ impl Instrument
 {
     // Constructor function to create a new Instrument
     pub fn new<S>(base: S, quote: S, kind: InstrumentKind) -> Self
-        where S: Into<Token>
+    where
+        S: Into<Token>,
     {
-        Self { base: base.into(),
-               quote: quote.into(),
-               kind }
+        Self {
+            base: base.into(),
+            quote: quote.into(),
+            kind,
+        }
     }
 }

@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 // NOTE 滑点和摩擦成本的设计放在这里
 use crate::common_skeleton::instrument::kind::InstrumentKind;
-use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
 /// 以 [`Instrument`]（符号）表示的 [`Trade`]（交易）费用。
@@ -35,8 +36,9 @@ pub struct PerpetualFees
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct OptionFees
 {
-    pub trade_fee_rate: f64, /* 交易费率
-                              * 期权可能还有其他费用，如行权费等，根据需要添加 */
+    pub trade_fee_rate: f64,
+    /* 交易费率
+                                 * 期权可能还有其他费用，如行权费等，根据需要添加 */
 }
 
 #[derive(Debug, Copy, Clone, PartialOrd, Serialize, Deserialize, PartialEq)]
@@ -51,9 +53,12 @@ impl InstrumentFees
 {
     /// 构造一个新的 [`InstrumentFees`]。
     pub fn new<S>(instrument: S, fees: Fees) -> Self
-        where S: Into<InstrumentKind>
+    where
+        S: Into<InstrumentKind>,
     {
-        Self { instrument_kind: instrument.into(),
-               fees }
+        Self {
+            instrument_kind: instrument.into(),
+            fees,
+        }
     }
 }
