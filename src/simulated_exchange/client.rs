@@ -19,8 +19,8 @@ impl ClientExecution for SimulatedClient {
     const CLIENT: EXCHANGE_KIND = ExchangeKind::Simulated;
     type Config = UnboundedSender<SimulatedEvent>;
 
-    async fn init(request_tx: Self::Config, _: UnboundedSender<AccountEvent>) -> Self {
-        Self { request_tx, local_timestamp: 0 }
+    async fn init(request_tx: Self::Config, _: UnboundedSender<AccountEvent>,local_timestamp:i64) -> Self {
+        Self { request_tx, local_timestamp}
     }
 
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError> {
