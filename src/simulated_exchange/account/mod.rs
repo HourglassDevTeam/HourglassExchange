@@ -144,7 +144,6 @@ where
             balances: self.balances.ok_or("balances is required")?,                         // 检查并获取balances
             positions: self.positions.ok_or("positions are required")?,                     // 检查并获取positions
             orders: self.orders.ok_or("orders are required")?,
-            /* 检查并获取orders */
         })
     }
 }
