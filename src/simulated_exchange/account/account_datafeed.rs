@@ -1,23 +1,23 @@
-use crate::common_skeleton::datafeed::{historical::MarketFeed, MarketFeedDistributor};
+use crate::common_skeleton::datafeed::{historical::HistoricalFeed, MarketFeedDistributor};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 // 鉴于Data的种类可能会很多，规避避开enum的开销和维护成本，使用泛型来定义AccountFeedData类型。
 #[derive(Debug)]
 pub struct AccountMarketFeed<Iter, Event>
     where Iter: Iterator<Item = Event> + Clone,
-          MarketFeed<Iter, Event>: MarketFeedDistributor<Event>
+          HistoricalFeed<Iter, Event>: MarketFeedDistributor<Event>
 {
     // NOTE 每次循环载入数据后atomic_id都会加1.记录数据载入的循环次数
     //      用AtomicU64来实现原子性操作，避免数据竞争，虽然不太可能。
     pub atomic_id: AtomicU64,
-    pub data: MarketFeed<Iter, Event>,
+    pub data: HistoricalFeed<Iter, Event>,
 }
 
 impl<Iter, Event> AccountMarketFeed<Iter, Event>
     where Iter: Iterator<Item = Event> + Clone,
-          MarketFeed<Iter, Event>: MarketFeedDistributor<Event>
+          HistoricalFeed<Iter, Event>: MarketFeedDistributor<Event>
 {
-    pub fn new(market_feed: MarketFeed<Iter, Event>) -> Self
+    pub fn new(market_feed: HistoricalFeed<Iter, Event>) -> Self
     {
         Self { atomic_id: AtomicU64::new(0),
                data: market_feed }
