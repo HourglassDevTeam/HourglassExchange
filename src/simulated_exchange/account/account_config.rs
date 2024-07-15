@@ -8,7 +8,7 @@ pub struct AccountConfig
     pub current_commission_rate: CommissionRates,
 }
 
-// NOTE 增加假设的佣金费率结构
+// NOTE 增加假设的佣金费率结构, 用于模拟交易所账户上。每个账户都有自己的佣金费率。
 #[derive(Clone, Debug)]
 pub struct CommissionRates
 {
