@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub mod account;
-pub mod client;
+pub mod simulated_client;
 mod data_from_clickhouse;
 pub mod instrument_orders;
 pub mod simulated_exchange;
