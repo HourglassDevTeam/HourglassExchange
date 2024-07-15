@@ -21,17 +21,19 @@ use std::{
 use tokio::sync::RwLock;
 
 #[derive(Clone, Debug)]
-pub struct AccountBalances<Data, Event>
+pub struct AccountBalances<Data, Iter, Event>
     where Data: Clone,
-          Event: Clone
+          Event: Clone,
+          Iter: Iterator<Item = Event>
 {
     pub balance_map: HashMap<Token, Balance>,
-    pub account_ref: Option<Arc<RwLock<Account<Data, Event>>>>,
+    pub account_ref: Option<Arc<RwLock<Account<Data, Iter, Event>>>>,
 }
 
-impl<Data, Event> PartialEq for AccountBalances<Data, Event>
+impl<Data, Iter, Event> PartialEq for AccountBalances<Data, Iter, Event>
     where Data: Clone,
-          Event: Clone
+          Event: Clone,
+          Iter: Iterator<Item = Event>
 {
     fn eq(&self, other: &Self) -> bool
     {
@@ -40,9 +42,10 @@ impl<Data, Event> PartialEq for AccountBalances<Data, Event>
     }
 }
 // CONSIDER 在哪个环节打上时间戳？
-impl<Data, Event> AccountBalances<Data, Event>
+impl<Data, Iter, Event> AccountBalances<Data, Iter, Event>
     where Data: Clone,
-          Event: Clone
+          Event: Clone,
+          Iter: Iterator<Item = Event>
 {
     /// 返回指定[`Token`]的[`Balance`]的引用。
     pub fn balance(&self, token: &Token) -> Result<&Balance, ExecutionError>
@@ -58,7 +61,7 @@ impl<Data, Event> AccountBalances<Data, Event>
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
     }
 
-    pub fn set_account(&mut self, account: Arc<RwLock<Account<Data, Event>>>)
+    pub fn set_account(&mut self, account: Arc<RwLock<Account<Data, Iter, Event>>>)
     {
         self.account_ref = Some(account);
     }
@@ -205,9 +208,10 @@ impl<Data, Event> AccountBalances<Data, Event>
     }
 }
 
-impl<Data, Event> Deref for AccountBalances<Data, Event>
+impl<Data, Iter, Event> Deref for AccountBalances<Data, Iter, Event>
     where Data: Clone,
-          Event: Clone
+          Event: Clone,
+          Iter: Iterator<Item = Event>
 {
     type Target = HashMap<Token, Balance>;
 
@@ -217,9 +221,10 @@ impl<Data, Event> Deref for AccountBalances<Data, Event>
     }
 }
 
-impl<Data, Event> DerefMut for AccountBalances<Data, Event>
+impl<Data, Iter, Event> DerefMut for AccountBalances<Data, Iter, Event>
     where Data: Clone,
-          Event: Clone
+          Event: Clone,
+          Iter: Iterator<Item = Event>
 {
     fn deref_mut(&mut self) -> &mut Self::Target
     {

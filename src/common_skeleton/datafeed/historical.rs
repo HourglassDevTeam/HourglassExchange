@@ -8,7 +8,6 @@ use crate::common_skeleton::datafeed::{Feed, FeedGenerator};
 pub struct MarketFeed<Iter, Event>
     where Iter: Iterator<Item = Event>
 {
-    /// struct的字段定义。 market_iterator 公共字段，类型为 Iter，它是一个迭代器。
     pub market_iterator: Iter,
 }
 

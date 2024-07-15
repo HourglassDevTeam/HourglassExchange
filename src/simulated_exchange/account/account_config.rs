@@ -1,4 +1,3 @@
-
 #[derive(Clone, Debug)]
 pub struct AccountConfig
 {
@@ -31,59 +30,64 @@ pub struct CommissionRatesInitiator
 
 // 为了确保 CommissionRatesBuilder 被强制实现，可以将 CommissionRates 结构体的初始化方法封装在 builder 方法中。
 // 这样，用户只能通过 builder 方法来创建 CommissionRates 实例。以下是具体实现：
-impl CommissionRates {
-    pub fn builder() -> CommissionRatesInitiator {
+impl CommissionRates
+{
+    pub fn builder() -> CommissionRatesInitiator
+    {
         CommissionRatesInitiator::new()
-    }}
+    }
+}
 
-
-impl CommissionRatesInitiator {
-    pub fn new() -> Self {
-        CommissionRatesInitiator {
-            spot_maker: None,
-            spot_taker: None,
-            perpetual_open: None,
-            perpetual_close: None,
-            perpetual_funding: None,
-        }
+impl CommissionRatesInitiator
+{
+    pub fn new() -> Self
+    {
+        CommissionRatesInitiator { spot_maker: None,
+                                   spot_taker: None,
+                                   perpetual_open: None,
+                                   perpetual_close: None,
+                                   perpetual_funding: None }
     }
 
-    pub fn spot_maker(mut self, rate: f64) -> Self {
+    pub fn spot_maker(mut self, rate: f64) -> Self
+    {
         self.spot_maker = Some(rate);
         self
     }
 
-    pub fn spot_taker(mut self, rate: f64) -> Self {
+    pub fn spot_taker(mut self, rate: f64) -> Self
+    {
         self.spot_taker = Some(rate);
         self
     }
 
-    pub fn perpetual_open(mut self, rate: f64) -> Self {
+    pub fn perpetual_open(mut self, rate: f64) -> Self
+    {
         self.perpetual_open = Some(rate);
         self
     }
 
-    pub fn perpetual_close(mut self, rate: f64) -> Self {
+    pub fn perpetual_close(mut self, rate: f64) -> Self
+    {
         self.perpetual_close = Some(rate);
         self
     }
 
-    pub fn perpetual_funding(mut self, rate: f64) -> Self {
+    pub fn perpetual_funding(mut self, rate: f64) -> Self
+    {
         self.perpetual_funding = Some(rate);
         self
     }
 
-    pub fn build(self) -> Result<CommissionRates, &'static str> {
-        Ok(CommissionRates {
-            spot_maker: self.spot_maker.ok_or("Spot maker rate is missing")?,
-            spot_taker: self.spot_taker.ok_or("Spot taker rate is missing")?,
-            perpetual_open: self.perpetual_open.ok_or("Perpetual open rate is missing")?,
-            perpetual_close: self.perpetual_close.ok_or("Perpetual close rate is missing")?,
-            perpetual_funding: self.perpetual_funding.ok_or("Perpetual funding rate is missing")?,
-        })
+    pub fn build(self) -> Result<CommissionRates, &'static str>
+    {
+        Ok(CommissionRates { spot_maker: self.spot_maker.ok_or("Spot maker rate is missing")?,
+                             spot_taker: self.spot_taker.ok_or("Spot taker rate is missing")?,
+                             perpetual_open: self.perpetual_open.ok_or("Perpetual open rate is missing")?,
+                             perpetual_close: self.perpetual_close.ok_or("Perpetual close rate is missing")?,
+                             perpetual_funding: self.perpetual_funding.ok_or("Perpetual funding rate is missing")? })
     }
 }
-
 
 // NOTE 更新费率函数的样本：为 AccountConfig 添加一个方法来更新佣金费率
 impl AccountConfig
@@ -137,7 +141,6 @@ pub enum PositionMode
     LongShortMode, // Note long/short, only applicable to Futures/Swap
     NetMode,       // Note one side per token per position
 }
-
 
 // NOTE 本模拟交易所特有，实际情况可能不同
 #[derive(Clone, Debug)]
