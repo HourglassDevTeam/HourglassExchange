@@ -16,7 +16,7 @@ pub struct SimulatedClient {
 
 #[async_trait]
 impl ClientExecution for SimulatedClient {
-    const CLIENT: EXCHANGE_KIND = ExchangeKind::Simulated;
+    const CLIENT = ExchangeKind::Simulated;
     type Config = UnboundedSender<SimulatedEvent>;
 
     async fn init(request_tx: Self::Config, _: UnboundedSender<AccountEvent>,local_timestamp:i64) -> Self {
