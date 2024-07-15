@@ -42,11 +42,13 @@ impl CommissionRatesInitiator
 {
     pub fn new() -> Self
     {
-        CommissionRatesInitiator { spot_maker: None,
-                                   spot_taker: None,
-                                   perpetual_open: None,
-                                   perpetual_close: None,
-                                   perpetual_funding: None }
+        CommissionRatesInitiator {
+            spot_maker: None,
+            spot_taker: None,
+            perpetual_open: None,
+            perpetual_close: None,
+            perpetual_funding: None,
+        }
     }
 
     pub fn spot_maker(mut self, rate: f64) -> Self
@@ -81,11 +83,13 @@ impl CommissionRatesInitiator
 
     pub fn build(self) -> Result<CommissionRates, &'static str>
     {
-        Ok(CommissionRates { spot_maker: self.spot_maker.ok_or("Spot maker rate is missing")?,
-                             spot_taker: self.spot_taker.ok_or("Spot taker rate is missing")?,
-                             perpetual_open: self.perpetual_open.ok_or("Perpetual open rate is missing")?,
-                             perpetual_close: self.perpetual_close.ok_or("Perpetual close rate is missing")?,
-                             perpetual_funding: self.perpetual_funding.ok_or("Perpetual funding rate is missing")? })
+        Ok(CommissionRates {
+            spot_maker: self.spot_maker.ok_or("Spot maker rate is missing")?,
+            spot_taker: self.spot_taker.ok_or("Spot taker rate is missing")?,
+            perpetual_open: self.perpetual_open.ok_or("Perpetual open rate is missing")?,
+            perpetual_close: self.perpetual_close.ok_or("Perpetual close rate is missing")?,
+            perpetual_funding: self.perpetual_funding.ok_or("Perpetual funding rate is missing")?,
+        })
     }
 }
 
@@ -96,31 +100,41 @@ impl AccountConfig
     pub fn update_commission_rate(mut self, commission_rates: &CommissionRates) -> Self
     {
         self.current_commission_rate = match self.commission_level {
-            | CommissionLevel::Lv1 => CommissionRates { spot_maker: commission_rates.spot_maker * 0.9,
-                                                        spot_taker: commission_rates.spot_taker * 0.9,
-                                                        perpetual_open: commission_rates.perpetual_open * 0.9,
-                                                        perpetual_close: commission_rates.perpetual_close * 0.9,
-                                                        perpetual_funding: commission_rates.perpetual_funding * 0.9 },
-            | CommissionLevel::Lv2 => CommissionRates { spot_maker: commission_rates.spot_maker * 0.8,
-                                                        spot_taker: commission_rates.spot_taker * 0.8,
-                                                        perpetual_open: commission_rates.perpetual_open * 0.8,
-                                                        perpetual_close: commission_rates.perpetual_close * 0.8,
-                                                        perpetual_funding: commission_rates.perpetual_funding * 0.8 },
-            | CommissionLevel::Lv3 => CommissionRates { spot_maker: commission_rates.spot_maker * 0.7,
-                                                        spot_taker: commission_rates.spot_taker * 0.7,
-                                                        perpetual_open: commission_rates.perpetual_open * 0.7,
-                                                        perpetual_close: commission_rates.perpetual_close * 0.7,
-                                                        perpetual_funding: commission_rates.perpetual_funding * 0.7 },
-            | CommissionLevel::Lv4 => CommissionRates { spot_maker: commission_rates.spot_maker * 0.6,
-                                                        spot_taker: commission_rates.spot_taker * 0.6,
-                                                        perpetual_open: commission_rates.perpetual_open * 0.6,
-                                                        perpetual_close: commission_rates.perpetual_close * 0.6,
-                                                        perpetual_funding: commission_rates.perpetual_funding * 0.6 },
-            | CommissionLevel::Lv5 => CommissionRates { spot_maker: commission_rates.spot_maker * 0.5,
-                                                        spot_taker: commission_rates.spot_taker * 0.5,
-                                                        perpetual_open: commission_rates.perpetual_open * 0.5,
-                                                        perpetual_close: commission_rates.perpetual_close * 0.5,
-                                                        perpetual_funding: commission_rates.perpetual_funding * 0.5 },
+            | CommissionLevel::Lv1 => CommissionRates {
+                spot_maker: commission_rates.spot_maker * 0.9,
+                spot_taker: commission_rates.spot_taker * 0.9,
+                perpetual_open: commission_rates.perpetual_open * 0.9,
+                perpetual_close: commission_rates.perpetual_close * 0.9,
+                perpetual_funding: commission_rates.perpetual_funding * 0.9,
+            },
+            | CommissionLevel::Lv2 => CommissionRates {
+                spot_maker: commission_rates.spot_maker * 0.8,
+                spot_taker: commission_rates.spot_taker * 0.8,
+                perpetual_open: commission_rates.perpetual_open * 0.8,
+                perpetual_close: commission_rates.perpetual_close * 0.8,
+                perpetual_funding: commission_rates.perpetual_funding * 0.8,
+            },
+            | CommissionLevel::Lv3 => CommissionRates {
+                spot_maker: commission_rates.spot_maker * 0.7,
+                spot_taker: commission_rates.spot_taker * 0.7,
+                perpetual_open: commission_rates.perpetual_open * 0.7,
+                perpetual_close: commission_rates.perpetual_close * 0.7,
+                perpetual_funding: commission_rates.perpetual_funding * 0.7,
+            },
+            | CommissionLevel::Lv4 => CommissionRates {
+                spot_maker: commission_rates.spot_maker * 0.6,
+                spot_taker: commission_rates.spot_taker * 0.6,
+                perpetual_open: commission_rates.perpetual_open * 0.6,
+                perpetual_close: commission_rates.perpetual_close * 0.6,
+                perpetual_funding: commission_rates.perpetual_funding * 0.6,
+            },
+            | CommissionLevel::Lv5 => CommissionRates {
+                spot_maker: commission_rates.spot_maker * 0.5,
+                spot_taker: commission_rates.spot_taker * 0.5,
+                perpetual_open: commission_rates.perpetual_open * 0.5,
+                perpetual_close: commission_rates.perpetual_close * 0.5,
+                perpetual_funding: commission_rates.perpetual_funding * 0.5,
+            },
         };
         self
     }
@@ -164,9 +178,11 @@ impl AccountConfigInitiator
 {
     pub fn new() -> Self
     {
-        Self { margin_mode: None,
-               position_mode: None,
-               commission_level: None }
+        Self {
+            margin_mode: None,
+            position_mode: None,
+            commission_level: None,
+        }
     }
 
     pub fn margin_mode(mut self, margin_mode: MarginMode) -> Self
@@ -191,13 +207,17 @@ impl AccountConfigInitiator
     //      be it simulated or not.
     pub fn initiate(self) -> Result<AccountConfig, &'static str>
     {
-        Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
-                           position_mode: self.position_mode.ok_or("position_mode is required")?,
-                           commission_level: self.commission_level.ok_or("commission_level is required")?,
-                           current_commission_rate: CommissionRates { spot_maker: 0.0,
-                                                                      spot_taker: 0.0,
-                                                                      perpetual_open: 0.0,
-                                                                      perpetual_close: 0.0,
-                                                                      perpetual_funding: 0.0 } })
+        Ok(AccountConfig {
+            margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
+            position_mode: self.position_mode.ok_or("position_mode is required")?,
+            commission_level: self.commission_level.ok_or("commission_level is required")?,
+            current_commission_rate: CommissionRates {
+                spot_maker: 0.0,
+                spot_taker: 0.0,
+                perpetual_open: 0.0,
+                perpetual_close: 0.0,
+                perpetual_funding: 0.0,
+            },
+        })
     }
 }

@@ -84,7 +84,9 @@ pub struct RequestCancel
 }
 
 // 从Id直接生成RequestCancel
-impl<Id> From<Id> for RequestCancel where Id: Into<OrderId>
+impl<Id> From<Id> for RequestCancel
+where
+    Id: Into<OrderId>,
 {
     fn from(id: Id) -> Self
     {
@@ -160,7 +162,9 @@ pub struct Cancelled
     pub id: OrderId,
 }
 
-impl<Id> From<Id> for Cancelled where Id: Into<OrderId>
+impl<Id> From<Id> for Cancelled
+where
+    Id: Into<OrderId>,
 {
     fn from(id: Id) -> Self
     {
@@ -172,7 +176,9 @@ impl<Id> From<Id> for Cancelled where Id: Into<OrderId>
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct OrderId(pub String);
 
-impl<Id> From<Id> for OrderId where Id: Display
+impl<Id> From<Id> for OrderId
+where
+    Id: Display,
 {
     fn from(id: Id) -> Self
     {
@@ -184,11 +190,13 @@ impl From<&Order<RequestOpen>> for Order<Pending>
 {
     fn from(request: &Order<RequestOpen>) -> Self
     {
-        Self { exchange: request.exchange.clone(),
-               instrument: request.instrument.clone(),
-               cid: request.cid,
-               side: request.side,
-               state: Pending }
+        Self {
+            exchange: request.exchange.clone(),
+            instrument: request.instrument.clone(),
+            cid: request.cid,
+            side: request.side,
+            state: Pending,
+        }
     }
 }
 
@@ -196,14 +204,18 @@ impl From<(OrderId, Order<RequestOpen>)> for Order<Open>
 {
     fn from((id, request): (OrderId, Order<RequestOpen>)) -> Self
     {
-        Self { exchange: request.exchange.clone(),
-               instrument: request.instrument.clone(),
-               cid: request.cid,
-               side: request.side,
-               state: Open { id,
-                             price: request.state.price,
-                             size: request.state.size,
-                             filled_quantity: 0.0 } }
+        Self {
+            exchange: request.exchange.clone(),
+            instrument: request.instrument.clone(),
+            cid: request.cid,
+            side: request.side,
+            state: Open {
+                id,
+                price: request.state.price,
+                size: request.state.size,
+                filled_quantity: 0.0,
+            },
+        }
     }
 }
 
@@ -211,10 +223,12 @@ impl From<Order<Open>> for Order<Cancelled>
 {
     fn from(order: Order<Open>) -> Self
     {
-        Self { exchange: order.exchange.clone(),
-               instrument: order.instrument.clone(),
-               cid: order.cid,
-               side: order.side,
-               state: Cancelled { id: order.state.id } }
+        Self {
+            exchange: order.exchange.clone(),
+            instrument: order.instrument.clone(),
+            cid: order.cid,
+            side: order.side,
+            state: Cancelled { id: order.state.id },
+        }
     }
 }

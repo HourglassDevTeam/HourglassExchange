@@ -35,11 +35,13 @@ impl From<MarketEvent<Trade>> for MarketEvent<DataKind>
     fn from(event: MarketEvent<Trade>) -> Self
     {
         // 将 Trade 类型的 MarketEvent 转换为 DataKind::Trade 类型的 MarketEvent
-        Self { exchange_time: event.exchange_time,
-               received_time: event.received_time,
-               exchange: event.exchange,
-               instrument: event.instrument,
-               kind: DataKind::Trade(event.kind) }
+        Self {
+            exchange_time: event.exchange_time,
+            received_time: event.received_time,
+            exchange: event.exchange,
+            instrument: event.instrument,
+            kind: DataKind::Trade(event.kind),
+        }
     }
 }
 
@@ -49,10 +51,12 @@ impl From<MarketEvent<WsTrade>> for MarketEvent<DataKind>
     fn from(event: MarketEvent<WsTrade>) -> Self
     {
         // 将 WsTrade 类型的 MarketEvent 转换为 DataKind::WsTrade 类型的 MarketEvent
-        Self { exchange_time: event.exchange_time,
-               received_time: event.received_time,
-               exchange: event.exchange,
-               instrument: event.instrument,
-               kind: DataKind::WsTrade(event.kind) }
+        Self {
+            exchange_time: event.exchange_time,
+            received_time: event.received_time,
+            exchange: event.exchange,
+            instrument: event.instrument,
+            kind: DataKind::WsTrade(event.kind),
+        }
     }
 }

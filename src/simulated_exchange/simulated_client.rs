@@ -53,7 +53,7 @@ impl ClientExecution for SimulatedClient
             .expect("[UnilinkExecution] : 模拟交易所目前离线 - 发送获取开放订单FetchOrdersOpen请求失败");
         // 从模拟交易所接收开放订单的响应。
         response_rx.await
-                   .expect("[UnilinkExecution] : 模拟交易所目前离线 - 接收获取开放订单 FetchOrdersOpen 响应失败")
+            .expect("[UnilinkExecution] : 模拟交易所目前离线 - 接收获取开放订单 FetchOrdersOpen 响应失败")
     }
 
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>
@@ -65,7 +65,7 @@ impl ClientExecution for SimulatedClient
             .expect("[UnilinkExecution] : 模拟交易所目前离线 - 发送获取账户余额 FetchBalances 请求失败");
         // 从模拟交易所接收账户余额的响应。
         response_rx.await
-                   .expect("[UnilinkExecution] : 模拟交易所目前离线 - 接收获取账户余额 FetchBalances 响应失败")
+            .expect("[UnilinkExecution] : 模拟交易所目前离线 - 接收获取账户余额 FetchBalances 响应失败")
     }
 
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>

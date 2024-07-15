@@ -22,7 +22,9 @@ impl AsRef<str> for Token
     }
 }
 
-impl<S> From<S> for Token where S: Into<String>
+impl<S> From<S> for Token
+where
+    S: Into<String>,
 {
     fn from(input: S) -> Self
     {
@@ -35,7 +37,8 @@ impl Token
     /// Construct a new [`Token`] new type using the provided `Into<Token>` value.
 
     pub fn new<S>(input: S) -> Self
-        where S: Into<String>
+    where
+        S: Into<String>,
     {
         Self(input.into().to_uppercase())
     }
