@@ -13,7 +13,7 @@ pub struct MarketFeed<Iter, Event>
 
 impl<Iter, Event> MarketFeedDistributor<Event> for MarketFeed<Iter, Event> where Iter: Iterator<Item = Event>
 {
-    fn next(&mut self) -> Feed<Event>
+    fn fetch_next(&mut self) -> Feed<Event>
     {
         self.market_iterator.next().map_or(Feed::Finished, Feed::Next)
     }

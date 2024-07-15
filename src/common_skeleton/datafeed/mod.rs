@@ -6,7 +6,7 @@ pub mod live;
 
 pub trait MarketFeedDistributor<Event>
 {
-    fn next(&mut self) -> Feed<Event>;
+    fn fetch_next(&mut self) -> Feed<Event>;
 }
 
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
