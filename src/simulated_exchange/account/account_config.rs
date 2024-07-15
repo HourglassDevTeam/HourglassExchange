@@ -19,9 +19,8 @@ pub struct CommissionRates
     pub perpetual_funding: f64,
 }
 
-
 #[derive(Clone, Debug)]
-pub struct CommissionRatesBuilder
+pub struct CommissionRatesInitiator
 {
     pub spot_maker: Option<f64>,
     pub spot_taker: Option<f64>,
@@ -29,15 +28,18 @@ pub struct CommissionRatesBuilder
     pub perpetual_close: Option<f64>,
     pub perpetual_funding: Option<f64>,
 }
+
+// 为了确保 CommissionRatesBuilder 被强制实现，可以将 CommissionRates 结构体的初始化方法封装在 builder 方法中。
+// 这样，用户只能通过 builder 方法来创建 CommissionRates 实例。以下是具体实现：
 impl CommissionRates {
-    pub fn builder() -> CommissionRatesBuilder {
-        CommissionRatesBuilder::new()
+    pub fn builder() -> CommissionRatesInitiator {
+        CommissionRatesInitiator::new()
     }}
 
 
-impl CommissionRatesBuilder {
+impl CommissionRatesInitiator {
     pub fn new() -> Self {
-        CommissionRatesBuilder {
+        CommissionRatesInitiator {
             spot_maker: None,
             spot_taker: None,
             perpetual_open: None,
