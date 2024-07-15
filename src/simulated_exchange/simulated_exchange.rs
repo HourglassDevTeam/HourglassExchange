@@ -8,8 +8,7 @@ use super::{account::Account, SimulatedEvent};
 pub struct SimulatedExchange<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedEvent>,
     pub account: Account<Data, Iter, Event>,
 }
@@ -17,8 +16,7 @@ pub struct SimulatedExchange<Data, Iter, Event>
 impl<Data, Iter, Event> SimulatedExchange<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     pub fn initiator() -> ExchangeInitiator<Data, Iter, Event>
     {
         ExchangeInitiator::new()
@@ -50,8 +48,7 @@ impl<Data, Iter, Event> SimulatedExchange<Data, Iter, Event>
 impl<Data, Iter, Event> Default for ExchangeInitiator<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     fn default() -> Self
     {
         let (_tx, rx) = mpsc::unbounded_channel();
@@ -63,8 +60,7 @@ impl<Data, Iter, Event> Default for ExchangeInitiator<Data, Iter, Event>
 pub struct ExchangeInitiator<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedEvent>>,
     account: Option<Account<Data, Iter, Event>>,
 }
@@ -72,8 +68,7 @@ pub struct ExchangeInitiator<Data, Iter, Event>
 impl<Data, Iter, Event> ExchangeInitiator<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     pub fn new() -> Self
     {
         Self { ..Default::default() }

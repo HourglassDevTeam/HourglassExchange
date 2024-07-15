@@ -24,8 +24,7 @@ use tokio::sync::RwLock;
 pub struct AccountBalances<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     pub balance_map: HashMap<Token, Balance>,
     pub account_ref: Option<Arc<RwLock<Account<Data, Iter, Event>>>>,
 }
@@ -33,8 +32,7 @@ pub struct AccountBalances<Data, Iter, Event>
 impl<Data, Iter, Event> PartialEq for AccountBalances<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     fn eq(&self, other: &Self) -> bool
     {
         self.balance_map == other.balance_map
@@ -45,8 +43,7 @@ impl<Data, Iter, Event> PartialEq for AccountBalances<Data, Iter, Event>
 impl<Data, Iter, Event> AccountBalances<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     /// 返回指定[`Token`]的[`Balance`]的引用。
     pub fn balance(&self, token: &Token) -> Result<&Balance, ExecutionError>
     {
@@ -211,8 +208,7 @@ impl<Data, Iter, Event> AccountBalances<Data, Iter, Event>
 impl<Data, Iter, Event> Deref for AccountBalances<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     type Target = HashMap<Token, Balance>;
 
     fn deref(&self) -> &Self::Target
@@ -224,8 +220,7 @@ impl<Data, Iter, Event> Deref for AccountBalances<Data, Iter, Event>
 impl<Data, Iter, Event> DerefMut for AccountBalances<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     fn deref_mut(&mut self) -> &mut Self::Target
     {
         &mut self.balance_map

@@ -33,8 +33,7 @@ pub mod account_orders;
 pub struct Account<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     pub exchange_timestamp: i64,                                    // NOTE 日后可以用无锁结构原子锁包裹
     pub data: Arc<RwLock<AccountMarketFeed<Iter, Event>>>,          // 帐户数据
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
@@ -49,8 +48,7 @@ pub struct Account<Data, Iter, Event>
 pub struct AccountInitiator<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     data: Option<Arc<RwLock<AccountMarketFeed<Iter, Event>>>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
     market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
@@ -64,8 +62,7 @@ pub struct AccountInitiator<Data, Iter, Event>
 impl<Data, Iter, Event> AccountInitiator<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     pub fn new() -> Self
     {
         AccountInitiator { data: None,
@@ -145,8 +142,7 @@ impl<Data, Iter, Event> AccountInitiator<Data, Iter, Event>
 impl<Data, Iter, Event> Account<Data, Iter, Event>
     where Data: Clone,
           Event: Clone,
-          Iter: Iterator<Item = Event>
-{
+    Iter: Iterator<Item = Event> +Clone{
     pub fn initiate() -> AccountInitiator<Data, Iter, Event>
     {
         AccountInitiator::new()
