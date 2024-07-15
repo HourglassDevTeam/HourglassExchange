@@ -30,7 +30,6 @@ where
     where
         IntoIter: IntoIterator<Item=Event, IntoIter=Iter>,
     {
-        // 使用提供的事件迭代器创建一个新的 `MarketFeed` 实例
         Self { market_iterator: market_iterator.into_iter() }
     }
 }
