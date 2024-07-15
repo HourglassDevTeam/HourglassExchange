@@ -15,8 +15,7 @@ impl TokenBalance
     pub fn new<S>(token: S, balance: Balance) -> Self
         where S: Into<Token>
     {
-        Self { token: token.into(),
-               balance }
+        Self { token: token.into(), balance }
     }
 }
 

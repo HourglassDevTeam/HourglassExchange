@@ -1,5 +1,5 @@
 edition = "2021"
-max_width = 150
+max_width = 180
 binop_separator = "Front"
 blank_lines_lower_bound = 0
 brace_style = "AlwaysNextLine"

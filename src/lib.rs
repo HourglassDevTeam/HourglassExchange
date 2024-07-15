@@ -16,12 +16,12 @@ use crate::{
     error::ExecutionError,
 };
 
-pub mod error;
-pub mod simulated_exchange;
 mod binance_exchange;
 pub mod common_skeleton;
 pub mod data_subscriber;
+pub mod error;
 pub mod okex_exchange;
+pub mod simulated_exchange;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
@@ -31,7 +31,7 @@ pub trait ClientExecution
     // NOTE 这个类型关联项表示配置类型，不同的交易所可能需要不同的配置。例如，API 密钥、API 密码、或其他初始化参数等等。
     type Config;
 
-    async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<AccountEvent>,local_timestamp:i64) -> Self;
+    async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<AccountEvent>, local_timestamp: i64) -> Self;
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>;
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>;
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>;
