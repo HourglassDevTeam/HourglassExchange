@@ -18,7 +18,7 @@ pub struct CommissionRates
     pub perpetual_funding: f64,
 }
 
-// NOTE 更新费率函数的样本：为 AccountConfig 添加一个关联函数来更新佣金费率
+// NOTE 更新费率函数的样本：为 AccountConfig 添加一个方法来更新佣金费率
 impl AccountConfig {
     // 更新当前佣金费率
     pub fn update_commission_rate(mut self, commission_rates: &CommissionRates) -> Self {
