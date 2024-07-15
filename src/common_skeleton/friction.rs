@@ -37,8 +37,8 @@ pub struct PerpetualFees
 pub struct OptionFees
 {
     pub trade_fee_rate: f64,
-    /* 交易费率
-                                 * 期权可能还有其他费用，如行权费等，根据需要添加 */
+    // 交易费率
+    // 期权可能还有其他费用，如行权费等，根据需要添加
 }
 
 #[derive(Debug, Copy, Clone, PartialOrd, Serialize, Deserialize, PartialEq)]
@@ -53,12 +53,9 @@ impl InstrumentFees
 {
     /// 构造一个新的 [`InstrumentFees`]。
     pub fn new<S>(instrument: S, fees: Fees) -> Self
-    where
-        S: Into<InstrumentKind>,
+        where S: Into<InstrumentKind>
     {
-        Self {
-            instrument_kind: instrument.into(),
-            fees,
-        }
+        Self { instrument_kind: instrument.into(),
+               fees }
     }
 }
