@@ -7,7 +7,8 @@ pub struct AccountMarketFeed<Iter, Event>
     where Iter: Iterator<Item = Event> + Clone,
           MarketFeed<Iter, Event>: MarketFeedDistributor<Event>
 {
-    // NOTE 每次循环载入数据后batch_id都会加1
+    // NOTE 每次循环载入数据后atomic_id都会加1.记录数据载入的循环次数
+    //      用AtomicU64来实现原子性操作
     pub atomic_id: AtomicU64,
     pub data: MarketFeed<Iter, Event>,
 }
