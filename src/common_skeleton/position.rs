@@ -6,7 +6,7 @@
 pub struct AccountPositions
 {
     margin_pos: Vec<MarginPosition>,  // useless in backtest
-    swap_pos: Vec<SwapPosition>,      // Note useful, and we gonna build it
+    swap_pos: Vec<SwapPosition>,      // Note useful, and we're gonna build it
     futures_pos: Vec<MarginPosition>, // useless
     option_pos: Vec<OptionPosition>,  // useless
 }
