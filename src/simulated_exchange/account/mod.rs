@@ -59,7 +59,7 @@ pub struct AccountInitiator<Data, Event>
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
-impl<Data, Event> AccountInitiator<Data, Event>
+impl<Data, Event> AccountInitiator<Data, Evenct>
     where Data: Clone,
           Event: Clone
 {

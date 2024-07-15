@@ -1,4 +1,5 @@
-// FIXME : code below needs to be restructured and fitted to the framework. need to provide enums.
+// FIXME : code below needs to be restructured and fitted to the framework. need to provide enums?
+// CONSIDER: can these positions coexist, if so enums might not be ideal.
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
