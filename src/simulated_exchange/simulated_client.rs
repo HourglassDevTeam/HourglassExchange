@@ -27,7 +27,7 @@ pub enum SimulatedClientEvent
 
 #[async_trait]
 impl ClientExecution for SimulatedClient {
-    // very naturally, the client's kind is determined by the exchange.
+    // very naturally, the client's kind is determined by and aligned the exchange.
     const CLIENT_KIND: ExchangeKind = ExchangeKind::Simulated;
     // in our case the 'optional' config parameter in the simulated exchange is an UnboundedSender
     type Config = UnboundedSender<SimulatedClientEvent>;
