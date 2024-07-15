@@ -124,10 +124,20 @@ impl AccountConfigInitiator
         self
     }
 
+    // NOTE initiated as all zeros. this could be replaced with actual values fetched from the exchange,
+    //      be it simulated or not.
     pub fn initiate(self) -> Result<AccountConfig, &'static str>
     {
         Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
                            position_mode: self.position_mode.ok_or("position_mode is required")?,
-                           commission_level: self.commission_level.ok_or("commission_level is required")? })
+                           commission_level: self.commission_level.ok_or("commission_level is required")?,
+            current_commission_rate: CommissionRates {
+                spot_maker: 0.0,
+                spot_taker: 0.0,
+                perpetual_open: 0.0,
+                perpetual_close: 0.0,
+                perpetual_funding: 0.0,
+            },
+        })
     }
 }
