@@ -124,7 +124,7 @@ impl AccountConfigInitiator
         self
     }
 
-    // NOTE initiated as all zeros. this could be replaced with actual values fetched from the exchange,
+    // NOTE CommissionRates here are initiated as all zeros. this could be replaced with actual values fetched from the exchange,
     //      be it simulated or not.
     pub fn initiate(self) -> Result<AccountConfig, &'static str>
     {
