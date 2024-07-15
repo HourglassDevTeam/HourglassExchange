@@ -17,9 +17,7 @@ use crate::{
 };
 
 pub mod error;
-// 模拟交易所的实现
 pub mod simulated_exchange;
-// 交易所的通用骨架模块
 mod binance_exchange;
 pub mod common_skeleton;
 pub mod data_subscriber;
@@ -63,6 +61,7 @@ impl Display for Exchange
 pub enum ExchangeKind
 {
     Simulated,
+    Binance,
     Okex,
 }
 
@@ -89,6 +88,7 @@ impl ExchangeKind
         match self {
             | ExchangeKind::Simulated => "simulated_exchange",
             | ExchangeKind::Okex => "ftx",
+            | ExchangeKind::Binance => "binance",
         }
     }
 }
