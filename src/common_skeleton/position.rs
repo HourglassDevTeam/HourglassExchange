@@ -1,4 +1,4 @@
-// FIXME : code below needs to be restructured and fitted to the framework.
+// FIXME : code below needs to be restructured and fitted to the framework. need to provide enums.
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
