@@ -34,7 +34,7 @@ pub struct Account<Data, Event>
     where Data: Clone,
           Event: Clone
 {
-    pub exchange_timestamp: i64, //NOTE 日后可以用无锁结构原子锁包裹
+    pub exchange_timestamp: i64,                                    // NOTE 日后可以用无锁结构原子锁包裹
     pub data: Arc<RwLock<AccountDataFeed<Data>>>,                   // 帐户数据
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
@@ -59,7 +59,7 @@ pub struct AccountInitiator<Data, Event>
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
-impl<Data, Event> AccountInitiator<Data, Evenct>
+impl<Data, Event> AccountInitiator<Data, Event>
     where Data: Clone,
           Event: Clone
 {
