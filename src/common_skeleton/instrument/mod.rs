@@ -1,6 +1,9 @@
-use crate::common_skeleton::{instrument::kind::InstrumentKind, token::Token};
-use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+
+use serde::{Deserialize, Serialize};
+
+use crate::common_skeleton::{instrument::kind::InstrumentKind, token::Token};
+
 pub mod kind;
 
 // 定义Instrument结构体，用于表示金融工具。

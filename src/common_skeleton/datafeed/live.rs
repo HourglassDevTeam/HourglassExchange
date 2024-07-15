@@ -1,5 +1,6 @@
-use crate::common_skeleton::datafeed::{Feed, MarketFeedDistributor};
 use tokio::sync::mpsc;
+
+use crate::common_skeleton::datafeed::{Feed, MarketFeedDistributor};
 
 #[derive(Debug)]
 pub struct LiveFeed<Event>

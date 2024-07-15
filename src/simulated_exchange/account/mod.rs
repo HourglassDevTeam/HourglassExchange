@@ -20,7 +20,7 @@ use crate::{
     error::ExecutionError,
     simulated_exchange::account::{
         account_datafeed::AccountMarketFeed,
-        account_latency::{fluctuate_latency, AccountLatency},
+        account_latency::{AccountLatency, fluctuate_latency},
     },
 };
 
