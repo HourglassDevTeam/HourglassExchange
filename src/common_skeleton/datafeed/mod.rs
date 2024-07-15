@@ -4,7 +4,7 @@ pub mod event;
 pub mod historical;
 pub mod live;
 
-pub trait FeedGenerator<Event>
+pub trait MarketFeedDistributor<Event>
 {
     fn next(&mut self) -> Feed<Event>;
 }
