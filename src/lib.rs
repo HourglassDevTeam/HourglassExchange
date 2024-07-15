@@ -31,15 +31,12 @@ pub trait ClientExecution
 {
     const CLIENT: ExchangeKind;
     type Config;
-    /// 使用提供的[`Self::Config`]和[`AccountEvent`]发送器初始化一个新的[`ClientExecution`]。
-    /// 通常包括启动一个异步WebSocket事件循环以从交易所接收[`AccountEvent`]，
-    /// 同时返回HTTP客户端`Self`。
+
     async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<AccountEvent>) -> Self;
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>;
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>;
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>;
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>>;
-    /// 取消所有账户中的[`Order<Open>`]（未完成订单）。
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>;
 }
 
@@ -66,7 +63,7 @@ impl Display for Exchange
 pub enum ExchangeKind
 {
     Simulated,
-    Ftx,
+    Okex,
 }
 
 impl From<ExchangeKind> for Exchange
@@ -91,7 +88,7 @@ impl ExchangeKind
     {
         match self {
             | ExchangeKind::Simulated => "simulated_exchange",
-            | ExchangeKind::Ftx => "ftx",
+            | ExchangeKind::Okex => "ftx",
         }
     }
 }
