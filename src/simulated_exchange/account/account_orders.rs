@@ -23,10 +23,12 @@ impl AccountOrders
     /// NOTE 在新的场景下怎么初始化比较好？
     pub fn new(instruments: Vec<Instrument>) -> Self
     {
-        Self { request_counter: 0,
-               all: instruments.into_iter()
-                               .map(|instrument| (instrument, InstrumentOrders::default()))
-                               .collect() }
+        Self {
+            request_counter: 0,
+            all: instruments.into_iter()
+                .map(|instrument| (instrument, InstrumentOrders::default()))
+                .collect(),
+        }
     }
 
     /// 返回指定 [`Instrument`] 的客户端 [`InstrumentOrders`] 的可变引用。

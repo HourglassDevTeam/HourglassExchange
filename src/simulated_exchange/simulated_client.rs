@@ -1,9 +1,8 @@
-
 use async_trait::async_trait;
 use mpsc::UnboundedSender;
 use tokio::sync::{mpsc, oneshot};
 
-use crate::{common_skeleton::order::{Cancelled, Open, Order}, simulated_exchange::ClientEvent, AccountEvent, ExecutionError, RequestCancel, RequestOpen, ExchangeKind, ClientExecution};
+use crate::{AccountEvent, ClientExecution, common_skeleton::order::{Cancelled, Open, Order}, ExchangeKind, ExecutionError, RequestCancel, RequestOpen};
 use crate::common_skeleton::balance::TokenBalance;
 use crate::common_skeleton::instrument::Instrument;
 use crate::common_skeleton::trade::Trade;
@@ -29,12 +28,12 @@ pub enum SimulatedClientEvent
 #[async_trait]
 impl ClientExecution for SimulatedClient {
     // very naturally, the client's kind is determined by the exchange.
-    const CLIENT_KIND :ExchangeKind = ExchangeKind::Simulated;
+    const CLIENT_KIND: ExchangeKind = ExchangeKind::Simulated;
     // in our case the 'optional' config parameter in the simulated exchange is an UnboundedSender
     type Config = UnboundedSender<SimulatedClientEvent>;
 
-    async fn init(request_tx: Self::Config, _: UnboundedSender<AccountEvent>,local_timestamp:i64) -> Self {
-        Self { request_tx, local_timestamp}
+    async fn init(request_tx: Self::Config, _: UnboundedSender<AccountEvent>, local_timestamp: i64) -> Self {
+        Self { request_tx, local_timestamp }
     }
 
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError> {
