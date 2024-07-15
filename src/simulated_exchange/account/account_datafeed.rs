@@ -9,6 +9,7 @@ where
     Iter: Iterator<Item=Event> + Clone,
     MarketFeed<Iter, Event>: MarketFeedDistributor<Event>,
 {
+    // NOTE 每次循环载入数据后batch_id都会加1
     pub batch_id: Uuid,
     pub data: MarketFeed<Iter, Event>,
 }
