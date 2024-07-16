@@ -4,8 +4,6 @@ variables:
   PCF_DEPLOY_BRANCH: master
   PCF_COMMIT_USER_NAME: arthur
   PCF_COMMIT_USER_EMAIL: arthur@ciuyat.com
-  SSH_USER: "gitlab-runner" # 你的SSH用户名
-  SSH_HOST: "192.168.110.130" # 你的SSH主机IP地址
 
 stages:
   - mergeCode
@@ -55,17 +53,38 @@ mergeCode:
     ## Checkout and update branch
     ##
     - git checkout -B $PCF_DEPLOY_BRANCH
+    
+    ##
+    ## Fetch full history from origin to avoid shallow update issues
+    ##
     - git fetch origin 
+    
+    ##
+    ## Pull latest changes from origin and rebase
+    ##
+    - git pull --rebase origin $PCF_DEPLOY_BRANCH
+    
+    ##
+    ## Pull latest changes from gitee and rebase
+    ##
     - git fetch gitee 
-
+    - git pull --rebase gitee $PCF_DEPLOY_BRANCH || true
+    
+    ##
+    ## Check if there are changes to push to origin
+    ##
+    - |
+      if [ -z "$(git status --porcelain)" ]; then
+        echo "No changes to push to origin"
+      else
+        echo "Pushing changes to origin"
+        git push origin $PCF_DEPLOY_BRANCH
+      fi
+    
+    ##
     ## Force push changes to gitee
     ##
-    - git push gitee $PCF_DEPLOY_BRANCH
-
-    ##
-    ## SSH into the server
-    ##
-    ## ssh -tt -i /home/gitlab-runner/.ssh/id_rsa -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST
+    - git push gitee $PCF_DEPLOY_BRANCH --force
 
   tags:
     - sync_task
