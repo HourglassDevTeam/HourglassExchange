@@ -14,8 +14,6 @@ stages:
     - git config --global user.name "arthur"
     - git checkout master
     - git status
-    - git add -A
-    - git commit -m "Force adding all changes"
     - git fetch gitee
     - git reset --hard gitee/master
     - git add -A
