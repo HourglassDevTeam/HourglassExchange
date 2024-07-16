@@ -1,52 +1,31 @@
-before_script:
-  - timedatectl set-timezone Asia/Shanghai
-  - git config --global user.name 'arthur' 
-  - git config --global user.email 'arthur@ciuyat.com'
-  - git remote set-url origin http://arthur:$PERSONAL_ACCESS_TOKEN@192.168.110.130/arthur/unilink_execution.git
-  - git remote set-url gitee https://arthur19q3:the17thangel@gitee.com/unilink_1/UnilinkExecution.git
-
-
 variables:
-  # GIT_TRACE: "1"
-  # GIT_CURL_VERBOSE: "1"
-  TZ: "Asia/Shanghai"
+  PCF_DEPLOY_REPO: http://arthur:$PERSONAL_ACCESS_TOKEN@192.168.110.130/arthur/unilink_execution.git
+  PCF_DEPLOY_BRANCH: master
+  PCF_COMMIT_USER_NAME: arthur
+  PCF_COMMIT_USER_EMAIL: arthur@ciuyat.com
 
 stages:
-  - sync
+  - mergeCode
 
-.sync_template: &sync_template
+mergeCode:
+  stage: mergeCode
   script:
-    - whoami
-    - timedatectl set-timezone Asia/Shanghai
-    - ls -l /home/gitlab-runner/.ssh
-    - ssh-keyscan gitee.com >> /home/gitlab-runner/.ssh/known_hosts
-    - git config --global user.name 'arthur' 
-    - git config --global user.email 'arthur@ciuyat.com'
-    - git log gitee/master..HEAD
-    - git checkout master
-    - git status 
-    - pwd
-    - git fetch gitee
-    - git push -f gitee master
-
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$SSH_PRIVATE_KEY") # 这里引入的是我们之前在CI/CD中添加的SSH私钥
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    # 下面的步骤不难理解，这里就不多做解释了
+    - git config --global user.email "$PCF_COMMIT_USER_EMAIL"
+    - git config --global user.name "$PCF_COMMIT_USER_NAME"
+    - git remote remove origin || true
+    - git remote remove gitlab || true
+    - git remote add origin "$PCF_DEPLOY_REPO"
+    - git remote set-url origin http://arthur:$PERSONAL_ACCESS_TOKEN@192.168.110.130/arthur/unilink_execution.git
+    - git remote set-url gitee https://arthur19q3:the17thangel@gitee.com/unilink_1/UnilinkExecution.git
+    - git remote add gitlab "$CI_PROJECT_URL"
+    - git checkout -B $PCF_DEPLOY_BRANCH
+    - git pull origin $PCF_DEPLOY_BRANCH
+    - git pull gitlab $CI_COMMIT_REF_NAME
+    - git push origin $PCF_DEPLOY_BRANCH
   tags:
     - sync_task
-
-sync_to_gitee:
-  stage: sync
-  <<: *sync_template
-  only:
-    - master
-
-sync_schedule:
-  stage: sync
-  <<: *sync_template
-  only:
-    - pushes
-  before_script:
-      - git clean -ffdx
-      - git reset --hard
-    
-
-
-
