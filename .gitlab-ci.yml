@@ -13,7 +13,6 @@ stages:
 .sync_template: &sync_template
   script:
     - whoami
-    - echo $TZ > /etc/timezone
     - timedatectl set-timezone Asia/Shanghai
     - ls -l /home/gitlab-runner/.ssh
     - ssh-keyscan gitee.com >> /home/gitlab-runner/.ssh/known_hosts
