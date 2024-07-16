@@ -7,6 +7,8 @@ stages:
 
 .sync_template: &sync_template
   script:
+    - whoami
+    - ls -l /home/gitlab-runner/.ssh
     - echo "$GIT_SSH_PRIVATE_KEY" | tr -d '\r' > /home/gitlab-runner/.ssh/id_rsa
     - chmod 600 /home/gitlab-runner/.ssh/id_rsa
     - ssh-keyscan gitee.com >> /home/gitlab-runner/.ssh/known_hosts
