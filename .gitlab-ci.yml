@@ -43,7 +43,7 @@ mergeCode:
     - git remote remove origin || true
     - git remote remove gitlab || true
     - git remote add origin "$PCF_DEPLOY_REPO"
-    - git remote set-url origin http://arthur:$PERSONAL_ACCESS_TOKEN@192.168.110.130/arthur/unilink_execution.git
+    - git remote set-url origin http://arthur:the17thangel@192.168.110.130/arthur/unilink_execution.git
     - git remote set-url gitee https://arthur19q3:the17thangel@gitee.com/unilink_1/UnilinkExecution.git
     - git remote add gitlab "$CI_PROJECT_URL"
     
