@@ -7,7 +7,8 @@ edition = "2021"
 # Logging
 tracing = "0.1.36"
 
-
+# Data Source
+clickhouse = "0.11.6"
 # Rand
 rand_distr = "0.4.3"
 # Async
