@@ -65,7 +65,7 @@ mergeCode:
     ##
     ## SSH into the server
     ##
-    - ssh -tt -i /home/gitlab-runner/.ssh/id_rsa -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST
+    ## ssh -tt -i /home/gitlab-runner/.ssh/id_rsa -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST
 
   tags:
     - sync_task
