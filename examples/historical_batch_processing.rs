@@ -1,3 +1,5 @@
+// build an example to demonstrate querying
+
 use unilink_execution::simulated_exchange::load_from_clickhouse::queries_operations::ClickHouseClient;
 
 #[tokio::main]
