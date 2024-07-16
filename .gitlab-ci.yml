@@ -14,6 +14,7 @@ stages:
 mergeCode:
   stage: mergeCode
   script:
+    -  timedatectl set-timezone Asia/Shanghai
     - echo "Starting mergeCode stage"
     ##
     ## Run ssh-agent (inside the build environment)
@@ -43,7 +44,7 @@ mergeCode:
     ## Debugging: Print the remotes to ensure correct URLs
     ##
     - git remote -v
-    
+    - 
     ##
     ## Remove existing remotes and add new ones
     ##
