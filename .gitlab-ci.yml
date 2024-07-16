@@ -13,6 +13,7 @@ stages:
     - git config --global user.email "arthur@ciuyat.com"
     - git config --global user.name "arthur"
     - git checkout master
+    - git add -A
     - git remote -v
     - git branch -a
     - git fetch gitee
