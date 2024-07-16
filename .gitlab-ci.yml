@@ -26,7 +26,7 @@ stages:
     - git checkout master
     - git status 
     - pwd
-    - git fetch gitee --all
+    - git fetch gitee
     - git push -f gitee master
 
   tags:
