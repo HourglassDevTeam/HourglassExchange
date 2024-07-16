@@ -13,8 +13,8 @@ stages:
     - git config --global user.email "arthur@ciuyat.com"
     - git config --global user.name "arthur"
     - git checkout master
-    - git add .
-    - git status
+    - git fetch gitee
+    - git diff gitee/master
     - git push -f --verbose gitee master
   tags:
     - sync_task
