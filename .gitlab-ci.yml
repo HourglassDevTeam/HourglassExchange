@@ -65,6 +65,7 @@ mergeCode:
     - git pull origin $PCF_DEPLOY_BRANCH
     - git pull origin $CI_COMMIT_REF_NAME
     - git push origin $PCF_DEPLOY_BRANCH
+    - git log
     - git push gitee $PCF_DEPLOY_BRANCH
 
     ##
