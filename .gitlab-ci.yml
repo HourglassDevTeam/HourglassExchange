@@ -18,12 +18,12 @@ stages:
     - ssh-keyscan gitee.com >> /home/gitlab-runner/.ssh/known_hosts
     - git config --global user.email "arthur@ciuyat.com"
     - git config --global user.name "arthur"
-    - git fetch gitee
     - git status -u
     - git diff
     - git reset --hard gitee/master
     - git remote remove gitee
     - git remote add https://gitee.com/unilink_1/UnilinkExecution.git
+    - git fetch gitee
     - git checkout master
     - git push -f gitee master
     - git log gitee/master..HEAD
