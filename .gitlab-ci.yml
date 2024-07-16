@@ -39,6 +39,5 @@ sync_schedule:
     - pushes
   before_script:
     - git remote set-url -add origin http://arthur:$PERSONAL_ACCESS_TOKEN@192.168.110.130/arthur/unilink_execution.git
-    - git remote set-url -add gitee http://arthur:$GITEE_ACCESS_TOKEN@gitee.com/unilink_1/UnilinkExecution.git
 
 
