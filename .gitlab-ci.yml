@@ -1,4 +1,6 @@
 before_script:
+  - git config --global user.name 'arthur' 
+  - git config --global user.email 'arthur@ciuyat.com'
   - git remote set-url origin http://arthur:$PERSONAL_ACCESS_TOKEN@192.168.110.130/arthur/unilink_execution.git
   - git remote set-url gitee https://gitee.com/unilink_1/UnilinkExecution.git
 
