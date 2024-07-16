@@ -17,7 +17,7 @@ stages:
     - git remote -v
     - git branch -a
     - git fetch gitee
-    - git diff gitee/master
+    - git diff --name-only gitee/master
     - git push -f --verbose gitee master
   tags:
     - sync_task
