@@ -3,6 +3,9 @@ variables:
   PCF_DEPLOY_BRANCH: master
   PCF_COMMIT_USER_NAME: arthur
   PCF_COMMIT_USER_EMAIL: arthur@ciuyat.com
+  PEM_FILE: "/tmp/id_rsa.pem" # 临时存储私钥的文件路径
+  SSH_USER: "gitlab-runner" # 你的SSH用户名
+  SSH_HOST: "192.168.110.130" # 你的SSH主机IP地址
 
 stages:
   - mergeCode
@@ -11,37 +14,50 @@ mergeCode:
   stage: mergeCode
   script:
     ##
+    ## Run ssh-agent (inside the build environment)
     ##
     - eval $(ssh-agent -s)
-
+    
     ##
-    ## Add the SSH key stored in SSH_PRIVATE_KEY variable to the agent store
+    ## Add the SSH key stored in SSH_PRIVATE_KEY variable to a file and set permissions
     ##
-    - whoami
-    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > /tmp/id_rsa
-    - chmod 600 /tmp/id_rsa
-    - ssh-add /tmp/id_rsa
+    - echo "$SSH_PRIVATE_KEY" > $PEM_FILE
+    - chmod 600 $PEM_FILE
 
     ##
     ## Optionally disable host key checking. Be aware that by adding that
     ## you are susceptible to man-in-the-middle attacks.
-    ## WARNING: Use this only with the Docker executor, if you use it with shell
-    ## you will overwrite your user's SSH config.
     ##
     - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
     
+    ##
+    ## Configure git
+    ##
     - git config --global user.email "$PCF_COMMIT_USER_EMAIL"
     - git config --global user.name "$PCF_COMMIT_USER_NAME"
+    
+    ##
+    ## Remove existing remotes and add new ones
+    ##
     - git remote remove origin || true
     - git remote remove gitlab || true
     - git remote add origin "$PCF_DEPLOY_REPO"
     - git remote set-url origin http://arthur:$PERSONAL_ACCESS_TOKEN@192.168.110.130/arthur/unilink_execution.git
     - git remote set-url gitee https://arthur19q3:the17thangel@gitee.com/unilink_1/UnilinkExecution.git
     - git remote add gitlab "$CI_PROJECT_URL"
+    
+    ##
+    ## Checkout and update branch
+    ##
     - git checkout -B $PCF_DEPLOY_BRANCH
     - git pull origin $PCF_DEPLOY_BRANCH
     - git pull gitlab $CI_COMMIT_REF_NAME
     - git push origin $PCF_DEPLOY_BRANCH
+
+    ##
+    ## SSH into the server
+    ##
+    - ssh -tt -i $PEM_FILE -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST
   tags:
     - sync_task # Gitlab Runner注册时，设置的tag
