@@ -370,11 +370,7 @@ impl ClickHouseClient {
     }
 
     pub async fn query_union_table(client: &ClickHouseClient, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<WsTrade>, clickhouse::error::Error> {
-        let table_name = match exchange {
-            "okex" => format!("{}_{}_{}_union_{}_{}", exchange, instrument, channel, date, instrument.to_uppercase()),
-            "binance" => format!("{}_{}_{}_union_{}", exchange, instrument, channel, date),
-            _ => return Err(Error::InvalidParams("Unsupported exchange".into())),
-        };
+        let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
         let database = format!("{}_{}_{}", exchange, instrument, channel);
         let query = format!("SELECT * FROM {}.{}", database, table_name);
         println!("[AlgoBacktest] : Executing query: {}", query);
