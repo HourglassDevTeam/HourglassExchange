@@ -13,14 +13,8 @@ mergeCode:
   script:
     - echo "Starting mergeCode stage"
     
-    ##
-    ## Run ssh-agent (inside the build environment)
-    ##
     - eval $(ssh-agent -s)
     
-    ##
-    ## Add the existing SSH key to the agent
-    ##
     - ssh-add /home/gitlab-runner/.ssh/id_rsa
 
     ##
