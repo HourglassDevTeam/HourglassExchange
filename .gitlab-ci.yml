@@ -60,7 +60,7 @@ mergeCode:
 
     ## Force push changes to gitee
     ##
-    - git push gitee $PCF_DEPLOY_BRANCH --force
+    - git push gitee $PCF_DEPLOY_BRANCH
 
     ##
     ## SSH into the server
