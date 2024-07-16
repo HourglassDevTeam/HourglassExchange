@@ -1,5 +1,5 @@
 variables:
-  PCF_DEPLOY_REPO: "http://arthur:the17thangel@192.168.110.130/arthur/unilink_execution.git"
+  PCF_DEPLOY_REPO: "http://arthur:${PERSONAL_ACCESS_TOKEN}@192.168.110.130/arthur/unilink_execution.git"
   GITEE_REPO: "https://arthur19q3:the17thangel@gitee.com/unilink_1/UnilinkExecution.git"
   PCF_DEPLOY_BRANCH: master
   PCF_COMMIT_USER_NAME: arthur
@@ -40,17 +40,12 @@ mergeCode:
     - git config --global user.name "$PCF_COMMIT_USER_NAME"
     
     ##
-    ## Debugging: Print the remotes to ensure correct URLs
-    ##    
-    ##
     ## Remove existing remotes and add new ones
     ##
     - git remote remove origin || true
     - git remote remove gitee || true
-    - git remote remove gitlab || true
     - git remote add origin "$PCF_DEPLOY_REPO"
     - git remote add gitee "$GITEE_REPO"
-    - git ls-remote gitee
     
     ##
     ## Debugging: Print the remotes again to ensure they are set correctly
@@ -67,7 +62,7 @@ mergeCode:
     ##
     ## Pull latest changes from gitee before pushing
     ##
-    - git pull gitee $PCF_DEPLOY_BRANCH || git pull gitee $PCF_DEPLOY_BRANCH 
+    - git pull --rebase gitee $PCF_DEPLOY_BRANCH
     - git push origin $PCF_DEPLOY_BRANCH
     - git push gitee $PCF_DEPLOY_BRANCH --force
 
