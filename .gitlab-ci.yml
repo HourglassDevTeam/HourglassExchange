@@ -22,9 +22,9 @@ stages:
     - git config --global user.name 'arthur' 
     - git config --global user.email 'arthur@ciuyat.com'
     - git fetch gitee
+    - git log gitee/master..HEAD
     - git checkout master
     - git push -f gitee master
-    - git log gitee/master..HEAD
 
   tags:
     - sync_task
