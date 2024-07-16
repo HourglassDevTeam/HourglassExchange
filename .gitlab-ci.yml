@@ -23,6 +23,7 @@ stages:
     - git diff
     - git reset --hard gitee/master
     - git remote remove gitee
+    - git remote add https://gitee.com/unilink_1/UnilinkExecution.git
     - git checkout master
     - git push -f gitee master
     - git log gitee/master..HEAD
