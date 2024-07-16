@@ -10,11 +10,27 @@ stages:
 mergeCode:
   stage: mergeCode
   script:
+    ##
+    ## Run ssh-agent (inside the build environment)
+    ##
     - eval $(ssh-agent -s)
-    - ssh-add <(echo "$SSH_PRIVATE_KEY") # 这里引入的是我们之前在CI/CD中添加的SSH私钥
+
+    ##
+    ## Add the SSH key stored in SSH_PRIVATE_KEY variable to the agent store
+    ##
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > /tmp/id_rsa
+    - chmod 600 /tmp/id_rsa
+    - ssh-add /tmp/id_rsa
+
+    ##
+    ## Optionally disable host key checking. Be aware that by adding that
+    ## you are susceptible to man-in-the-middle attacks.
+    ## WARNING: Use this only with the Docker executor, if you use it with shell
+    ## you will overwrite your user's SSH config.
+    ##
     - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
-    # 下面的步骤不难理解，这里就不多做解释了
+    
     - git config --global user.email "$PCF_COMMIT_USER_EMAIL"
     - git config --global user.name "$PCF_COMMIT_USER_NAME"
     - git remote remove origin || true
@@ -28,4 +44,4 @@ mergeCode:
     - git pull gitlab $CI_COMMIT_REF_NAME
     - git push origin $PCF_DEPLOY_BRANCH
   tags:
-    - sync_task
+    - sync_task # Gitlab Runner注册时，设置的tag
