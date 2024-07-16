@@ -9,6 +9,8 @@ mod data_from_clickhouse;
 pub mod instrument_orders;
 pub mod simulated_client;
 pub(crate) mod ws_trade;
+pub mod load_from_clickhouse;
+pub mod utils;
 
 #[derive(Debug)]
 pub struct SimulatedExchange<Data, Iter, Event>

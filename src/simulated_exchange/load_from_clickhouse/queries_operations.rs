@@ -1,12 +1,14 @@
 // NOTE this module is previously built and imported into the main project as a dependency.
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
-use super::{utils::chrono_operations::extract_date};
 pub use clickhouse::{
-    error::{Error, Result},
-    Client, Row,
+    Client,
+    error::{Error, Result}, Row,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::simulated_exchange::utils::chrono_operations::extract_date;
+use crate::simulated_exchange::ws_trade::WsTrade;
 
 pub struct ClickHouseClient {
     pub client: Client,
@@ -144,6 +146,7 @@ pub struct TradeDataFromClickhouse {
     pub price: f64,
     pub timestamp: i64,
 }
+
 
 impl ClickHouseClient {
     // NOTE 这些函数分为不同的交易所分为两个分支 因为不同交易所的明明逻辑是不一样的：
@@ -367,7 +370,11 @@ impl ClickHouseClient {
     }
 
     pub async fn query_union_table(client: &ClickHouseClient, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<WsTrade>, clickhouse::error::Error> {
-        let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
+        let table_name = match exchange {
+            "okex" => format!("{}_{}_{}_union_{}_{}", exchange, instrument, channel, date, instrument.to_uppercase()),
+            "binance" => format!("{}_{}_{}_union_{}", exchange, instrument, channel, date),
+            _ => return Err(Error::InvalidParams("Unsupported exchange".into())),
+        };
         let database = format!("{}_{}_{}", exchange, instrument, channel);
         let query = format!("SELECT * FROM {}.{}", database, table_name);
         println!("[AlgoBacktest] : Executing query: {}", query);
@@ -375,4 +382,5 @@ impl ClickHouseClient {
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
+
 }

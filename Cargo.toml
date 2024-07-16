@@ -34,3 +34,4 @@ parking_lot = "0.12.1"
 num-traits = "0.2.15"
 rand = "0.8.5"
 rust_decimal = "1.35.0"
+regex = { version = "1.10.0",features = ["unicode-perl"] }
