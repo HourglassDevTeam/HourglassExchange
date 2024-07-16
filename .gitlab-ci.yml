@@ -21,10 +21,10 @@ stages:
     - ssh-keyscan gitee.com >> /home/gitlab-runner/.ssh/known_hosts
     - git config --global user.name 'arthur' 
     - git config --global user.email 'arthur@ciuyat.com'
-    - git fetch gitee --all
     - git log gitee/master..HEAD
     - git status 
     - pwd
+    - git fetch gitee --all
     - git checkout master
     - git push -f gitee master
 
