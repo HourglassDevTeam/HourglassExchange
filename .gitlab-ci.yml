@@ -1,5 +1,5 @@
 variables:
-  PCF_DEPLOY_REPO: "http://arthur:${PERSONAL_ACCESS_TOKEN}@192.168.110.130/arthur/unilink_execution.git"
+  PCF_DEPLOY_REPO: "http://arthur:the17thangel@192.168.110.130/arthur/unilink_execution.git"
   GITEE_REPO: "https://arthur19q3:the17thangel@gitee.com/unilink_1/UnilinkExecution.git"
   PCF_DEPLOY_BRANCH: master
   PCF_COMMIT_USER_NAME: arthur
@@ -61,23 +61,7 @@ mergeCode:
     ##
     - git pull --rebase origin $PCF_DEPLOY_BRANCH
     
-    ##
-    ## Pull latest changes from gitee and rebase
-    ##
-    - git pull --rebase gitee $PCF_DEPLOY_BRANCH || {
-        echo "Conflicts detected. Attempting to auto-merge.";
-        git rebase --abort;
-        git pull --no-rebase gitee $PCF_DEPLOY_BRANCH;
-        git merge --strategy-option ours;
-        git rebase origin/$PCF_DEPLOY_BRANCH;
-    }
-    
-    ##
-    ## Push changes to origin
-    ##
-    - git push origin $PCF_DEPLOY_BRANCH
-    
-    ##
+
     ## Force push changes to gitee
     ##
     - git push gitee $PCF_DEPLOY_BRANCH --force
