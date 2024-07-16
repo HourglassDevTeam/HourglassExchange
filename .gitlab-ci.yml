@@ -17,7 +17,6 @@ stages:
     - ls -l /home/gitlab-runner/.ssh
     - ssh-keyscan gitee.com >> /home/gitlab-runner/.ssh/known_hosts
     - git config --global user.email "arthur@ciuyat.com"
-    - git config --global user.name "arthur"
     - git fetch gitee
     - git checkout master
     - git push -f gitee master
