@@ -1,6 +1,6 @@
 before_script:
   - git remote set-url origin http://arthur:$PERSONAL_ACCESS_TOKEN@192.168.110.130/arthur/unilink_execution.git
-  - git remote set-url gitee https://arthur19q3:$GITEE_ACCESS_TOKEN@gitee.com/unilink_1/UnilinkExecution.git
+  - git remote set-url gitee https://gitee.com/unilink_1/UnilinkExecution.git
 
 
 variables:
