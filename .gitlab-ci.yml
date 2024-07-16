@@ -4,7 +4,6 @@ variables:
   PCF_DEPLOY_BRANCH: master
   PCF_COMMIT_USER_NAME: arthur
   PCF_COMMIT_USER_EMAIL: arthur@ciuyat.com
-  PEM_FILE: "/tmp/id_rsa.pem" # 临时存储私钥的文件路径
   SSH_USER: "gitlab-runner" # 你的SSH用户名
   SSH_HOST: "192.168.110.130" # 你的SSH主机IP地址
 
@@ -15,16 +14,16 @@ mergeCode:
   stage: mergeCode
   script:
     - echo "Starting mergeCode stage"
+    
     ##
     ## Run ssh-agent (inside the build environment)
     ##
     - eval $(ssh-agent -s)
     
     ##
-    ## Add the SSH key stored in SSH_PRIVATE_KEY variable to a file and set permissions
+    ## Add the existing SSH key to the agent
     ##
-    - echo "$SSH_PRIVATE_KEY" > $PEM_FILE
-    - chmod 600 $PEM_FILE
+    - ssh-add /home/gitlab-runner/.ssh/id_rsa
 
     ##
     ## Optionally disable host key checking. Be aware that by adding that
@@ -67,14 +66,15 @@ mergeCode:
     ##
     - git pull --rebase gitee $PCF_DEPLOY_BRANCH
     
+
     ## Force push changes to gitee
-    
+    ##
     - git push gitee $PCF_DEPLOY_BRANCH --force
 
     ##
     ## SSH into the server
     ##
-    - ssh -tt -i $PEM_FILE -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST
+    - ssh -tt -i /home/gitlab-runner/.ssh/id_rsa -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST
 
   tags:
     - sync_task
