@@ -6,8 +6,8 @@ before_script:
 
 
 variables:
-  GIT_TRACE: "1"
-  GIT_CURL_VERBOSE: "1"
+  # GIT_TRACE: "1"
+  # GIT_CURL_VERBOSE: "1"
   TZ: "Asia/Shanghai"
 
 stages:
