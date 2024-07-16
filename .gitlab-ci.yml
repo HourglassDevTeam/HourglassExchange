@@ -17,10 +17,6 @@ mergeCode:
     
     - ssh-add /home/gitlab-runner/.ssh/id_rsa
 
-    ##
-    ## Optionally disable host key checking. Be aware that by adding that
-    ## you are susceptible to man-in-the-middle attacks.
-    ##
     - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
     
