@@ -22,6 +22,8 @@ stages:
     - git status -u
     - git diff
     - git reset --hard gitee/master
+    - git remote remove gitee
+    - git checkout master
     - git push -f gitee master
     - git log gitee/master..HEAD
 
