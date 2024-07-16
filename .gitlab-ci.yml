@@ -14,7 +14,7 @@ stages:
     - git config --global user.name "arthur"
     - git checkout master
     - git add .
-    - git push -f gitee master
+    - git push -f --verbose gitee master
   tags:
     - sync_task
 
