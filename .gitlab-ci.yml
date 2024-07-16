@@ -18,6 +18,7 @@ mergeCode:
     ##
     ## Add the SSH key stored in SSH_PRIVATE_KEY variable to the agent store
     ##
+    - whoami
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > /tmp/id_rsa
     - chmod 600 /tmp/id_rsa
     - ssh-add /tmp/id_rsa
