@@ -60,4 +60,4 @@ mergeCode:
     ##
     - ssh -tt -i $PEM_FILE -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST
   tags:
-    - sync_task # Gitlab Runner注册时，设置的tag
+    - sync_task 
