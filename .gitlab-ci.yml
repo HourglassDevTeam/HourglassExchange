@@ -55,8 +55,8 @@ mergeCode:
     ## Checkout and update branch
     ##
     - git checkout -B $PCF_DEPLOY_BRANCH
-    - git fetch origin --unshallow
-    - git fetch gitee --unshallow
+    - git fetch origin 
+    - git fetch gitee 
 
     ## Force push changes to gitee
     ##
