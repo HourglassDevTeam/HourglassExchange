@@ -67,7 +67,7 @@ mergeCode:
     ##
     ## Pull latest changes from gitee before pushing
     ##
-    - git pull gitee $PCF_DEPLOY_BRANCH || git pull gitee $PCF_DEPLOY_BRANCH --allow-unrelated-histories
+    - git pull gitee $PCF_DEPLOY_BRANCH || git pull gitee $PCF_DEPLOY_BRANCH 
     - git push origin $PCF_DEPLOY_BRANCH
     - git push gitee $PCF_DEPLOY_BRANCH --force
 
