@@ -1,5 +1,5 @@
 variables:
-  PCF_DEPLOY_REPO: http://arthur:$PERSONAL_ACCESS_TOKEN@192.168.110.130/arthur/unilink_execution.git
+  PCF_DEPLOY_REPO: http://arthur:the17thangel@192.168.110.130/arthur/unilink_execution.git
   PCF_DEPLOY_BRANCH: master
   PCF_COMMIT_USER_NAME: arthur
   PCF_COMMIT_USER_EMAIL: arthur@ciuyat.com
