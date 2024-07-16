@@ -32,7 +32,6 @@ sync_to_gitee:
   only:
     - master
 
-
 sync_schedule:
   stage: sync
   <<: *sync_template
@@ -40,5 +39,6 @@ sync_schedule:
     - pushes
   before_script:
     - git remote set-url origin http://arthur:$PERSONAL_ACCESS_TOKEN@192.168.110.130/arthur/unilink_execution.git
+    - git remote set-url gitee http://arthur:$GITEE_ACCESS_TOKEN@gitee.com/unilink_1/UnilinkExecution.git
 
 
