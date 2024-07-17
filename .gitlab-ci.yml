@@ -52,13 +52,13 @@ mergeCode:
     ##
     ## Pull latest changes from origin and rebase
     ##
-    - git pull --rebase origin $PCF_DEPLOY_BRANCH
+    - git pull origin $PCF_DEPLOY_BRANCH
     
     ##
     ## Pull latest changes from gitee and rebase
     ##
     - git fetch gitee 
-    - git pull --rebase gitee $PCF_DEPLOY_BRANCH || true
+    - git pull gitee $PCF_DEPLOY_BRANCH || true
     
     ##
     ## Check if there are changes to push to origin
