@@ -6,10 +6,10 @@ pub use clickhouse::{
     error::{Error, Result}, Row,
 };
 use serde::{Deserialize, Serialize};
-
+use async_stream::stream;
+use futures_core::Stream;
 use crate::simulated_exchange::utils::chrono_operations::extract_date;
 use crate::simulated_exchange::ws_trade::WsTrade;
-
 pub struct ClickHouseClient {
     pub client: Client,
 }
@@ -127,6 +127,48 @@ impl ClickHouseClient {
         let trade_datas = client.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
+    }
+
+
+    pub fn query_union_table_batched<'a>(
+        &'a self,
+        exchange: &'a str,
+        instrument: &'a str,
+        channel: &'a str,
+        date: &'a str,
+    ) -> impl Stream<Item = Result<Vec<WsTrade>, Error>> + 'a {
+        stream! {
+            let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
+            let database = format!("{}_{}_{}", exchange, instrument, channel);
+            let mut offset = 0;
+            let limit = 100000;
+
+            loop {
+                let query = format!(
+                    "SELECT symbol, side, price, timestamp FROM {}.{} LIMIT {} OFFSET {}",
+                    database, table_name, limit, offset
+                );
+                println!("[AlgoBacktest] : Executing query: {}", query);
+
+                match self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await {
+                    Ok(trade_datas) => {
+                        let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
+                        let batch_size = ws_trades.len();
+                        yield Ok(ws_trades);
+
+                        if batch_size < limit {
+                            break;
+                        }
+
+                        offset += limit;
+                    },
+                    Err(e) => {
+                        yield Err(e);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
 }
