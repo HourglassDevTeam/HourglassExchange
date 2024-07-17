@@ -2,8 +2,7 @@ use std::pin::Pin;
 
 use futures::Stream;
 
-use crate::error::ExecutionError;
-use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickHouseClient;
+use crate::{error::ExecutionError, simulated_exchange::load_from_clickhouse::queries_operations::ClickHouseClient};
 
 pub struct HistoricalFeed<Event>
 {
