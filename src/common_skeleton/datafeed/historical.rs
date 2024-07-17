@@ -5,7 +5,7 @@ use futures::Stream;
 use crate::error::ExecutionError;
 
 pub struct HistoricalFeed<Event> {
-    stream: Pin<Box<dyn Stream<Item=Result<Event, ExecutionError>> + Send>>,
+    stream: Pin<Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>>,
 }
 
 impl<Event> HistoricalFeed<Event>

@@ -1,9 +1,12 @@
 use std::fmt;
 use std::fmt::Debug;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
+use futures_core::Stream;
 
 use crate::common_skeleton::datafeed::historical::HistoricalFeed;
 use crate::common_skeleton::datafeed::live::LiveFeed;
+use crate::error::ExecutionError;
 
 pub struct AccountMarketFeed<Event>
 where
@@ -50,4 +53,18 @@ where
 {
     LiveFeed(LiveFeed<Event>),
     HistoricalFeed(HistoricalFeed<Event>),
+}
+
+
+
+impl<Event> StreamKind<Event>
+where
+    Event: Clone + Send + Sync + 'static,
+{
+    pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item = Result<Event, ExecutionError>> + Send)> {
+        match self {
+            StreamKind::LiveFeed(feed) => feed.poll_next(),
+            StreamKind::HistoricalFeed(feed) => feed.poll_next(),
+        }
+    }
 }
