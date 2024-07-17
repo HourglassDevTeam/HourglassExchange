@@ -148,7 +148,7 @@ impl ClickHouseClient
                                          instrument: &'a str,
                                          channel: &'a str,
                                          date: &'a str)
-                                         -> impl Stream<Item = Result<Vec<WsTrade>, ExecutionError>> + 'a
+                                         -> impl Stream<Item = Result<WsTrade, ExecutionError>> + 'a
     {
         stream! {
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
@@ -165,11 +165,11 @@ impl ClickHouseClient
 
                 match self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await.or_else( |e| Err(ExecutionError::InternalError(format!("Failed query: {}", e)))) {
                     Ok(trade_datas) => {
-                        let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
-                        let batch_size = ws_trades.len();
-                        yield Ok(ws_trades);
+                        for trade_data in &trade_datas {
+                            yield Ok(WsTrade::from(trade_data.clone()));
+                        }
 
-                        if batch_size < limit {
+                        if trade_datas.len() < limit {
                             break;
                         }
 
