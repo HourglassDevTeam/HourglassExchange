@@ -48,12 +48,11 @@ async fn main()
 
     // 创建一个 HistoricalFeed 实例
     let feed = HistoricalFeed { // 将 CLIENT 的所有权克隆一份并赋值给 database_client 字段
-        // to_owned 方法用于克隆 Arc 引用计数指针，从而创建一个新的 Arc 指针指向相同的 ClickHouseClient 实例
-        database_client: CLIENT.to_owned(),
+                                // to_owned 方法用于克隆 Arc 引用计数指针，从而创建一个新的 Arc 指针指向相同的 ClickHouseClient 实例
+                                database_client: CLIENT.to_owned(),
 
-        // 使用 Box::pin 包装数据流，并赋值给 stream 字段
-        stream: Box::pin(stream),
-    };
+                                // 使用 Box::pin 包装数据流，并赋值给 stream 字段
+                                stream: Box::pin(stream) };
 
     let _account_stream = AccountMarketStream::new(MarketStream::Historical(feed));
 }

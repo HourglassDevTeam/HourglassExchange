@@ -14,16 +14,13 @@ pub mod ws_trade;
 
 #[derive(Debug)]
 pub struct SimulatedExchange<Event>
-where
-    Event: Clone + Send + Sync + 'static,
+    where Event: Clone + Send + Sync + 'static
 {
     pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedClientEvent>,
     pub account: Account<Event>,
 }
 
-impl<Event> SimulatedExchange<Event>
-where
-    Event: Clone + Send + Sync + 'static,
+impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + 'static
 {
     pub fn initiator() -> ExchangeInitiator<Event>
     {
@@ -51,31 +48,24 @@ where
     }
 }
 
-impl<Event> Default for ExchangeInitiator<Event>
-where
-    Event: Clone + Send + Sync + 'static,
+impl<Event> Default for ExchangeInitiator<Event> where Event: Clone + Send + Sync + 'static
 {
     fn default() -> Self
     {
         let (_tx, rx) = mpsc::unbounded_channel();
-        Self {
-            event_simulated_rx: Some(rx),
-            account: None,
-        }
+        Self { event_simulated_rx: Some(rx),
+               account: None }
     }
 }
 #[derive(Debug)]
 pub struct ExchangeInitiator<Event>
-where
-    Event: Clone + Send + Sync + 'static,
+    where Event: Clone + Send + Sync + 'static
 {
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedClientEvent>>,
     account: Option<Account<Event>>,
 }
 
-impl<Event> ExchangeInitiator<Event>
-where
-    Event: Clone + Send + Sync + 'static,
+impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + 'static
 {
     pub fn new() -> Self
     {
@@ -84,10 +74,8 @@ where
 
     pub fn event_simulated_rx(self, value: mpsc::UnboundedReceiver<SimulatedClientEvent>) -> Self
     {
-        Self {
-            event_simulated_rx: Some(value),
-            ..self
-        }
+        Self { event_simulated_rx: Some(value),
+               ..self }
     }
 
     pub fn account(self, value: Account<Event>) -> Self
@@ -97,10 +85,8 @@ where
 
     pub fn initiate(self) -> Result<SimulatedExchange<Event>, ExecutionError>
     {
-        Ok(SimulatedExchange {
-            event_simulated_rx: self.event_simulated_rx
-                .ok_or_else(|| ExecutionError::InitiatorIncomplete("event_simulated_rx".to_string()))?,
-            account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))?,
-        })
+        Ok(SimulatedExchange { event_simulated_rx: self.event_simulated_rx
+                                                       .ok_or_else(|| ExecutionError::InitiatorIncomplete("event_simulated_rx".to_string()))?,
+                               account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
     }
 }

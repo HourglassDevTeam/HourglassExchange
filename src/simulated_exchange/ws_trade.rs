@@ -21,12 +21,10 @@ impl From<TradeDataFromClickhouse> for WsTrade
 {
     fn from(trade: TradeDataFromClickhouse) -> Self
     {
-        WsTrade {
-            instId: trade.symbol,
-            side: trade.side,
-            px: trade.price.to_string(),
-            ts: trade.timestamp.to_string(),
-        }
+        WsTrade { instId: trade.symbol,
+                  side: trade.side,
+                  px: trade.price.to_string(),
+                  ts: trade.timestamp.to_string() }
     }
 }
 
@@ -35,10 +33,9 @@ impl WsTrade
     pub(crate) fn from_ref(data: &TradeDataFromClickhouse) -> Self
     {
         WsTrade { // 这里假设 WsTrade 结构体字段和 TradeDataFromClickhouse 结构体字段对应
-            instId: data.symbol.clone(),
-            side: data.side.clone(),
-            px: data.price.to_string(),
-            ts: data.timestamp.to_string(),
-        }
+                  instId: data.symbol.clone(),
+                  side: data.side.clone(),
+                  px: data.price.to_string(),
+                  ts: data.timestamp.to_string() }
     }
 }

@@ -9,16 +9,13 @@ use crate::{
 };
 
 pub struct AccountMarketStream<Event>
-where
-    Event: Clone + Send + Sync + 'static,
+    where Event: Clone + Send + Sync + 'static
 {
     pub stream_kind_name: &'static str,
     pub data_stream: MarketStream<Event>,
 }
 
-impl<Event> Debug for AccountMarketStream<Event>
-where
-    Event: Debug + Clone + Send + Sync + 'static,
+impl<Event> Debug for AccountMarketStream<Event> where Event: Debug + Clone + Send + Sync + 'static
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
@@ -26,36 +23,29 @@ where
     }
 }
 
-impl<Event> AccountMarketStream<Event>
-where
-    Event: Clone + Send + Sync + 'static,
+impl<Event> AccountMarketStream<Event> where Event: Clone + Send + Sync + 'static
 {
     pub fn new(stream: MarketStream<Event>) -> Self
     {
-        Self {
-            stream_kind_name: match stream {
-                | Live(_) => "LiveFeed",
-                | Historical(_) => "HistoricalFeed",
-            },
-            data_stream: stream,
-        }
+        Self { stream_kind_name: match stream {
+                   | Live(_) => "LiveFeed",
+                   | Historical(_) => "HistoricalFeed",
+               },
+               data_stream: stream }
     }
 }
 
 // add enum StreamKind for AccountMarketFeed to choose
 pub enum MarketStream<Event>
-where
-    Event: Clone + Send + Sync + 'static,
+    where Event: Clone + Send + Sync + 'static
 {
     Live(LiveFeed<Event>),
     Historical(HistoricalFeed<Event>),
 }
 
-impl<Event> MarketStream<Event>
-where
-    Event: Clone + Send + Sync + 'static,
+impl<Event> MarketStream<Event> where Event: Clone + Send + Sync + 'static
 {
-    pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item=Result<Event, ExecutionError>> + Send)>
+    pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item = Result<Event, ExecutionError>> + Send)>
     {
         match self {
             | Live(feed) => feed.poll_next(),

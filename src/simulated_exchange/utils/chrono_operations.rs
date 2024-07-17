@@ -1,4 +1,4 @@
-use chrono::{Datelike, DateTime, Local, Timelike, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Local, TimeZone, Timelike, Utc};
 use regex::Regex;
 
 #[allow(dead_code)]
@@ -13,7 +13,8 @@ pub fn extract_date(table_name: &str) -> Option<String>
         if let Some(caps) = binance_pattern.captures(table_name) {
             return Some(caps[1].to_string());
         }
-    } else if table_name.starts_with("okex") {
+    }
+    else if table_name.starts_with("okex") {
         if let Some(caps) = okex_pattern.captures(table_name) {
             return Some(caps[1].to_string());
         }
@@ -97,7 +98,8 @@ pub fn expand_date_str(input_str: &str) -> String
         let formatted_date_str = format!("{}-{}-{} 00:00:00", year, month, day);
 
         formatted_date_str
-    } else {
+    }
+    else {
         // 如果输入字符串不是有效的日期格式，可以返回错误消息或默认值，根据需要
         "Invalid Date".to_string()
     }
