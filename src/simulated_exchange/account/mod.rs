@@ -27,7 +27,7 @@ use crate::{
 pub mod account_balances;
 pub mod account_config;
 mod account_latency;
-mod account_market_feed;
+pub mod account_market_feed;
 pub mod account_orders;
 
 #[derive(Clone, Debug)]

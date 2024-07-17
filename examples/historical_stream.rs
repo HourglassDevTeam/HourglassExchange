@@ -17,9 +17,11 @@
 
 use lazy_static::lazy_static; // 用于创建全局静态变量
 use std::sync::Arc; // 用于原子引用计数的智能指针
-use unilink_execution::{ // 导入项目中的模块和结构体
-                         common_skeleton::datafeed::historical::HistoricalFeed,
-                         simulated_exchange::load_from_clickhouse::queries_operations::*,
+use unilink_execution::{
+    // 导入项目中的模块和结构体
+    common_skeleton::datafeed::historical::HistoricalFeed,
+    simulated_exchange::account::account_market_feed::*,
+    simulated_exchange::load_from_clickhouse::queries_operations::*,
 };
 
 // 使用 lazy_static 宏来创建一个全局静态变量 CLIENT
@@ -27,9 +29,9 @@ lazy_static! {
     pub static ref CLIENT: Arc<ClickHouseClient> = Arc::new(ClickHouseClient::new());
 }
 
-
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     // 定义交易所、金融工具、频道和日期的字符串变量
     let exchange = "binance";
     let instrument = "futures";
@@ -40,12 +42,12 @@ async fn main() {
     let stream = CLIENT.query_union_table_batched(exchange, instrument, channel, date);
 
     // 创建一个 HistoricalFeed 实例
-    HistoricalFeed {
-        // 将 CLIENT 的所有权克隆一份并赋值给 database_client 字段
-        // to_owned 方法用于克隆 Arc 引用计数指针，从而创建一个新的 Arc 指针指向相同的 ClickHouseClient 实例
-        database_client: CLIENT.to_owned(),
+    let feed = HistoricalFeed { // 将 CLIENT 的所有权克隆一份并赋值给 database_client 字段
+                                // to_owned 方法用于克隆 Arc 引用计数指针，从而创建一个新的 Arc 指针指向相同的 ClickHouseClient 实例
+                                database_client: CLIENT.to_owned(),
 
-        // 使用 Box::pin 包装数据流，并赋值给 stream 字段
-        stream: Box::pin(stream)
-    };
+                                // 使用 Box::pin 包装数据流，并赋值给 stream 字段
+                                stream: Box::pin(stream) };
+
+    let account_stream = AccountMarketStream::new(MarketStream::Historical(feed));
 }
