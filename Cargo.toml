@@ -8,15 +8,13 @@ edition = "2021"
 tracing = "0.1.36"
 
 # Data Source
-clickhouse = "0.11.6"
+clickhouse = "0.12.0"
 # Rand
 rand_distr = "0.4.3"
 # Async
 tokio = { version = "1.17.0", features = ["sync", "macros", "rt-multi-thread"] }
-tokio-stream = { version = "0.1.9", features = ["sync"] }
 futures = "0.3.21"
 async-trait = "0.1.57"
-pin-project = "1.0.10"
 async-stream = "0.3"
 # Error
 thiserror = "1.0.32"
@@ -32,6 +30,6 @@ chrono = { version = "0.4.22", features = ["serde"] }
 num-traits = "0.2.15"
 rand = "0.8.5"
 rust_decimal = "1.35.0"
-regex = { version = "1.10.0",features = ["unicode-perl"] }
+regex = { version = "1.10.0", features = ["unicode-perl"] }
 futures-core = "0.3.30"
 pin-utils = "0.1.0"

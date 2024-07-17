@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common_skeleton::{instrument::Instrument, trade::Trade},
-    simulated_exchange::ws_trade::WsTrade,
     Exchange,
+    simulated_exchange::ws_trade::WsTrade,
 };
 
 // 定义一个泛型结构体 MarketEvent，包含各种交易市场事件信息
@@ -35,11 +35,13 @@ impl From<MarketEvent<Trade>> for MarketEvent<DataKind>
     fn from(event: MarketEvent<Trade>) -> Self
     {
         // 将 Trade 类型的 MarketEvent 转换为 DataKind::Trade 类型的 MarketEvent
-        Self { exchange_time: event.exchange_time,
-               received_time: event.received_time,
-               exchange: event.exchange,
-               instrument: event.instrument,
-               kind: DataKind::Trade(event.kind) }
+        Self {
+            exchange_time: event.exchange_time,
+            received_time: event.received_time,
+            exchange: event.exchange,
+            instrument: event.instrument,
+            kind: DataKind::Trade(event.kind),
+        }
     }
 }
 
@@ -49,10 +51,12 @@ impl From<MarketEvent<WsTrade>> for MarketEvent<DataKind>
     fn from(event: MarketEvent<WsTrade>) -> Self
     {
         // 将 WsTrade 类型的 MarketEvent 转换为 DataKind::WsTrade 类型的 MarketEvent
-        Self { exchange_time: event.exchange_time,
-               received_time: event.received_time,
-               exchange: event.exchange,
-               instrument: event.instrument,
-               kind: DataKind::WsTrade(event.kind) }
+        Self {
+            exchange_time: event.exchange_time,
+            received_time: event.received_time,
+            exchange: event.exchange,
+            instrument: event.instrument,
+            kind: DataKind::WsTrade(event.kind),
+        }
     }
 }

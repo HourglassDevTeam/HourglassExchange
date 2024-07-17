@@ -19,7 +19,7 @@ use crate::{
     },
     error::ExecutionError,
     simulated_exchange::account::{
-        account_latency::{fluctuate_latency, AccountLatency},
+        account_latency::{AccountLatency, fluctuate_latency},
         account_market_feed::AccountMarketStream,
     },
 };
@@ -32,7 +32,8 @@ pub mod account_orders;
 
 #[derive(Clone, Debug)]
 pub struct Account<Event>
-    where Event: Clone + Send + Sync + 'static
+where
+    Event: Clone + Send + Sync + 'static,
 {
     pub exchange_timestamp: i64,                                    // NOTE 日后可以用无锁结构原子锁包裹
     pub data: Arc<RwLock<AccountMarketStream<Event>>>,              // 帐户数据
@@ -46,7 +47,8 @@ pub struct Account<Event>
 }
 #[derive(Clone, Debug)]
 pub struct AccountInitiator<Event>
-    where Event: Clone + Send + Sync + 'static
+where
+    Event: Clone + Send + Sync + 'static,
 {
     data: Option<Arc<RwLock<AccountMarketStream<Event>>>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
@@ -58,18 +60,22 @@ pub struct AccountInitiator<Event>
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
-impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> AccountInitiator<Event>
+where
+    Event: Clone + Send + Sync + 'static,
 {
     pub fn new() -> Self
     {
-        AccountInitiator { data: None,
-                           account_event_tx: None,
-                           market_event_tx: None,
-                           latency: None,
-                           config: None,
-                           balances: None,
-                           positions: None,
-                           orders: None }
+        AccountInitiator {
+            data: None,
+            account_event_tx: None,
+            market_event_tx: None,
+            latency: None,
+            config: None,
+            balances: None,
+            positions: None,
+            orders: None,
+        }
     }
 
     pub fn data(mut self, value: AccountMarketStream<Event>) -> Self
@@ -122,21 +128,25 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + 'static
 
     pub fn build(self) -> Result<Account<Event>, String>
     {
-        Ok(Account { exchange_timestamp: 0,
-                     data: self.data.ok_or("datafeed is required")?,                                 // 检查并获取data
-                     account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
-                     market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
-                     latency: self.latency.ok_or("latency is required")?,                            // 检查并获取latency
-                     config: self.config.ok_or("config is required")?,                               // 检查并获取config
-                     balances: self.balances.ok_or("balances is required")?,                         // 检查并获取balances
-                     positions: self.positions.ok_or("positions are required")?,                     // 检查并获取positions
-                     orders: self.orders.ok_or("orders are required")? })
+        Ok(Account {
+            exchange_timestamp: 0,
+            data: self.data.ok_or("datafeed is required")?,                                 // 检查并获取data
+            account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
+            market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
+            latency: self.latency.ok_or("latency is required")?,                            // 检查并获取latency
+            config: self.config.ok_or("config is required")?,                               // 检查并获取config
+            balances: self.balances.ok_or("balances is required")?,                         // 检查并获取balances
+            positions: self.positions.ok_or("positions are required")?,                     // 检查并获取positions
+            orders: self.orders.ok_or("orders are required")?,
+        })
     }
 }
 
 // NOTE 未完成
 #[allow(dead_code)]
-impl<Event> Account<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> Account<Event>
+where
+    Event: Clone + Send + Sync + 'static,
 {
     pub fn initiate() -> AccountInitiator<Event>
     {
@@ -180,14 +190,14 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + 'static
     pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>, current_timestamp: i64)
     {
         let open_futures = open_requests.into_iter().map(|request| {
-                                                        let mut this = self.clone();
-                                                        async move { this.try_open_order_atomic(request, current_timestamp).await }
-                                                    });
+            let mut this = self.clone();
+            async move { this.try_open_order_atomic(request, current_timestamp).await }
+        });
 
         let open_results = join_all(open_futures).await;
         response_tx.send(open_results).unwrap_or_else(|_| {
-                                          // Handle the error if sending fails
-                                      });
+            // Handle the error if sending fails
+        });
     }
 
     pub async fn try_open_order_atomic(&mut self, request: Order<RequestOpen>, _current_timestamp: i64) -> Result<Order<Open>, ExecutionError>
@@ -202,14 +212,14 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + 'static
                                current_timestamp: i64)
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
-                                                            let mut this = self.clone();
-                                                            async move { this.try_cancel_order_atomic(request, current_timestamp).await }
-                                                        });
+            let mut this = self.clone();
+            async move { this.try_cancel_order_atomic(request, current_timestamp).await }
+        });
 
         let cancel_results = join_all(cancel_futures).await;
         response_tx.send(cancel_results).unwrap_or_else(|_| {
-                                            // Handle the error if sending fails
-                                        });
+            // Handle the error if sending fails
+        });
     }
 
     pub async fn try_cancel_order_atomic(&mut self, _request: Order<RequestCancel>, _current_timestamp: i64) -> Result<Order<Cancelled>, ExecutionError>
@@ -231,10 +241,11 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + 'static
 
 // FIXME: currently erratic
 pub fn respond_with_latency<Response>(_latency: i64, response_tx: oneshot::Sender<Response>, response: Response)
-    where Response: Debug + Send + 'static
+where
+    Response: Debug + Send + 'static,
 {
     tokio::spawn(async move {
         response_tx.send(response)
-                   .expect("[UnilinkExecution] : SimulatedExchange failed to send oneshot response to execution request")
+            .expect("[UnilinkExecution] : SimulatedExchange failed to send oneshot response to execution request")
     });
 }

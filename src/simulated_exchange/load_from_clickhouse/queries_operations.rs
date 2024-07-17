@@ -1,17 +1,18 @@
 // NOTE this module is previously built and imported into the main project as a dependency.
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
+use async_stream::stream;
+pub use clickhouse::{
+    Client,
+    error::{Error, Result}, Row,
+};
+use futures_core::Stream;
+use serde::{Deserialize, Serialize};
+
 use crate::{
     error::ExecutionError,
     simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade},
 };
-use async_stream::stream;
-pub use clickhouse::{
-    error::{Error, Result},
-    Client, Row,
-};
-use futures_core::Stream;
-use serde::{Deserialize, Serialize};
 
 pub struct ClickHouseClient
 {
@@ -70,12 +71,12 @@ impl ClickHouseClient
 
     pub async fn get_table_names(&self, database: &str) -> Vec<String>
     {
-        let table_names_query = format!("SHOW TABLES FROM {database}",);
+        let table_names_query = format!("SHOW TABLES FROM {database}", );
         println!("{:?}", table_names_query);
         let result = self.client.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
-                                                                                          eprintln!("[AlgoBacktest] : Error loading table names: {:?}", e);
-                                                                                          vec![]
-                                                                                      });
+            eprintln!("[AlgoBacktest] : Error loading table names: {:?}", e);
+            vec![]
+        });
 
         result
     }
@@ -87,15 +88,14 @@ impl ClickHouseClient
 
         // 筛选出指定日期的表名
         let tables_for_date: Vec<String> = table_names.into_iter()
-                                                      .filter(|table_name| {
-                                                          if let Some(table_date) = extract_date(table_name) {
-                                                              table_date == date
-                                                          }
-                                                          else {
-                                                              false
-                                                          }
-                                                      })
-                                                      .collect();
+            .filter(|table_name| {
+                if let Some(table_date) = extract_date(table_name) {
+                    table_date == date
+                } else {
+                    false
+                }
+            })
+            .collect();
 
         tables_for_date
     }
@@ -139,7 +139,7 @@ impl ClickHouseClient
                                          instrument: &'a str,
                                          channel: &'a str,
                                          date: &'a str)
-                                         -> impl Stream<Item = Result<WsTrade, ExecutionError>> + 'a
+                                         -> impl Stream<Item=Result<WsTrade, ExecutionError>> + 'a
     {
         stream! {
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);

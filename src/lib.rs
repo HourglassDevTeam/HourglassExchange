@@ -42,7 +42,9 @@ pub trait ClientExecution
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize, Debug)]
 pub struct Exchange(Cow<'static, str>);
 
-impl<E> From<E> for Exchange where E: Into<Cow<'static, str>>
+impl<E> From<E> for Exchange
+where
+    E: Into<Cow<'static, str>>,
 {
     fn from(exchange: E) -> Self
     {
