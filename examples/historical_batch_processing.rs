@@ -1,9 +1,10 @@
-use unilink_execution::simulated_exchange::load_from_clickhouse::queries_operations::ClickHouseClient;
-use tokio_stream::StreamExt;
 use pin_utils::pin_mut;
+use tokio_stream::StreamExt;
+use unilink_execution::simulated_exchange::load_from_clickhouse::queries_operations::ClickHouseClient;
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     let client = ClickHouseClient::new();
     let exchange = "binance";
     let instrument = "futures";
@@ -15,12 +16,12 @@ async fn main() {
 
     while let Some(result) = stream.next().await {
         match result {
-            Ok(trades) => {
+            | Ok(trades) => {
                 for trade in trades {
                     println!("{:?}", trade);
                 }
-            },
-            Err(e) => eprintln!("Error: {}", e),
+            }
+            | Err(e) => eprintln!("Error: {}", e),
         }
     }
 }

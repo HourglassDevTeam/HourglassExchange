@@ -12,30 +12,25 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::Instrument,
         order::{Open, Order},
-        Side,
         token::Token,
         trade::Trade,
+        Side,
     },
     error::ExecutionError,
+    simulated_exchange::account::Account,
     Exchange,
     ExchangeKind::Simulated,
-    simulated_exchange::account::Account,
 };
 
 #[derive(Clone, Debug)]
 pub struct AccountBalances<Event>
-where
-
-   Event: Clone + Send + Sync + 'static,
+    where Event: Clone + Send + Sync + 'static
 {
     pub balance_map: HashMap<Token, Balance>,
     pub account_ref: Option<Arc<RwLock<Account<Event>>>>,
 }
 
-impl<Event> PartialEq for AccountBalances<Event>
-where
-
-   Event: Clone + Send + Sync + 'static,
+impl<Event> PartialEq for AccountBalances<Event> where Event: Clone + Send + Sync + 'static
 {
     fn eq(&self, other: &Self) -> bool
     {
@@ -44,10 +39,7 @@ where
     }
 }
 // CONSIDER 在哪个环节打上时间戳？
-impl<Event> AccountBalances<Event>
-where
-
-   Event: Clone + Send + Sync + 'static,
+impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + 'static
 {
     /// 返回指定[`Token`]的[`Balance`]的引用。
     pub fn balance(&self, token: &Token) -> Result<&Balance, ExecutionError>
@@ -74,7 +66,8 @@ where
         if let Some(account) = &self.account_ref {
             let account_read = account.read().await;
             Some(account_read.exchange_timestamp)
-        } else {
+        }
+        else {
             None
         }
     }
@@ -115,11 +108,9 @@ where
             }
         };
 
-        AccountEvent {
-            exchange_timestamp: self.get_exchange_ts().await.unwrap(),
-            exchange: Exchange::from(Simulated),
-            kind: AccountEventKind::Balance(_updated_balance),
-        }
+        AccountEvent { exchange_timestamp: self.get_exchange_ts().await.unwrap(),
+                       exchange: Exchange::from(Simulated),
+                       kind: AccountEventKind::Balance(_updated_balance) }
     }
 
     /// 当client取消[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
@@ -129,14 +120,14 @@ where
         match cancelled.side {
             | Side::Buy => {
                 let balance = self.balance_mut(&cancelled.instrument.quote)
-                    .expect("[UniLinkExecution] : Balance existence checked when opening Order");
+                                  .expect("[UniLinkExecution] : Balance existence checked when opening Order");
 
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
                 TokenBalance::new(cancelled.instrument.quote.clone(), *balance)
             }
             | Side::Sell => {
                 let balance = self.balance_mut(&cancelled.instrument.base)
-                    .expect("[UniLinkExecution] : Balance existence checked when opening Order");
+                                  .expect("[UniLinkExecution] : Balance existence checked when opening Order");
 
                 balance.available += cancelled.state.remaining_quantity();
                 TokenBalance::new(cancelled.instrument.base.clone(), *balance)
@@ -158,34 +149,26 @@ where
             | Side::Buy => {
                 // Base total & available increase by trade.size minus base trade.fees
                 let base_increase = trade.size - trade.fees;
-                let base_delta = BalanceDelta {
-                    total: base_increase,
-                    available: base_increase,
-                };
+                let base_delta = BalanceDelta { total: base_increase,
+                                                available: base_increase };
 
                 // Quote total decreases by (trade.size * price)
                 // Note: available was already decreased by the opening of the Side::Buy order
-                let quote_delta = BalanceDelta {
-                    total: -trade.size * trade.price,
-                    available: 0.0,
-                };
+                let quote_delta = BalanceDelta { total: -trade.size * trade.price,
+                                                 available: 0.0 };
 
                 (base_delta, quote_delta)
             }
             | Side::Sell => {
                 // Base total decreases by trade.size
                 // Note: available was already decreased by the opening of the Side::Sell order
-                let base_delta = BalanceDelta {
-                    total: -trade.size,
-                    available: 0.0,
-                };
+                let base_delta = BalanceDelta { total: -trade.size,
+                                                available: 0.0 };
 
                 // Quote total & available increase by (trade.size * price) minus quote fees
                 let quote_increase = (trade.size * trade.price) - trade.fees;
-                let quote_delta = BalanceDelta {
-                    total: quote_increase,
-                    available: quote_increase,
-                };
+                let quote_delta = BalanceDelta { total: quote_increase,
+                                                 available: quote_increase };
 
                 (base_delta, quote_delta)
             }
@@ -195,11 +178,9 @@ where
         let _base_balance = self.update(base, base_delta);
         let _quote_balance = self.update(quote, quote_delta);
 
-        AccountEvent {
-            exchange_timestamp: self.get_exchange_ts().await.unwrap(),
-            exchange: Exchange::from(Simulated),
-            kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), _base_balance), TokenBalance::new(quote.clone(), _quote_balance)]),
-        }
+        AccountEvent { exchange_timestamp: self.get_exchange_ts().await.unwrap(),
+                       exchange: Exchange::from(Simulated),
+                       kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), _base_balance), TokenBalance::new(quote.clone(), _quote_balance)]) }
     }
 
     /// Apply the [`BalanceDelta`] to the [`Balance`] of the specified [`Token`], returning a
@@ -214,10 +195,7 @@ where
     }
 }
 
-impl<Event> Deref for AccountBalances<Event>
-where
-
-   Event: Clone + Send + Sync + 'static,
+impl<Event> Deref for AccountBalances<Event> where Event: Clone + Send + Sync + 'static
 {
     type Target = HashMap<Token, Balance>;
 
@@ -227,10 +205,7 @@ where
     }
 }
 
-impl<Event> DerefMut for AccountBalances<Event>
-where
-
-   Event: Clone + Send + Sync + 'static,
+impl<Event> DerefMut for AccountBalances<Event> where Event: Clone + Send + Sync + 'static
 {
     fn deref_mut(&mut self) -> &mut Self::Target
     {
