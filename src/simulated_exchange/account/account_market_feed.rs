@@ -19,7 +19,7 @@ impl<Event> Debug for AccountMarketStream<Event> where Event: Debug + Clone + Se
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
-        f.debug_struct("AccountMarketFeed").field("atomic_id", &self.stream_kind_name).finish()
+        f.debug_struct("AccountMarketFeed").field("stream_kind_name", &self.stream_kind_name).finish()
     }
 }
 
