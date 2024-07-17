@@ -13,23 +13,23 @@ pub mod load_from_clickhouse;
 pub mod utils;
 
 #[derive(Debug)]
-pub struct SimulatedExchange<Data, Iter, Event>
+pub struct SimulatedExchange<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
     pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedClientEvent>,
-    pub account: Account<Data, Iter, Event>,
+    pub account: Account<Iter, Event>,
 }
 
-impl<Data, Iter, Event> SimulatedExchange<Data, Iter, Event>
+impl<Iter, Event> SimulatedExchange<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
-    pub fn initiator() -> ExchangeInitiator<Data, Iter, Event>
+    pub fn initiator() -> ExchangeInitiator<Iter, Event>
     {
         ExchangeInitiator::new()
     }
@@ -55,9 +55,9 @@ where
     }
 }
 
-impl<Data, Iter, Event> Default for ExchangeInitiator<Data, Iter, Event>
+impl<Iter, Event> Default for ExchangeInitiator<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
@@ -71,19 +71,19 @@ where
     }
 }
 #[derive(Debug)]
-pub struct ExchangeInitiator<Data, Iter, Event>
+pub struct ExchangeInitiator<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedClientEvent>>,
-    account: Option<Account<Data, Iter, Event>>,
+    account: Option<Account<Iter, Event>>,
 }
 
-impl<Data, Iter, Event> ExchangeInitiator<Data, Iter, Event>
+impl<Iter, Event> ExchangeInitiator<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
@@ -100,12 +100,12 @@ where
         }
     }
 
-    pub fn account(self, value: Account<Data, Iter, Event>) -> Self
+    pub fn account(self, value: Account<Iter, Event>) -> Self
     {
         Self { account: Some(value), ..self }
     }
 
-    pub fn initiate(self) -> Result<SimulatedExchange<Data, Iter, Event>, ExecutionError>
+    pub fn initiate(self) -> Result<SimulatedExchange<Iter, Event>, ExecutionError>
     {
         Ok(SimulatedExchange {
             event_simulated_rx: self.event_simulated_rx

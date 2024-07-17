@@ -31,9 +31,9 @@ mod account_latency;
 pub mod account_orders;
 
 #[derive(Clone, Debug)]
-pub struct Account<Data, Iter, Event>
+pub struct Account<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
@@ -43,14 +43,14 @@ where
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub latency: Arc<RwLock<AccountLatency>>,                       // 帐户延迟
     pub config: Arc<RwLock<AccountConfig>>,                         // 帐户配置
-    pub balances: Arc<RwLock<AccountBalances<Data, Iter, Event>>>,  // 帐户余额
+    pub balances: Arc<RwLock<AccountBalances<Iter, Event>>>,  // 帐户余额
     pub positions: Arc<RwLock<Vec<AccountPositions>>>,              // 帐户头寸
     pub orders: Arc<RwLock<AccountOrders>>,                         // 帐户订单
 }
 #[derive(Clone, Debug)]
-pub struct AccountInitiator<Data, Iter, Event>
+pub struct AccountInitiator<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
@@ -59,14 +59,14 @@ where
     market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
     latency: Option<Arc<RwLock<AccountLatency>>>,
     config: Option<Arc<RwLock<AccountConfig>>>,
-    balances: Option<Arc<RwLock<AccountBalances<Data, Iter, Event>>>>,
+    balances: Option<Arc<RwLock<AccountBalances<Iter, Event>>>>,
     positions: Option<Arc<RwLock<Vec<AccountPositions>>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
-impl<Data, Iter, Event> AccountInitiator<Data, Iter, Event>
+impl<Iter, Event> AccountInitiator<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
@@ -114,7 +114,7 @@ where
         self
     }
 
-    pub fn balances(mut self, value: AccountBalances<Data, Iter, Event>) -> Self
+    pub fn balances(mut self, value: AccountBalances<Iter, Event>) -> Self
     {
         self.balances = Some(Arc::new(RwLock::new(value)));
         self
@@ -132,7 +132,7 @@ where
         self
     }
 
-    pub fn build(self) -> Result<Account<Data, Iter, Event>, String>
+    pub fn build(self) -> Result<Account<Iter, Event>, String>
     {
         Ok(Account {
             exchange_timestamp: 0,
@@ -150,13 +150,13 @@ where
 
 // NOTE 未完成
 #[allow(dead_code)]
-impl<Data, Iter, Event> Account<Data, Iter, Event>
+impl<Iter, Event> Account<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
-    pub fn initiate() -> AccountInitiator<Data, Iter, Event>
+    pub fn initiate() -> AccountInitiator<Iter, Event>
     {
         AccountInitiator::new()
     }

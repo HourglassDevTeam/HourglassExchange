@@ -23,19 +23,19 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct AccountBalances<Data, Iter, Event>
+pub struct AccountBalances<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
     pub balance_map: HashMap<Token, Balance>,
-    pub account_ref: Option<Arc<RwLock<Account<Data, Iter, Event>>>>,
+    pub account_ref: Option<Arc<RwLock<Account<Iter, Event>>>>,
 }
 
-impl<Data, Iter, Event> PartialEq for AccountBalances<Data, Iter, Event>
+impl<Iter, Event> PartialEq for AccountBalances<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
@@ -46,9 +46,9 @@ where
     }
 }
 // CONSIDER 在哪个环节打上时间戳？
-impl<Data, Iter, Event> AccountBalances<Data, Iter, Event>
+impl<Iter, Event> AccountBalances<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
@@ -66,7 +66,7 @@ where
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
     }
 
-    pub fn set_account(&mut self, account: Arc<RwLock<Account<Data, Iter, Event>>>)
+    pub fn set_account(&mut self, account: Arc<RwLock<Account<Iter, Event>>>)
     {
         self.account_ref = Some(account);
     }
@@ -217,9 +217,9 @@ where
     }
 }
 
-impl<Data, Iter, Event> Deref for AccountBalances<Data, Iter, Event>
+impl<Iter, Event> Deref for AccountBalances<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
@@ -231,9 +231,9 @@ where
     }
 }
 
-impl<Data, Iter, Event> DerefMut for AccountBalances<Data, Iter, Event>
+impl<Iter, Event> DerefMut for AccountBalances<Iter, Event>
 where
-    Data: Clone,
+
     Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
 {
