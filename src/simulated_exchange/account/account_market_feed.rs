@@ -10,7 +10,7 @@ where
     Event: Clone + Send + Sync + 'static,
 {
     pub atomic_id: AtomicU64,
-    pub data_stream: FeedKind<Event>,
+    pub data_stream: StreamKind<Event>,
 }
 
 impl<Event> Debug for AccountMarketFeed<Event>
@@ -27,7 +27,7 @@ impl<Event> AccountMarketFeed<Event>
 where
     Event: Clone + Send + Sync + 'static,
 {
-    pub fn new(stream: FeedKind<Event>) -> Self {
+    pub fn new(stream: StreamKind<Event>) -> Self {
         Self {
             atomic_id: AtomicU64::new(0),
             data_stream: stream,
@@ -44,7 +44,7 @@ where
 }
 
 
-pub enum FeedKind<Event>
+pub enum StreamKind<Event>
 where
     Event: Clone + Send + Sync + 'static,
 {
