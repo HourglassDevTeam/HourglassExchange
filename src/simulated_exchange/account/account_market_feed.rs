@@ -2,6 +2,7 @@ use std::fmt;
 use std::fmt::Debug;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
+
 use futures_core::Stream;
 
 use crate::common_skeleton::datafeed::historical::HistoricalFeed;
@@ -54,7 +55,6 @@ where
     LiveFeed(LiveFeed<Event>),
     HistoricalFeed(HistoricalFeed<Event>),
 }
-
 
 
 impl<Event> StreamKind<Event>
