@@ -29,11 +29,11 @@ impl Display for InstrumentKind
         match self {
             | InstrumentKind::Spot => write!(f, "spot"),
             | InstrumentKind::Future(future) => {
-                write!(f, "{}_{}", future.future_code, future.multiplier, )
+                write!(f, "{}_{}", future.future_code, future.multiplier,)
             }
             | InstrumentKind::Perpetual => write!(f, "perpetual"),
             | InstrumentKind::Option(option) => {
-                write!(f, "{}_{}", option.option_code, option.multiplier, )
+                write!(f, "{}_{}", option.option_code, option.multiplier,)
             }
         }
     }
