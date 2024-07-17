@@ -19,14 +19,14 @@ use crate::{
     },
     error::ExecutionError,
     simulated_exchange::account::{
-        account_datafeed::AccountMarketFeed,
+        account_market_feed::AccountMarketFeed,
         account_latency::{AccountLatency, fluctuate_latency},
     },
 };
 
 pub mod account_balances;
 pub mod account_config;
-mod account_datafeed;
+mod account_market_feed;
 mod account_latency;
 pub mod account_orders;
 
