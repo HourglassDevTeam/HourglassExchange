@@ -1,7 +1,10 @@
 // NOTE this module is previously built and imported into the main project as a dependency.
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
-use crate::simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade};
+use crate::{
+    error::ExecutionError,
+    simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade},
+};
 use async_stream::stream;
 pub use clickhouse::{
     error::{Error, Result},
@@ -9,7 +12,6 @@ pub use clickhouse::{
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
-use crate::error::ExecutionError;
 
 pub struct ClickHouseClient
 {
@@ -131,6 +133,7 @@ impl ClickHouseClient
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
+
     pub fn query_union_table_batched<'a>(&'a self,
                                          exchange: &'a str,
                                          instrument: &'a str,

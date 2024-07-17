@@ -1,6 +1,5 @@
-use std::pin::Pin;
-use std::sync::Arc;
 use futures::Stream;
+use std::{pin::Pin, sync::Arc};
 
 use crate::{error::ExecutionError, simulated_exchange::load_from_clickhouse::queries_operations::ClickHouseClient};
 
