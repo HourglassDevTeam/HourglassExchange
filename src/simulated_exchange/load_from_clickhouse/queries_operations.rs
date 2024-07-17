@@ -5,7 +5,6 @@ use async_stream::stream;
 pub use clickhouse::{error::Result, Client, Row};
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 use crate::{
     error::ExecutionError,
@@ -14,7 +13,7 @@ use crate::{
 
 pub struct ClickHouseClient
 {
-    client: Arc<Client>, // Using Arc to safely share and own the client across contexts
+    client: Client, // Using Arc to safely share and own the client across contexts
 }
 
 impl ClickHouseClient
@@ -25,7 +24,7 @@ impl ClickHouseClient
 
         println!("[AlgoBacktest] : 连接到 ClickHouse 服务器成功。");
 
-        Self { client: Arc::new(client) } // Wrap the client in Arc
+        Self { client } // Wrap the client in Arc
     }
 }
 #[allow(dead_code)]

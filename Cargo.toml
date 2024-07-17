@@ -21,6 +21,8 @@ async-stream = "0.3"
 # Error
 thiserror = "1.0.32"
 
+lazy_static = "1.4.0"
+once_cell = "1.7.2"
 # SerDe
 serde = { version = "1.0.143", features = ["derive"] }
 

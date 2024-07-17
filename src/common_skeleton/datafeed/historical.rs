@@ -1,5 +1,5 @@
 use std::pin::Pin;
-
+use std::sync::Arc;
 use futures::Stream;
 
 use crate::{error::ExecutionError, simulated_exchange::load_from_clickhouse::queries_operations::ClickHouseClient};
@@ -7,7 +7,7 @@ use crate::{error::ExecutionError, simulated_exchange::load_from_clickhouse::que
 pub struct HistoricalFeed<Event>
 {
     // NOTE ClickHouseClient is opted and hardcoded for simplicity, as a makeshift solution.
-    pub database_client: ClickHouseClient,
+    pub database_client: Arc<ClickHouseClient>,
     pub stream: Pin<Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>>,
 }
 
