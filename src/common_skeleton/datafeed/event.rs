@@ -8,13 +8,13 @@ use crate::{
 
 // 定义一个泛型结构体 MarketEvent，包含各种交易市场事件信息
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
-pub struct MarketEvent<T>
+pub struct MarketEvent<Data>
 {
     pub exchange_time: i64,     // 交易所时间戳
     pub received_time: i64,     // 接收到数据的时间戳
     pub exchange: Exchange,     // 交易所信息
     pub instrument: Instrument, // 交易工具信息
-    pub kind: T,                // 事件的具体类型
+    pub kind: Data,                // 事件的具体类型
 }
 
 // 定义一个枚举类型 DataKind，用于表示不同种类的数据

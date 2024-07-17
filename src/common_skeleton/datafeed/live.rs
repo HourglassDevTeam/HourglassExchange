@@ -1,6 +1,6 @@
 use tokio::sync::mpsc;
 
-use crate::common_skeleton::datafeed::{Feed, MarketFeedDistributor};
+use crate::common_skeleton::datafeed::{FeedStatus, MarketFeedDistributor};
 
 #[derive(Debug)]
 pub struct LiveFeed<Event>
@@ -13,13 +13,13 @@ impl<Event> MarketFeedDistributor<Event> for LiveFeed<Event>
 {
     /// 实现 MarketGenerator trait，用于生成下一个市场 `Event`。
 
-    fn fetch_next(&mut self) -> Feed<Event>
+    fn fetch_next(&mut self) -> FeedStatus<Event>
     {
         loop {
             match self.market_rx.try_recv() {
-                | Ok(event) => break Feed::Next(event),
+                | Ok(event) => break FeedStatus::Next(event),
                 | Err(mpsc::error::TryRecvError::Empty) => continue,
-                | Err(mpsc::error::TryRecvError::Disconnected) => break Feed::Finished,
+                | Err(mpsc::error::TryRecvError::Disconnected) => break FeedStatus::Finished,
             }
         }
     }

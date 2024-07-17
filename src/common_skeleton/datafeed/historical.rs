@@ -1,9 +1,9 @@
-use crate::common_skeleton::datafeed::{Feed, MarketFeedDistributor};
+use crate::common_skeleton::datafeed::{FeedStatus, MarketFeedDistributor};
 
 // 从 common_skeleton 模块中引入 Feed 和 MarketFeedDistributor
 // 这两个结构体或特性用于处理市场数据
 
-/// 历史市场事件的 [`Feed`]。
+/// 历史市场事件的 [`FeedStatus`]。
 /// MarketFeed 接受一个泛型迭代器[Iter]，并允许用户按需逐个获取历史市场事件。
 /// 这种方式适合处理离线数据或在内存中加载整个历史数据集的情况。
 #[derive(Debug)]
@@ -21,12 +21,12 @@ where
     Iter: Iterator<Item=Event>,
 {
     // 为 HistoricalFeed 实现 MarketFeedDistributor 特性
-    fn fetch_next(&mut self) -> Feed<Event>
+    fn fetch_next(&mut self) -> FeedStatus<Event>
     {
         // fetch_next 方法尝试从迭代器中获取下一个事件
         // 如果有事件，返回 Feed::Next(event)
         // 如果没有事件，返回 Feed::Finished
-        self.market_iterator.next().map_or(Feed::Finished, Feed::Next)
+        self.market_iterator.next().map_or(FeedStatus::Finished, FeedStatus::Next)
     }
 }
 
