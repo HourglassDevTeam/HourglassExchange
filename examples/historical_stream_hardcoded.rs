@@ -1,5 +1,6 @@
 use pin_utils::pin_mut;
 use tokio_stream::StreamExt;
+
 use unilink_execution::simulated_exchange::load_from_clickhouse::queries_operations::ClickHouseClient;
 
 #[tokio::main]

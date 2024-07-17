@@ -10,7 +10,7 @@ pub mod instrument_orders;
 pub mod load_from_clickhouse;
 pub mod simulated_client;
 pub mod utils;
-pub(crate) mod ws_trade;
+pub mod ws_trade;
 
 #[derive(Debug)]
 pub struct SimulatedExchange<Event>

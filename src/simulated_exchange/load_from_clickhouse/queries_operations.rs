@@ -1,31 +1,35 @@
 // NOTE this module is previously built and imported into the main project as a dependency.
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
-use crate::simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade};
+use std::sync::Arc;
 use async_stream::stream;
 pub use clickhouse::{
-    error::{Error, Result},
-    Client, Row,
+    Client,
+    error::Result, Row,
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
-pub struct ClickHouseClient
-{
-    pub client: Client,
+
+use crate::error::ExecutionError;
+use crate::simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade};
+
+
+pub struct ClickHouseClient {
+    client: Arc<Client>,  // Using Arc to safely share and own the client across contexts
 }
 
-impl ClickHouseClient
-{
-    pub fn new() -> Self
-    {
-        let client = Client::default().with_url("http://localhost:8123").with_user("default").with_password("");
+impl ClickHouseClient {
+    pub fn new() -> Self {
+        let client = Client::default()
+            .with_url("http://localhost:8123")
+            .with_user("default")
+            .with_password("");
 
         println!("[AlgoBacktest] : 连接到 ClickHouse 服务器成功。");
 
-        Self { client }
+        Self { client: Arc::new(client) }  // Wrap the client in Arc
     }
 }
-
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Row)]
 pub struct TradeDataFromClickhouse
@@ -69,7 +73,7 @@ impl ClickHouseClient
         let table_names_query = format!("SHOW TABLES FROM {database}",);
         println!("{:?}", table_names_query);
         let result = self.client.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
-                                                                                          eprintln!("[AlgoBacktest] : Error loading table names: {:?}", e);
+                                                                                          eprintln!("[AlgoBacktest] : ExecutionError loading table names: {:?}", e);
                                                                                           vec![]
                                                                                       });
 
@@ -96,42 +100,42 @@ impl ClickHouseClient
         tables_for_date
     }
 
-    pub async fn retrieve_all_trades(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<Vec<WsTrade>, Error>
+    pub async fn retrieve_all_trades(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<Vec<WsTrade>, ExecutionError>
     {
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp", full_table_path);
         println!("[AlgoBacktest] : 查询SQL语句 {}", query);
-        let trade_datas = self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await?;
+        let trade_datas = self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await.or_else(|e| Err(ExecutionError::InternalError(format!("Failed query: {}", e))))?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
 
-    pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<WsTrade, Error>
+    pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<WsTrade, ExecutionError>
     {
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
         println!("[AlgoBacktest] : 查询SQL语句 {}", query);
-        let trade_data = self.client.query(&query).fetch_one::<TradeDataFromClickhouse>().await?;
+        let trade_data = self.client.query(&query).fetch_one::<TradeDataFromClickhouse>().await.or_else(|e| Err(ExecutionError::InternalError(format!("Failed query: {}", e))))?;
         Ok(WsTrade::from(trade_data))
     }
 
-    pub async fn query_union_table(client: &ClickHouseClient, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<WsTrade>, clickhouse::error::Error>
+    pub async fn query_union_table(client: &ClickHouseClient, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<WsTrade>, ExecutionError>
     {
         let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
         let database = format!("{}_{}_{}", exchange, instrument, channel);
         let query = format!("SELECT * FROM {}.{}", database, table_name);
         println!("[AlgoBacktest] : Executing query: {}", query);
-        let trade_datas = client.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await?;
+        let trade_datas = client.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await.or_else(|e| Err(ExecutionError::InternalError(format!("Failed query: {}", e))))?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
 
     pub fn query_union_table_batched<'a>(&'a self, exchange: &'a str, instrument: &'a str, channel: &'a str, date: &'a str)
-                                         -> impl Stream<Item = Result<Vec<WsTrade>, Error>> + 'a
+                                         -> impl Stream<Item = Result<Vec<WsTrade>, ExecutionError>> + 'a
     {
         stream! {
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
@@ -146,7 +150,7 @@ impl ClickHouseClient
                 );
                 println!("[AlgoBacktest] : Executing query: {}", query);
 
-                match self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await {
+                match self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await.or_else( |e| Err(ExecutionError::InternalError(format!("Failed query: {}", e)))) {
                     Ok(trade_datas) => {
                         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
                         let batch_size = ws_trades.len();
