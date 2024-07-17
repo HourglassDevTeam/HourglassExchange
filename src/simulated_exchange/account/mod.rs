@@ -34,8 +34,8 @@ pub mod account_orders;
 pub struct Account<Iter, Event>
 where
 
-    Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
+    Event: Clone,
 {
     pub exchange_timestamp: i64,                                    // NOTE 日后可以用无锁结构原子锁包裹
     pub data: Arc<RwLock<AccountMarketFeed<Iter, Event>>>,          // 帐户数据
@@ -51,8 +51,9 @@ where
 pub struct AccountInitiator<Iter, Event>
 where
 
-    Event: Clone,
     Iter: Iterator<Item=Event> + Clone,
+    Event: Clone,
+
 {
     data: Option<Arc<RwLock<AccountMarketFeed<Iter, Event>>>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
