@@ -1,7 +1,5 @@
 use std::fmt::Debug;
-
 use serde::{Deserialize, Serialize};
-
 use crate::common_skeleton::{
     order::{Open, Order},
     Side,
