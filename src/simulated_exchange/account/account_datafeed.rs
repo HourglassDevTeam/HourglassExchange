@@ -50,8 +50,6 @@ impl<Iter,Event> MarketFeedDistributor<Event> for FeedKind<Iter,Event>
 where
     Event: Clone,
     Iter: Iterator<Item = Event> + Clone,
-    LiveFeed<Event>: MarketFeedDistributor<Event>,
-    HistoricalFeed<Iter, Event>: MarketFeedDistributor<Event>,
 {
     fn fetch_next(&mut self) -> FeedStatus<Event> {
         match self {
