@@ -5,17 +5,17 @@ use futures_core::Stream;
 use crate::{
     common_skeleton::datafeed::{historical::HistoricalFeed, live::LiveFeed},
     error::ExecutionError,
-    simulated_exchange::account::account_market_feed::StreamKind::{Historical, Live},
+    simulated_exchange::account::account_market_feed::MarketStream::{Historical, Live},
 };
 
-pub struct AccountMarketFeed<Event>
+pub struct AccountMarketStream<Event>
     where Event: Clone + Send + Sync + 'static
 {
     pub stream_kind_name: &'static str,
-    pub data_stream: StreamKind<Event>,
+    pub data_stream: MarketStream<Event>,
 }
 
-impl<Event> Debug for AccountMarketFeed<Event> where Event: Debug + Clone + Send + Sync + 'static
+impl<Event> Debug for AccountMarketStream<Event> where Event: Debug + Clone + Send + Sync + 'static
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
@@ -23,9 +23,9 @@ impl<Event> Debug for AccountMarketFeed<Event> where Event: Debug + Clone + Send
     }
 }
 
-impl<Event> AccountMarketFeed<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> AccountMarketStream<Event> where Event: Clone + Send + Sync + 'static
 {
-    pub fn new(stream: StreamKind<Event>) -> Self
+    pub fn new(stream: MarketStream<Event>) -> Self
     {
         Self { stream_kind_name: match stream {
                    | Live(_) => "LiveFeed",
@@ -36,14 +36,14 @@ impl<Event> AccountMarketFeed<Event> where Event: Clone + Send + Sync + 'static
 }
 
 // add enum StreamKind for AccountMarketFeed to choose
-pub enum StreamKind<Event>
+pub enum MarketStream<Event>
     where Event: Clone + Send + Sync + 'static
 {
     Live(LiveFeed<Event>),
     Historical(HistoricalFeed<Event>),
 }
 
-impl<Event> StreamKind<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> MarketStream<Event> where Event: Clone + Send + Sync + 'static
 {
     pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item = Result<Event, ExecutionError>> + Send)>
     {
