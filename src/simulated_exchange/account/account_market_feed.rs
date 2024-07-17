@@ -1,29 +1,30 @@
+use std::pin::Pin;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use futures_core::Stream;
+use tokio::sync::RwLock;
 
 use crate::common_skeleton::datafeed::{FeedStatus, historical::HistoricalFeed, MarketFeedDistributor};
 use crate::common_skeleton::datafeed::live::LiveFeed;
+use crate::error::ExecutionError;
 
 #[derive(Debug)]
-pub struct AccountMarketFeed<Iter,Event,>
+pub struct AccountMarketFeed<Event>
 where
-    Event: Clone,
-    Iter: Iterator<Item = Event> + Clone,
-    FeedKind<Iter,Event>: MarketFeedDistributor<Event>,
+    Event: Clone + Send + Sync + 'static,
 {
     pub atomic_id: AtomicU64,
-    pub data: FeedKind<Iter,Event>,
+    pub data_stream: Arc<RwLock<Pin<Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>>>>,
 }
 
-impl<Iter,Event> AccountMarketFeed<Iter,Event>
+impl<Event> AccountMarketFeed<Event>
 where
-    Event: Clone,
-    Iter: Iterator<Item = Event> + Clone,
-    FeedKind<Iter,Event>: MarketFeedDistributor<Event>,
+    Event: Clone + Send + Sync + 'static,
 {
-    pub fn new(data: FeedKind<Iter,Event>) -> Self {
+    pub fn new(stream: Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>) -> Self {
         Self {
             atomic_id: AtomicU64::new(0),
-            data,
+            data_stream: Arc::new(RwLock::new(Box::pin(stream))),
         }
     }
 
@@ -37,26 +38,23 @@ where
 }
 
 
-// add enumeration FeedKind for AccountMarketFeed to choose
 #[derive(Debug)]
-pub enum FeedKind<Iter,Event>
+pub enum FeedKind<Event>
 where
-    Event: Clone,
-    Iter: Iterator<Item = Event> + Clone,
+    Event: Clone + Send + Sync + 'static,
 {
-    LiveFeed(LiveFeed<Event>),
-    HistoricalFeed(HistoricalFeed<Iter, Event>),
+    LiveFeed(Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>),
+    HistoricalFeed(Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>),
 }
 
-impl<Iter,Event> MarketFeedDistributor<Event> for FeedKind<Iter,Event>
+impl<Event> MarketFeedDistributor<Event> for FeedKind<Event>
 where
-    Event: Clone,
-    Iter: Iterator<Item = Event> + Clone,
+    Event: Clone + Send + Sync + 'static,
 {
-    fn fetch_next(&mut self) -> FeedStatus<Event> {
+    fn fetch_next(&mut self) -> Pin<Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>> {
         match self {
-            FeedKind::LiveFeed(feed) => feed.fetch_next(),
-            FeedKind::HistoricalFeed(feed) => feed.fetch_next(),
+            FeedKind::LiveFeed(stream) => stream.clone(),
+            FeedKind::HistoricalFeed(stream) => stream.clone(),
         }
     }
 }

@@ -31,45 +31,42 @@ mod account_latency;
 pub mod account_orders;
 
 #[derive(Clone, Debug)]
-pub struct Account<Iter, Event>
+pub struct Account<Event>
 where
 
-    Iter: Iterator<Item=Event> + Clone,
-    Event: Clone,
+    Event: Clone + Send + Sync + 'static,
 {
     pub exchange_timestamp: i64,                                    // NOTE 日后可以用无锁结构原子锁包裹
-    pub data: Arc<RwLock<AccountMarketFeed<Iter, Event>>>,          // 帐户数据
+    pub data: Arc<RwLock<AccountMarketFeed<Event>>>,          // 帐户数据
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub latency: Arc<RwLock<AccountLatency>>,                       // 帐户延迟
     pub config: Arc<RwLock<AccountConfig>>,                         // 帐户配置
-    pub balances: Arc<RwLock<AccountBalances<Iter, Event>>>,  // 帐户余额
+    pub balances: Arc<RwLock<AccountBalances<Event>>>,  // 帐户余额
     pub positions: Arc<RwLock<Vec<AccountPositions>>>,              // 帐户头寸
     pub orders: Arc<RwLock<AccountOrders>>,                         // 帐户订单
 }
 #[derive(Clone, Debug)]
-pub struct AccountInitiator<Iter, Event>
+pub struct AccountInitiator<Event>
 where
 
-    Iter: Iterator<Item=Event> + Clone,
-    Event: Clone,
+    Event: Clone + Send + Sync + 'static,
 
 {
-    data: Option<Arc<RwLock<AccountMarketFeed<Iter, Event>>>>,
+    data: Option<Arc<RwLock<AccountMarketFeed<Event>>>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
     market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
     latency: Option<Arc<RwLock<AccountLatency>>>,
     config: Option<Arc<RwLock<AccountConfig>>>,
-    balances: Option<Arc<RwLock<AccountBalances<Iter, Event>>>>,
+    balances: Option<Arc<RwLock<AccountBalances<Event>>>>,
     positions: Option<Arc<RwLock<Vec<AccountPositions>>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
-impl<Iter, Event> AccountInitiator<Iter, Event>
+impl<Event> AccountInitiator<Event>
 where
 
-    Event: Clone,
-    Iter: Iterator<Item=Event> + Clone,
+   Event: Clone + Send + Sync + 'static,
 {
     pub fn new() -> Self
     {
@@ -85,7 +82,7 @@ where
         }
     }
 
-    pub fn data(mut self, value: AccountMarketFeed<Iter, Event>) -> Self
+    pub fn data(mut self, value: AccountMarketFeed<Event>) -> Self
     {
         self.data = Some(Arc::new(RwLock::new(value)));
         self
@@ -115,7 +112,7 @@ where
         self
     }
 
-    pub fn balances(mut self, value: AccountBalances<Iter, Event>) -> Self
+    pub fn balances(mut self, value: AccountBalances<Event>) -> Self
     {
         self.balances = Some(Arc::new(RwLock::new(value)));
         self
@@ -133,7 +130,7 @@ where
         self
     }
 
-    pub fn build(self) -> Result<Account<Iter, Event>, String>
+    pub fn build(self) -> Result<Account<Event>, String>
     {
         Ok(Account {
             exchange_timestamp: 0,
@@ -151,13 +148,12 @@ where
 
 // NOTE 未完成
 #[allow(dead_code)]
-impl<Iter, Event> Account<Iter, Event>
+impl<Event> Account<Event>
 where
 
-    Event: Clone,
-    Iter: Iterator<Item=Event> + Clone,
+   Event: Clone + Send + Sync + 'static,
 {
-    pub fn initiate() -> AccountInitiator<Iter, Event>
+    pub fn initiate() -> AccountInitiator<Event>
     {
         AccountInitiator::new()
     }
