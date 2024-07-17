@@ -1,26 +1,18 @@
-use tokio::sync::mpsc;
+use std::pin::Pin;
 
-use crate::common_skeleton::datafeed::{FeedStatus, MarketFeedDistributor};
+use futures::Stream;
 
-#[derive(Debug)]
-pub struct LiveFeed<Event>
-{
-    // 此处不设发送端，发送端由subscriber实现
-    pub market_rx: mpsc::UnboundedReceiver<Event>,
+use crate::error::ExecutionError;
+
+pub struct LiveFeed<Event> {
+    stream: Pin<Box<dyn Stream<Item=Result<Event, ExecutionError>> + Send>>,
 }
 
-impl<Event> MarketFeedDistributor<Event> for LiveFeed<Event>
+impl<Event> LiveFeed<Event>
+where
+    Event: Clone + Send + Sync + 'static,
 {
-    /// 实现 MarketGenerator trait，用于生成下一个市场 `Event`。
-
-    fn fetch_next(&mut self) -> FeedStatus<Event>
-    {
-        loop {
-            match self.market_rx.try_recv() {
-                | Ok(event) => break FeedStatus::Next(event),
-                | Err(mpsc::error::TryRecvError::Empty) => continue,
-                | Err(mpsc::error::TryRecvError::Disconnected) => break FeedStatus::Finished,
-            }
-        }
+    pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item=Result<Event, ExecutionError>> + Send)> {
+        self.stream.as_mut()
     }
 }

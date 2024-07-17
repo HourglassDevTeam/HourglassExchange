@@ -1,30 +1,36 @@
-use std::pin::Pin;
-use std::sync::Arc;
+use std::fmt;
+use std::fmt::Debug;
 use std::sync::atomic::{AtomicU64, Ordering};
-use futures_core::Stream;
-use tokio::sync::RwLock;
 
-use crate::common_skeleton::datafeed::{FeedStatus, historical::HistoricalFeed, MarketFeedDistributor};
+use crate::common_skeleton::datafeed::historical::HistoricalFeed;
 use crate::common_skeleton::datafeed::live::LiveFeed;
-use crate::error::ExecutionError;
 
-#[derive(Debug)]
 pub struct AccountMarketFeed<Event>
 where
     Event: Clone + Send + Sync + 'static,
 {
     pub atomic_id: AtomicU64,
-    pub data_stream: Arc<RwLock<Pin<Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>>>>,
+    pub data_stream: FeedKind<Event>,
 }
+
+impl<Event> Debug for AccountMarketFeed<Event>
+where
+    Event: Debug + Clone + Send + Sync + 'static,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("AccountMarketFeed").field("atomic_id", &self.atomic_id).finish()
+    }
+}
+
 
 impl<Event> AccountMarketFeed<Event>
 where
     Event: Clone + Send + Sync + 'static,
 {
-    pub fn new(stream: Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>) -> Self {
+    pub fn new(stream: FeedKind<Event>) -> Self {
         Self {
             atomic_id: AtomicU64::new(0),
-            data_stream: Arc::new(RwLock::new(Box::pin(stream))),
+            data_stream: stream,
         }
     }
 
@@ -38,23 +44,10 @@ where
 }
 
 
-#[derive(Debug)]
 pub enum FeedKind<Event>
 where
     Event: Clone + Send + Sync + 'static,
 {
-    LiveFeed(Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>),
-    HistoricalFeed(Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>),
-}
-
-impl<Event> MarketFeedDistributor<Event> for FeedKind<Event>
-where
-    Event: Clone + Send + Sync + 'static,
-{
-    fn fetch_next(&mut self) -> Pin<Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>> {
-        match self {
-            FeedKind::LiveFeed(stream) => stream.clone(),
-            FeedKind::HistoricalFeed(stream) => stream.clone(),
-        }
-    }
+    LiveFeed(LiveFeed<Event>),
+    HistoricalFeed(HistoricalFeed<Event>),
 }
