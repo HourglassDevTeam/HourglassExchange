@@ -1,3 +1,4 @@
+// NOTE 这个示例是示范性，但是不健全的。并未把 [WsTrade] 流转化为 [MarketEvent] 流。
 // ### 深度解释 `to_owned` 的作用
 //
 // `to_owned` 方法在这个代码中的作用是克隆 `CLIENT` 这个全局静态变量的 `Arc<ClickHouseClient>` 引用。`Arc` 是一种原子引用计数的智能指针，允许在多个线程之间安全地共享数据。当我们调用 `to_owned` 方法时，实际上是创建了一个新的 `Arc` 实例，该实例的引用计数增加了1，并且它仍然指向原来的 `ClickHouseClient` 实例。
