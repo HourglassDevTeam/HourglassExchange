@@ -47,7 +47,7 @@ where
     }
 }
 
-
+// add enum StreamKind for AccountMarketFeed to choose
 pub enum StreamKind<Event>
 where
     Event: Clone + Send + Sync + 'static,
