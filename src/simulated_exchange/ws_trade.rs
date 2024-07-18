@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 pub struct WsTrade
 {
     #[serde(alias = "instrument_id", alias = "inst_id")]
-    instId: String,
+    instId: String, // NOTE nomenclature of instrument ID ?
     #[serde(alias = "side")]
     side: String,
     #[serde(alias = "price")]
