@@ -34,7 +34,7 @@ impl ClickHouseClient
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
 pub struct ClickhouseTrade
 {
-    pub symbol: String,
+    pub basequote: String,
     pub side: String,
     pub price: f64,
     pub timestamp: i64,
