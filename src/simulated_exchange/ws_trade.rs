@@ -10,6 +10,7 @@ use crate::{
     simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
     Exchange,
 };
+use crate::common_skeleton::instrument::kind::InstrumentKind::Perpetual;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd)]
 #[allow(non_snake_case)]
@@ -28,14 +29,14 @@ pub struct WsTrade
 // NOTE 这是按照Okex交易所API数据类型构建的 WebsocketTrade 数据结构，回测选用。
 impl MarketEvent<WsTrade>
 {
-    pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, exchange: Exchange) -> Self
+    pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, instrument: InstrumentKind, exchange: Exchange) -> Self
     {
         let exchange_time = ws_trade.ts.parse::<i64>().unwrap_or(0);
         let received_time = ws_trade.ts.parse::<i64>().unwrap_or(0); // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
 
         let instrument = Instrument { base: Token::from(base),
                                       quote: Token::from(quote),
-                                      kind: InstrumentKind::Spot };
+                                      kind: instrument };
 
         MarketEvent { exchange_time,
                       received_time,
@@ -49,14 +50,14 @@ impl MarketEvent<WsTrade>
 // NOTE 这是按照Clickhouse中存储的数据类型构建的 WebsocketTrade 数据结构，回测选用。
 impl MarketEvent<ClickhouseTrade>
 {
-    pub fn from_swap_trade_clickhouse(trade: ClickhouseTrade, base: String, quote: String, instrument_kind: InstrumentKind, exchange: Exchange) -> Self
+    pub fn from_swap_trade_clickhouse(trade: ClickhouseTrade, base: String, quote: String, exchange: Exchange) -> Self
     {
         let exchange_time = trade.timestamp;
         let received_time = trade.timestamp; // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
 
         let instrument = Instrument { base: Token::from(base),
                                       quote: Token::from(quote),
-                                      kind: instrument_kind };
+                                      kind: Perpetual };
 
         MarketEvent { exchange_time,
                       received_time,
