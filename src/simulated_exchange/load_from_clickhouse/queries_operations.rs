@@ -141,7 +141,7 @@ impl ClickHouseClient
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
             let database = format!("{}_{}_{}", exchange, instrument, channel);
             let mut offset = 0;
-            let limit = 100000;
+            let limit = 1000000;
 
             loop {
                 let query = format!(
