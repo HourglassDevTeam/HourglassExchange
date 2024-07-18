@@ -3,16 +3,13 @@
 
 use async_stream::stream;
 pub use clickhouse::{
-    error::{Error, Result},
-    Client, Row,
+    Client,
+    error::{Error, Result}, Row,
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    error::ExecutionError,
-    simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade},
-};
+use crate::simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade};
 
 pub struct ClickHouseClient
 {

@@ -9,7 +9,6 @@ use futures_core::Stream;
 
 use crate::{
     common_skeleton::datafeed::{historical::HistoricalFeed, live::LiveFeed},
-    error::ExecutionError,
     simulated_exchange::account::account_market_feed::MarketStream::{Historical, Live},
 };
 
