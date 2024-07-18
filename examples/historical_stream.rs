@@ -45,7 +45,7 @@ async fn main()
     let date = "2024_03_03";
 
     // 调用 CLIENT 的 query_union_table_batched 方法获取数据流
-    let stream = CLIENT.query_union_table_batched(exchange, instrument, channel, date);
+    let stream = CLIENT.query_unioned_trade_table_batched(exchange, instrument, channel, date);
 
     // 创建一个 HistoricalFeed 实例
     let feed = HistoricalFeed { database_client: CLIENT.to_owned(),

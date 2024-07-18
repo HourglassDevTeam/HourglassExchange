@@ -122,7 +122,7 @@ impl ClickHouseClient
         Ok(WsTrade::from(trade_data))
     }
 
-    pub async fn query_union_table(client: &ClickHouseClient, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<WsTrade>, Error>
+    pub async fn query_unioned_trade_table(client: &ClickHouseClient, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<WsTrade>, Error>
     {
         let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
         let database = format!("{}_{}_{}", exchange, instrument, channel);
@@ -133,12 +133,12 @@ impl ClickHouseClient
         Ok(ws_trades)
     }
 
-    pub fn query_union_table_batched<'a>(&'a self,
-                                         exchange: &'a str,
-                                         instrument: &'a str,
-                                         channel: &'a str,
-                                         date: &'a str)
-                                         -> impl Stream<Item = MarketEvent<TradeDataFromClickhouse>> + 'a
+    pub fn query_unioned_trade_table_batched<'a>(&'a self,
+                                                 exchange: &'a str,
+                                                 instrument: &'a str,
+                                                 channel: &'a str,
+                                                 date: &'a str)
+                                                 -> impl Stream<Item = MarketEvent<TradeDataFromClickhouse>> + 'a
     {
         stream! {
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
