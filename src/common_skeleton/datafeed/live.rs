@@ -6,7 +6,7 @@ use crate::error::ExecutionError;
 
 pub struct LiveFeed<Event>
 {
-    stream: Pin<Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>>,
+    pub(crate) stream: Pin<Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>>,
 }
 
 impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + 'static

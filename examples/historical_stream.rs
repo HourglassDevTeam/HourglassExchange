@@ -1,3 +1,4 @@
+#![feature(async_iterator)]
 // NOTE 这个示例是示范性，但是不健全的。并未把 [WsTrade] 流转化为 [MarketEvent] 流。
 // ### 深度解释 `to_owned` 的作用
 //
@@ -19,6 +20,7 @@
 // 用于创建全局静态变量
 use std::sync::Arc;
 
+use futures::StreamExt;
 use lazy_static::lazy_static;
 
 // 用于原子引用计数的智能指针
@@ -33,10 +35,8 @@ use unilink_execution::{
 lazy_static! {
     pub static ref CLIENT: Arc<ClickHouseClient> = Arc::new(ClickHouseClient::new());
 }
-
 #[tokio::main]
-async fn main()
-{
+async fn main() {
     // 定义交易所、金融工具、频道和日期的字符串变量
     let exchange = "binance";
     let instrument = "futures";
@@ -47,14 +47,18 @@ async fn main()
     let stream = CLIENT.query_union_table_batched(exchange, instrument, channel, date);
 
     // 创建一个 HistoricalFeed 实例
-    let feed = HistoricalFeed { // 将 CLIENT 的所有权克隆一份并赋值给 database_client 字段
-                                // to_owned 方法用于克隆 Arc 引用计数指针，从而创建一个新的 Arc 指针指向相同的 ClickHouseClient 实例
-                                database_client: CLIENT.to_owned(),
-
-                                // 使用 Box::pin 包装数据流，并赋值给 stream 字段
-                                stream: Box::pin(stream) };
+    let feed = HistoricalFeed {
+        database_client: CLIENT.to_owned(),
+        stream: Box::pin(stream),
+    };
 
     let mut account_stream = AccountMarketStream::new(MarketStream::Historical(feed));
-    // // 打印 AccountMarketStream 实例的调试
-    account_stream.data_stream.poll_next(); // 开始数据流的轮询
+
+    // 使用 while let 循环来遍历数据流，并在每次接收到数据时打印
+    while let Some(result) = account_stream.data_stream.next().await {
+        match result {
+            Ok(event) => println!("Received event: {:?}", event),
+            Err(e) => eprintln!("Error receiving event: {:?}", e),
+        }
+    }
 }

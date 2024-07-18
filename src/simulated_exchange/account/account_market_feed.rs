@@ -1,4 +1,5 @@
 use std::{fmt, fmt::Debug, pin::Pin};
+use std::task::{Context, Poll};
 
 use futures_core::Stream;
 
@@ -41,6 +42,24 @@ pub enum MarketStream<Event>
 {
     Live(LiveFeed<Event>),
     Historical(HistoricalFeed<Event>),
+}
+
+
+impl<Event> Stream for MarketStream<Event>
+where
+    Event: Clone + Send + Sync + 'static,
+{
+    type Item = Result<Event, ExecutionError>;
+
+    fn poll_next(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        match self.get_mut() {
+            Historical(feed) => Pin::new(&mut feed.stream).poll_next(cx),
+            Live(feed) => Pin::new(&mut feed.stream).poll_next(cx),
+        }
+    }
 }
 
 impl<Event> MarketStream<Event> where Event: Clone + Send + Sync + 'static
