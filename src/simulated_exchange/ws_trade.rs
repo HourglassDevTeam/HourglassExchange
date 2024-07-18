@@ -1,13 +1,16 @@
+/// NOTE code below is to be merged later
+use serde::{Deserialize, Serialize};
+
 use crate::{
     common_skeleton::{
         datafeed::event::MarketEvent,
-        instrument::{kind::InstrumentKind, Instrument},
+        instrument::{Instrument, kind::InstrumentKind},
         token::Token,
     },
     simulated_exchange::load_from_clickhouse::queries_operations::TradeDataFromClickhouse,
 };
-/// NOTE code below is to be merged later
-use serde::{Deserialize, Serialize};
+use crate::Exchange;
+
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd)]
 #[allow(non_snake_case)]
@@ -22,8 +25,6 @@ pub struct WsTrade
     #[serde(alias = "timestamp")]
     ts: String,
 }
-
-use crate::Exchange;
 
 // Implement a constructor function for MarketEvent<WsTrade>
 impl MarketEvent<WsTrade>
@@ -44,6 +45,7 @@ impl MarketEvent<WsTrade>
                       kind: ws_trade }
     }
 }
+
 
 // 从 TradeDataFromClickhouse 到 WsTrade 的转换实现
 impl From<TradeDataFromClickhouse> for WsTrade
