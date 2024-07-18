@@ -32,7 +32,7 @@ impl ClickHouseClient
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize, Row)]
+#[derive(Debug, Clone,Serialize, Deserialize, Row)]
 pub struct TradeDataFromClickhouse
 {
     pub symbol: String,
