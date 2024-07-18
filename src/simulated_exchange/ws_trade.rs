@@ -81,7 +81,7 @@ impl From<ClickhouseTrade> for WsTrade
 
 pub fn parse_base_and_quote(basequote: &str) -> (String, String)
 {
-    let quote_assets = ["USDT", "USDC"];
+    let quote_assets = ["USDT", "USDC","USD","UST","DAI"];
     for &quote in &quote_assets {
         if basequote.ends_with(quote) {
             let base = &basequote[..basequote.len() - quote.len()];
