@@ -161,7 +161,7 @@ impl ClickHouseClient
                     Ok(trade_datas) => {
                         for trade_data in &trade_datas {
                             let (base, quote) = parse_base_and_quote(&trade_data.basequote);
-                            let market_event = MarketEvent::from_trade_clickhouse_swap(trade_data.clone(),base, quote, Exchange::from(exchange.to_string()));
+                            let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(),base, quote, Exchange::from(exchange.to_string()));
                             yield market_event;
                         }
 
@@ -212,7 +212,7 @@ impl ClickHouseClient
                             for trade_data in &trade_datas {
                                                             let (base, quote) = parse_base_and_quote(&trade_data.basequote);
 
-                                let market_event = MarketEvent::from_trade_clickhouse_swap(trade_data.clone(),base, quote, Exchange::from(exchange.to_string()));
+                                let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(),base, quote, Exchange::from(exchange.to_string()));
                                 yield market_event;
                             }
 
