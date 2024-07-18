@@ -1,6 +1,7 @@
 // NOTE this module is previously built and imported into the main project as a dependency.
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
+use crate::Exchange;
 use async_stream::stream;
 pub use clickhouse::{
     Client,
@@ -8,6 +9,8 @@ pub use clickhouse::{
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
+use crate::common_skeleton::datafeed::event::MarketEvent;
+use crate::error::ExecutionError;
 
 use crate::simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade};
 
@@ -132,8 +135,13 @@ impl ClickHouseClient
         Ok(ws_trades)
     }
 
-    pub fn query_union_table_batched<'a>(&'a self, exchange: &'a str, instrument: &'a str, channel: &'a str, date: &'a str) -> impl Stream<Item = TradeDataFromClickhouse> + 'a
-    {
+    pub fn query_union_table_batched<'a>(
+        &'a self,
+        exchange: &'a str,
+        instrument: &'a str,
+        channel: &'a str,
+        date: &'a str,
+    ) -> impl Stream<Item = MarketEvent<TradeDataFromClickhouse>> + 'a {
         stream! {
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
             let database = format!("{}_{}_{}", exchange, instrument, channel);
@@ -150,7 +158,8 @@ impl ClickHouseClient
                 match self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await {
                     Ok(trade_datas) => {
                         for trade_data in &trade_datas {
-                            yield trade_data.clone(); // 返回 TradeDataFromClickhouse 项目
+                            let market_event = MarketEvent::from_trade_clickhouse(trade_data.clone(), "base".to_string(), "quote".to_string(), Exchange::from(exchange.to_string()));
+                            yield market_event;
                         }
 
                         if trade_datas.len() < limit {
