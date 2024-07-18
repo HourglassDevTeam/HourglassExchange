@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub enum InstrumentKind
 {
-    Spot,      // [NOTE] 注意：Spot 指的是即期合约，此处现在缺乏合约细节字段，不适合MarketID的唯一识别。
-    #[serde(alias = "Swap",alias = "SWAP",alias = "PERPETUAL" )]
+    Spot, // [NOTE] 注意：Spot 指的是即期合约，此处现在缺乏合约细节字段，不适合MarketID的唯一识别。
+    #[serde(alias = "Swap", alias = "SWAP", alias = "PERPETUAL")]
     Perpetual, // [NOTE] 注意：Perpetual 指的是永续合约，此处现缺乏合约细节字段，不适合MarketID的唯一识别。
     Future(FutureContract),
     Option(OptionContract),
