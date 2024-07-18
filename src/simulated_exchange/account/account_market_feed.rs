@@ -36,6 +36,7 @@ impl<Event> AccountMarketStream<Event> where Event: Clone + Send + Sync + 'stati
     }
 }
 
+
 // add enum StreamKind for AccountMarketFeed to choose
 pub enum MarketStream<Event>
     where Event: Clone + Send + Sync + 'static

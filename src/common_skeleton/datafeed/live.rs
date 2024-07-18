@@ -4,6 +4,7 @@ use futures::Stream;
 
 use crate::error::ExecutionError;
 
+
 pub struct LiveFeed<Event>
 {
     pub(crate) stream: Pin<Box<dyn Stream<Item = Result<Event, ExecutionError>> + Send>>,

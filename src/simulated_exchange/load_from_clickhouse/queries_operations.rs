@@ -158,7 +158,7 @@ impl ClickHouseClient
                 match self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await {
                     Ok(trade_datas) => {
                         for trade_data in &trade_datas {
-                            trade_data; // 使用 clone() 来避免移动值
+                            println!("{:?}", trade_data);// 使用 clone() 来避免移动值
                         }
 
                         if trade_datas.len() < limit {
