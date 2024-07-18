@@ -194,7 +194,7 @@ impl ClickHouseClient
 
         let mut current_date = start_date;
         while current_date <= end_date {
-            let date = current_date.format("%Y-%m-%d").to_string();
+            let date = current_date.format("%Y_%m_%d").to_string();
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
             let database = format!("{}_{}_{}", exchange, instrument, channel);
             let mut offset = 0;
@@ -228,6 +228,5 @@ impl ClickHouseClient
 
             current_date += Duration::days(1);
         }
-    }
-    }
+    }}
 }
