@@ -1,17 +1,19 @@
 // NOTE this module is previously built and imported into the main project as a dependency.
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
-use std::borrow::Cow;
 use async_stream::stream;
 pub use clickhouse::{
-    error::{Error, Result},
-    Client, Row,
+    Client,
+    error::{Error, Result}, Row,
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::ExecutionError, Exchange, simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade}};
-use crate::common_skeleton::datafeed::event::MarketEvent;
+use crate::{
+    common_skeleton::datafeed::event::MarketEvent,
+    Exchange,
+    simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade},
+};
 
 pub struct ClickHouseClient
 {
@@ -31,7 +33,7 @@ impl ClickHouseClient
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize, Row)]
+#[derive(Debug, Clone,Serialize, Deserialize, Row)]
 pub struct TradeDataFromClickhouse
 {
     pub symbol: String,
@@ -134,13 +136,13 @@ impl ClickHouseClient
         Ok(ws_trades)
     }
 
-    pub fn query_union_table_batched<'a>(
-        &'a self,
-        exchange: &'a str,
-        instrument: &'a str,
-        channel: &'a str,
-        date: &'a str,
-    ) -> impl Stream<Item = Result<MarketEvent<TradeDataFromClickhouse>, Error>> + 'a {
+    pub fn query_union_table_batched<'a>(&'a self,
+                                         exchange: &'a str,
+                                         instrument: &'a str,
+                                         channel: &'a str,
+                                         date: &'a str)
+                                         -> impl Stream<Item = Result<MarketEvent<TradeDataFromClickhouse>, Error>> + 'a
+    {
         stream! {
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
             let database = format!("{}_{}_{}", exchange, instrument, channel);
@@ -157,12 +159,12 @@ impl ClickHouseClient
                 let trade_datas = self.client.query(&query).fetch_all().await;
                 match trade_datas {
                     Ok(trade_datas) => {
-                        for trade_data in trade_datas {
+                        for trade_data in &trade_datas {
                             let market_event = MarketEvent::from_trade_clickhouse(
-                                trade_data,
-                                "base_currency".to_string(),
-                                "quote_currency".to_string(),
-                                Exchange(Cow::Borrowed(exchange))
+                                *trade_data,
+                                "base".to_string(),
+                                "quote".to_string(),
+                                Exchange::from(exchange.to_string())
                             );
                             yield Ok(market_event);
                         }

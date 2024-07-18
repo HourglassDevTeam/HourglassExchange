@@ -1,7 +1,4 @@
-use std::{
-    borrow::Cow,
-    fmt::{Debug, Display, Formatter},
-};
+use std::fmt::{Debug, Display, Formatter};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -40,9 +37,9 @@ pub trait ClientExecution
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize, Debug)]
-pub struct Exchange(Cow<'static, str>);
+pub struct Exchange(String);
 
-impl<E> From<E> for Exchange where E: Into<Cow<'static, str>>
+impl<E> From<E> for Exchange where E: Into<String>
 {
     fn from(exchange: E) -> Self
     {

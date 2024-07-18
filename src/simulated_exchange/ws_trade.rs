@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 use crate::{
     common_skeleton::{
         datafeed::event::MarketEvent,
-        instrument::{kind::InstrumentKind, Instrument},
+        instrument::{Instrument, kind::InstrumentKind},
         token::Token,
     },
-    simulated_exchange::load_from_clickhouse::queries_operations::TradeDataFromClickhouse,
     Exchange,
+    simulated_exchange::load_from_clickhouse::queries_operations::TradeDataFromClickhouse,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd)]
@@ -39,7 +39,8 @@ impl MarketEvent<WsTrade>
 
         MarketEvent { exchange_time,
                       received_time,
-                      exchange,
+                      exchange: Exchange(exchange.to_string()),
+
                       instrument,
                       kind: ws_trade }
     }
@@ -59,7 +60,7 @@ impl MarketEvent<TradeDataFromClickhouse>
 
         MarketEvent { exchange_time,
                       received_time,
-                      exchange,
+                      exchange: Exchange(exchange.to_string()),
                       instrument,
                       kind: trade }
     }
