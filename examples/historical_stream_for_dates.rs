@@ -24,7 +24,6 @@ async fn main()
     let exchange = "binance";
     let instrument = "futures";
     let channel = "trades";
-    let date = "2024_03_03";
 
     // 调用 CLIENT 的 query_union_table_batched 方法获取数据流
     let stream = CLIENT.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, "2024_03_03","2024_07_03",10000);
