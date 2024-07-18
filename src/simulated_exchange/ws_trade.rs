@@ -7,7 +7,7 @@ use crate::{
         instrument::{kind::InstrumentKind, Instrument},
         token::Token,
     },
-    simulated_exchange::load_from_clickhouse::queries_operations::TradeDataFromClickhouse,
+    simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
     Exchange,
 };
 
@@ -47,9 +47,9 @@ impl MarketEvent<WsTrade>
 }
 
 // NOTE 这是按照Clickhouse中存储的数据类型构建的 WebsocketTrade 数据结构，回测选用。
-impl MarketEvent<TradeDataFromClickhouse>
+impl MarketEvent<ClickhouseTrade>
 {
-    pub fn from_trade_clickhouse(trade: TradeDataFromClickhouse, base: String, quote: String, exchange: Exchange) -> Self
+    pub fn from_trade_clickhouse(trade: ClickhouseTrade, base: String, quote: String, exchange: Exchange) -> Self
     {
         let exchange_time = trade.timestamp;
         let received_time = trade.timestamp; // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
@@ -67,9 +67,9 @@ impl MarketEvent<TradeDataFromClickhouse>
 }
 
 // 从 TradeDataFromClickhouse 到 WsTrade 的转换实现
-impl From<TradeDataFromClickhouse> for WsTrade
+impl From<ClickhouseTrade> for WsTrade
 {
-    fn from(trade: TradeDataFromClickhouse) -> Self
+    fn from(trade: ClickhouseTrade) -> Self
     {
         WsTrade { instId: trade.symbol,
                   side: trade.side,
@@ -80,7 +80,7 @@ impl From<TradeDataFromClickhouse> for WsTrade
 #[allow(dead_code)]
 impl WsTrade
 {
-    pub(crate) fn from_ref(data: &TradeDataFromClickhouse) -> Self
+    pub(crate) fn from_ref(data: &ClickhouseTrade) -> Self
     {
         WsTrade { // 这里假设 WsTrade 结构体字段和 TradeDataFromClickhouse 结构体字段对应
                   instId: data.symbol.clone(),

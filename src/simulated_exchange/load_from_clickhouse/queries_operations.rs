@@ -31,7 +31,7 @@ impl ClickHouseClient
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
-pub struct TradeDataFromClickhouse
+pub struct ClickhouseTrade
 {
     pub symbol: String,
     pub side: String,
@@ -106,7 +106,7 @@ impl ClickHouseClient
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp", full_table_path);
         println!("[UnilinkExecution] : 查询SQL语句 {}", query);
-        let trade_datas = self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await?;
+        let trade_datas = self.client.query(&query).fetch_all::<ClickhouseTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
@@ -118,7 +118,7 @@ impl ClickHouseClient
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
         println!("[UnilinkExecution] : 查询SQL语句 {}", query);
-        let trade_data = self.client.query(&query).fetch_one::<TradeDataFromClickhouse>().await?;
+        let trade_data = self.client.query(&query).fetch_one::<ClickhouseTrade>().await?;
         Ok(WsTrade::from(trade_data))
     }
 
@@ -128,7 +128,7 @@ impl ClickHouseClient
         let database = format!("{}_{}_{}", exchange, instrument, channel);
         let query = format!("SELECT * FROM {}.{}", database, table_name);
         println!("[UnilinkExecution] : Executing query: {}", query);
-        let trade_datas = client.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await?;
+        let trade_datas = client.client.query(&query).fetch_all::<ClickhouseTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
@@ -138,7 +138,7 @@ impl ClickHouseClient
                                                  instrument: &'a str,
                                                  channel: &'a str,
                                                  date: &'a str)
-                                                 -> impl Stream<Item = MarketEvent<TradeDataFromClickhouse>> + 'a
+                                                 -> impl Stream<Item = MarketEvent<ClickhouseTrade>> + 'a
     {
         stream! {
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
@@ -153,7 +153,7 @@ impl ClickHouseClient
                 );
                 println!("[UnilinkExecution] : Executing query: {}", query);
 
-                match self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await {
+                match self.client.query(&query).fetch_all::<ClickhouseTrade>().await {
                     Ok(trade_datas) => {
                         for trade_data in &trade_datas {
                             let market_event = MarketEvent::from_trade_clickhouse(trade_data.clone(), "base".to_string(), "quote".to_string(), Exchange::from(exchange.to_string()));
