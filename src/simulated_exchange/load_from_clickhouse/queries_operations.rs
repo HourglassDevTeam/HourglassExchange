@@ -153,7 +153,7 @@ impl ClickHouseClient
                     "SELECT symbol, side, price, timestamp FROM {}.{} LIMIT {} OFFSET {}",
                     database, table_name, limit, offset
                 );
-                println!("[AlgoBacktest] : Executing query: {}", query);
+                println!("[UnilinkExecution] : Executing query: {}", query);
 
                 match self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await {
                     Ok(trade_datas) => {
