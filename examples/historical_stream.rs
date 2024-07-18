@@ -53,8 +53,14 @@ async fn main()
 
     let mut account_stream = AccountMarketStream::new(MarketStream::Historical(feed));
 
-    // 使用 while let 循环来遍历数据流，并在每次接收到数据时打印
-    while let result = account_stream.data_stream.next().await.unwrap() {
-        println!("{:?}", result);
+
+    loop {
+        let result = account_stream.data_stream.next().await;
+        match result {
+            Some(data) => {
+                println!("{:?}", data);
+            },
+            None => break,
+        }
     }
 }
