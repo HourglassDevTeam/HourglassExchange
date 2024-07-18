@@ -4,13 +4,12 @@ use serde::{Deserialize, Serialize};
 use crate::{
     common_skeleton::{
         datafeed::event::MarketEvent,
-        instrument::{Instrument, kind::InstrumentKind},
+        instrument::{kind::InstrumentKind, Instrument},
         token::Token,
     },
     simulated_exchange::load_from_clickhouse::queries_operations::TradeDataFromClickhouse,
+    Exchange,
 };
-use crate::Exchange;
-
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd)]
 #[allow(non_snake_case)]
@@ -26,7 +25,7 @@ pub struct WsTrade
     ts: String,
 }
 
-// Implement a constructor function for MarketEvent<WsTrade>
+// NOTE 按照API构建的 WebsocketTrade 数据结构，回测选用。
 impl MarketEvent<WsTrade>
 {
     pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, exchange: Exchange) -> Self
@@ -34,7 +33,7 @@ impl MarketEvent<WsTrade>
         let exchange_time = ws_trade.ts.parse::<i64>().unwrap_or(0);
         let received_time = ws_trade.ts.parse::<i64>().unwrap_or(0);
 
-        let instrument = Instrument { base: Token::from(base) ,
+        let instrument = Instrument { base: Token::from(base),
                                       quote: Token::from(quote),
                                       kind: InstrumentKind::Spot };
 
@@ -46,6 +45,25 @@ impl MarketEvent<WsTrade>
     }
 }
 
+// NOTE 回测专用
+impl MarketEvent<TradeDataFromClickhouse>
+{
+    pub fn from_trade_clickhouse(trade: TradeDataFromClickhouse, base: String, quote: String, exchange: Exchange) -> Self
+    {
+        let exchange_time = trade.timestamp;
+        let received_time = trade.timestamp;
+
+        let instrument = Instrument { base: Token::from(base),
+                                      quote: Token::from(quote),
+                                      kind: InstrumentKind::Spot };
+
+        MarketEvent { exchange_time,
+                      received_time,
+                      exchange,
+                      instrument,
+                      kind: trade }
+    }
+}
 
 // 从 TradeDataFromClickhouse 到 WsTrade 的转换实现
 impl From<TradeDataFromClickhouse> for WsTrade
