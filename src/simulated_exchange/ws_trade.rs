@@ -31,7 +31,7 @@ impl MarketEvent<WsTrade>
     pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, exchange: Exchange) -> Self
     {
         let exchange_time = ws_trade.ts.parse::<i64>().unwrap_or(0);
-        let received_time = ws_trade.ts.parse::<i64>().unwrap_or(0);
+        let received_time = ws_trade.ts.parse::<i64>().unwrap_or(0); // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
 
         let instrument = Instrument { base: Token::from(base),
                                       quote: Token::from(quote),
@@ -51,7 +51,7 @@ impl MarketEvent<TradeDataFromClickhouse>
     pub fn from_trade_clickhouse(trade: TradeDataFromClickhouse, base: String, quote: String, exchange: Exchange) -> Self
     {
         let exchange_time = trade.timestamp;
-        let received_time = trade.timestamp;
+        let received_time = trade.timestamp; // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
 
         let instrument = Instrument { base: Token::from(base),
                                       quote: Token::from(quote),
