@@ -77,6 +77,19 @@ impl From<ClickhouseTrade> for WsTrade
                   ts: trade.timestamp.to_string() }
     }
 }
+
+pub fn parse_base_and_quote(basequote: &str) -> (String, String)
+{
+    let quote_assets = ["USDT", "USDC"];
+    for &quote in &quote_assets {
+        if basequote.ends_with(quote) {
+            let base = &basequote[..basequote.len() - quote.len()];
+            return (base.to_string(), quote.to_string());
+        }
+    }
+    (basequote.to_string(), String::new()) // 如果无法解析，返回原始值
+}
+
 #[allow(dead_code)]
 impl WsTrade
 {
