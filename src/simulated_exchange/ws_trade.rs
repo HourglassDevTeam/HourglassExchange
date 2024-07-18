@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 use crate::{
     common_skeleton::{
         datafeed::event::MarketEvent,
-        instrument::{Instrument, kind::InstrumentKind},
+        instrument::{kind::InstrumentKind, Instrument},
         token::Token,
     },
-    Exchange,
     simulated_exchange::load_from_clickhouse::queries_operations::TradeDataFromClickhouse,
+    Exchange,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd)]
@@ -77,7 +77,7 @@ impl From<TradeDataFromClickhouse> for WsTrade
                   ts: trade.timestamp.to_string() }
     }
 }
-
+#[allow(dead_code)]
 impl WsTrade
 {
     pub(crate) fn from_ref(data: &TradeDataFromClickhouse) -> Self

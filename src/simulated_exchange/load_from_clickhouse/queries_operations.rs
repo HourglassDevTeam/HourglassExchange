@@ -3,15 +3,14 @@
 
 use async_stream::stream;
 pub use clickhouse::{
-    Client,
-    error::{Error, Result}, Row,
+    error::{Error, Result},
+    Client, Row,
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::datafeed::event::MarketEvent,
-    Exchange,
+    error::ExecutionError,
     simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade},
 };
 
@@ -33,7 +32,7 @@ impl ClickHouseClient
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone,Serialize, Deserialize, Row)]
+#[derive(Debug, Serialize, Deserialize, Row)]
 pub struct TradeDataFromClickhouse
 {
     pub symbol: String,
@@ -141,7 +140,7 @@ impl ClickHouseClient
                                          instrument: &'a str,
                                          channel: &'a str,
                                          date: &'a str)
-                                         -> impl Stream<Item = Result<MarketEvent<TradeDataFromClickhouse>, Error>> + 'a
+                                         -> impl Stream<Item = Result<TradeDataFromClickhouse, ExecutionError>> + 'a
     {
         stream! {
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
@@ -154,19 +153,12 @@ impl ClickHouseClient
                     "SELECT symbol, side, price, timestamp FROM {}.{} LIMIT {} OFFSET {}",
                     database, table_name, limit, offset
                 );
-                println!("[UnilinkExecution] : Executing query: {}", query);
+                println!("[AlgoBacktest] : Executing query: {}", query);
 
-                let trade_datas = self.client.query(&query).fetch_all().await;
-                match trade_datas {
+                match self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await {
                     Ok(trade_datas) => {
                         for trade_data in &trade_datas {
-                            let market_event = MarketEvent::from_trade_clickhouse(
-                                *trade_data,
-                                "base".to_string(),
-                                "quote".to_string(),
-                                Exchange::from(exchange.to_string())
-                            );
-                            yield Ok(market_event);
+                            let _ = trade_data; // 使用 clone() 来避免移动值
                         }
 
                         if trade_datas.len() < limit {
@@ -176,7 +168,7 @@ impl ClickHouseClient
                         offset += limit;
                     },
                     Err(e) => {
-                        yield Err(e);
+                        yield Err(ExecutionError::InternalError(format!("Failed query: {}", e)));
                         break;
                     }
                 }
