@@ -25,7 +25,7 @@ pub struct WsTrade
     ts: String,
 }
 
-// NOTE 这是按照交易所API数据类型构建的 WebsocketTrade 数据结构，回测选用。
+// NOTE 这是按照Okex交易所API数据类型构建的 WebsocketTrade 数据结构，回测选用。
 impl MarketEvent<WsTrade>
 {
     pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, exchange: Exchange) -> Self
