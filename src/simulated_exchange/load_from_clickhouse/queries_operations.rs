@@ -201,7 +201,7 @@ impl ClickHouseClient
 
             loop {
                 let query = format!(
-                    "SELECT symbol, side, price, timestamp FROM {}.{} LIMIT {} OFFSET {} ORDER BY timestamp",
+                    "SELECT symbol, side, price, timestamp FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {} ",
                     database, table_name, batch_size, offset
                 );
                 println!("[UnilinkExecution] : Executing query: {}", query);
