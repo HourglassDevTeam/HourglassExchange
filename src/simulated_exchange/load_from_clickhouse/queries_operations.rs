@@ -1,16 +1,14 @@
 // NOTE this module is previously built and imported into the main project as a dependency.
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
-use crate::Exchange;
+use crate::{common_skeleton::datafeed::event::MarketEvent, Exchange};
 use async_stream::stream;
 pub use clickhouse::{
-    Client,
-    error::{Error, Result}, Row,
+    error::{Error, Result},
+    Client, Row,
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
-use crate::common_skeleton::datafeed::event::MarketEvent;
-use crate::error::ExecutionError;
 
 use crate::simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade};
 
@@ -135,13 +133,13 @@ impl ClickHouseClient
         Ok(ws_trades)
     }
 
-    pub fn query_union_table_batched<'a>(
-        &'a self,
-        exchange: &'a str,
-        instrument: &'a str,
-        channel: &'a str,
-        date: &'a str,
-    ) -> impl Stream<Item = MarketEvent<TradeDataFromClickhouse>> + 'a {
+    pub fn query_union_table_batched<'a>(&'a self,
+                                         exchange: &'a str,
+                                         instrument: &'a str,
+                                         channel: &'a str,
+                                         date: &'a str)
+                                         -> impl Stream<Item = MarketEvent<TradeDataFromClickhouse>> + 'a
+    {
         stream! {
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
             let database = format!("{}_{}_{}", exchange, instrument, channel);
