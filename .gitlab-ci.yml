@@ -12,9 +12,9 @@ mergeCode:
   stage: mergeCode
   script:
     - echo "Starting mergeCode stage"
-    
+
     - eval $(ssh-agent -s)
-    
+
     - ssh-add /home/gitlab-runner/.ssh/id_rsa
 
     - mkdir -p ~/.ssh
@@ -36,7 +36,7 @@ mergeCode:
     
     ##
     ## Debugging: Print the remotes again to ensure they are set correctly
-    
+
     - git remote -v
     
     ##
@@ -47,18 +47,18 @@ mergeCode:
     ##
     ## Fetch full history from origin to avoid shallow update issues
     ##
-    - git fetch origin 
+    - git fetch origin
     
     ##
     ## Pull latest changes from origin and rebase
     ##
-    - git pull origin $PCF_DEPLOY_BRANCH
+    - git pull --rebase origin $PCF_DEPLOY_BRANCH
     
     ##
     ## Pull latest changes from gitee and rebase
     ##
-    - git fetch gitee 
-    - git pull gitee $PCF_DEPLOY_BRANCH || true
+    - git fetch gitee
+    - git pull --rebase gitee $PCF_DEPLOY_BRANCH || true
     
     ##
     ## Check if there are changes to push to origin

@@ -1,58 +1,72 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+    fmt,
+    fmt::Debug,
+    pin::Pin,
+    task::{Context, Poll},
+};
 
-use crate::common_skeleton::datafeed::{historical::HistoricalFeed, live::LiveFeed, FeedStatus, MarketFeedDistributor};
+use futures_core::Stream;
 
-#[derive(Debug)]
-pub struct AccountMarketFeed<Iter, Event>
-    where Event: Clone,
-          Iter: Iterator<Item = Event> + Clone,
-          FeedKind<Iter, Event>: MarketFeedDistributor<Event>
+use crate::{
+    common_skeleton::datafeed::{historical::HistoricalFeed, live::LiveFeed},
+    simulated_exchange::account::account_market_feed::MarketStream::{Historical, Live},
+};
+
+pub struct AccountMarketStream<Event>
+    where Event: Clone + Send + Sync + 'static
 {
-    pub atomic_id: AtomicU64,
-    pub data: FeedKind<Iter, Event>,
+    pub stream_kind_name: &'static str,
+    pub data_stream: MarketStream<Event>,
 }
 
-impl<Iter, Event> AccountMarketFeed<Iter, Event>
-    where Event: Clone,
-          Iter: Iterator<Item = Event> + Clone,
-          FeedKind<Iter, Event>: MarketFeedDistributor<Event>
+impl<Event> Debug for AccountMarketStream<Event> where Event: Debug + Clone + Send + Sync + 'static
 {
-    pub fn new(data: FeedKind<Iter, Event>) -> Self
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
-        Self { atomic_id: AtomicU64::new(0),
-               data }
-    }
-
-    pub fn increment_batch_id(&self)
-    {
-        self.atomic_id.fetch_add(1, Ordering::SeqCst);
-    }
-
-    pub fn get_batch_id(&self) -> u64
-    {
-        self.atomic_id.load(Ordering::SeqCst)
+        f.debug_struct("AccountMarketFeed").field("stream_kind_name", &self.stream_kind_name).finish()
     }
 }
 
-// add enumeration FeedKind for AccountMarketFeed to choose
-#[derive(Debug)]
-pub enum FeedKind<Iter, Event>
-    where Event: Clone,
-          Iter: Iterator<Item = Event> + Clone
+impl<Event> AccountMarketStream<Event> where Event: Clone + Send + Sync + 'static
 {
-    LiveFeed(LiveFeed<Event>),
-    HistoricalFeed(HistoricalFeed<Iter, Event>),
+    pub fn new(stream: MarketStream<Event>) -> Self
+    {
+        Self { stream_kind_name: match stream {
+                   | Live(_) => "LiveFeed",
+                   | Historical(_) => "HistoricalFeed",
+               },
+               data_stream: stream }
+    }
 }
 
-impl<Iter, Event> MarketFeedDistributor<Event> for FeedKind<Iter, Event>
-    where Event: Clone,
-          Iter: Iterator<Item = Event> + Clone
+// add enum StreamKind for AccountMarketFeed to choose
+pub enum MarketStream<Event>
+    where Event: Clone + Send + Sync + 'static
 {
-    fn fetch_next(&mut self) -> FeedStatus<Event>
+    Live(LiveFeed<Event>),
+    Historical(HistoricalFeed<Event>),
+}
+
+impl<Event> Stream for MarketStream<Event> where Event: Clone + Send + Sync + 'static
+{
+    type Item = Event;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>>
+    {
+        match self.get_mut() {
+            | Historical(feed) => Pin::new(&mut feed.stream).poll_next(cx),
+            | Live(feed) => Pin::new(&mut feed.stream).poll_next(cx),
+        }
+    }
+}
+
+impl<Event> MarketStream<Event> where Event: Clone + Send + Sync + 'static
+{
+    pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item = Event> + Send)>
     {
         match self {
-            | FeedKind::LiveFeed(feed) => feed.fetch_next(),
-            | FeedKind::HistoricalFeed(feed) => feed.fetch_next(),
+            | Live(feed) => feed.poll_next(),
+            | Historical(feed) => feed.poll_next(),
         }
     }
 }

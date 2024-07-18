@@ -10,22 +10,19 @@ pub mod instrument_orders;
 pub mod load_from_clickhouse;
 pub mod simulated_client;
 pub mod utils;
-pub(crate) mod ws_trade;
+pub mod ws_trade;
 
 #[derive(Debug)]
-pub struct SimulatedExchange<Iter, Event>
-    where Event: Clone,
-          Iter: Iterator<Item = Event> + Clone
+pub struct SimulatedExchange<Event>
+    where Event: Clone + Send + Sync + 'static
 {
     pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedClientEvent>,
-    pub account: Account<Iter, Event>,
+    pub account: Account<Event>,
 }
 
-impl<Iter, Event> SimulatedExchange<Iter, Event>
-    where Event: Clone,
-          Iter: Iterator<Item = Event> + Clone
+impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + 'static
 {
-    pub fn initiator() -> ExchangeInitiator<Iter, Event>
+    pub fn initiator() -> ExchangeInitiator<Event>
     {
         ExchangeInitiator::new()
     }
@@ -51,9 +48,7 @@ impl<Iter, Event> SimulatedExchange<Iter, Event>
     }
 }
 
-impl<Iter, Event> Default for ExchangeInitiator<Iter, Event>
-    where Event: Clone,
-          Iter: Iterator<Item = Event> + Clone
+impl<Event> Default for ExchangeInitiator<Event> where Event: Clone + Send + Sync + 'static
 {
     fn default() -> Self
     {
@@ -63,17 +58,14 @@ impl<Iter, Event> Default for ExchangeInitiator<Iter, Event>
     }
 }
 #[derive(Debug)]
-pub struct ExchangeInitiator<Iter, Event>
-    where Event: Clone,
-          Iter: Iterator<Item = Event> + Clone
+pub struct ExchangeInitiator<Event>
+    where Event: Clone + Send + Sync + 'static
 {
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedClientEvent>>,
-    account: Option<Account<Iter, Event>>,
+    account: Option<Account<Event>>,
 }
 
-impl<Iter, Event> ExchangeInitiator<Iter, Event>
-    where Event: Clone,
-          Iter: Iterator<Item = Event> + Clone
+impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + 'static
 {
     pub fn new() -> Self
     {
@@ -86,12 +78,12 @@ impl<Iter, Event> ExchangeInitiator<Iter, Event>
                ..self }
     }
 
-    pub fn account(self, value: Account<Iter, Event>) -> Self
+    pub fn account(self, value: Account<Event>) -> Self
     {
         Self { account: Some(value), ..self }
     }
 
-    pub fn initiate(self) -> Result<SimulatedExchange<Iter, Event>, ExecutionError>
+    pub fn initiate(self) -> Result<SimulatedExchange<Event>, ExecutionError>
     {
         Ok(SimulatedExchange { event_simulated_rx: self.event_simulated_rx
                                                        .ok_or_else(|| ExecutionError::InitiatorIncomplete("event_simulated_rx".to_string()))?,

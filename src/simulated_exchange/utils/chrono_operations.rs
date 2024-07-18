@@ -1,6 +1,6 @@
 use chrono::{DateTime, Datelike, Local, TimeZone, Timelike, Utc};
-
 use regex::Regex;
+
 #[allow(dead_code)]
 pub fn extract_date(table_name: &str) -> Option<String>
 {
