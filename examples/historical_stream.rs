@@ -54,6 +54,7 @@ async fn main()
                                 // 使用 Box::pin 包装数据流，并赋值给 stream 字段
                                 stream: Box::pin(stream) };
 
-    let account_stream = AccountMarketStream::new(MarketStream::Historical(feed));
-    println!("{:?}", account_stream); // 打印 AccountMarketStream 实例的调试
+    let mut account_stream = AccountMarketStream::new(MarketStream::Historical(feed));
+    // // 打印 AccountMarketStream 实例的调试
+    account_stream.data_stream.poll_next(); // 开始数据流的轮询
 }

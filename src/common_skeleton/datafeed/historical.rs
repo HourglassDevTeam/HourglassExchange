@@ -14,7 +14,7 @@ pub struct HistoricalFeed<Event>
 impl<Event> HistoricalFeed<Event> where Event: Clone + Send + Sync + 'static
 {
     pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item = Result<Event, ExecutionError>> + Send)>
-    {
+    {   println!("Polled historical feed");
         self.stream.as_mut()
     }
 }
