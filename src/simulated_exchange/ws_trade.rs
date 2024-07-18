@@ -49,14 +49,14 @@ impl MarketEvent<WsTrade>
 // NOTE 这是按照Clickhouse中存储的数据类型构建的 WebsocketTrade 数据结构，回测选用。
 impl MarketEvent<ClickhouseTrade>
 {
-    pub fn from_swap_trade_clickhouse(trade: ClickhouseTrade, base: String, quote: String, exchange: Exchange) -> Self
+    pub fn from_swap_trade_clickhouse(trade: ClickhouseTrade, base: String, quote: String, instrument_kind: InstrumentKind, exchange: Exchange) -> Self
     {
         let exchange_time = trade.timestamp;
         let received_time = trade.timestamp; // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
 
         let instrument = Instrument { base: Token::from(base),
                                       quote: Token::from(quote),
-                                      kind: InstrumentKind::Perpetual };
+                                      kind: instrument_kind };
 
         MarketEvent { exchange_time,
                       received_time,
