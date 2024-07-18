@@ -32,7 +32,7 @@ impl ClickHouseClient
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone,Serialize, Deserialize, Row)]
+#[derive(Debug, Clone, Serialize, Deserialize, Row)]
 pub struct TradeDataFromClickhouse
 {
     pub symbol: String,
@@ -135,12 +135,7 @@ impl ClickHouseClient
         Ok(ws_trades)
     }
 
-    pub fn query_union_table_batched<'a>(&'a self,
-                                         exchange: &'a str,
-                                         instrument: &'a str,
-                                         channel: &'a str,
-                                         date: &'a str)
-                                         -> impl Stream<Item = Result<TradeDataFromClickhouse, ExecutionError>> + 'a
+    pub fn query_union_table_batched<'a>(&'a self, exchange: &'a str, instrument: &'a str, channel: &'a str, date: &'a str) -> impl Stream<Item = TradeDataFromClickhouse> + 'a
     {
         stream! {
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
@@ -158,7 +153,7 @@ impl ClickHouseClient
                 match self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await {
                     Ok(trade_datas) => {
                         for trade_data in &trade_datas {
-                            yield Ok(trade_data);// 并使用 yield 关键字来返回值
+                            yield trade_data.clone(); // 返回 TradeDataFromClickhouse 项目
                         }
 
                         if trade_datas.len() < limit {
@@ -168,7 +163,7 @@ impl ClickHouseClient
                         offset += limit;
                     },
                     Err(e) => {
-                        yield Err(ExecutionError::InternalError(format!("Failed query: {}", e)));
+                        eprintln!("Failed query: {}", e);
                         break;
                     }
                 }

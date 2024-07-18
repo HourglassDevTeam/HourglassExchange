@@ -1,5 +1,9 @@
-use std::{fmt, fmt::Debug, pin::Pin};
-use std::task::{Context, Poll};
+use std::{
+    fmt,
+    fmt::Debug,
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 use futures_core::Stream;
 
@@ -36,7 +40,6 @@ impl<Event> AccountMarketStream<Event> where Event: Clone + Send + Sync + 'stati
     }
 }
 
-
 // add enum StreamKind for AccountMarketFeed to choose
 pub enum MarketStream<Event>
     where Event: Clone + Send + Sync + 'static
@@ -45,27 +48,22 @@ pub enum MarketStream<Event>
     Historical(HistoricalFeed<Event>),
 }
 
-
-impl<Event> Stream for MarketStream<Event>
-where
-    Event: Clone + Send + Sync + 'static,
+impl<Event> Stream for MarketStream<Event> where Event: Clone + Send + Sync + 'static
 {
-    type Item = Result<Event, ExecutionError>;
+    type Item = Event;
 
-    fn poll_next(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>>
+    {
         match self.get_mut() {
-            Historical(feed) => Pin::new(&mut feed.stream).poll_next(cx),
-            Live(feed) => Pin::new(&mut feed.stream).poll_next(cx),
+            | Historical(feed) => Pin::new(&mut feed.stream).poll_next(cx),
+            | Live(feed) => Pin::new(&mut feed.stream).poll_next(cx),
         }
     }
 }
 
 impl<Event> MarketStream<Event> where Event: Clone + Send + Sync + 'static
 {
-    pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item = Result<Event, ExecutionError>> + Send)>
+    pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item = Event> + Send)>
     {
         match self {
             | Live(feed) => feed.poll_next(),

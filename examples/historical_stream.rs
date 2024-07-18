@@ -36,7 +36,8 @@ lazy_static! {
     pub static ref CLIENT: Arc<ClickHouseClient> = Arc::new(ClickHouseClient::new());
 }
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     // 定义交易所、金融工具、频道和日期的字符串变量
     let exchange = "binance";
     let instrument = "futures";
@@ -47,18 +48,13 @@ async fn main() {
     let stream = CLIENT.query_union_table_batched(exchange, instrument, channel, date);
 
     // 创建一个 HistoricalFeed 实例
-    let feed = HistoricalFeed {
-        database_client: CLIENT.to_owned(),
-        stream: Box::pin(stream),
-    };
+    let feed = HistoricalFeed { database_client: CLIENT.to_owned(),
+                                stream: Box::pin(stream) };
 
     let mut account_stream = AccountMarketStream::new(MarketStream::Historical(feed));
 
     // 使用 while let 循环来遍历数据流，并在每次接收到数据时打印
-    while let Some(result) = account_stream.data_stream.next().await {
-        match result {
-            Ok(event) => println!("Received event: {:?}", event),
-            Err(e) => eprintln!("Error receiving event: {:?}", e),
-        }
+    while let result = account_stream.data_stream.next().await.unwrap() {
+        println!("{:?}", result);
     }
 }
