@@ -1,6 +1,7 @@
 // NOTE this module is previously built and imported into the main project as a dependency.
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
+use std::borrow::Cow;
 use async_stream::stream;
 pub use clickhouse::{
     error::{Error, Result},
@@ -9,10 +10,8 @@ pub use clickhouse::{
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    error::ExecutionError,
-    simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade},
-};
+use crate::{error::ExecutionError, Exchange, simulated_exchange::{utils::chrono_operations::extract_date, ws_trade::WsTrade}};
+use crate::common_skeleton::datafeed::event::MarketEvent;
 
 pub struct ClickHouseClient
 {
@@ -25,7 +24,7 @@ impl ClickHouseClient
     {
         let client = Client::default().with_url("http://localhost:8123").with_user("default").with_password("");
 
-        println!("[AlgoBacktest] : 连接到 ClickHouse 服务器成功。");
+        println!("[UnilinkExecution] : 连接到 ClickHouse 服务器成功。");
 
         Self { client }
     }
@@ -74,7 +73,7 @@ impl ClickHouseClient
         let table_names_query = format!("SHOW TABLES FROM {database}",);
         println!("{:?}", table_names_query);
         let result = self.client.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
-                                                                                          eprintln!("[AlgoBacktest] : Error loading table names: {:?}", e);
+                                                                                          eprintln!("[UnilinkExecution] : Error loading table names: {:?}", e);
                                                                                           vec![]
                                                                                       });
 
@@ -107,7 +106,7 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp", full_table_path);
-        println!("[AlgoBacktest] : 查询SQL语句 {}", query);
+        println!("[UnilinkExecution] : 查询SQL语句 {}", query);
         let trade_datas = self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
@@ -119,29 +118,29 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
-        println!("[AlgoBacktest] : 查询SQL语句 {}", query);
+        println!("[UnilinkExecution] : 查询SQL语句 {}", query);
         let trade_data = self.client.query(&query).fetch_one::<TradeDataFromClickhouse>().await?;
         Ok(WsTrade::from(trade_data))
     }
 
-    pub async fn query_union_table(client: &ClickHouseClient, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<WsTrade>, clickhouse::error::Error>
+    pub async fn query_union_table(client: &ClickHouseClient, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<WsTrade>, Error>
     {
         let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
         let database = format!("{}_{}_{}", exchange, instrument, channel);
         let query = format!("SELECT * FROM {}.{}", database, table_name);
-        println!("[AlgoBacktest] : Executing query: {}", query);
+        println!("[UnilinkExecution] : Executing query: {}", query);
         let trade_datas = client.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
 
-    pub fn query_union_table_batched<'a>(&'a self,
-                                         exchange: &'a str,
-                                         instrument: &'a str,
-                                         channel: &'a str,
-                                         date: &'a str)
-                                         -> impl Stream<Item = Result<WsTrade, ExecutionError>> + 'a
-    {
+    pub fn query_union_table_batched<'a>(
+        &'a self,
+        exchange: &'a str,
+        instrument: &'a str,
+        channel: &'a str,
+        date: &'a str,
+    ) -> impl Stream<Item = Result<MarketEvent<TradeDataFromClickhouse>, Error>> + 'a {
         stream! {
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
             let database = format!("{}_{}_{}", exchange, instrument, channel);
@@ -153,12 +152,19 @@ impl ClickHouseClient
                     "SELECT symbol, side, price, timestamp FROM {}.{} LIMIT {} OFFSET {}",
                     database, table_name, limit, offset
                 );
-                println!("[AlgoBacktest] : Executing query: {}", query);
+                println!("[UnilinkExecution] : Executing query: {}", query);
 
-                match self.client.query(&query).fetch_all::<TradeDataFromClickhouse>().await.or_else( |e| Err(ExecutionError::InternalError(format!("Failed query: {}", e)))) {
+                let trade_datas = self.client.query(&query).fetch_all().await;
+                match trade_datas {
                     Ok(trade_datas) => {
-                        for trade_data in &trade_datas {
-                            yield Ok(WsTrade::from_ref(trade_data));
+                        for trade_data in trade_datas {
+                            let market_event = MarketEvent::from_trade_clickhouse(
+                                trade_data,
+                                "base_currency".to_string(),
+                                "quote_currency".to_string(),
+                                Exchange(Cow::Borrowed(exchange))
+                            );
+                            yield Ok(market_event);
                         }
 
                         if trade_datas.len() < limit {
