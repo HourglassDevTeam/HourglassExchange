@@ -25,7 +25,7 @@ pub struct WsTrade
     ts: String,
 }
 
-// NOTE 按照API构建的 WebsocketTrade 数据结构，回测选用。
+// NOTE 这是按照交易所API数据类型构建的 WebsocketTrade 数据结构，回测选用。
 impl MarketEvent<WsTrade>
 {
     pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, exchange: Exchange) -> Self
@@ -45,7 +45,7 @@ impl MarketEvent<WsTrade>
     }
 }
 
-// NOTE 回测专用
+// NOTE 这是按照Clickhouse中存储的数据类型构建的 WebsocketTrade 数据结构，回测选用。
 impl MarketEvent<TradeDataFromClickhouse>
 {
     pub fn from_trade_clickhouse(trade: TradeDataFromClickhouse, base: String, quote: String, exchange: Exchange) -> Self
