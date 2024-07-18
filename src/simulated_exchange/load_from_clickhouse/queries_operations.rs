@@ -189,8 +189,8 @@ impl ClickHouseClient
                                                  -> impl Stream<Item = MarketEvent<ClickhouseTrade>> + 'a
     {
         stream! {
-        let start_date = NaiveDate::parse_from_str(start_date, "%Y-%m-%d").expect("Invalid start date format");
-        let end_date = NaiveDate::parse_from_str(end_date, "%Y-%m-%d").expect("Invalid end date format");
+        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d").expect("Invalid start date format");
+        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d").expect("Invalid end date format");
 
         let mut current_date = start_date;
         while current_date <= end_date {
