@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 pub mod event;
 pub mod historical;
 pub mod live;
+pub mod data_subscriber;
 
 pub trait MarketFeedDistributor<Event>
 {
