@@ -118,7 +118,7 @@ impl<Event> Stream for DataStream<Event> where Event: Clone + Send + Sync + Debu
 }
 
 
-// 为DataStream实现额外的方法，方便获取下一个元素。
+// 为 DataStream 实现额外的方法，方便获取下一个元素。
 impl<Event> DataStream<Event>
 where
     Event: Clone + Send + Sync + Debug + 'static + Ord, // 约束Event类型必须满足Clone, Send, Sync, 'static特性，并且可排序（Ord）
