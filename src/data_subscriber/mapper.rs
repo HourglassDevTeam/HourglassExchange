@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-use crate::data_subscriber::subscriber::Identifier;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     data_subscriber::{
         connector::Connector,
-        subscriber::{ExchangeSub, SubKind},
+        subscriber::{ExchangeSub, Identifier, SubKind},
         SubscriptionId, SubscriptionMap, SubscriptionMeta,
     },
     simulated_exchange::account::account_market_feed::Subscription,

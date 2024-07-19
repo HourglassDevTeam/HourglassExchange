@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use crate::data_subscriber::mapper::SubscriptionMapper;
 use async_trait::async_trait;
 use tokio_tungstenite::tungstenite::connect;
 use tracing::{debug, info};
