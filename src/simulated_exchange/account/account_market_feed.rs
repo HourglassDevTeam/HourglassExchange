@@ -12,14 +12,14 @@ use crate::{
     simulated_exchange::account::account_market_feed::MarketStream::{Historical, Live},
 };
 
-pub struct AccountMarketStream<Event>
+pub struct AccountMarketStreams<Event>
     where Event: Clone + Send + Sync + 'static
 {
     pub stream_kind_name: &'static str,
     pub data_stream: MarketStream<Event>,
 }
 
-impl<Event> Debug for AccountMarketStream<Event> where Event: Debug + Clone + Send + Sync + 'static
+impl<Event> Debug for AccountMarketStreams<Event> where Event: Debug + Clone + Send + Sync + 'static
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
@@ -27,7 +27,7 @@ impl<Event> Debug for AccountMarketStream<Event> where Event: Debug + Clone + Se
     }
 }
 
-impl<Event> AccountMarketStream<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> AccountMarketStreams<Event> where Event: Clone + Send + Sync + 'static
 {
     pub fn new(stream: MarketStream<Event>) -> Self
     {

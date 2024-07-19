@@ -20,7 +20,7 @@ use crate::{
     error::ExecutionError,
     simulated_exchange::account::{
         account_latency::{fluctuate_latency, AccountLatency},
-        account_market_feed::AccountMarketStream,
+        account_market_feed::AccountMarketStreams,
     },
 };
 
@@ -35,7 +35,7 @@ pub struct Account<Event>
     where Event: Clone + Send + Sync + 'static
 {
     pub exchange_timestamp: i64,                                    // NOTE 日后可以用无锁结构原子锁包裹
-    pub data: Arc<RwLock<AccountMarketStream<Event>>>,              // 帐户数据
+    pub data: Arc<RwLock<AccountMarketStreams<Event>>>,              // 帐户数据
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub latency: Arc<RwLock<AccountLatency>>,                       // 帐户延迟
@@ -48,7 +48,7 @@ pub struct Account<Event>
 pub struct AccountInitiator<Event>
     where Event: Clone + Send + Sync + 'static
 {
-    data: Option<Arc<RwLock<AccountMarketStream<Event>>>>,
+    data: Option<Arc<RwLock<AccountMarketStreams<Event>>>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
     market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
     latency: Option<Arc<RwLock<AccountLatency>>>,
@@ -72,7 +72,7 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + 'static
                            orders: None }
     }
 
-    pub fn data(mut self, value: AccountMarketStream<Event>) -> Self
+    pub fn data(mut self, value: AccountMarketStreams<Event>) -> Self
     {
         self.data = Some(Arc::new(RwLock::new(value)));
         self

@@ -31,7 +31,7 @@ async fn main()
     let feed = HistoricalFeed { database_client: CLIENT.to_owned(),
                                 stream: Box::pin(stream) };
 
-    let mut account_stream = AccountMarketStream::new(MarketStream::Historical(feed));
+    let mut account_stream = AccountMarketStreams::new(MarketStream::Historical(feed));
 
     loop {
         let result = account_stream.data_stream.next().await;
