@@ -31,7 +31,7 @@ impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Sen
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
-        // 打印AccountDataStreams的调试信息，包括流的标识符。
+        // 打印 AccountDataStreams 的调试信息，包括流的标识符。
         f.debug_struct("AccountMarketStreams").field("streams", &self.streams.keys().collect::<Vec<_>>()).finish()
     }
 }
