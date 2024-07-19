@@ -28,31 +28,34 @@ pub struct WebSocketSubMapper;
 
 impl SubscriptionMapper for WebSocketSubMapper
 {
+    /// 将订阅数组映射到 `SubscriptionMeta`。
     fn map<Kind>(subscriptions: &[Subscription<Kind>]) -> SubscriptionMeta
         where Kind: SubKind
     {
-        // Allocate SubscriptionIds HashMap to track identifiers for each actioned Subscription
+        // 分配 SubscriptionIds HashMap，用于跟踪每个操作订阅的标识符
         let mut instrument_map = Map(HashMap::with_capacity(subscriptions.len()));
 
-        // Map  Subscriptions to exchange specific subscriptions
+        // 将订阅映射成特定交易所的订阅
         let exchange_subs = subscriptions.iter()
                                          .map(|subscription| {
-                                             // Translate  Subscription to exchange specific subscription
+                                             // 将 Subscription 转换为特定交易所的订阅
                                              let exchange_sub = ExchangeSub::new(subscription);
 
-                                             // Determine the SubscriptionId associated with this exchange specific subscription
+                                             // 确定与此特定交易所订阅关联的 SubscriptionId
                                              let subscription_id = exchange_sub.id();
 
-                                             // Use ExchangeSub SubscriptionId as the link to this  Subscription
+                                             // 使用 ExchangeSub SubscriptionId 作为此订阅的链接
                                              instrument_map.0.insert(subscription_id, subscription.instrument.clone());
 
                                              exchange_sub
                                          })
+                                         // 收集为 ExchangeSub 向量
                                          .collect::<Vec<ExchangeSub<Exchange::Channel, Exchange::Market>>>();
 
-        // Construct WebSocket message subscriptions requests
+        // 构建 WebSocket 消息订阅请求
         let subscriptions = Exchange::requests(exchange_subs);
 
+        // 返回包含 instrument_map 和 subscriptions 的 SubscriptionMeta
         SubscriptionMeta { instrument_map, subscriptions }
     }
 }
