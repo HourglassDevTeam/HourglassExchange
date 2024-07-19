@@ -19,7 +19,7 @@ pub trait SubKind
 
 pub struct ExchangeSub<Channel, Market>
 {
-    /// Type that defines how to translate a Cerebro [`Subscription`] into an exchange specific
+    /// Type that defines how to translate a  [`Subscription`] into an exchange specific
     /// channel to be subscribed to.
     ///
     /// ### Examples
@@ -27,7 +27,7 @@ pub struct ExchangeSub<Channel, Market>
     /// - [`KrakenChannel("trade")`](super::kraken::channel::KrakenChannel)
     pub channel: Channel,
 
-    /// Type that defines how to translate a Cerebro [`Subscription`] into an exchange specific
+    /// Type that defines how to translate a  [`Subscription`] into an exchange specific
     /// market that can be subscribed to.
     ///
     /// ### Examples

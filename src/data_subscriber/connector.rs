@@ -30,7 +30,7 @@ pub trait Connector
 
     const ID: ExchangeKind;
 
-    /// Type that defines how to translate a Cerebro
+    /// Type that defines how to translate a
     /// [`Subscription`](crate::subscription::Subscription) into an exchange specific channel
     /// to be subscribed to.
     ///
@@ -40,7 +40,7 @@ pub trait Connector
 
     type Channel: AsRef<str>;
 
-    /// Type that defines how to translate a Cerebro
+    /// Type that defines how to translate a
     /// [`Subscription`](crate::subscription::Subscription) into an exchange specific market that
     /// can be subscribed to.
     ///

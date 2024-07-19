@@ -11,7 +11,7 @@ use crate::{
     simulated_exchange::account::account_market_feed::Subscription,
 };
 
-/// Defines how to map a collection of Cerebro [`Subscription`]s into exchange specific
+/// Defines how to map a collection of  [`Subscription`]s into exchange specific
 /// [`SubscriptionMeta`], containing subscription payloads that are sent to the exchange.
 
 pub trait SubscriptionMapper
@@ -34,16 +34,16 @@ impl SubscriptionMapper for WebSocketSubMapper
         // Allocate SubscriptionIds HashMap to track identifiers for each actioned Subscription
         let mut instrument_map = Map(HashMap::with_capacity(subscriptions.len()));
 
-        // Map Cerebro Subscriptions to exchange specific subscriptions
+        // Map  Subscriptions to exchange specific subscriptions
         let exchange_subs = subscriptions.iter()
                                          .map(|subscription| {
-                                             // Translate Cerebro Subscription to exchange specific subscription
+                                             // Translate  Subscription to exchange specific subscription
                                              let exchange_sub = ExchangeSub::new(subscription);
 
                                              // Determine the SubscriptionId associated with this exchange specific subscription
                                              let subscription_id = exchange_sub.id();
 
-                                             // Use ExchangeSub SubscriptionId as the link to this Cerebro Subscription
+                                             // Use ExchangeSub SubscriptionId as the link to this  Subscription
                                              instrument_map.0.insert(subscription_id, subscription.instrument.clone());
 
                                              exchange_sub

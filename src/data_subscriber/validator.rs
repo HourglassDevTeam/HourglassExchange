@@ -5,9 +5,14 @@ use tracing::debug;
 
 use crate::{
     common_skeleton::instrument::Instrument,
-    data_subscriber::{connector::Connector, socket_error::SocketError, subscriber::SubKind, Map},
+    data_subscriber::{
+        connector::Connector,
+        socket_error::SocketError,
+        subscriber::SubKind,
+        websocket::{StreamParser, WebSocket, WebSocketParser},
+        Map,
+    },
 };
-use crate::data_subscriber::websocket::{StreamParser, WebSocket, WebSocketParser};
 
 pub trait Validator
 {
