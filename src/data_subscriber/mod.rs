@@ -22,7 +22,6 @@ mod websocket;
 pub struct SubscriptionId(pub String);
 
 /// `SubscriptionMeta` 结构体
-/// 包含 `HashMap`，用于映射 [`SubscriptionId`] 与其关联的  [`Instrument`]。
 /// 还包括一个 `Vec`，用于存储 WebSocket 消息（`WsMessage`）。
 pub struct SubscriptionMeta
 {
@@ -40,7 +39,6 @@ pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream
 
 #[async_trait]
 /// `Subscriber` 特征
-/// 定义了一个异步的订阅方法，用于处理订阅操作。
 pub trait Subscriber
 {
     /// 关联的订阅映射器类型。
