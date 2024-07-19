@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::WebSocket;
@@ -7,7 +6,7 @@ use tracing::debug;
 
 use crate::{
     common_skeleton::instrument::Instrument,
-    data_subscriber::{connector::Connector, socket_error::SocketError, Map},
+    data_subscriber::{connector::Connector, Map, socket_error::SocketError},
 };
 
 pub trait Validator

@@ -1,9 +1,11 @@
-use crate::common_skeleton::instrument::Instrument;
 use std::collections::HashMap;
+
 use async_trait::async_trait;
 use tokio::net::TcpStream;
 use tokio_tungstenite::MaybeTlsStream;
 pub use tokio_tungstenite::tungstenite::Message as WsMessage;
+
+use crate::common_skeleton::instrument::Instrument;
 use crate::data_subscriber::mapper::SubscriptionMapper;
 use crate::data_subscriber::socket_error::SocketError;
 use crate::data_subscriber::subscriber::SubKind;

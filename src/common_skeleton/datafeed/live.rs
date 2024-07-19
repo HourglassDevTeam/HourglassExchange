@@ -1,14 +1,14 @@
 use std::{fmt::Debug, pin::Pin};
 
+use futures::Stream;
+
 use crate::{
     data_subscriber::{
-        connector::Connector,
         socket_error::SocketError,
         subscriber::{SubKind, WebSocketSubscriber},
     },
     simulated_exchange::account::account_market_feed::Subscription,
 };
-use futures::Stream;
 
 pub struct LiveFeed<Event>
 {

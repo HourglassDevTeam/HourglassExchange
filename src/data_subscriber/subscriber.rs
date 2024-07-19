@@ -1,12 +1,14 @@
-use crate::{
-    common_skeleton::instrument::Instrument,
-    data_subscriber::{connector::Connector, socket_error::SocketError, Map, SubscriptionMeta},
-    simulated_exchange::account::account_market_feed::Subscription,
-};
-use async_trait::async_trait;
 use std::fmt::Debug;
+
+use async_trait::async_trait;
 use tokio_tungstenite::tungstenite::{connect, WebSocket};
 use tracing::{debug, info};
+
+use crate::{
+    common_skeleton::instrument::Instrument,
+    data_subscriber::{connector::Connector, Map, socket_error::SocketError, SubscriptionMeta},
+    simulated_exchange::account::account_market_feed::Subscription,
+};
 use crate::data_subscriber::mapper::WebSocketSubMapper;
 use crate::data_subscriber::Subscriber;
 

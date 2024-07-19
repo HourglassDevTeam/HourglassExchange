@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    exchange::{subscription::ExchangeSub, Connector},
-    subscription::{Map, SubKind, Subscription, SubscriptionMeta},
+    exchange::{Connector, subscription::ExchangeSub},
     Identifier,
+    subscription::{Map, SubKind, Subscription, SubscriptionMeta},
 };
+use crate::data_subscriber::{Map, SubscriptionMeta};
 use crate::data_subscriber::connector::Connector;
 use crate::data_subscriber::subscriber::{ExchangeSub, SubKind};
-use crate::data_subscriber::{Map, SubscriptionMeta};
 use crate::simulated_exchange::account::account_market_feed::Subscription;
 
 /// Defines how to map a collection of Cerebro [`Subscription`]s into exchange specific

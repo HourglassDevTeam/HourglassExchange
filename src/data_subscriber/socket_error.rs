@@ -1,7 +1,8 @@
-use crate::data_subscriber::SubscriptionId;
 use reqwest::Error;
 use thiserror::Error;
 use url::ParseError;
+
+use crate::data_subscriber::SubscriptionId;
 
 #[allow(dead_code)]
 #[derive(Debug, Error)]

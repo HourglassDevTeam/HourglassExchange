@@ -1,17 +1,19 @@
+use std::{collections::HashMap, fmt::Debug, time::Duration};
+
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use tracing::Subscriber;
+use url::Url;
+
 use crate::{
     common_skeleton::instrument::Instrument,
     data_subscriber::{
         socket_error::SocketError,
         subscriber::ExchangeSub,
-        validator::{SubscriptionValidator, Validator},
-        SubscriptionId, WsMessage,
+        SubscriptionId,
+        validator::{SubscriptionValidator, Validator}, WsMessage,
     },
     ExchangeKind,
 };
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Debug, time::Duration};
-use tracing::Subscriber;
-use url::Url;
 
 #[derive(Debug)]
 pub struct PingInterval
