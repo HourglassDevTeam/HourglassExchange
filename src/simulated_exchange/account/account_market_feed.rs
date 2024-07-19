@@ -130,7 +130,7 @@ pub enum DataStream<Event>
 impl<Event> DataStream<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     pub async fn from_websocket<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<Self, SocketError>
-        where Exchange: Connector + Send + Sync,
+        where
               Kind: SubKind + Send + Sync
     {
         let live_feed = LiveFeed::new(subscriptions).await?;
