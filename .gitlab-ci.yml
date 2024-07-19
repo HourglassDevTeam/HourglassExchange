@@ -4,7 +4,7 @@ variables:
   PCF_DEPLOY_BRANCH: master
   PCF_COMMIT_USER_NAME: arthur
   PCF_COMMIT_USER_EMAIL: arthur@ciuyat.com
-  GIT_STRATEGY: fetch
+  GIT_STRATEGY: none
 
 stages:
   - mergeCode
