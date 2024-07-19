@@ -19,7 +19,7 @@ use crate::{
     },
     error::ExecutionError,
     simulated_exchange::account::Account,
-    Exchange,
+    ExchangeID,
     ExchangeVariant::Simulated,
 };
 
@@ -110,7 +110,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         };
 
         AccountEvent { exchange_timestamp: self.get_exchange_ts().await.unwrap(),
-                       exchange: Exchange::from(Simulated),
+                       exchange: ExchangeID::from(Simulated),
                        kind: AccountEventKind::Balance(_updated_balance) }
     }
 
@@ -180,7 +180,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         let _quote_balance = self.update(quote, quote_delta);
 
         AccountEvent { exchange_timestamp: self.get_exchange_ts().await.unwrap(),
-                       exchange: Exchange::from(Simulated),
+                       exchange: ExchangeID::from(Simulated),
                        kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), _base_balance), TokenBalance::new(quote.clone(), _quote_balance)]) }
     }
 

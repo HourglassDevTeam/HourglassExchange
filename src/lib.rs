@@ -37,17 +37,18 @@ pub trait ClientExecution
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize, Debug)]
-pub struct Exchange(String);
+pub struct ExchangeID(String);
 
-impl<E> From<E> for Exchange where E: Into<String>
+impl<E> From<E> for ExchangeID
+where E: Into<String>
 {
     fn from(exchange: E) -> Self
     {
-        Exchange(exchange.into())
+        ExchangeID(exchange.into())
     }
 }
 
-impl Display for Exchange
+impl Display for ExchangeID
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
@@ -63,11 +64,11 @@ pub enum ExchangeVariant
     Okex,
 }
 
-impl From<ExchangeVariant> for Exchange
+impl From<ExchangeVariant> for ExchangeID
 {
     fn from(execution_kind: ExchangeVariant) -> Self
     {
-        Exchange::from(execution_kind.as_str())
+        ExchangeID::from(execution_kind.as_str())
     }
 }
 

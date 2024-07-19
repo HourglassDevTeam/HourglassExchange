@@ -9,7 +9,7 @@ use crate::{
         order::{Cancelled, Open, Order},
         trade::Trade,
     },
-    Exchange,
+    ExchangeID,
 };
 
 /// NOTE: 如果需要记录交易所的时间戳，可以再添加一个专门的字段来表示交易所的时间，例如：    pub exchange_ts: DateTime<Utc> or i64
@@ -18,7 +18,7 @@ pub struct AccountEvent
 {
     pub exchange_timestamp: i64, // 交易所发送事件的时间,
     // pub client_ts: i64,        // 客户端接发送事件的时间
-    pub exchange: Exchange,     // 目标和源头交易所
+    pub exchange: ExchangeID,     // 目标和源头交易所
     pub kind: AccountEventKind, // 事件类型
 }
 

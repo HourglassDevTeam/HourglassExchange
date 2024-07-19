@@ -17,7 +17,7 @@ use crate::{
     },
     data_subscriber::{connector::Connector, socket_error::SocketError, subscriber::SubKind},
     simulated_exchange::account::account_market_feed::DataStream::{Historical, Live},
-    Exchange,
+    ExchangeID,
 };
 
 // 定义一个数据流别名，用于标识每个数据流。
@@ -44,7 +44,7 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
 {
     // 添加一个新的方法用于添加WebSocket实时数据流
     pub async fn add_websocket_stream<Kind>(&mut self, id: StreamID, subscriptions: &[Subscription<Kind>]) -> Result<(), SocketError>
-        where Exchange: Connector + Send + Sync,
+        where ExchangeID: Connector + Send + Sync,
               Kind: SubKind + Send + Sync
     {
         let stream = DataStream::from_websocket(subscriptions).await?;
@@ -57,7 +57,7 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
 #[derive(Debug)]
 pub struct Subscription<Kind>
 {
-    pub exchange: Exchange,
+    pub exchange: ExchangeID,
     pub instrument: Instrument,
     pub kind: Kind,
 }

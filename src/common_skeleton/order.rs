@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
-    Exchange,
+    ExchangeID,
 };
 
 /// 订单类型枚举
@@ -43,7 +43,7 @@ impl Display for OrderKind
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
-    pub exchange: Exchange,     // 交易所
+    pub exchange: ExchangeID,     // 交易所
     pub instrument: Instrument, // 交易工具
     // Consider : 需要记录 OrderId 吗 ????
     pub cid: ClientOrderId, // 客户端订单ID
