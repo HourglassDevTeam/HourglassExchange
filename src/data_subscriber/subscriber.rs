@@ -5,8 +5,10 @@ use crate::{
 };
 use async_trait::async_trait;
 use std::fmt::Debug;
-use tokio_tungstenite::tungstenite::WebSocket;
+use tokio_tungstenite::tungstenite::{connect, WebSocket};
 use tracing::{debug, info};
+use crate::data_subscriber::mapper::WebSocketSubMapper;
+use crate::data_subscriber::Subscriber;
 
 pub struct WebSocketSubscriber;
 pub trait SubKind

@@ -25,8 +25,8 @@ pub trait SubscriptionValidator
 {
     type Parser: StreamParser;
 
-    async fn validate<Exchange, Kind>(instrument_map: Map<Instrument>, websocket: &mut WebSocket) -> Result<Map<Instrument>, SocketError>
-        where Exchange: Connector + Send,
+    async fn validate<Kind>(instrument_map: Map<Instrument>, websocket: &mut WebSocket) -> Result<Map<Instrument>, SocketError>
+        where
               Kind: SubKind + Send;
 }
 
@@ -41,8 +41,8 @@ impl SubscriptionValidator for WebSocketSubValidator
 {
     type Parser = WebSocketParser;
 
-    async fn validate<Exchange, Kind>(instrument_map: Map<Instrument>, websocket: &mut WebSocket) -> Result<Map<Instrument>, SocketError>
-        where Exchange: Connector + Send,
+    async fn validate<Kind>(instrument_map: Map<Instrument>, websocket: &mut WebSocket) -> Result<Map<Instrument>, SocketError>
+        where
               Kind: SubKind + Send
     {
         // Establish exchange specific subscription validation parameters
