@@ -27,10 +27,10 @@ impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
 
 impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
-    pub async fn new<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<Self, SocketError>
+    pub async fn new<Exchange, SubscriptionKind>(subscriptions: &[Subscription<Exchange, SubscriptionKind>]) -> Result<Self, SocketError>
         where Exchange: Connector + Send + Sync,
-              Kind: SubKind + Send + Sync,
-              Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>
+              SubscriptionKind: SubKind + Send + Sync,
+              Subscription<Exchange, SubscriptionKind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>
     {
         let (websocket, _instrument_map) = WebSocketSubscriber::subscribe(subscriptions).await?;
         let stream = websocket.map(|msg| {
