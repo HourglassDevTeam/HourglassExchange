@@ -36,7 +36,7 @@ async fn main()
             let result = stream.next().await;
             match result {
                 | Some(data) => {
-                    println!("数据流 {}: {:?}", id, data);
+                    println!("Stream {}: {:?}", id, data);
                 }
                 | None => continue,
             }
