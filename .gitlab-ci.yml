@@ -18,7 +18,6 @@ mergeCode:
 
     - ssh-add /home/gitlab-runner/.ssh/id_rsa
 
-    - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
     
     ##
