@@ -4,6 +4,7 @@ pub use tokio_tungstenite::tungstenite::Message as WsMessage;
 pub mod connector;
 pub mod socket_error;
 pub mod subscriber;
+mod validator;
 
 #[derive(Debug)]
 pub struct SubscriptionId(pub String);

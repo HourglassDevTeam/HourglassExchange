@@ -1,13 +1,19 @@
 use crate::{
     common_skeleton::instrument::Instrument,
-    data_subscriber::{socket_error::SocketError, SubscriptionId},
+    data_subscriber::{socket_error::SocketError, SubscriptionId, WsMessage},
     ExchangeKind,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug, time::Duration};
 use tracing::Subscriber;
 use url::Url;
-use crate::data_subscriber::WsMessage;
+
+#[derive(Debug)]
+pub struct PingInterval
+{
+    pub interval: tokio::time::Interval,
+    pub ping: fn() -> WsMessage,
+}
 
 pub trait Connector
     where Self: Clone + Default + Debug + for<'de> Deserialize<'de> + Serialize + Sized
