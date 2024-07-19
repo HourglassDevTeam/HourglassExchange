@@ -2,20 +2,21 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use tokio::net::TcpStream;
-use tokio_tungstenite::MaybeTlsStream;
 pub use tokio_tungstenite::tungstenite::Message as WsMessage;
+use tokio_tungstenite::MaybeTlsStream;
 
-use crate::common_skeleton::instrument::Instrument;
-use crate::data_subscriber::mapper::SubscriptionMapper;
-use crate::data_subscriber::socket_error::SocketError;
-use crate::data_subscriber::subscriber::SubKind;
-use crate::simulated_exchange::account::account_market_feed::Subscription;
+use crate::{
+    common_skeleton::instrument::Instrument,
+    data_subscriber::{mapper::SubscriptionMapper, socket_error::SocketError, subscriber::SubKind},
+    simulated_exchange::account::account_market_feed::Subscription,
+};
 
 pub mod connector;
+mod mapper;
 pub mod socket_error;
 pub mod subscriber;
 pub mod validator;
-mod mapper;
+mod websocket;
 
 #[derive(Debug)]
 pub struct SubscriptionId(pub String);
@@ -32,10 +33,10 @@ pub struct SubscriptionMeta
 pub struct Map<T>(pub HashMap<SubscriptionId, T>);
 pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream>>;
 
-
 #[async_trait]
-pub trait Subscriber {
+pub trait Subscriber
+{
     type SubMapper: SubscriptionMapper;
     async fn subscribe<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<(WebSocket, Map<Instrument>), SocketError>
-                                       where Kind: SubKind + Send + Sync;
+        where Kind: SubKind + Send + Sync;
 }

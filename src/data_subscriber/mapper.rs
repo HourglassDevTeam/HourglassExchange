@@ -3,23 +3,21 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    exchange::{Connector, subscription::ExchangeSub},
-    Identifier,
-    subscription::{Map, SubKind, Subscription, SubscriptionMeta},
+    data_subscriber::{
+        connector::Connector,
+        subscriber::{ExchangeSub, SubKind},
+        Map, SubscriptionMeta,
+    },
+    simulated_exchange::account::account_market_feed::Subscription,
 };
-use crate::data_subscriber::{Map, SubscriptionMeta};
-use crate::data_subscriber::connector::Connector;
-use crate::data_subscriber::subscriber::{ExchangeSub, SubKind};
-use crate::simulated_exchange::account::account_market_feed::Subscription;
 
 /// Defines how to map a collection of Cerebro [`Subscription`]s into exchange specific
 /// [`SubscriptionMeta`], containing subscription payloads that are sent to the exchange.
 
-pub trait SubscriptionMapper {
+pub trait SubscriptionMapper
+{
     fn map<Kind>(subscriptions: &[Subscription<Kind>]) -> SubscriptionMeta
-                           where
-                                                              Kind: SubKind,
-                               ;
+        where Kind: SubKind;
 }
 
 /// Standard [`SubscriptionMapper`] for
@@ -28,37 +26,33 @@ pub trait SubscriptionMapper {
 
 pub struct WebSocketSubMapper;
 
-impl SubscriptionMapper for WebSocketSubMapper {
+impl SubscriptionMapper for WebSocketSubMapper
+{
     fn map<Kind>(subscriptions: &[Subscription<Kind>]) -> SubscriptionMeta
-                           where
-                                                              Kind: SubKind,
+        where Kind: SubKind
     {
         // Allocate SubscriptionIds HashMap to track identifiers for each actioned Subscription
         let mut instrument_map = Map(HashMap::with_capacity(subscriptions.len()));
 
         // Map Cerebro Subscriptions to exchange specific subscriptions
-        let exchange_subs = subscriptions
-            .iter()
-            .map(|subscription| {
-                // Translate Cerebro Subscription to exchange specific subscription
-                let exchange_sub = ExchangeSub::new(subscription);
+        let exchange_subs = subscriptions.iter()
+                                         .map(|subscription| {
+                                             // Translate Cerebro Subscription to exchange specific subscription
+                                             let exchange_sub = ExchangeSub::new(subscription);
 
-                // Determine the SubscriptionId associated with this exchange specific subscription
-                let subscription_id = exchange_sub.id();
+                                             // Determine the SubscriptionId associated with this exchange specific subscription
+                                             let subscription_id = exchange_sub.id();
 
-                // Use ExchangeSub SubscriptionId as the link to this Cerebro Subscription
-                instrument_map.0.insert(subscription_id, subscription.instrument.clone());
+                                             // Use ExchangeSub SubscriptionId as the link to this Cerebro Subscription
+                                             instrument_map.0.insert(subscription_id, subscription.instrument.clone());
 
-                exchange_sub
-            })
-            .collect::<Vec<ExchangeSub<Exchange::Channel, Exchange::Market>>>();
+                                             exchange_sub
+                                         })
+                                         .collect::<Vec<ExchangeSub<Exchange::Channel, Exchange::Market>>>();
 
         // Construct WebSocket message subscriptions requests
         let subscriptions = Exchange::requests(exchange_subs);
 
-        SubscriptionMeta {
-            instrument_map,
-            subscriptions,
-        }
+        SubscriptionMeta { instrument_map, subscriptions }
     }
 }

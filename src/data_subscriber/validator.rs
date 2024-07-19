@@ -1,13 +1,13 @@
 use async_trait::async_trait;
-use futures::StreamExt;
-use serde::{Deserialize, Serialize};
-use tokio_tungstenite::tungstenite::WebSocket;
+use futures::{Stream, StreamExt};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tracing::debug;
 
 use crate::{
     common_skeleton::instrument::Instrument,
-    data_subscriber::{connector::Connector, Map, socket_error::SocketError},
+    data_subscriber::{connector::Connector, socket_error::SocketError, subscriber::SubKind, Map},
 };
+use crate::data_subscriber::websocket::{StreamParser, WebSocket, WebSocketParser};
 
 pub trait Validator
 {
@@ -25,8 +25,7 @@ pub trait SubscriptionValidator
     type Parser: StreamParser;
 
     async fn validate<Kind>(instrument_map: Map<Instrument>, websocket: &mut WebSocket) -> Result<Map<Instrument>, SocketError>
-        where
-              Kind: SubKind + Send;
+        where Kind: SubKind + Send;
 }
 
 /// Standard [`SubscriptionValidator`] for [`WebSocket`]s suitable for most exchanges.
@@ -41,8 +40,7 @@ impl SubscriptionValidator for WebSocketSubValidator
     type Parser = WebSocketParser;
 
     async fn validate<Kind>(instrument_map: Map<Instrument>, websocket: &mut WebSocket) -> Result<Map<Instrument>, SocketError>
-        where
-              Kind: SubKind + Send
+        where Kind: SubKind + Send
     {
         // Establish exchange specific subscription validation parameters
         let timeout = Exchange::subscription_timeout();

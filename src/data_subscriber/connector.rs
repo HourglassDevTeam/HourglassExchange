@@ -9,8 +9,8 @@ use crate::{
     data_subscriber::{
         socket_error::SocketError,
         subscriber::ExchangeSub,
-        SubscriptionId,
-        validator::{SubscriptionValidator, Validator}, WsMessage,
+        validator::{SubscriptionValidator, Validator},
+        SubscriptionId, WsMessage,
     },
     ExchangeKind,
 };

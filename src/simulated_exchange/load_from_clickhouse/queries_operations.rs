@@ -4,19 +4,19 @@
 use async_stream::stream;
 use chrono::{Duration, NaiveDate};
 pub use clickhouse::{
-    Client,
-    error::{Error, Result}, Row,
+    error::{Error, Result},
+    Client, Row,
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     common_skeleton::datafeed::event::MarketEvent,
-    Exchange,
     simulated_exchange::{
         utils::chrono_operations::extract_date,
         ws_trade::{parse_base_and_quote, WsTrade},
     },
+    Exchange,
 };
 
 pub struct ClickHouseClient

@@ -16,8 +16,8 @@ use crate::{
         instrument::Instrument,
     },
     data_subscriber::{connector::Connector, socket_error::SocketError, subscriber::SubKind},
-    Exchange,
     simulated_exchange::account::account_market_feed::DataStream::{Historical, Live},
+    Exchange,
 };
 
 // 定义一个数据流别名，用于标识每个数据流。
@@ -130,8 +130,7 @@ pub enum DataStream<Event>
 impl<Event> DataStream<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     pub async fn from_websocket<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<Self, SocketError>
-        where
-              Kind: SubKind + Send + Sync
+        where Kind: SubKind + Send + Sync
     {
         let live_feed = LiveFeed::new(subscriptions).await?;
         Ok(DataStream::Live(live_feed))
