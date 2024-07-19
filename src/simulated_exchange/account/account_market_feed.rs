@@ -13,7 +13,7 @@ use crate::{
     simulated_exchange::account::account_market_feed::DataStream::{Historical, Live},
 };
 
-pub type StreamID = String;
+pub type StreamID = String; // NOTE CUSTOMISABLE FOR NOW
 
 pub struct AccountDataStreams<Event>
     where Event: Clone + Send + Sync + 'static
