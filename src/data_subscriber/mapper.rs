@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::data_subscriber::subscriber::Identifier;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -10,16 +11,19 @@ use crate::{
     },
     simulated_exchange::account::account_market_feed::Subscription,
 };
+use crate::data_subscriber::SubscriptionId;
 
 /// Defines how to map a collection of  [`Subscription`]s into exchange specific
 /// [`SubscriptionMeta`], containing subscription payloads that are sent to the exchange.
 
-pub trait SubscriptionMapper
-{
+pub trait SubscriptionMapper {
     fn map<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> SubscriptionMeta
-        where Exchange: Connector,
-              Kind: SubKind;
+                           where
+                               Exchange: Connector,
+                               Kind: SubKind,
+                               Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>;
 }
+
 
 /// Standard [`SubscriptionMapper`] for
 /// [`WebSocket`](cerebro_integration::protocol::websocket::WebSocket)s suitable for most exchanges.
@@ -32,7 +36,9 @@ impl SubscriptionMapper for WebSocketSubMapper
     /// 将订阅数组映射到 `SubscriptionMeta`。
     fn map<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> SubscriptionMeta
         where Exchange: Connector,
-              Kind: SubKind
+              Kind: SubKind,
+              Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>,
+              ExchangeSub<Exchange::Channel, Exchange::Market>: Identifier<SubscriptionId>
     {
         // 分配 SubscriptionIds HashMap，用于跟踪每个操作订阅的标识符
         let mut instrument_map = SubscriptionMap(HashMap::with_capacity(subscriptions.len()));

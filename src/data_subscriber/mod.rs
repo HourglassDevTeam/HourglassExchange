@@ -29,6 +29,23 @@ impl Display for SubscriptionId
         write!(f, "{}", self.0)
     }
 }
+
+impl AsRef<str> for SubscriptionId
+{
+    fn as_ref(&self) -> &str
+    {
+        &self.0
+    }
+}
+
+impl<S> From<S> for SubscriptionId where S: Into<String>
+{
+    fn from(input: S) -> Self
+    {
+        Self(input.into())
+    }
+}
+
 pub struct SubscriptionMeta
 {
     pub instrument_map: SubscriptionMap<Instrument>,

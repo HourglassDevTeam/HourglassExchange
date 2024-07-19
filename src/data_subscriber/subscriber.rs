@@ -11,7 +11,7 @@ use crate::{
         mapper::{SubscriptionMapper, WebSocketSubMapper},
         socket_error::SocketError,
         validator::SubscriptionValidator,
-        Subscriber, SubscriptionMap, SubscriptionMeta, WebSocket,
+        Subscriber, SubscriptionId, SubscriptionMap, SubscriptionMeta, WebSocket,
     },
     simulated_exchange::account::account_market_feed::Subscription,
 };
@@ -33,7 +33,34 @@ pub struct ExchangeSub<Channel, Market>
     /// - [`KrakenMarket("BTC/USDT")`](super::kraken::market::KrakenMarket)
     pub market: Market,
 }
+pub trait Identifier<T>
+{
+    fn id(&self) -> T;
+}
 
+impl<Channel, Market> Identifier<SubscriptionId> for ExchangeSub<Channel, Market>
+    where Channel: AsRef<str>,
+          Market: AsRef<str>
+{
+    fn id(&self) -> SubscriptionId
+    {
+        SubscriptionId::from(format!("{}|{}", self.channel.as_ref(), self.market.as_ref()))
+    }
+}
+
+impl<Channel, Market> ExchangeSub<Channel, Market>
+    where Channel: AsRef<str>,
+          Market: AsRef<str>
+{
+    /// Construct a new exchange specific [`Self`] with the Cerebro [`Subscription`] provided.
+
+    pub fn new<Exchange, Kind>(sub: &Subscription<Exchange, Kind>) -> Self
+        where Subscription<Exchange, Kind>: Identifier<Channel> + Identifier<Market>
+    {
+        Self { channel: sub.id(),
+               market: sub.id() }
+    }
+}
 #[async_trait]
 impl Subscriber for WebSocketSubscriber
 {

@@ -17,7 +17,6 @@ use crate::{
     },
     data_subscriber::{connector::Connector, socket_error::SocketError, subscriber::SubKind},
     simulated_exchange::account::account_market_feed::DataStream::{Historical, Live},
-    ExchangeVariant,
 };
 
 // 定义一个数据流别名，用于标识每个数据流。
@@ -57,7 +56,7 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
 #[derive(Debug)]
 pub struct Subscription<Exchange, Kind>
 {
-    pub exchange: ExchangeVariant,
+    pub exchange: Exchange,
     pub instrument: Instrument,
     pub kind: Kind,
 }
