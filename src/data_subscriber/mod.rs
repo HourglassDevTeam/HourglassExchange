@@ -8,7 +8,12 @@ use tokio_tungstenite::MaybeTlsStream;
 
 use crate::{
     common_skeleton::instrument::Instrument,
-    data_subscriber::{connector::Connector, mapper::SubscriptionMapper, socket_error::SocketError, subscriber::SubKind},
+    data_subscriber::{
+        connector::Connector,
+        mapper::SubscriptionMapper,
+        socket_error::SocketError,
+        subscriber::{Identifier, SubKind},
+    },
     simulated_exchange::account::account_market_feed::Subscription,
 };
 
@@ -62,9 +67,10 @@ pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream
 #[async_trait]
 pub trait Subscriber
 {
-    /// 关联的订阅映射器类型。
     type SubscriptionMapper: SubscriptionMapper;
+
     async fn subscribe<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<(WebSocket, SubscriptionMap<Instrument>), SocketError>
         where Exchange: Connector + Send + Sync,
-              Kind: SubKind + Send + Sync;
+              Kind: SubKind + Send + Sync,
+              Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>;
 }

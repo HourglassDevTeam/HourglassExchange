@@ -7,23 +7,21 @@ use crate::{
     data_subscriber::{
         connector::Connector,
         subscriber::{ExchangeSub, SubKind},
-        SubscriptionMap, SubscriptionMeta,
+        SubscriptionId, SubscriptionMap, SubscriptionMeta,
     },
     simulated_exchange::account::account_market_feed::Subscription,
 };
-use crate::data_subscriber::SubscriptionId;
 
 /// Defines how to map a collection of  [`Subscription`]s into exchange specific
 /// [`SubscriptionMeta`], containing subscription payloads that are sent to the exchange.
 
-pub trait SubscriptionMapper {
+pub trait SubscriptionMapper
+{
     fn map<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> SubscriptionMeta
-                           where
-                               Exchange: Connector,
-                               Kind: SubKind,
-                               Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>;
+        where Exchange: Connector,
+              Kind: SubKind,
+              Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>;
 }
-
 
 /// Standard [`SubscriptionMapper`] for
 /// [`WebSocket`](cerebro_integration::protocol::websocket::WebSocket)s suitable for most exchanges.

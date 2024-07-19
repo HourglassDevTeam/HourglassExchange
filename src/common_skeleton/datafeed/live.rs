@@ -6,7 +6,7 @@ use crate::{
     data_subscriber::{
         connector::Connector,
         socket_error::SocketError,
-        subscriber::{SubKind, WebSocketSubscriber},
+        subscriber::{Identifier, SubKind, WebSocketSubscriber},
         Subscriber,
     },
     simulated_exchange::account::account_market_feed::Subscription,
@@ -29,13 +29,14 @@ impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static +
 {
     pub async fn new<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<Self, SocketError>
         where Exchange: Connector + Send + Sync,
-              Kind: SubKind + Send + Sync
+              Kind: SubKind + Send + Sync,
+              Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>
     {
         let (websocket, _instrument_map) = WebSocketSubscriber::subscribe(subscriptions).await?;
         let stream = websocket.map(|msg| {
                                   // 将WebSocket消息解析为事件
                                   // 这里你需要根据你的业务逻辑进行实现
-                                  Event::from_websocket_message(msg)
+                                  Event::parse_ws(msg)
                               })
                               .boxed();
 

@@ -7,11 +7,8 @@ use tracing::{debug, info};
 use crate::{
     common_skeleton::instrument::Instrument,
     data_subscriber::{
-        connector::Connector,
-        mapper::{SubscriptionMapper, WebSocketSubMapper},
-        socket_error::SocketError,
-        validator::SubscriptionValidator,
-        Subscriber, SubscriptionId, SubscriptionMap, SubscriptionMeta, WebSocket,
+        connector::Connector, mapper::WebSocketSubMapper, socket_error::SocketError, validator::SubscriptionValidator, Subscriber, SubscriptionId, SubscriptionMap,
+        SubscriptionMeta, WebSocket,
     },
     simulated_exchange::account::account_market_feed::Subscription,
 };
@@ -71,7 +68,8 @@ impl Subscriber for WebSocketSubscriber
     /// 返回包含 WebSocket 和订阅映射的结果，或返回 `SocketError`。
     async fn subscribe<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<(WebSocket, SubscriptionMap<Instrument>), SocketError>
         where Exchange: Connector + Send + Sync,
-              Kind: SubKind + Send + Sync
+              Kind: SubKind + Send + Sync,
+              Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>
     {
         // 定义变量用于日志记录
         let exchange = Exchange::ID;
