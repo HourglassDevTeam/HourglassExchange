@@ -37,5 +37,5 @@ pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream
 pub trait Subscriber {
     type SubMapper: SubscriptionMapper;
     async fn subscribe<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<(WebSocket, Map<Instrument>), SocketError>
-                                       where Kind: SubKind + Send + Sync,
+                                       where Kind: SubKind + Send + Sync;
 }
