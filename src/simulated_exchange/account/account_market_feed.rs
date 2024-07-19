@@ -12,7 +12,6 @@ use crate::{
     common_skeleton::datafeed::{historical::HistoricalFeed, live::LiveFeed},
     simulated_exchange::account::account_market_feed::DataStream::{Historical, Live},
 };
-use crate::common_skeleton::datafeed::event::MarketEvent;
 
 pub type StreamID = String;
 
