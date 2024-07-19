@@ -5,6 +5,7 @@ use crate::{
     simulated_exchange::account::account_market_feed::Subscription,
 };
 use futures::Stream;
+use crate::data_subscriber::subscriber::SubKind;
 
 pub struct LiveFeed<Event>
 {

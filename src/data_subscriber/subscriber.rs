@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use crate::{
     common_skeleton::instrument::Instrument,
     data_subscriber::{connector::Connector, socket_error::SocketError, Map, SubscriptionMeta},
@@ -8,7 +9,12 @@ use tokio_tungstenite::tungstenite::WebSocket;
 use tracing::{debug, info};
 
 pub struct WebSocketSubscriber;
-
+pub trait SubKind
+where
+    Self: Debug + Clone,
+{
+    type Event: Debug;
+}
 #[async_trait]
 
 impl Subscriber for WebSocketSubscriber
