@@ -82,4 +82,4 @@ impl Subscriber for WebSocketSubscriber
 
         // 返回 WebSocket 和订阅映射
         Ok((websocket, map))
-    }
+    }}

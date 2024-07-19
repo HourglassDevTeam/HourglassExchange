@@ -1,6 +1,7 @@
 use std::{fmt::Debug, pin::Pin};
 
 use futures::Stream;
+use futures_util::FutureExt;
 
 use crate::{
     data_subscriber::{
@@ -9,6 +10,7 @@ use crate::{
     },
     simulated_exchange::account::account_market_feed::Subscription,
 };
+use crate::data_subscriber::Subscriber;
 
 pub struct LiveFeed<Event>
 {
