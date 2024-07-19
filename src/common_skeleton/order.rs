@@ -43,7 +43,7 @@ impl Display for OrderKind
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
-    pub exchange: ExchangeID,     // 交易所
+    pub exchange: ExchangeID,   // 交易所
     pub instrument: Instrument, // 交易工具
     // Consider : 需要记录 OrderId 吗 ????
     pub cid: ClientOrderId, // 客户端订单ID

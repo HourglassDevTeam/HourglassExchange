@@ -1,10 +1,10 @@
 use std::{fmt::Debug, pin::Pin};
 
-use futures::Stream;
-use futures_util::FutureExt;
+use futures::{Stream, StreamExt};
 
 use crate::{
     data_subscriber::{
+        connector::Connector,
         socket_error::SocketError,
         subscriber::{SubKind, WebSocketSubscriber},
         Subscriber,
@@ -27,8 +27,9 @@ impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
 
 impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
-    pub async fn new<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<Self, SocketError>
-        where Kind: SubKind + Send + Sync
+    pub async fn new<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<Self, SocketError>
+        where Exchange: Connector + Send + Sync,
+              Kind: SubKind + Send + Sync
     {
         let (websocket, _instrument_map) = WebSocketSubscriber::subscribe(subscriptions).await?;
         let stream = websocket.map(|msg| {

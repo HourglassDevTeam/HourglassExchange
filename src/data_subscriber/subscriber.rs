@@ -7,8 +7,10 @@ use tracing::{debug, info};
 use crate::{
     common_skeleton::instrument::Instrument,
     data_subscriber::{
+        connector::Connector,
         mapper::{SubscriptionMapper, WebSocketSubMapper},
         socket_error::SocketError,
+        validator::SubscriptionValidator,
         Subscriber, SubscriptionMap, SubscriptionMeta, WebSocket,
     },
     simulated_exchange::account::account_market_feed::Subscription,
@@ -23,18 +25,10 @@ pub trait SubKind
 
 pub struct ExchangeSub<Channel, Market>
 {
-    /// Type that defines how to translate a  [`Subscription`] into an exchange specific
-    /// channel to be subscribed to.
-    ///
     /// ### Examples
     /// - [`BinanceChannel("@depth@100ms")`](super::binance::channel::BinanceChannel)
     /// - [`KrakenChannel("trade")`](super::kraken::channel::KrakenChannel)
     pub channel: Channel,
-
-    /// Type that defines how to translate a  [`Subscription`] into an exchange specific
-    /// market that can be subscribed to.
-    ///
-    /// ### Examples
     /// - [`BinanceMarket("btcusdt")`](super::binance::market::BinanceMarket)
     /// - [`KrakenMarket("BTC/USDT")`](super::kraken::market::KrakenMarket)
     pub market: Market,
@@ -48,8 +42,9 @@ impl Subscriber for WebSocketSubscriber
     /// 订阅方法
     /// 通过 WebSocket 连接到交易所，并发送订阅请求。
     /// 返回包含 WebSocket 和订阅映射的结果，或返回 `SocketError`。
-    async fn subscribe<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<(WebSocket, SubscriptionMap<Instrument>), SocketError>
-        where Kind: SubKind + Send + Sync
+    async fn subscribe<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<(WebSocket, SubscriptionMap<Instrument>), SocketError>
+        where Exchange: Connector + Send + Sync,
+              Kind: SubKind + Send + Sync
     {
         // 定义变量用于日志记录
         let exchange = Exchange::ID;
@@ -66,8 +61,8 @@ impl Subscriber for WebSocketSubscriber
         // 记录连接成功日志
         debug!(%exchange, ?subscriptions, "connected to WebSocket");
 
-        // 将 &[Subscription<Kind>] 映射到 SubscriptionMeta
-        let SubscriptionMeta { instrument_map, subscriptions } = Self::SubscriptionMapper::map::<Kind>(subscriptions);
+        // 将 &[Subscription<Exchange,Kind>] 映射到 SubscriptionMeta
+        let SubscriptionMeta { instrument_map, subscriptions } = Self::SubscriptionMapper::map::<Exchange, Kind>(subscriptions);
 
         // 通过 WebSocket 发送订阅请求
         for subscription in subscriptions {
@@ -77,7 +72,7 @@ impl Subscriber for WebSocketSubscriber
         }
 
         // 验证订阅响应
-        let map = Exchange::SubValidator::validate::<Kind>(instrument_map, &mut websocket).await?;
+        let map = Exchange::SubValidator::validate::<Exchange, Kind>(instrument_map, &mut websocket).await?;
 
         // 记录订阅成功日志
         info!(%exchange, "subscribed to WebSocket");

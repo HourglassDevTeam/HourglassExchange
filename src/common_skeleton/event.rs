@@ -18,7 +18,7 @@ pub struct AccountEvent
 {
     pub exchange_timestamp: i64, // 交易所发送事件的时间,
     // pub client_ts: i64,        // 客户端接发送事件的时间
-    pub exchange: ExchangeID,     // 目标和源头交易所
+    pub exchange: ExchangeID,   // 目标和源头交易所
     pub kind: AccountEventKind, // 事件类型
 }
 

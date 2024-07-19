@@ -17,7 +17,7 @@ use crate::{
     },
     data_subscriber::{connector::Connector, socket_error::SocketError, subscriber::SubKind},
     simulated_exchange::account::account_market_feed::DataStream::{Historical, Live},
-    ExchangeID,
+    ExchangeVariant,
 };
 
 // 定义一个数据流别名，用于标识每个数据流。
@@ -43,11 +43,11 @@ impl<Event> Debug for AccountDataStreams<Event>
 impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     // 添加一个新的方法用于添加WebSocket实时数据流
-    pub async fn add_websocket_stream<Kind>(&mut self, id: StreamID, subscriptions: &[Subscription<Kind>]) -> Result<(), SocketError>
-        where ExchangeID: Connector + Send + Sync,
+    pub async fn add_websocket_stream<Exchange, Kind>(&mut self, id: StreamID, subscriptions: &[Subscription<Exchange, Kind>]) -> Result<(), SocketError>
+        where Exchange: Connector + Send + Sync,
               Kind: SubKind + Send + Sync
     {
-        let stream = DataStream::from_websocket(subscriptions).await?;
+        let stream = DataStream::from_websocket::<Exchange, Kind>(subscriptions).await?;
         self.add_stream(id, stream);
         Ok(())
     }
@@ -55,9 +55,9 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
 
 // NOTE this is foreign to this module
 #[derive(Debug)]
-pub struct Subscription<Kind>
+pub struct Subscription<Exchange, Kind>
 {
-    pub exchange: ExchangeID,
+    pub exchange: ExchangeVariant,
     pub instrument: Instrument,
     pub kind: Kind,
 }
@@ -128,10 +128,11 @@ pub enum DataStream<Event>
 
 impl<Event> DataStream<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
-    pub async fn from_websocket<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<Self, SocketError>
-        where Kind: SubKind + Send + Sync
+    pub async fn from_websocket<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<Self, SocketError>
+        where Exchange: Connector + Send + Sync,
+              Kind: SubKind + Send + Sync
     {
-        let live_feed = LiveFeed::new(subscriptions).await?;
+        let live_feed = LiveFeed::new::<Exchange, Kind>(subscriptions).await?;
         Ok(DataStream::Live(live_feed))
     }
 }

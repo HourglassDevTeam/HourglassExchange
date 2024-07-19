@@ -10,7 +10,7 @@ use crate::{
         socket_error::SocketError,
         subscriber::ExchangeSub,
         validator::{SubscriptionValidator, Validator},
-        SubscriptionId, WsMessage,
+        SubscriptionId, SubscriptionMap, WsMessage,
     },
     ExchangeVariant,
 };
@@ -63,7 +63,7 @@ pub trait Connector
     fn requests(exchange_subs: Vec<ExchangeSub<Self::Channel, Self::Market>>) -> Vec<WsMessage>;
 
     /// 定义期望从交易所服务器接收到的订阅响应数量
-    fn expected_responses(map: &SubMap<Instrument>) -> usize
+    fn expected_responses(map: &SubscriptionMap<Instrument>) -> usize
     {
         map.0.len()
     }
@@ -76,9 +76,8 @@ pub trait Connector
 }
 
 /// 用于存储订阅映射的结构体
-pub struct SubMap<T>(pub HashMap<SubscriptionId, T>);
 
-impl<T> FromIterator<(SubscriptionId, T)> for SubMap<T>
+impl<T> FromIterator<(SubscriptionId, T)> for SubscriptionMap<T>
 {
     /// 从迭代器生成 `SubMap` 实例
     fn from_iter<Iter>(iter: Iter) -> Self
@@ -88,7 +87,7 @@ impl<T> FromIterator<(SubscriptionId, T)> for SubMap<T>
     }
 }
 
-impl<T> SubMap<T>
+impl<T> SubscriptionMap<T>
 {
     /// 查找与提供的 [`SubscriptionId`] 关联的 `T`
     pub fn find(&self, id: &SubscriptionId) -> Result<T, SocketError>

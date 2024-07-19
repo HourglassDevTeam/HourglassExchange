@@ -16,8 +16,9 @@ use crate::{
 
 pub trait SubscriptionMapper
 {
-    fn map<Kind>(subscriptions: &[Subscription<Kind>]) -> SubscriptionMeta
-        where Kind: SubKind;
+    fn map<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> SubscriptionMeta
+        where Exchange: Connector,
+              Kind: SubKind;
 }
 
 /// Standard [`SubscriptionMapper`] for
@@ -29,8 +30,9 @@ pub struct WebSocketSubMapper;
 impl SubscriptionMapper for WebSocketSubMapper
 {
     /// 将订阅数组映射到 `SubscriptionMeta`。
-    fn map<Kind>(subscriptions: &[Subscription<Kind>]) -> SubscriptionMeta
-        where Kind: SubKind
+    fn map<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> SubscriptionMeta
+        where Exchange: Connector,
+              Kind: SubKind
     {
         // 分配 SubscriptionIds HashMap，用于跟踪每个操作订阅的标识符
         let mut instrument_map = SubscriptionMap(HashMap::with_capacity(subscriptions.len()));
