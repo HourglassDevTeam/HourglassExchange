@@ -21,13 +21,13 @@ pub type StreamID = String;
 
 // 定义一个结构体，用于管理多个数据流。
 pub struct AccountDataStreams<Event>
-where Event: Clone + Send + Sync + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
+where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
 {
     pub streams: HashMap<StreamID, DataStream<Event>>, // 使用HashMap存储数据流，键为StreamID
 }
 
 // 为 AccountDataStreams 实现 Debug trait，方便调试。
-impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static + Ord/* 约束Event类型必须满足Debug, Clone, Send, Sync, 'static特性 */
+impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + Debug + 'static + Ord/* 约束Event类型必须满足Debug, Clone, Send, Sync, 'static特性 */
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
@@ -37,7 +37,7 @@ impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Sen
 }
 
 // 为 AccountDataStreams 实现创建和增减数据流的方法，用于管理数据流。
-impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
+impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
 {
     // 创建一个新的 AccountDataStreams 实例。
     pub fn new() -> Self
@@ -93,7 +93,7 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + 'static
 
 // 定义一个枚举，表示数据流的类型，可以是实时数据流或历史数据流。
 pub enum DataStream<Event>
-where Event: Clone + Send + Sync + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
+where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
 {
     Live(LiveFeed<Event>),             // 实时数据流
     Historical(HistoricalFeed<Event>), // 历史数据流
@@ -101,7 +101,7 @@ where Event: Clone + Send + Sync + 'static + Ord /* 约束Event类型必须满�
 
 
 // 为DataStream实现Stream trait，使其可以作为异步流处理。
-impl<Event> Stream for DataStream<Event> where Event: Clone + Send + Sync + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
+impl<Event> Stream for DataStream<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
 {
     type Item = Event;
 
@@ -121,7 +121,7 @@ impl<Event> Stream for DataStream<Event> where Event: Clone + Send + Sync + 'sta
 // 为DataStream实现额外的方法，方便获取下一个元素。
 impl<Event> DataStream<Event>
 where
-    Event: Clone + Send + Sync + 'static + Ord, // 约束Event类型必须满足Clone, Send, Sync, 'static特性，并且可排序（Ord）
+    Event: Clone + Send + Sync + Debug + 'static + Ord, // 约束Event类型必须满足Clone, Send, Sync, 'static特性，并且可排序（Ord）
 {
     // 将DataStream转换为一个Stream。
     pub fn into_stream(self) -> impl Stream<Item = Event> + 'static {

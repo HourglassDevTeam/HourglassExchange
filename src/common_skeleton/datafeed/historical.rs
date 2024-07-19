@@ -1,4 +1,5 @@
 use std::{pin::Pin, sync::Arc};
+use std::fmt::Debug;
 
 use futures::Stream;
 
@@ -11,7 +12,7 @@ pub struct HistoricalFeed<Event>
     pub stream: Pin<Box<dyn Stream<Item = Event> + Send>>,
 }
 
-impl<Event> HistoricalFeed<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> HistoricalFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
 {
     pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item = Event> + Send)>
     {

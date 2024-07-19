@@ -3,6 +3,7 @@ use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
 };
+use std::fmt::Debug;
 
 use tokio::sync::RwLock;
 
@@ -24,13 +25,13 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct AccountBalances<Event>
-    where Event: Clone + Send + Sync + 'static + Ord + Ord
+    where Event: Clone + Send + Sync + Debug + 'static + Ord + Ord
 {
     pub balance_map: HashMap<Token, Balance>,
     pub account_ref: Option<Arc<RwLock<Account<Event>>>>,
 }
 
-impl<Event> PartialEq for AccountBalances<Event> where Event: Clone + Send + Sync + 'static + Ord
+impl<Event> PartialEq for AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     fn eq(&self, other: &Self) -> bool
     {
@@ -39,7 +40,7 @@ impl<Event> PartialEq for AccountBalances<Event> where Event: Clone + Send + Syn
     }
 }
 // CONSIDER 在哪个环节打上时间戳？
-impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + 'static + Ord
+impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     /// 返回指定[`Token`]的[`Balance`]的引用。
     pub fn balance(&self, token: &Token) -> Result<&Balance, ExecutionError>
@@ -195,7 +196,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + 'static + 
     }
 }
 
-impl<Event> Deref for AccountBalances<Event> where Event: Clone + Send + Sync + 'static + Ord
+impl<Event> Deref for AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     type Target = HashMap<Token, Balance>;
 
@@ -205,7 +206,7 @@ impl<Event> Deref for AccountBalances<Event> where Event: Clone + Send + Sync + 
     }
 }
 
-impl<Event> DerefMut for AccountBalances<Event> where Event: Clone + Send + Sync + 'static + Ord
+impl<Event> DerefMut for AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     fn deref_mut(&mut self) -> &mut Self::Target
     {
