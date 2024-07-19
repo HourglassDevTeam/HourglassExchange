@@ -54,6 +54,7 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
 }
 
 // NOTE this is foreign to this module
+#[derive(Debug)]
 pub struct Subscription<Kind>
 {
     pub exchange: Exchange,

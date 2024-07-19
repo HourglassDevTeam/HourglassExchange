@@ -6,9 +6,10 @@ use tracing::{debug, info};
 
 use crate::{
     common_skeleton::instrument::Instrument,
-    data_subscriber::{connector::Connector, Map, mapper::WebSocketSubMapper, socket_error::SocketError, Subscriber, SubscriptionMeta},
+    data_subscriber::{ Map, mapper::WebSocketSubMapper, socket_error::SocketError, Subscriber, SubscriptionMeta},
     simulated_exchange::account::account_market_feed::Subscription,
 };
+use crate::data_subscriber::mapper::SubscriptionMapper;
 use crate::data_subscriber::WebSocket;
 
 pub struct WebSocketSubscriber;
@@ -82,4 +83,4 @@ impl Subscriber for WebSocketSubscriber
 
         // 返回 WebSocket 和订阅映射
         Ok((websocket, map))
-    }
+    }}

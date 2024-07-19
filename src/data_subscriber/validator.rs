@@ -1,12 +1,11 @@
 use async_trait::async_trait;
 use futures::{Stream, StreamExt};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use crate::{
     common_skeleton::instrument::Instrument,
     data_subscriber::{
-        connector::Connector,
         Map,
         socket_error::SocketError,
         subscriber::SubKind,
