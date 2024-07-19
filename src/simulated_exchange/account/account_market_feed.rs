@@ -41,14 +41,11 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + 'static
         self.streams.insert(id, stream);
     }
 
-    pub fn remove_stream(&mut self, id: StreamID){
+    pub fn remove_stream(&mut self, id: StreamID)
+    {
         self.streams.remove(&id);
     }
-
 }
-
-
-
 
 pub enum DataStream<Event>
     where Event: Clone + Send + Sync + 'static
