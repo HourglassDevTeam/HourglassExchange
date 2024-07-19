@@ -5,23 +5,29 @@ use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::WebSocket;
 use tracing::debug;
 
+use crate::{
+    common_skeleton::instrument::Instrument,
+    data_subscriber::{connector::Connector, socket_error::SocketError, Map},
+};
 
-use crate::common_skeleton::instrument::Instrument;
-use crate::data_subscriber::connector::Connector;
-use crate::data_subscriber::Map;
-use crate::data_subscriber::socket_error::SocketError;
+pub trait Validator
+{
+    /// Check if `Self` is valid for some use case.
 
+    fn validate(self) -> Result<Self, SocketError>
+        where Self: Sized;
+}
 /// Defines how to validate that actioned market data
 /// [`Subscription`](crate::subscription::Subscription)s were accepted by the exchange.
 #[async_trait]
 
-pub trait SubscriptionValidator {
+pub trait SubscriptionValidator
+{
     type Parser: StreamParser;
 
     async fn validate<Exchange, Kind>(instrument_map: Map<Instrument>, websocket: &mut WebSocket) -> Result<Map<Instrument>, SocketError>
-                                      where
-                                          Exchange: Connector + Send,
-                                          Kind: SubKind + Send;
+        where Exchange: Connector + Send,
+              Kind: SubKind + Send;
 }
 
 /// Standard [`SubscriptionValidator`] for [`WebSocket`]s suitable for most exchanges.
@@ -31,13 +37,13 @@ pub struct WebSocketSubValidator;
 
 #[async_trait]
 
-impl SubscriptionValidator for WebSocketSubValidator {
+impl SubscriptionValidator for WebSocketSubValidator
+{
     type Parser = WebSocketParser;
 
     async fn validate<Exchange, Kind>(instrument_map: Map<Instrument>, websocket: &mut WebSocket) -> Result<Map<Instrument>, SocketError>
-                                      where
-                                          Exchange: Connector + Send,
-                                          Kind: SubKind + Send,
+        where Exchange: Connector + Send,
+              Kind: SubKind + Send
     {
         // Establish exchange specific subscription validation parameters
         let timeout = Exchange::subscription_timeout();

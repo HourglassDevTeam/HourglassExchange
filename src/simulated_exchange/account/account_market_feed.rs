@@ -15,7 +15,7 @@ use crate::{
         datafeed::{historical::HistoricalFeed, live::LiveFeed},
         instrument::Instrument,
     },
-    data_subscriber::socket_error::SocketError,
+    data_subscriber::{connector::Connector, socket_error::SocketError, subscriber::SubKind},
     simulated_exchange::account::account_market_feed::DataStream::{Historical, Live},
     Exchange,
 };
@@ -45,8 +45,7 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
     // 添加一个新的方法用于添加WebSocket实时数据流
     pub async fn add_websocket_stream<Kind>(&mut self, id: StreamID, subscriptions: &[Subscription<Kind>]) -> Result<(), SocketError>
         where Exchange: Connector + Send + Sync,
-              Kind: SubKind + Send + Sync,
-              Subscription<Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>
+              Kind: SubKind + Send + Sync
     {
         let stream = DataStream::from_websocket(subscriptions).await?;
         self.add_stream(id, stream);
@@ -132,8 +131,7 @@ impl<Event> DataStream<Event> where Event: Clone + Send + Sync + Debug + 'static
 {
     pub async fn from_websocket<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<Self, SocketError>
         where Exchange: Connector + Send + Sync,
-              Kind: SubKind + Send + Sync,
-              Subscription<Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>
+              Kind: SubKind + Send + Sync
     {
         let live_feed = LiveFeed::new(subscriptions).await?;
         Ok(DataStream::Live(live_feed))

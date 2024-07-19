@@ -1,20 +1,39 @@
-use std::fmt::Debug;
 use crate::{
     common_skeleton::instrument::Instrument,
     data_subscriber::{connector::Connector, socket_error::SocketError, Map, SubscriptionMeta},
     simulated_exchange::account::account_market_feed::Subscription,
 };
 use async_trait::async_trait;
+use std::fmt::Debug;
 use tokio_tungstenite::tungstenite::WebSocket;
 use tracing::{debug, info};
 
 pub struct WebSocketSubscriber;
 pub trait SubKind
-where
-    Self: Debug + Clone,
+    where Self: Debug + Clone
 {
     type Event: Debug;
 }
+
+pub struct ExchangeSub<Channel, Market>
+{
+    /// Type that defines how to translate a Cerebro [`Subscription`] into an exchange specific
+    /// channel to be subscribed to.
+    ///
+    /// ### Examples
+    /// - [`BinanceChannel("@depth@100ms")`](super::binance::channel::BinanceChannel)
+    /// - [`KrakenChannel("trade")`](super::kraken::channel::KrakenChannel)
+    pub channel: Channel,
+
+    /// Type that defines how to translate a Cerebro [`Subscription`] into an exchange specific
+    /// market that can be subscribed to.
+    ///
+    /// ### Examples
+    /// - [`BinanceMarket("btcusdt")`](super::binance::market::BinanceMarket)
+    /// - [`KrakenMarket("BTC/USDT")`](super::kraken::market::KrakenMarket)
+    pub market: Market,
+}
+
 #[async_trait]
 
 impl Subscriber for WebSocketSubscriber

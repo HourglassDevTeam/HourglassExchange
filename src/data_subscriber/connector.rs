@@ -1,6 +1,11 @@
 use crate::{
     common_skeleton::instrument::Instrument,
-    data_subscriber::{socket_error::SocketError, SubscriptionId, WsMessage},
+    data_subscriber::{
+        socket_error::SocketError,
+        subscriber::ExchangeSub,
+        validator::{SubscriptionValidator, Validator},
+        SubscriptionId, WsMessage,
+    },
     ExchangeKind,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -14,6 +19,7 @@ pub struct PingInterval
     pub interval: tokio::time::Interval,
     pub ping: fn() -> WsMessage,
 }
+pub const DEFAULT_SUBSCRIPTION_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub trait Connector
     where Self: Clone + Default + Debug + for<'de> Deserialize<'de> + Serialize + Sized

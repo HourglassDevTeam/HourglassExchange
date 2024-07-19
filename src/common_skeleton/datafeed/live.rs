@@ -1,11 +1,14 @@
 use std::{fmt::Debug, pin::Pin};
 
 use crate::{
-    data_subscriber::{connector::Connector, socket_error::SocketError, subscriber::WebSocketSubscriber},
+    data_subscriber::{
+        connector::Connector,
+        socket_error::SocketError,
+        subscriber::{SubKind, WebSocketSubscriber},
+    },
     simulated_exchange::account::account_market_feed::Subscription,
 };
 use futures::Stream;
-use crate::data_subscriber::subscriber::SubKind;
 
 pub struct LiveFeed<Event>
 {
@@ -22,9 +25,8 @@ impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
 
 impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
-    pub async fn new<Exchange, Kind>(subscriptions: &[Subscription<Kind>]) -> Result<Self, SocketError>
-        where Exchange: Connector + Send + Sync,
-              Kind: SubKind + Send + Sync
+    pub async fn new<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<Self, SocketError>
+        where Kind: SubKind + Send + Sync
     {
         let (websocket, _instrument_map) = WebSocketSubscriber::subscribe(subscriptions).await?;
         let stream = websocket.map(|msg| {
