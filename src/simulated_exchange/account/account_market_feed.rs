@@ -105,7 +105,7 @@ impl<Event> Stream for DataStream<Event> where Event: Clone + Send + Sync + Debu
 {
     type Item = Event;
 
-    // 数据流中的元素类型为Event
+    // 数据流中的元素类型为 Event
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>>
     {
