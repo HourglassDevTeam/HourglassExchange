@@ -1,10 +1,11 @@
-use std::fmt::Debug;
-use std::pin::Pin;
+use std::{fmt::Debug, pin::Pin};
 
+use crate::{
+    data_subscriber::{connector::Connector, socket_error::SocketError},
+    simulated_exchange::account::account_market_feed::Subscription,
+};
 use futures::Stream;
-use crate::data_subscriber::connector::Connector;
-use crate::data_subscriber::socket_error::SocketError;
-use crate::simulated_exchange::account::account_market_feed::Subscription;
+use crate::data_subscriber::subscriber::WebSocketSubscriber;
 
 pub struct LiveFeed<Event>
 {
@@ -19,27 +20,19 @@ impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
     }
 }
 
-
-
-
-impl<Event> LiveFeed<Event>
-where
-    Event: Clone + Send + Sync + Debug + 'static + Ord,
+impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
-    pub async fn new<Exchange, Kind>(
-        subscriptions: &[Subscription<Kind>],
-    ) -> Result<Self, SocketError>
-        where
-            Exchange: Connector + Send + Sync,
-            Kind: SubKind + Send + Sync,
-            Subscription<Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>,
+    pub async fn new<Exchange, Kind>(subscriptions: &[Subscription<Kind>]) -> Result<Self, SocketError>
+        where Exchange: Connector + Send + Sync,
+              Kind: SubKind + Send + Sync,
     {
         let (websocket, _instrument_map) = WebSocketSubscriber::subscribe(subscriptions).await?;
         let stream = websocket.map(|msg| {
-            // 将WebSocket消息解析为事件
-            // 这里你需要根据你的业务逻辑进行实现
-            Event::from_websocket_message(msg)
-        }).boxed();
+                                  // 将WebSocket消息解析为事件
+                                  // 这里你需要根据你的业务逻辑进行实现
+                                  Event::from_websocket_message(msg)
+                              })
+                              .boxed();
 
         Ok(Self { stream })
     }

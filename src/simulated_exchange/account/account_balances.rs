@@ -1,9 +1,9 @@
 use std::{
     collections::HashMap,
+    fmt::Debug,
     ops::{Deref, DerefMut},
     sync::Arc,
 };
-use std::fmt::Debug;
 
 use tokio::sync::RwLock;
 

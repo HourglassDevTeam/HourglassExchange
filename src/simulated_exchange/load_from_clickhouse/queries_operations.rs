@@ -46,11 +46,11 @@ pub struct ClickhouseTrade
     pub timestamp: i64,
 }
 
-
-
 // 手动实现 Eq 和 PartialEq 特性
-impl PartialEq for ClickhouseTrade {
-    fn eq(&self, other: &Self) -> bool {
+impl PartialEq for ClickhouseTrade
+{
+    fn eq(&self, other: &Self) -> bool
+    {
         self.timestamp == other.timestamp
     }
 }
@@ -58,18 +58,21 @@ impl PartialEq for ClickhouseTrade {
 impl Eq for ClickhouseTrade {}
 
 // 手动实现 PartialOrd 和 Ord 特性
-impl PartialOrd for ClickhouseTrade {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+impl PartialOrd for ClickhouseTrade
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering>
+    {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for ClickhouseTrade {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+impl Ord for ClickhouseTrade
+{
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering
+    {
         self.timestamp.cmp(&other.timestamp)
     }
 }
-
 
 impl ClickHouseClient
 {

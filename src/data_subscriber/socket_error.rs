@@ -1,20 +1,26 @@
+use crate::data_subscriber::SubscriptionId;
 use reqwest::Error;
 use thiserror::Error;
 use url::ParseError;
-use crate::data_subscriber::SubscriptionId;
-
 
 #[allow(dead_code)]
 #[derive(Debug, Error)]
-pub enum SocketError {
+pub enum SocketError
+{
     #[error("Sink error")]
     Sink,
 
     #[error("Deserialising JSON error: {error} for payload: {payload}")]
-    Deserialise { error: serde_json::Error, payload: String },
+    Deserialise
+    {
+        error: serde_json::Error, payload: String
+    },
 
     #[error("Deserialising JSON error: {error} for binary payload: {payload:?}")]
-    DeserialiseBinary { error: serde_json::Error, payload: Vec<u8> },
+    DeserialiseBinary
+    {
+        error: serde_json::Error, payload: Vec<u8>
+    },
 
     #[error("Serialising JSON error: {0}")]
     Serialise(serde_json::Error),
@@ -32,7 +38,10 @@ pub enum SocketError {
     Terminated(String),
 
     #[error("{entity} does not support: {item}")]
-    Unsupported { entity: &'static str, item: String },
+    Unsupported
+    {
+        entity: &'static str, item: String
+    },
 
     #[error("WebSocket error: {0}")]
     WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
@@ -54,8 +63,10 @@ pub enum SocketError {
     Exchange(String),
 }
 
-impl From<Error> for SocketError {
-    fn from(error: Error) -> Self {
+impl From<Error> for SocketError
+{
+    fn from(error: Error) -> Self
+    {
         match error {
             | error if error.is_timeout() => SocketError::HttpTimeout(error),
             | error => SocketError::Http(error),

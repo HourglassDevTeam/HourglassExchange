@@ -1,18 +1,16 @@
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::time::Duration;
-use serde::{Deserialize, Serialize};
-use serde::de::DeserializeOwned;
+use crate::{
+    common_skeleton::instrument::Instrument,
+    data_subscriber::{socket_error::SocketError, SubscriptionId},
+    ExchangeKind,
+};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::{collections::HashMap, fmt::Debug, time::Duration};
 use tracing::Subscriber;
 use url::Url;
-use crate::common_skeleton::instrument::Instrument;
-use crate::data_subscriber::socket_error::SocketError;
-use crate::data_subscriber::SubscriptionId;
-use crate::ExchangeKind;
+use crate::data_subscriber::WsMessage;
 
 pub trait Connector
-where
-    Self: Clone + Default + Debug + for<'de> Deserialize<'de> + Serialize + Sized,
+    where Self: Clone + Default + Debug + for<'de> Deserialize<'de> + Serialize + Sized
 {
     /// Unique identifier for the exchange server being connected with.
 
@@ -67,7 +65,8 @@ where
     ///
     /// Defaults to `None`, meaning that no custom pings are sent.
 
-    fn ping_interval() -> Option<PingInterval> {
+    fn ping_interval() -> Option<PingInterval>
+    {
         None
     }
 
@@ -80,42 +79,45 @@ where
     /// exchange server in responses to the requests send. Used to validate all
     /// [`Subscription`](crate::subscription::Subscription)s were accepted.
 
-    fn expected_responses(map: &SubMap<Instrument>) -> usize {
+    fn expected_responses(map: &SubMap<Instrument>) -> usize
+    {
         map.0.len()
     }
 
     /// Expected [`Duration`] the [`SubscriptionValidator`] will wait to receive all success
     /// responses to actioned [`Subscription`](crate::subscription::Subscription) requests.
 
-    fn subscription_timeout() -> Duration {
+    fn subscription_timeout() -> Duration
+    {
         DEFAULT_SUBSCRIPTION_TIMEOUT
     }
 }
 
 pub struct SubMap<T>(pub HashMap<SubscriptionId, T>);
 
-impl<T> FromIterator<(SubscriptionId, T)> for SubMap<T> {
+impl<T> FromIterator<(SubscriptionId, T)> for SubMap<T>
+{
     fn from_iter<Iter>(iter: Iter) -> Self
-                       where
-                           Iter: IntoIterator<Item = (SubscriptionId, T)>,
+        where Iter: IntoIterator<Item = (SubscriptionId, T)>
     {
         Self(iter.into_iter().collect::<HashMap<SubscriptionId, T>>())
     }
 }
 
-impl<T> SubMap<T> {
+impl<T> SubMap<T>
+{
     /// Find the `T` associated with the provided [`SubscriptionId`].
 
     pub fn find(&self, id: &SubscriptionId) -> Result<T, SocketError>
-                where
-                    T: Clone,
+        where T: Clone
     {
         self.0.get(id).cloned().ok_or_else(|| SocketError::Unidentifiable(id.clone()))
     }
 
     /// Find the mutable reference to `T` associated with the provided [`SubscriptionId`].
 
-    pub fn find_mut(&mut self, id: &SubscriptionId) -> Result<&mut T, SocketError> {
+    pub fn find_mut(&mut self, id: &SubscriptionId) -> Result<&mut T, SocketError>
+    {
         self.0.get_mut(id).ok_or_else(|| SocketError::Unidentifiable(id.clone()))
     }
 }

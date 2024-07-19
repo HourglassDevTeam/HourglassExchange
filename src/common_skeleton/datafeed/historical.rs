@@ -1,5 +1,4 @@
-use std::{pin::Pin, sync::Arc};
-use std::fmt::Debug;
+use std::{fmt::Debug, pin::Pin, sync::Arc};
 
 use futures::Stream;
 
