@@ -9,7 +9,7 @@ use crate::{
         order::{Cancelled, Open, Order},
         trade::Trade,
     },
-    AccountEvent, ClientExecution, ExchangeKind, ExecutionError, RequestCancel, RequestOpen,
+    AccountEvent, ClientExecution, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen,
 };
 
 #[derive(Clone, Debug)]
@@ -37,7 +37,7 @@ impl ClientExecution for SimulatedClient
     type Config = UnboundedSender<SimulatedClientEvent>;
 
     // very naturally, the client's kind is determined by and aligned the exchange.
-    const CLIENT_KIND: ExchangeKind = ExchangeKind::Simulated;
+    const CLIENT_KIND: ExchangeVariant = ExchangeVariant::Simulated;
 
     async fn init(request_tx: Self::Config, _: UnboundedSender<AccountEvent>, local_timestamp: i64) -> Self
     {

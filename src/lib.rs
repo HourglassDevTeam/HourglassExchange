@@ -24,7 +24,7 @@ pub mod simulated_exchange;
 #[async_trait]
 pub trait ClientExecution
 {
-    const CLIENT_KIND: ExchangeKind;
+    const CLIENT_KIND: ExchangeVariant;
     // NOTE 这个类型关联项表示配置类型，不同的交易所可能需要不同的配置。例如，API 密钥、API 密码、或其他初始化参数等等。
     type Config;
 
@@ -56,22 +56,22 @@ impl Display for Exchange
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub enum ExchangeKind
+pub enum ExchangeVariant
 {
     Simulated,
     Binance,
     Okex,
 }
 
-impl From<ExchangeKind> for Exchange
+impl From<ExchangeVariant> for Exchange
 {
-    fn from(execution_kind: ExchangeKind) -> Self
+    fn from(execution_kind: ExchangeVariant) -> Self
     {
         Exchange::from(execution_kind.as_str())
     }
 }
 
-impl Display for ExchangeKind
+impl Display for ExchangeVariant
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
@@ -79,14 +79,14 @@ impl Display for ExchangeKind
     }
 }
 
-impl ExchangeKind
+impl ExchangeVariant
 {
     pub fn as_str(&self) -> &'static str
     {
         match self {
-            | ExchangeKind::Simulated => "simulated_exchange",
-            | ExchangeKind::Okex => "ftx",
-            | ExchangeKind::Binance => "binance",
+            | ExchangeVariant::Simulated => "simulated_exchange",
+            | ExchangeVariant::Okex => "ftx",
+            | ExchangeVariant::Binance => "binance",
         }
     }
 }

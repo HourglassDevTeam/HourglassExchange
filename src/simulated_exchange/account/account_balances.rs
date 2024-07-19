@@ -20,7 +20,7 @@ use crate::{
     error::ExecutionError,
     simulated_exchange::account::Account,
     Exchange,
-    ExchangeKind::Simulated,
+    ExchangeVariant::Simulated,
 };
 
 #[derive(Clone, Debug)]

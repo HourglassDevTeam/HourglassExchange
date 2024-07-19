@@ -1,6 +1,7 @@
 use std::{fmt::Debug, pin::Pin};
 
 use futures::Stream;
+use futures_util::FutureExt;
 
 use crate::{
     data_subscriber::{

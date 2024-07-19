@@ -12,7 +12,7 @@ use crate::{
         validator::{SubscriptionValidator, Validator},
         SubscriptionId, WsMessage,
     },
-    ExchangeKind,
+    ExchangeVariant,
 };
 
 /// 表示 Ping 间隔的结构体
@@ -33,7 +33,7 @@ pub trait Connector
     where Self: Clone + Default + Debug + for<'de> Deserialize<'de> + Serialize + Sized
 {
     /// 连接的交易所服务器的唯一标识符
-    const ID: ExchangeKind;
+    const ID: ExchangeVariant;
 
     /// 定义如何将 [`Subscription`](crate::subscription::Subscription) 转换为交易所特定的通道
     type Channel: AsRef<str>;
