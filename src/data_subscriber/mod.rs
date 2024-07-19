@@ -1,6 +1,5 @@
 use fmt::Display;
-use std::collections::HashMap;
-use std::fmt;
+use std::{collections::HashMap, fmt};
 
 use async_trait::async_trait;
 use tokio::net::TcpStream;
@@ -22,10 +21,11 @@ mod websocket;
 
 #[derive(Eq, Hash, PartialEq)]
 pub struct SubscriptionId(pub String);
-// 为 SubscriptionId 实现 Display trait
-impl Display for SubscriptionId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // 使用 self.0 来访问结构体中的 String
+
+impl Display for SubscriptionId
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
+    {
         write!(f, "{}", self.0)
     }
 }

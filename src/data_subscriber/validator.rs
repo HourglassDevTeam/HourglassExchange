@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use futures::{StreamExt};
+use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
