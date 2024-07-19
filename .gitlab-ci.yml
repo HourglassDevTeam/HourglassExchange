@@ -45,23 +45,9 @@ mergeCode:
     ##
     - git checkout -B $PCF_DEPLOY_BRANCH
     
-    ##
-    ## Fetch full history from origin to avoid shallow update issues
-    ##
-    # - git fetch origin || (sleep 5 && git fetch origin)
     
-    ##
-    ## Pull latest changes from origin and rebase
-    ##
-    # - git pull --rebase origin $PCF_DEPLOY_BRANCH
-    
-    ##
-    ## Pull latest changes from gitee and rebase
-    ##
-    # - git fetch --unshallow
     - git pull --rebase gitee $PCF_DEPLOY_BRANCH || true
     
-    ##
     ## Check if there are changes to push to origin
     ##
     - |
