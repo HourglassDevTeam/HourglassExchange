@@ -11,7 +11,7 @@ use futures_core::Stream;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{datafeed::event::MarketEvent},
+    common_skeleton::datafeed::event::MarketEvent,
     simulated_exchange::{
         utils::chrono_operations::extract_date,
         ws_trade::{parse_base_and_quote, WsTrade},

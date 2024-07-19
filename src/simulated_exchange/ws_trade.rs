@@ -4,13 +4,15 @@ use serde::{Deserialize, Serialize};
 use crate::{
     common_skeleton::{
         datafeed::event::MarketEvent,
-        instrument::{kind::InstrumentKind, Instrument},
+        instrument::{
+            kind::{InstrumentKind, InstrumentKind::Perpetual},
+            Instrument,
+        },
         token::Token,
     },
     simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
     Exchange,
 };
-use crate::common_skeleton::instrument::kind::InstrumentKind::Perpetual;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd)]
 #[allow(non_snake_case)]
@@ -81,7 +83,7 @@ impl From<ClickhouseTrade> for WsTrade
 
 pub fn parse_base_and_quote(basequote: &str) -> (String, String)
 {
-    let quote_assets = ["USDT","USTC","USDC","USD","UST","DAI","FDUSD","BTC","ETH","EURT"];
+    let quote_assets = ["USDT", "USTC", "USDC", "USD", "UST", "DAI", "FDUSD", "BTC", "ETH", "EURT"];
     for &quote in &quote_assets {
         if basequote.ends_with(quote) {
             let base = &basequote[..basequote.len() - quote.len()];

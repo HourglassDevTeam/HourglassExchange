@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fmt,
     fmt::Debug,
     pin::Pin,
@@ -12,30 +13,33 @@ use crate::{
     simulated_exchange::account::account_market_feed::MarketStream::{Historical, Live},
 };
 
+// Define a unique identifier for the streams
+pub type StreamID = String;
+
 pub struct AccountMarketStreams<Event>
     where Event: Clone + Send + Sync + 'static
 {
-    pub stream_kind_name: &'static str,
-    pub data_stream: MarketStream<Event>,
+    pub streams: HashMap<StreamID, MarketStream<Event>>,
 }
 
 impl<Event> Debug for AccountMarketStreams<Event> where Event: Debug + Clone + Send + Sync + 'static
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
-        f.debug_struct("AccountMarketFeed").field("stream_kind_name", &self.stream_kind_name).finish()
+        f.debug_struct("AccountMarketStreams").field("streams", &self.streams.keys().collect::<Vec<_>>()).finish()
     }
 }
 
 impl<Event> AccountMarketStreams<Event> where Event: Clone + Send + Sync + 'static
 {
-    pub fn new(stream: MarketStream<Event>) -> Self
+    pub fn new() -> Self
     {
-        Self { stream_kind_name: match stream {
-                   | Live(_) => "LiveFeed",
-                   | Historical(_) => "HistoricalFeed",
-               },
-               data_stream: stream }
+        Self { streams: HashMap::new() }
+    }
+
+    pub fn add_stream(&mut self, id: StreamID, stream: MarketStream<Event>)
+    {
+        self.streams.insert(id, stream);
     }
 }
 
