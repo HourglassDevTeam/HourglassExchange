@@ -57,7 +57,7 @@ mergeCode:
     ##
     ## Pull latest changes from gitee and rebase
     ##
-    - git fetch gitee
+    - git fetch --unshallow
     - git pull --rebase gitee $PCF_DEPLOY_BRANCH || true
     
     ##
