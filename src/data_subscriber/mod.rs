@@ -44,7 +44,7 @@ pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream
 pub trait Subscriber
 {
     /// 关联的订阅映射器类型。
-    type SubMapper: SubscriptionMapper;
+    type SubscriptionMapper: SubscriptionMapper;
     async fn subscribe<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<(WebSocket, SubscriptionMap<Instrument>), SocketError>
         where Kind: SubKind + Send + Sync;
 }

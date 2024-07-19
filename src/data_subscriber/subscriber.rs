@@ -42,7 +42,7 @@ pub struct ExchangeSub<Channel, Market>
 #[async_trait]
 impl Subscriber for WebSocketSubscriber
 {
-    type SubMapper = WebSocketSubMapper;
+    type SubscriptionMapper = WebSocketSubMapper;
 
     /// 订阅方法
     /// 通过 WebSocket 连接到交易所，并发送订阅请求。
@@ -66,7 +66,7 @@ impl Subscriber for WebSocketSubscriber
         debug!(%exchange, ?subscriptions, "connected to WebSocket");
 
         // 将 &[Subscription<Kind>] 映射到 SubscriptionMeta
-        let SubscriptionMeta { instrument_map, subscriptions } = Self::SubMapper::map::<Kind>(subscriptions);
+        let SubscriptionMeta { instrument_map, subscriptions } = Self::SubscriptionMapper::map::<Kind>(subscriptions);
 
         // 通过 WebSocket 发送订阅请求
         for subscription in subscriptions {
