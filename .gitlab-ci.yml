@@ -74,7 +74,7 @@ mergeCode:
     ##
     ## Force push changes to gitee
     ##
-    - git push gitee $PCF_DEPLOY_BRANCH 
+    - git push gitee $PCF_DEPLOY_BRANCH --unshallow
 
   tags:
     - sync_task
