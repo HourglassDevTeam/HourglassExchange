@@ -39,4 +39,5 @@ rand = "0.8.5" # 随机数生成库
 rust_decimal = "1.35.0" # 提供精确的十进制数处理
 regex = { version = "1.10.0", features = ["unicode-perl"] } # 正则表达式库，支持Unicode和Perl风格的正则表达式
 futures-core = "0.3.30" # 核心异步编程工具库，提供Future和Stream的基础定义
-pin-utils = "0.1.0" # 用于处理Pin的实用工具库
+pin-utils = "0.1.0"
+futures-util = "0.3.30" # 用于处理Pin的实用工具库
