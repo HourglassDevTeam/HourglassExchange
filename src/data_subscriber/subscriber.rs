@@ -2,9 +2,8 @@ use std::fmt::Debug;
 
 use crate::data_subscriber::mapper::SubscriptionMapper;
 use async_trait::async_trait;
-use tokio_tungstenite::tungstenite::connect;
 use tracing::{debug, info};
-
+use futures::SinkExt;
 use crate::{
     common_skeleton::instrument::Instrument,
     data_subscriber::{
@@ -13,6 +12,7 @@ use crate::{
     },
     simulated_exchange::account::account_market_feed::Subscription,
 };
+use crate::data_subscriber::websocket::connect;
 
 pub struct WebSocketSubscriber;
 pub trait SubKind
