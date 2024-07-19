@@ -4,6 +4,7 @@ variables:
   PCF_DEPLOY_BRANCH: master
   PCF_COMMIT_USER_NAME: arthur
   PCF_COMMIT_USER_EMAIL: arthur@ciuyat.com
+  GIT_STRATEGY: fetch
 
 stages:
   - mergeCode
@@ -47,17 +48,17 @@ mergeCode:
     ##
     ## Fetch full history from origin to avoid shallow update issues
     ##
-    - git fetch origin || (sleep 5 && git fetch origin)
+    # - git fetch origin || (sleep 5 && git fetch origin)
     
     ##
     ## Pull latest changes from origin and rebase
     ##
-    - git pull --rebase origin $PCF_DEPLOY_BRANCH
+    # - git pull --rebase origin $PCF_DEPLOY_BRANCH
     
     ##
     ## Pull latest changes from gitee and rebase
     ##
-    - git fetch --unshallow
+    # - git fetch --unshallow
     - git pull --rebase gitee $PCF_DEPLOY_BRANCH || true
     
     ##
