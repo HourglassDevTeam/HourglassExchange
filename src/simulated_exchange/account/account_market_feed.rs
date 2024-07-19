@@ -16,8 +16,8 @@ use crate::{
         instrument::Instrument,
     },
     data_subscriber::{connector::Connector, socket_error::SocketError, subscriber::SubKind},
-    simulated_exchange::account::account_market_feed::DataStream::{Historical, Live},
     Exchange,
+    simulated_exchange::account::account_market_feed::DataStream::{Historical, Live},
 };
 
 // 定义一个数据流别名，用于标识每个数据流。

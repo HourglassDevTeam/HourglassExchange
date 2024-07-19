@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     data_subscriber::{
         connector::Connector,
-        subscriber::{ExchangeSub, SubKind},
-        Map, SubscriptionMeta,
+        Map,
+        subscriber::{ExchangeSub, SubKind}, SubscriptionMeta,
     },
     simulated_exchange::account::account_market_feed::Subscription,
 };

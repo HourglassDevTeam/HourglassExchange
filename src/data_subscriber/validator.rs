@@ -7,10 +7,10 @@ use crate::{
     common_skeleton::instrument::Instrument,
     data_subscriber::{
         connector::Connector,
+        Map,
         socket_error::SocketError,
         subscriber::SubKind,
         websocket::{StreamParser, WebSocket, WebSocketParser},
-        Map,
     },
 };
 
