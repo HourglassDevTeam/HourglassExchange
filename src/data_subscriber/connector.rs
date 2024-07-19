@@ -15,104 +15,75 @@ use crate::{
     ExchangeKind,
 };
 
+
+/// 表示 Ping 间隔的结构体
 #[derive(Debug)]
 pub struct PingInterval
 {
+    /// tokio 时间间隔
     pub interval: tokio::time::Interval,
+    /// 生成 Ping 消息的函数
     pub ping: fn() -> WsMessage,
 }
+
+/// 默认订阅超时时间
 pub const DEFAULT_SUBSCRIPTION_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// 连接器特征，定义了如何与交易所服务器进行连接和通信
 pub trait Connector
-    where Self: Clone + Default + Debug + for<'de> Deserialize<'de> + Serialize + Sized
+where Self: Clone + Default + Debug + for<'de> Deserialize<'de> + Serialize + Sized
 {
-    /// Unique identifier for the exchange server being connected with.
-
+    /// 连接的交易所服务器的唯一标识符
     const ID: ExchangeKind;
 
-    /// Type that defines how to translate a
-    /// [`Subscription`](crate::subscription::Subscription) into an exchange specific channel
-    /// to be subscribed to.
-    ///
-    /// ### Examples
-    /// - [`BinanceChannel("@depth@100ms")`](binance::channel::BinanceChannel)
-    /// - [`KrakenChannel("trade")`](kraken::channel::KrakenChannel)
-
+    /// 定义如何将 [`Subscription`](crate::subscription::Subscription) 转换为交易所特定的通道
     type Channel: AsRef<str>;
 
-    /// Type that defines how to translate a
-    /// [`Subscription`](crate::subscription::Subscription) into an exchange specific market that
-    /// can be subscribed to.
-    ///
-    /// ### Examples
-    /// - [`BinanceMarket("btcusdt")`](binance::market::BinanceMarket)
-    /// - [`KrakenMarket("BTC/USDT")`](kraken::market::KrakenMarket)
-
+    /// 定义如何将 [`Subscription`](crate::subscription::Subscription) 转换为交易所特定的市场
     type Market: AsRef<str>;
 
-    /// [`Subscriber`] type that establishes a connection with the exchange server, and actions
-    /// [`Subscription`](crate::subscription::Subscription)s over the socket.
-
+    /// 建立与交易所服务器连接的订阅者类型
     type Subscriber: Subscriber;
 
-    /// [`SubscriptionValidator`] type that listens to responses from the exchange server and
-    /// validates if the actioned [`Subscription`](crate::subscription::Subscription)s were
-    /// successful.
-
+    /// 监听交易所服务器响应并验证订阅是否成功的验证器类型
     type SubValidator: SubscriptionValidator;
 
-    /// Deserialisable type that the [`Self::SubValidator`] expects to receive from the exchange server in
-    /// response to the [`Subscription`](crate::subscription::Subscription) [`Self::requests`]
-    /// sent over the [`WebSocket`](cerebro_integration::protocol::websocket::WebSocket). Implements
-    /// [`Validator`](cerebro_integration::Validator) in order to determine if [`Self`]
-    /// communicates a successful [`Subscription`](crate::subscription::Subscription) outcome.
-
+    /// 期望从交易所服务器接收的响应类型
     type SubResponse: Validator + Debug + DeserializeOwned;
 
-    /// Base [`Url`] of the exchange server being connected with.
-
+    /// 返回交易所服务器的基础 URL
     fn url() -> Result<Url, SocketError>;
 
-    /// Defines [`PingInterval`] of custom application-level
-    /// [`WebSocket`](cerebro_integration::protocol::websocket::WebSocket) pings for the exchange
-    /// server being connected with.
-    ///
-    /// Defaults to `None`, meaning that no custom pings are sent.
-
+    /// 定义自定义应用级别 WebSocket ping 的 `PingInterval`
     fn ping_interval() -> Option<PingInterval>
     {
         None
     }
 
-    /// Defines how to translate a collection of [`ExchangeSub`]s into the [`WsMessage`]
-    /// subscription payloads sent to the exchange server.
-
+    /// 定义如何将一组 [`ExchangeSub`] 转换为发送到交易所服务器的 [`WsMessage`] 订阅负载
     fn requests(exchange_subs: Vec<ExchangeSub<Self::Channel, Self::Market>>) -> Vec<WsMessage>;
 
-    /// Number of [`Subscription`](crate::subscription::Subscription) responses expected from the
-    /// exchange server in responses to the requests send. Used to validate all
-    /// [`Subscription`](crate::subscription::Subscription)s were accepted.
-
+    /// 定义期望从交易所服务器接收到的订阅响应数量
     fn expected_responses(map: &SubMap<Instrument>) -> usize
     {
         map.0.len()
     }
 
-    /// Expected [`Duration`] the [`SubscriptionValidator`] will wait to receive all success
-    /// responses to actioned [`Subscription`](crate::subscription::Subscription) requests.
-
+    /// 定义订阅验证器等待接收所有成功响应的最大时间
     fn subscription_timeout() -> Duration
     {
         DEFAULT_SUBSCRIPTION_TIMEOUT
     }
 }
 
+/// 用于存储订阅映射的结构体
 pub struct SubMap<T>(pub HashMap<SubscriptionId, T>);
 
 impl<T> FromIterator<(SubscriptionId, T)> for SubMap<T>
 {
+    /// 从迭代器生成 `SubMap` 实例
     fn from_iter<Iter>(iter: Iter) -> Self
-        where Iter: IntoIterator<Item = (SubscriptionId, T)>
+                       where Iter: IntoIterator<Item = (SubscriptionId, T)>
     {
         Self(iter.into_iter().collect::<HashMap<SubscriptionId, T>>())
     }
@@ -120,16 +91,14 @@ impl<T> FromIterator<(SubscriptionId, T)> for SubMap<T>
 
 impl<T> SubMap<T>
 {
-    /// Find the `T` associated with the provided [`SubscriptionId`].
-
+    /// 查找与提供的 [`SubscriptionId`] 关联的 `T`
     pub fn find(&self, id: &SubscriptionId) -> Result<T, SocketError>
-        where T: Clone
+                where T: Clone
     {
         self.0.get(id).cloned().ok_or_else(|| SocketError::Unidentifiable(id.clone()))
     }
 
-    /// Find the mutable reference to `T` associated with the provided [`SubscriptionId`].
-
+    /// 查找与提供的 [`SubscriptionId`] 关联的 `T` 的可变引用
     pub fn find_mut(&mut self, id: &SubscriptionId) -> Result<&mut T, SocketError>
     {
         self.0.get_mut(id).ok_or_else(|| SocketError::Unidentifiable(id.clone()))
