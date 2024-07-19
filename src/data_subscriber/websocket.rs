@@ -5,12 +5,12 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tokio::net::TcpStream;
 use tokio_tungstenite::{
     connect_async,
-    MaybeTlsStream,
     tungstenite::{
         client::IntoClientRequest,
         error::ProtocolError,
-        protocol::{CloseFrame, frame::Frame},
+        protocol::{frame::Frame, CloseFrame},
     },
+    MaybeTlsStream,
 };
 use tracing::debug;
 

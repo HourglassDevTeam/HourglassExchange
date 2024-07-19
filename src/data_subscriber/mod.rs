@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use tokio::net::TcpStream;
-use tokio_tungstenite::MaybeTlsStream;
 pub use tokio_tungstenite::tungstenite::Message as WsMessage;
+use tokio_tungstenite::MaybeTlsStream;
 
 use crate::{
     common_skeleton::instrument::Instrument,

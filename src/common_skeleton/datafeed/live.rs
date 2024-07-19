@@ -7,10 +7,10 @@ use crate::{
     data_subscriber::{
         socket_error::SocketError,
         subscriber::{SubKind, WebSocketSubscriber},
+        Subscriber,
     },
     simulated_exchange::account::account_market_feed::Subscription,
 };
-use crate::data_subscriber::Subscriber;
 
 pub struct LiveFeed<Event>
 {

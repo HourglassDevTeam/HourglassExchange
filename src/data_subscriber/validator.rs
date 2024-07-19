@@ -6,10 +6,10 @@ use tracing::debug;
 use crate::{
     common_skeleton::instrument::Instrument,
     data_subscriber::{
-        SubscriptionMap,
         socket_error::SocketError,
         subscriber::SubKind,
         websocket::{StreamParser, WebSocket, WebSocketParser},
+        SubscriptionMap,
     },
 };
 
@@ -29,7 +29,7 @@ pub trait SubscriptionValidator
     type Parser: StreamParser;
 
     async fn validate<Kind>(instrument_map: SubscriptionMap<Instrument>, websocket: &mut WebSocket) -> Result<SubscriptionMap<Instrument>, SocketError>
-                            where Kind: SubKind + Send;
+        where Kind: SubKind + Send;
 }
 
 /// Standard [`SubscriptionValidator`] for [`WebSocket`]s suitable for most exchanges.
@@ -44,7 +44,7 @@ impl SubscriptionValidator for WebSocketSubValidator
     type Parser = WebSocketParser;
 
     async fn validate<Kind>(instrument_map: SubscriptionMap<Instrument>, websocket: &mut WebSocket) -> Result<SubscriptionMap<Instrument>, SocketError>
-                            where Kind: SubKind + Send
+        where Kind: SubKind + Send
     {
         // Establish exchange specific subscription validation parameters
         let timeout = Exchange::subscription_timeout();

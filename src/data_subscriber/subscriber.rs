@@ -1,16 +1,18 @@
 use std::fmt::Debug;
 
 use async_trait::async_trait;
-use tokio_tungstenite::tungstenite::{connect};
+use tokio_tungstenite::tungstenite::connect;
 use tracing::{debug, info};
 
 use crate::{
     common_skeleton::instrument::Instrument,
-    data_subscriber::{SubscriptionMap, mapper::WebSocketSubMapper, socket_error::SocketError, Subscriber, SubscriptionMeta},
+    data_subscriber::{
+        mapper::{SubscriptionMapper, WebSocketSubMapper},
+        socket_error::SocketError,
+        Subscriber, SubscriptionMap, SubscriptionMeta, WebSocket,
+    },
     simulated_exchange::account::account_market_feed::Subscription,
 };
-use crate::data_subscriber::mapper::SubscriptionMapper;
-use crate::data_subscriber::WebSocket;
 
 pub struct WebSocketSubscriber;
 pub trait SubKind
@@ -38,7 +40,6 @@ pub struct ExchangeSub<Channel, Market>
     pub market: Market,
 }
 
-
 #[async_trait]
 impl Subscriber for WebSocketSubscriber
 {
@@ -48,7 +49,7 @@ impl Subscriber for WebSocketSubscriber
     /// 通过 WebSocket 连接到交易所，并发送订阅请求。
     /// 返回包含 WebSocket 和订阅映射的结果，或返回 `SocketError`。
     async fn subscribe<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<(WebSocket, SubscriptionMap<Instrument>), SocketError>
-                             where Kind: SubKind + Send + Sync
+        where Kind: SubKind + Send + Sync
     {
         // 定义变量用于日志记录
         let exchange = Exchange::ID;
@@ -83,4 +84,5 @@ impl Subscriber for WebSocketSubscriber
 
         // 返回 WebSocket 和订阅映射
         Ok((websocket, map))
-    }}
+    }
+}

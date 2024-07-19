@@ -9,12 +9,11 @@ use crate::{
     data_subscriber::{
         socket_error::SocketError,
         subscriber::ExchangeSub,
-        SubscriptionId,
-        validator::{SubscriptionValidator, Validator}, WsMessage,
+        validator::{SubscriptionValidator, Validator},
+        SubscriptionId, WsMessage,
     },
     ExchangeKind,
 };
-
 
 /// 表示 Ping 间隔的结构体
 #[derive(Debug)]
@@ -31,7 +30,7 @@ pub const DEFAULT_SUBSCRIPTION_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// 连接器特征，定义了如何与交易所服务器进行连接和通信
 pub trait Connector
-where Self: Clone + Default + Debug + for<'de> Deserialize<'de> + Serialize + Sized
+    where Self: Clone + Default + Debug + for<'de> Deserialize<'de> + Serialize + Sized
 {
     /// 连接的交易所服务器的唯一标识符
     const ID: ExchangeKind;
@@ -83,7 +82,7 @@ impl<T> FromIterator<(SubscriptionId, T)> for SubMap<T>
 {
     /// 从迭代器生成 `SubMap` 实例
     fn from_iter<Iter>(iter: Iter) -> Self
-                       where Iter: IntoIterator<Item = (SubscriptionId, T)>
+        where Iter: IntoIterator<Item = (SubscriptionId, T)>
     {
         Self(iter.into_iter().collect::<HashMap<SubscriptionId, T>>())
     }
@@ -93,7 +92,7 @@ impl<T> SubMap<T>
 {
     /// 查找与提供的 [`SubscriptionId`] 关联的 `T`
     pub fn find(&self, id: &SubscriptionId) -> Result<T, SocketError>
-                where T: Clone
+        where T: Clone
     {
         self.0.get(id).cloned().ok_or_else(|| SocketError::Unidentifiable(id.clone()))
     }
