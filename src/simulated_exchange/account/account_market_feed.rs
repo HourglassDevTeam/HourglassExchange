@@ -26,7 +26,7 @@ where Event: Clone + Send + Sync + 'static + Ord /* 约束Event类型必须满�
     pub streams: HashMap<StreamID, DataStream<Event>>, // 使用HashMap存储数据流，键为StreamID
 }
 
-// 为 AccountDataStreams 实现Debug trait，方便调试。
+// 为 AccountDataStreams 实现 Debug trait，方便调试。
 impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static + Ord/* 约束Event类型必须满足Debug, Clone, Send, Sync, 'static特性 */
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
