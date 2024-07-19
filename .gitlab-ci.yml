@@ -27,10 +27,26 @@ mergeCode:
     - git config --global user.name "$PCF_COMMIT_USER_NAME"
     
     ##
+    ## Check if inside a git repository, if not, initialize one
+    ##
+    - |
+      if [ ! -d .git ]; then
+        git init
+        # Create an initial commit to allow pull and push
+        git commit --allow-empty -m "Initial commit"
+        git branch -M $PCF_DEPLOY_BRANCH
+      fi
+
+    ##
     ## Remove existing remotes and add new ones
     ##
-    - git remote remove origin || true
-    - git remote remove gitee || true
+    - |
+      if git remote | grep -q '^origin$'; then
+        git remote remove origin
+      fi
+      if git remote | grep -q '^gitee$'; then
+        git remote remove gitee
+      fi
     - git remote add origin "$PCF_DEPLOY_REPO"
     - git remote add gitee "$GITEE_REPO"
     
