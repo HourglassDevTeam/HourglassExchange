@@ -11,10 +11,9 @@ use std::collections::BinaryHeap;
 use futures_core::Stream;
 use futures_util::{FutureExt, StreamExt};
 
-use crate::{
-    common_skeleton::datafeed::{historical::HistoricalFeed, live::LiveFeed},
-    simulated_exchange::account::account_market_feed::DataStream::{Historical, Live},
-};
+use crate::{common_skeleton::datafeed::{historical::HistoricalFeed, live::LiveFeed}, Exchange, simulated_exchange::account::account_market_feed::DataStream::{Historical, Live}};
+use crate::common_skeleton::instrument::Instrument;
+use crate::data_subscriber::socket_error::SocketError;
 
 // 定义一个数据流别名，用于标识每个数据流。
 pub type StreamID = String;
@@ -35,6 +34,37 @@ impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Sen
         f.debug_struct("AccountMarketStreams").field("streams", &self.streams.keys().collect::<Vec<_>>()).finish()
     }
 }
+impl<Event> AccountDataStreams<Event>
+where
+    Event: Clone + Send + Sync + Debug + 'static + Ord,
+{
+    // 添加一个新的方法用于添加WebSocket实时数据流
+    pub async fn add_websocket_stream<Kind>(
+        &mut self,
+        id: StreamID,
+        subscriptions: &[Subscription<Kind>],
+    ) -> Result<(), SocketError>
+        where
+            Exchange: Connector + Send + Sync,
+            Kind: SubKind + Send + Sync,
+            Subscription<Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>,
+    {
+        let stream = DataStream::from_websocket(subscriptions).await?;
+        self.add_stream(id, stream);
+        Ok(())
+    }
+}
+
+
+// NOTE this is foreign to this module
+pub struct Subscription<Kind> {
+    pub exchange: Exchange,
+    #[serde(flatten)]
+    pub instrument: Instrument,
+    #[serde(alias = "type")]
+    pub kind: Kind,
+}
+
 
 // 为 AccountDataStreams 实现创建和增减数据流的方法，用于管理数据流。
 impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
@@ -99,6 +129,22 @@ where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必
     Historical(HistoricalFeed<Event>), // 历史数据流
 }
 
+impl<Event> DataStream<Event>
+where
+    Event: Clone + Send + Sync + Debug + 'static + Ord,
+{
+    pub async fn from_websocket<Kind>(
+        subscriptions: &[Subscription<Kind>],
+    ) -> Result<Self, SocketError>
+        where
+            Exchange: Connector + Send + Sync,
+            Kind: SubKind + Send + Sync,
+            Subscription<Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>,
+    {
+        let live_feed = LiveFeed::new(subscriptions).await?;
+        Ok(DataStream::Live(live_feed))
+    }
+}
 
 // 为DataStream实现Stream trait，使其可以作为异步流处理。
 impl<Event> Stream for DataStream<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
