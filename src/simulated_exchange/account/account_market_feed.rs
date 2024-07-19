@@ -39,7 +39,7 @@ impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Sen
 // 为 AccountDataStreams 实现创建和增减方法，用于管理数据流。
 impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
 {
-    // 创建一个新的AccountDataStreams实例。
+    // 创建一个新的 AccountDataStreams 实例。
     pub fn new() -> Self
     {
         Self { streams: HashMap::new() }
