@@ -47,7 +47,7 @@ mergeCode:
     ##
     ## Fetch full history from origin to avoid shallow update issues
     ##
-    - git fetch origin
+    - git fetch origin || (sleep 5 && git fetch origin)
     
     ##
     ## Pull latest changes from origin and rebase
