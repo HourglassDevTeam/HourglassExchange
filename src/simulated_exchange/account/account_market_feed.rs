@@ -10,19 +10,19 @@ use futures_core::Stream;
 
 use crate::{
     common_skeleton::datafeed::{historical::HistoricalFeed, live::LiveFeed},
-    simulated_exchange::account::account_market_feed::MarketStream::{Historical, Live},
+    simulated_exchange::account::account_market_feed::DataStream::{Historical, Live},
 };
+use crate::common_skeleton::datafeed::event::MarketEvent;
 
-// Define a unique identifier for the streams
 pub type StreamID = String;
 
-pub struct AccountMarketStreams<Event>
+pub struct AccountDataStreams<Event>
     where Event: Clone + Send + Sync + 'static
 {
-    pub streams: HashMap<StreamID, MarketStream<Event>>,
+    pub streams: HashMap<StreamID, DataStream<Event>>,
 }
 
-impl<Event> Debug for AccountMarketStreams<Event> where Event: Debug + Clone + Send + Sync + 'static
+impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
@@ -30,28 +30,30 @@ impl<Event> Debug for AccountMarketStreams<Event> where Event: Debug + Clone + S
     }
 }
 
-impl<Event> AccountMarketStreams<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + 'static
 {
     pub fn new() -> Self
     {
         Self { streams: HashMap::new() }
     }
 
-    pub fn add_stream(&mut self, id: StreamID, stream: MarketStream<Event>)
+    pub fn add_stream(&mut self, id: StreamID, stream: DataStream<Event>)
     {
         self.streams.insert(id, stream);
     }
 }
 
-// add enum StreamKind for AccountMarketFeed to choose
-pub enum MarketStream<Event>
+
+
+
+pub enum DataStream<Event>
     where Event: Clone + Send + Sync + 'static
 {
     Live(LiveFeed<Event>),
     Historical(HistoricalFeed<Event>),
 }
 
-impl<Event> Stream for MarketStream<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> Stream for DataStream<Event> where Event: Clone + Send + Sync + 'static
 {
     type Item = Event;
 
@@ -64,7 +66,7 @@ impl<Event> Stream for MarketStream<Event> where Event: Clone + Send + Sync + 's
     }
 }
 
-impl<Event> MarketStream<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> DataStream<Event> where Event: Clone + Send + Sync + 'static
 {
     pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item = Event> + Send)>
     {

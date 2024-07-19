@@ -25,7 +25,7 @@ async fn main()
                              /* Add more parameters as needed */];
 
     // 创建 AccountMarketStreams 实例
-    let mut account_streams = AccountMarketStreams::new();
+    let mut account_streams = AccountDataStreams::new();
 
     // 循环创建和添加数据流
     for (exchange, instrument, channel, date, batch_size) in stream_params {
@@ -38,7 +38,7 @@ async fn main()
 
         // 生成唯一的 stream_id 并将流添加到 account_streams 中
         let stream_id = format!("{}_{}_{}", exchange, instrument, channel);
-        account_streams.add_stream(stream_id, MarketStream::Historical(feed));
+        account_streams.add_stream(stream_id, DataStream::Historical(feed));
     }
 
     // 循环处理所有数据流

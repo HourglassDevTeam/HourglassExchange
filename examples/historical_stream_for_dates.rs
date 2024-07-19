@@ -15,7 +15,7 @@ lazy_static! {
 #[tokio::main]
 async fn main()
 {
-    let mut account_streams = AccountMarketStreams::new();
+    let mut account_streams = AccountDataStreams::new();
 
     // Define the parameters for the streams
     let stream_params = vec![("binance", "futures", "trades", "2024_03_03", "2024_07_03"),
@@ -28,7 +28,7 @@ async fn main()
                                     stream: Box::pin(stream) };
 
         let stream_id = format!("{}_{}_{}", exchange, instrument, channel);
-        account_streams.add_stream(stream_id, MarketStream::Historical(feed));
+        account_streams.add_stream(stream_id, DataStream::Historical(feed));
     }
 
     loop {
