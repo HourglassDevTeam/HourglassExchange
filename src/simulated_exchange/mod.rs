@@ -14,13 +14,13 @@ pub mod ws_trade;
 
 #[derive(Debug)]
 pub struct SimulatedExchange<Event>
-    where Event: Clone + Send + Sync + 'static
+    where Event: Clone + Send + Sync + 'static + Ord
 {
     pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedClientEvent>,
     pub account: Account<Event>,
 }
 
-impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + 'static + Ord
 {
     pub fn initiator() -> ExchangeInitiator<Event>
     {
@@ -48,7 +48,7 @@ impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + 'static
     }
 }
 
-impl<Event> Default for ExchangeInitiator<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> Default for ExchangeInitiator<Event> where Event: Clone + Send + Sync + 'static + Ord
 {
     fn default() -> Self
     {
@@ -59,13 +59,13 @@ impl<Event> Default for ExchangeInitiator<Event> where Event: Clone + Send + Syn
 }
 #[derive(Debug)]
 pub struct ExchangeInitiator<Event>
-    where Event: Clone + Send + Sync + 'static
+    where Event: Clone + Send + Sync + 'static + Ord
 {
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedClientEvent>>,
     account: Option<Account<Event>>,
 }
 
-impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + 'static + Ord
 {
     pub fn new() -> Self
     {

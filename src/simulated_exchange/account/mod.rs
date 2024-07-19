@@ -32,7 +32,7 @@ pub mod account_orders;
 
 #[derive(Clone, Debug)]
 pub struct Account<Event>
-    where Event: Clone + Send + Sync + 'static
+    where Event: Clone + Send + Sync + 'static + Ord
 {
     pub exchange_timestamp: i64,                                    // NOTE 日后可以用无锁结构原子锁包裹
     pub data: Arc<RwLock<AccountDataStreams<Event>>>,               // 帐户数据
@@ -46,7 +46,7 @@ pub struct Account<Event>
 }
 #[derive(Clone, Debug)]
 pub struct AccountInitiator<Event>
-    where Event: Clone + Send + Sync + 'static
+    where Event: Clone + Send + Sync + 'static + Ord
 {
     data: Option<Arc<RwLock<AccountDataStreams<Event>>>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
@@ -58,7 +58,7 @@ pub struct AccountInitiator<Event>
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
-impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + 'static + Ord
 {
     pub fn new() -> Self
     {
@@ -136,7 +136,7 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + 'static
 
 // NOTE 未完成
 #[allow(dead_code)]
-impl<Event> Account<Event> where Event: Clone + Send + Sync + 'static
+impl<Event> Account<Event> where Event: Clone + Send + Sync + 'static + Ord
 {
     pub fn initiate() -> AccountInitiator<Event>
     {
