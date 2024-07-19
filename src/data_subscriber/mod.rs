@@ -27,14 +27,14 @@ pub struct SubscriptionId(pub String);
 pub struct SubscriptionMeta
 {
     /// `HashMap`，包含 [`SubscriptionId`] 和它关联的  [`Instrument`] 之间的映射。
-    pub instrument_map: Map<Instrument>,
+    pub instrument_map: SubscriptionMap<Instrument>,
     /// 存储 WebSocket 消息的向量。
     pub subscriptions: Vec<WsMessage>,
 }
 
 /// `Map` 结构体
-/// 使用泛型参数 `T`，包含一个 `HashMap`，用于存储 [`SubscriptionId`] 与泛型类型 `T` 之间的映射。
-pub struct Map<T>(pub HashMap<SubscriptionId, T>);
+/// 用于存储 [`SubscriptionId`] 与泛型类型 `T` 之间的映射。
+pub struct SubscriptionMap<T>(pub HashMap<SubscriptionId, T>);
 /// 使用 tokio-tungstenite 库的 [WebSocketStream]，可能是 TLS 或非 TLS 的 TcpStream。
 pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream>>;
 
@@ -45,6 +45,6 @@ pub trait Subscriber
 {
     /// 关联的订阅映射器类型。
     type SubMapper: SubscriptionMapper;
-    async fn subscribe<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<(WebSocket, Map<Instrument>), SocketError>
+    async fn subscribe<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<(WebSocket, SubscriptionMap<Instrument>), SocketError>
         where Kind: SubKind + Send + Sync;
 }

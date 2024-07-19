@@ -6,7 +6,7 @@ use tracing::{debug, info};
 
 use crate::{
     common_skeleton::instrument::Instrument,
-    data_subscriber::{ Map, mapper::WebSocketSubMapper, socket_error::SocketError, Subscriber, SubscriptionMeta},
+    data_subscriber::{SubscriptionMap, mapper::WebSocketSubMapper, socket_error::SocketError, Subscriber, SubscriptionMeta},
     simulated_exchange::account::account_market_feed::Subscription,
 };
 use crate::data_subscriber::mapper::SubscriptionMapper;
@@ -47,7 +47,7 @@ impl Subscriber for WebSocketSubscriber
     /// 订阅方法
     /// 通过 WebSocket 连接到交易所，并发送订阅请求。
     /// 返回包含 WebSocket 和订阅映射的结果，或返回 `SocketError`。
-    async fn subscribe<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<(WebSocket, Map<Instrument>), SocketError>
+    async fn subscribe<Kind>(subscriptions: &[Subscription<Kind>]) -> Result<(WebSocket, SubscriptionMap<Instrument>), SocketError>
                              where Kind: SubKind + Send + Sync
     {
         // 定义变量用于日志记录

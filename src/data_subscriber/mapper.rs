@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     data_subscriber::{
         connector::Connector,
-        Map,
+        SubscriptionMap,
         subscriber::{ExchangeSub, SubKind}, SubscriptionMeta,
     },
     simulated_exchange::account::account_market_feed::Subscription,
@@ -33,7 +33,7 @@ impl SubscriptionMapper for WebSocketSubMapper
         where Kind: SubKind
     {
         // 分配 SubscriptionIds HashMap，用于跟踪每个操作订阅的标识符
-        let mut instrument_map = Map(HashMap::with_capacity(subscriptions.len()));
+        let mut instrument_map = SubscriptionMap(HashMap::with_capacity(subscriptions.len()));
 
         // 将订阅映射成特定交易所的订阅
         let exchange_subs = subscriptions.iter()
