@@ -43,7 +43,6 @@ pub struct SubscriptionMap<T>(pub HashMap<SubscriptionId, T>);
 pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 #[async_trait]
-/// `Subscriber` 特征
 pub trait Subscriber
 {
     /// 关联的订阅映射器类型。
