@@ -58,9 +58,7 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
 pub struct Subscription<Kind>
 {
     pub exchange: Exchange,
-    #[serde(flatten)]
     pub instrument: Instrument,
-    #[serde(alias = "type")]
     pub kind: Kind,
 }
 
