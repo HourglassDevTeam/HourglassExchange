@@ -1,7 +1,6 @@
 // NOTE this module is previously built and imported into the main project as a dependency.
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
-use std::sync::Arc;
 use async_stream::stream;
 use chrono::{Duration, NaiveDate};
 pub use clickhouse::{
@@ -10,8 +9,11 @@ pub use clickhouse::{
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
-use tokio::sync::RwLock;
+use std::sync::Arc;
+use tokio::sync::{
+    mpsc::{unbounded_channel, UnboundedReceiver},
+    RwLock,
+};
 
 use crate::{
     common_skeleton::datafeed::event::MarketEvent,
@@ -22,17 +24,15 @@ use crate::{
     ExchangeID,
 };
 
-
-pub struct ClickHouseClient {
+pub struct ClickHouseClient
+{
     pub client: Arc<RwLock<Client>>,
 }
 impl ClickHouseClient
 {
-    pub fn new() -> Self {
-        let client = Client::default()
-            .with_url("http://localhost:8123")
-            .with_user("default")
-            .with_password("");
+    pub fn new() -> Self
+    {
+        let client = Client::default().with_url("http://localhost:8123").with_user("default").with_password("");
 
         println!("[UnilinkExecution] : 连接到 ClickHouse 服务器成功。");
 
@@ -111,9 +111,9 @@ impl ClickHouseClient
         let table_names_query = format!("SHOW TABLES FROM {database}",);
         println!("{:?}", table_names_query);
         let result = self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
-                                                                                          eprintln!("[UnilinkExecution] : Error loading table names: {:?}", e);
-                                                                                          vec![]
-                                                                                      });
+                                                                                                       eprintln!("[UnilinkExecution] : Error loading table names: {:?}", e);
+                                                                                                       vec![]
+                                                                                                   });
 
         result
     }
@@ -215,21 +215,18 @@ impl ClickHouseClient
         }
     }
 
-
-    pub async fn query_unioned_trade_table_batched_for_dates(
-        self: Arc<Self>,
-        exchange: &str,
-        instrument: &str,
-        channel: &str,
-        start_date: &str,
-        end_date: &str,
-        batch_size: usize,
-    ) -> Result<UnboundedReceiver<MarketEvent<ClickhouseTrade>>, String> {
+    pub async fn query_unioned_trade_table_batched_for_dates(self: Arc<Self>,
+                                                             exchange: &str,
+                                                             instrument: &str,
+                                                             channel: &str,
+                                                             start_date: &str,
+                                                             end_date: &str,
+                                                             batch_size: usize)
+                                                             -> Result<UnboundedReceiver<MarketEvent<ClickhouseTrade>>, String>
+    {
         let (tx, rx) = unbounded_channel();
-        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d")
-            .map_err(|e| format!("Invalid start date format: {}", e))?;
-        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d")
-            .map_err(|e| format!("Invalid end date format: {}", e))?;
+        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d").map_err(|e| format!("Invalid start date format: {}", e))?;
+        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d").map_err(|e| format!("Invalid end date format: {}", e))?;
         let mut current_date = start_date;
 
         let client = Arc::clone(&self.client);
@@ -245,23 +242,16 @@ impl ClickHouseClient
                 let mut offset = 0;
 
                 loop {
-                    let query = format!(
-                        "SELECT symbol, side, price, timestamp FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}",
-                        database, table_name, batch_size, offset
-                    );
+                    let query = format!("SELECT symbol, side, price, timestamp FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}",
+                                        database, table_name, batch_size, offset);
                     println!("[UnilinkExecution] : Executing query: {}", query);
 
                     let client = client.read().await;
                     match client.query(&query).fetch_all::<ClickhouseTrade>().await {
-                        Ok(trade_datas) => {
+                        | Ok(trade_datas) => {
                             for trade_data in &trade_datas {
                                 let (base, quote) = parse_base_and_quote(&trade_data.basequote);
-                                let market_event = MarketEvent::from_swap_trade_clickhouse(
-                                    trade_data.clone(),
-                                    base,
-                                    quote,
-                                    ExchangeID::from(exchange.clone()),
-                                );
+                                let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote, ExchangeID::from(exchange.clone()));
                                 if tx.send(market_event).is_err() {
                                     eprintln!("Failed to send market event");
                                     return;
@@ -274,7 +264,7 @@ impl ClickHouseClient
 
                             offset += batch_size;
                         }
-                        Err(e) => {
+                        | Err(e) => {
                             eprintln!("Failed query: {}", e);
                             eprintln!("Query: {}", query);
                             return;
@@ -288,5 +278,4 @@ impl ClickHouseClient
 
         Ok(rx)
     }
-
 }
