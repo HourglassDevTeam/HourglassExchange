@@ -55,6 +55,7 @@ mergeCode:
     ## Debugging: Print the remotes again to ensure they are set correctly
 
     - git remote -v
+    - rm -fr ".git/rebase-merge"
     
     ##
     ## Checkout and update branch
