@@ -15,7 +15,7 @@ use crate::{
 pub struct AccountOrders
 {
     pub request_counter: u64, // 用来生成一个唯一的 [`OrderId`]。 NOTE：注意原子性
-    pub all: HashMap<Instrument, InstrumentOrders>,
+    pub instrument_orders_map: HashMap<Instrument, InstrumentOrders>,
 }
 impl AccountOrders
 {
@@ -24,13 +24,13 @@ impl AccountOrders
     pub fn new(instruments: Vec<Instrument>) -> Self
     {
         Self { request_counter: 0,
-               all: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect() }
+               instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect() }
     }
 
     /// 返回指定 [`Instrument`] 的客户端 [`InstrumentOrders`] 的可变引用。
     pub fn orders_mut(&mut self, instrument: &Instrument) -> Result<&mut InstrumentOrders, ExecutionError>
     {
-        self.all
+        self.instrument_orders_map
             .get_mut(instrument)
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange 没有为 Instrument: {instrument} 配置")))
     }
@@ -38,7 +38,7 @@ impl AccountOrders
     /// 为每个 [`Instrument`] 获取出价和要价 [`Order<Open>`]。
     pub fn fetch_all(&self) -> Vec<Order<Open>>
     {
-        self.all.values().flat_map(|market| [&market.bids, &market.asks]).flatten().cloned().collect()
+        self.instrument_orders_map.values().flat_map(|market| [&market.bids, &market.asks]).flatten().cloned().collect()
     }
 
     /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
