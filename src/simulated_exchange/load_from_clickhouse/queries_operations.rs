@@ -252,7 +252,7 @@ impl ClickHouseClient
                     );
                     println!("[UnilinkExecution] : Executing query: {}", query);
 
-                    match client.query(&query).fetch_all::<ClickhouseTrade>().await {
+                    match client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await {
                         Ok(trade_datas) => {
                             for trade_data in &trade_datas {
                                 let (base, quote) = parse_base_and_quote(&trade_data.basequote);
