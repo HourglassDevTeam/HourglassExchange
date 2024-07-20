@@ -25,7 +25,7 @@ mergeCode:
     ##
     - git config --global user.email "$PCF_COMMIT_USER_EMAIL"
     - git config --global user.name "$PCF_COMMIT_USER_NAME"
-    - git config pull.rebase true 
+    - git config pull.rebase false 
     
     ##
     ## Check if inside a git repository, if not, initialize one
