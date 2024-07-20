@@ -5,6 +5,8 @@ use std::{
 
     ,
 };
+use mpsc::UnboundedReceiver;
+use tokio::sync::mpsc;
 
 use crate::{
     common_skeleton::{
@@ -25,7 +27,7 @@ pub type StreamID = String;
 pub struct AccountDataStreams<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
 {
-    pub streams: HashMap<StreamID, DataStream<Event>>, // 使用HashMap存储数据流，键为StreamID
+    pub streams: HashMap<StreamID, DataStreams<Event>>, // 使用HashMap存储数据流，键为StreamID
 }
 
 // 为 AccountDataStreams 实现 Debug trait，方便调试。
@@ -46,7 +48,7 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
               Kind: SubKind + Send + Sync,
               Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>
     {
-        let stream = DataStream::from_websocket::<Exchange, Kind>(subscriptions).await?;
+        let stream = DataStreams::from_websocket::<Exchange, Kind>(subscriptions).await?;
         self.add_stream(id, stream);
         Ok(())
     }
@@ -71,7 +73,7 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
     }
 
     // 向AccountDataStreams中添加一个新的数据流。
-    pub fn add_stream(&mut self, id: StreamID, stream: DataStream<Event>)
+    pub fn add_stream(&mut self, id: StreamID, stream: DataStreams<Event>)
     {
         self.streams.insert(id, stream);
     }
@@ -84,21 +86,64 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
 }
 
 // 定义一个枚举，表示数据流的类型，可以是实时数据流或历史数据流。
-pub enum DataStream<Event>
+pub enum DataStreams<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
 {
     Live(LiveFeed<Event>),             // 实时数据流
     Historical(HistoricalFeed<Event>), // 历史数据流
 }
 
-impl<Event> DataStream<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
-{
-    pub async fn from_websocket<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<Self, SocketError>
-        where Exchange: Connector + Send + Sync,
-              Kind: SubKind + Send + Sync,
-              Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>
+
+impl<T> DataStreams<T> {
+    /// Construct a [`StreamBuilder`] for configuring new
+    /// [`MarketEvent<SubKind::Event>`](crate::event::MarketEvent) [`DataStreams`].
+
+    pub fn builder<Kind>() -> StreamBuilder<Kind>
+                           where
+                               Kind: SubKind,
     {
-        let live_feed = LiveFeed::new::<Exchange, Kind>(subscriptions).await?;
-        Ok(DataStream::Live(live_feed))
+        StreamBuilder::<Kind>::new()
+    }
+
+    /// Construct a [`MultiStreamBuilder`] for configuring new
+    /// [`MarketEvent<T>`](crate::event::MarketEvent) [`DataStreams`].
+
+    pub fn builder_multi() -> MultiStreamBuilder<T> {
+        MultiStreamBuilder::<T>::new()
+    }
+
+
+    pub fn select(&mut self, exchange: ExchangeId) -> Option<UnboundedReceiver<T>> {
+        self.streams.remove(&exchange)
+    }
+
+
+    pub async fn join(self) -> UnboundedReceiver<T>
+                      where
+                          T: Send + 'static,
+    {
+        let (joined_tx, joined_rx) = mpsc::unbounded_channel();
+
+        for mut exchange_rx in self.streams.into_values() {
+            let joined_tx = joined_tx.clone();
+
+            tokio::spawn(async move {
+                while let Some(event) = exchange_rx.recv().await {
+                    let _ = joined_tx.send(event);
+                }
+            });
+        }
+
+        joined_rx
+    }
+
+    /// Join all exchange [`UnboundedReceiver`] streams into a unified [`StreamMap`].
+
+    pub async fn join_map(self) -> StreamMap<ExchangeId, UnboundedReceiverStream<T>> {
+        self.streams.into_iter().fold(StreamMap::new(), |mut map, (exchange, rx)| {
+            map.insert(exchange, UnboundedReceiverStream::new(rx));
+
+            map
+        })
     }
 }
