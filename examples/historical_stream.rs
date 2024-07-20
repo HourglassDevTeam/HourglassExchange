@@ -40,7 +40,7 @@ async fn main() {
             match client.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, start_date, end_date, batch_size).await {
                 Ok(mut rx) => {
                     while let Some(event) = rx.recv().await {
-                        // println!("{event:?}"); // NOTE 调试开关
+                        println!("{event:?}"); // NOTE 调试开关
                         if tx.send(event).is_err() {
                             eprintln!("发送市场事件失败");
                             break;
