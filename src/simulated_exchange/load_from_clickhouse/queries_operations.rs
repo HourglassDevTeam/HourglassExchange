@@ -9,7 +9,6 @@ pub use clickhouse::{
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 
 use crate::{
     common_skeleton::datafeed::event::MarketEvent,
@@ -212,77 +211,55 @@ impl ClickHouseClient
         }
     }
 
-
-
-    pub async fn query_unioned_trade_table_batched_for_dates(
-        &self,
-        exchange: &str,
-        instrument: &str,
-        channel: &str,
-        start_date: &str,
-        end_date: &str,
-        batch_size: usize,
-    ) -> Result<UnboundedReceiver<MarketEvent<ClickhouseTrade>>, String> {
-        let (tx, rx) = unbounded_channel();
-        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d")
-            .map_err(|e| format!("Invalid start date format: {}", e))?;
-        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d")
-            .map_err(|e| format!("Invalid end date format: {}", e))?;
+    pub async fn query_unioned_trade_table_batched_for_dates(&self,
+                                                             exchange: &str,
+                                                             instrument: &str,
+                                                             channel: &str,
+                                                             start_date: &str,
+                                                             end_date: &str,
+                                                             batch_size: usize)
+                                                             -> Vec<MarketEvent<ClickhouseTrade>>
+    {
+        let mut results = Vec::new();
+        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d").expect("Invalid start date format");
+        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d").expect("Invalid end date format");
         let mut current_date = start_date;
 
-        // Cloning self to move into async block
-        let client = self.client.clone();
-        let exchange = exchange.to_owned();
-        let instrument = instrument.to_owned();
-        let channel = channel.to_owned();
+        while current_date <= end_date {
+            let date = current_date.format("%Y_%m_%d").to_string();
+            let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
+            let database = format!("{}_{}_{}", exchange, instrument, channel);
+            let mut offset = 0;
 
-        tokio::spawn(async move {
-            while current_date <= end_date {
-                let date = current_date.format("%Y_%m_%d").to_string();
-                let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
-                let database = format!("{}_{}_{}", exchange, instrument, channel);
-                let mut offset = 0;
+            loop {
+                let query = format!("SELECT symbol, side, price, timestamp FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}",
+                                    database, table_name, batch_size, offset);
+                println!("[UnilinkExecution] : Executing query: {}", query);
 
-                loop {
-                    let query = format!(
-                        "SELECT symbol, side, price, timestamp FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}",
-                        database, table_name, batch_size, offset
-                    );
-                    println!("[UnilinkExecution] : Executing query: {}", query);
-
-                    match client.query(&query).fetch_all::<ClickhouseTrade>().await {
-                        Ok(trade_datas) => {
-                            for trade_data in &trade_datas {
-                                let (base, quote) = parse_base_and_quote(&trade_data.basequote);
-                                let market_event = MarketEvent::from_swap_trade_clickhouse(
-                                    trade_data.clone(),
-                                    base,
-                                    quote,
-                                    ExchangeID::from(exchange.clone()),
-                                );
-                                if tx.send(market_event).is_err() {
-                                    eprintln!("Failed to send market event");
-                                    return;
-                                }
-                            }
-
-                            if trade_datas.len() < batch_size {
-                                break;
-                            }
-
-                            offset += batch_size;
+                match self.client.query(&query).fetch_all::<ClickhouseTrade>().await {
+                    | Ok(trade_datas) => {
+                        for trade_data in &trade_datas {
+                            let (base, quote) = parse_base_and_quote(&trade_data.basequote);
+                            let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote, ExchangeID::from(exchange.to_string()));
+                            results.push(market_event);
                         }
-                        Err(e) => {
-                            eprintln!("Failed query: {}", e);
-                            return;
+
+                        if trade_datas.len() < batch_size {
+                            break;
                         }
+
+                        offset += batch_size;
+                    }
+                    | Err(e) => {
+                        eprintln!("Failed query: {}", e);
+                        break;
                     }
                 }
-
-                current_date += Duration::days(1);
             }
-        });
 
-        Ok(rx)
+            current_date += Duration::days(1);
+        }
+
+        results
     }
 }

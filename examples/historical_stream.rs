@@ -14,7 +14,8 @@ lazy_static! {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     // 定义交易所、金融工具、频道和日期的字符串变量
     let stream_params = vec![("binance", "futures", "trades", "2024_03_03", 1000000)];
 
@@ -24,33 +25,26 @@ async fn main() {
     // 循环创建和添加数据流
     for (exchange, instrument, channel, date, batch_size) in stream_params {
         // 调用 CLIENT 的 query_unioned_trade_table_batched_for_dates 方法获取数据流
-        match CLIENT
-            .query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, date, date, batch_size)
-            .await
-        {
-            Ok(mut rx) => {
-                // 创建一个 MPSC 通道
-                let (tx, rx_clone) = unbounded_channel::<MarketEvent<ClickhouseTrade>>();
+        let events = CLIENT.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, date, date, batch_size)
+                           .await;
+        println!("Query returned {} events", events.len());
 
-                // 将通道接收端添加到 AccountDataStreams
-                let stream_id = format!("{}_{}_{}_{}", exchange, instrument, channel, date);
-                account_streams.add_stream(stream_id.clone(), rx_clone);
-                println!("Hooooray! New stream has been added.");
+        // 创建一个 MPSC 通道
+        let (tx, rx) = unbounded_channel::<MarketEvent<ClickhouseTrade>>();
 
-                // 遍历事件并打印和发送
-                tokio::spawn(async move {
-                    while let Some(event) = rx.recv().await {
-                        println!("{:?}", event);
-                        if tx.send(event).is_err() {
-                            eprintln!("Failed to send event");
-                            break;
-                        }
-                    }
-                });
-            }
-            Err(e) => {
-                eprintln!("Failed to query events: {}", e);
+        // 将通道接收端添加到 AccountDataStreams
+        let stream_id = format!("{}_{}_{}_{}", exchange, instrument, channel, date);
+        account_streams.add_stream(stream_id.clone(), rx);
+        println!("Hooooray ! New stream has been added.");
+
+        // 遍历事件并打印和发送
+        for event in events {
+            println!("{:?}", event);
+            if tx.send(event).is_err() {
+                eprintln!("Failed to send event");
+                break;
             }
         }
+
     }
 }
