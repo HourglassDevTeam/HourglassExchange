@@ -6,7 +6,7 @@ use unilink_execution::{
     common_skeleton::datafeed::event::MarketEvent,
     simulated_exchange::{account::account_market_feed::*, load_from_clickhouse::queries_operations::*},
 };
-
+use tokio::task;
 lazy_static! {
     pub static ref CLIENT: Arc<ClickHouseClient> = Arc::new(ClickHouseClient::new());
 }
@@ -25,6 +25,9 @@ async fn main() {
     // 创建一个 Arc<Mutex<HashMap>> 来存储所有的发送者
     let tx_map = Arc::new(Mutex::new(std::collections::HashMap::new()));
 
+    // 存储所有的异步任务句柄
+    let mut handles = Vec::new();
+
     // Voila.录入循环开始。
     for (exchange, instrument, channel, start_date, end_date, batch_size) in stream_params {
         let client = client.clone();
@@ -40,7 +43,8 @@ async fn main() {
         // 克隆 Arc 指针以便在异步任务中使用
         let tx_map = Arc::clone(&tx_map);
 
-        tokio::spawn(async move {
+        // 创建异步任务并将句柄存储到 handles 向量中
+        let handle = task::spawn(async move {
             match client.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, start_date, end_date, batch_size).await {
                 Ok(mut rx) => {
                     while let Some(event) = rx.recv().await {
@@ -59,5 +63,14 @@ async fn main() {
                 }
             }
         });
+
+        handles.push(handle);
+    }
+
+    // 等待所有异步任务完成
+    for handle in handles {
+        if let Err(e) = handle.await {
+            eprintln!("Task failed: {:?}", e);
+        }
     }
 }
