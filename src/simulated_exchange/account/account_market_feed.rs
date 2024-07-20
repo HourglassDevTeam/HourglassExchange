@@ -1,12 +1,10 @@
 use std::{
     collections::HashMap,
     fmt,
-    fmt::Debug,
-    pin::Pin,
-    task::{Context, Poll},
-};
+    fmt::Debug
 
-use futures_core::Stream;
+    ,
+};
 
 use crate::{
     common_skeleton::{
@@ -18,7 +16,6 @@ use crate::{
         socket_error::SocketError,
         subscriber::{Identifier, SubKind},
     },
-    simulated_exchange::account::account_market_feed::DataStream::{Historical, Live},
 };
 
 // 定义一个数据流别名，用于标识每个数据流。
@@ -103,22 +100,5 @@ impl<Event> DataStream<Event> where Event: Clone + Send + Sync + Debug + 'static
     {
         let live_feed = LiveFeed::new::<Exchange, Kind>(subscriptions).await?;
         Ok(DataStream::Live(live_feed))
-    }
-}
-
-// 为DataStream实现Stream trait，使其可以作为异步流处理。
-impl<Event> Stream for DataStream<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
-{
-    type Item = Event;
-
-    // 数据流中的元素类型为 Event
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>>
-    {
-        // 根据数据流的类型，调用相应的poll_next方法。
-        match self.get_mut() {
-            | Historical(feed) => Pin::new(&mut feed.receiver).poll_recv(cx),
-            | Live(feed) => Pin::new(&mut feed.stream).poll_recv(cx),
-        }
     }
 }

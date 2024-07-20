@@ -54,9 +54,9 @@ pub trait StreamParser
 }
 impl StreamParser for WebSocketParser
 {
-    type Stream = WebSocket;
-    type Message = WsMessage;
     type Error = WsError;
+    type Message = WsMessage;
+    type Stream = WebSocket;
 
     fn parse<Output>(input: Result<Self::Message, Self::Error>) -> Option<Result<Output, SocketError>>
         where Output: DeserializeOwned
@@ -105,7 +105,6 @@ pub fn process_binary<ExchangeMessage>(payload: Vec<u8>) -> Option<Result<Exchan
                                                                                            payload: String::from_utf8(payload).unwrap_or_else(|x| x.to_string()) }
                                                             }))
 }
-
 
 pub fn process_ping<ExchangeMessage>(ping: Vec<u8>) -> Option<Result<ExchangeMessage, SocketError>>
 {
