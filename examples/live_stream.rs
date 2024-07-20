@@ -11,9 +11,8 @@ use tokio_stream::StreamExt;
 #[rustfmt::skip]
 #[tokio::main]
 async fn main() {
-    // 为不同交易所初始化 MarketEvent<DataKind> 流
     let streams: Streams<MarketEvent<DataKind>> = Streams::builder_multi()
-        // 为不同交易所添加 PublicTrades 流
+        // 添加 PublicTrades 流
         .add(Streams::<PublicTrades>::builder()
             .subscribe([
                 (Okx, "btc", "usdt", InstrumentKind::Spot, PublicTrades),
