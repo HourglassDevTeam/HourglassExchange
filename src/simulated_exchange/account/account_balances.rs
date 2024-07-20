@@ -13,14 +13,14 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::Instrument,
         order::{Open, Order},
+        Side,
         token::Token,
         trade::Trade,
-        Side,
     },
     error::ExecutionError,
-    simulated_exchange::account::Account,
     ExchangeID,
     ExchangeVariant::Simulated,
+    simulated_exchange::account::Account,
 };
 
 #[derive(Clone, Debug)]

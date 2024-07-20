@@ -9,8 +9,8 @@ use crate::{
         connector::Connector,
         socket_error::SocketError,
         subscriber::SubKind,
-        websocket::{StreamParser, WebSocket, WebSocketParser},
         SubscriptionMap,
+        websocket::{StreamParser, WebSocket, WebSocketParser},
     },
 };
 

@@ -1,20 +1,21 @@
 use std::fmt::Debug;
 
+use async_trait::async_trait;
+use futures::SinkExt;
+use tracing::{debug, info};
+
 use crate::{
     common_skeleton::instrument::Instrument,
     data_subscriber::{
         connector::Connector,
         mapper::{SubscriptionMapper, WebSocketSubMapper},
         socket_error::SocketError,
-        validator::SubscriptionValidator,
-        websocket::connect,
-        Subscriber, SubscriptionId, SubscriptionMap, SubscriptionMeta, WebSocket,
+        Subscriber,
+        SubscriptionId,
+        SubscriptionMap, SubscriptionMeta, validator::SubscriptionValidator, WebSocket, websocket::connect,
     },
     simulated_exchange::account::account_market_feed::Subscription,
 };
-use async_trait::async_trait;
-use futures::SinkExt;
-use tracing::{debug, info};
 
 pub struct WebSocketSubscriber;
 pub trait SubKind

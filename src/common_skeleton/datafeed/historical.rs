@@ -1,6 +1,5 @@
-use std::{fmt::Debug, pin::Pin, sync::Arc};
+use std::{fmt::Debug, sync::Arc};
 
-use futures::Stream;
 use tokio::sync::mpsc::UnboundedReceiver;
 
 use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickHouseClient;

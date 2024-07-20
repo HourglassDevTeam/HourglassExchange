@@ -1,6 +1,5 @@
 use std::{
-    cmp::Reverse,
-    collections::{BinaryHeap, HashMap},
+    collections::HashMap,
     fmt,
     fmt::Debug,
     pin::Pin,

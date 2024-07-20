@@ -1,6 +1,6 @@
-use std::{fmt::Debug, pin::Pin};
+use std::fmt::Debug;
 
-use futures::{Stream, StreamExt};
+use futures::StreamExt;
 use mpsc::UnboundedReceiver;
 use tokio::sync::mpsc;
 
@@ -14,7 +14,6 @@ use crate::{
     simulated_exchange::account::account_market_feed::Subscription,
 };
 
-
 /// Live feed for events.
 pub struct LiveFeed<Event>
 {
@@ -23,9 +22,10 @@ pub struct LiveFeed<Event>
 
 impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
 {
-    pub fn poll_next(&mut self) -> UnboundedReceiver<Event>
+    pub fn recv_next(&mut self) -> Option<Event>
     {
-        self.stream.as_mut()
+        // 尝试从接收器中接收事件
+        self.stream.try_recv().ok()
     }
 }
 

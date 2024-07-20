@@ -3,8 +3,8 @@ use std::{collections::HashMap, fmt};
 
 use async_trait::async_trait;
 use tokio::net::TcpStream;
-pub use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
+pub use tokio_tungstenite::tungstenite::Message as WsMessage;
 
 use crate::{
     common_skeleton::instrument::Instrument,
