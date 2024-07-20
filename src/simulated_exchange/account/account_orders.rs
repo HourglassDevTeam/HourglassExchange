@@ -20,9 +20,9 @@ pub struct AccountOrders
 }
 
 
-/// NOTE SeqCst 是 Rust 中的一个内存排序选项，代表“顺序一致性”（Sequential Consistency）。
+/// NOTE Relaxed 是 Rust 中的一个内存排序选项，代表“顺序一致性”（Sequential Consistency）。
 ///     这是在使用原子操作（例如原子计数器、原子指针）时用于指定操作之间的内存顺序的一种模式。
-///     SeqCst 是最强的内存排序，它保证了所有线程看到的操作顺序是一致的，即所有线程按照相同的顺序看到内存操作。
+///     Relaxed 是最强的内存排序，它保证了所有线程看到的操作顺序是一致的，即所有线程按照相同的顺序看到内存操作。
 impl AccountOrders
 {
     /// 从提供的 [`Instrument`] 选择构造一个新的 [`AccountOrders`]。
@@ -57,11 +57,11 @@ impl AccountOrders
 
     pub fn increment_request_counter(&self)
     {
-        self.request_counter.fetch_add(1, Ordering::SeqCst);
+        self.request_counter.fetch_add(1, Ordering::Relaxed);
     }
 
     pub fn order_id(&self) -> OrderId
     {
-        OrderId(self.request_counter.load(Ordering::SeqCst).to_string())
+        OrderId(self.request_counter.load(Ordering::Acquire).to_string())
     }
 }

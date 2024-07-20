@@ -47,7 +47,6 @@ async fn main()
                         break;
                     }
                 }
-                println!("完成数据流推送: {}", stream_id);
             }
             | Err(e) => {
                 eprintln!("查询事件失败: {}", e);

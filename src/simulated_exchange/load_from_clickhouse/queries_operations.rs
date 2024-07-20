@@ -166,7 +166,7 @@ impl ClickHouseClient
         let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
         let database = format!("{}_{}_{}", exchange, instrument, channel);
         let query = format!("SELECT * FROM {}.{}", database, table_name);
-        println!("[UnilinkExecution] : Executing query: {}", query);
+        println!("[UnilinkExecution] : 正在执行 query: {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
@@ -190,7 +190,7 @@ impl ClickHouseClient
                     "SELECT symbol, side, price, timestamp FROM {}.{} LIMIT {} OFFSET {}",
                     database, table_name, batch_size, offset
                 );
-                println!("[UnilinkExecution] : Executing query: {}", query);
+                println!("[UnilinkExecution] : 正在执行 query: {}", query);
 
                 match self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await {
                     Ok(trade_datas) => {
@@ -244,7 +244,7 @@ impl ClickHouseClient
                 loop {
                     let query = format!("SELECT symbol, side, price, timestamp FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}",
                                         database, table_name, batch_size, offset);
-                    println!("[UnilinkExecution] : Executing query: {}", query);
+                    println!("[UnilinkExecution] : 正在执行 query: {}", query);
 
                     let client = client.read().await;
                     match client.query(&query).fetch_all::<ClickhouseTrade>().await {
