@@ -61,7 +61,7 @@ mergeCode:
     - git checkout -B $PCF_DEPLOY_BRANCH
     
     
-    - git pull --rebase gitee $PCF_DEPLOY_BRANCH || true
+    - git pull gitee $PCF_DEPLOY_BRANCH
     
     ## Check if there are changes to push to origin
     ##
