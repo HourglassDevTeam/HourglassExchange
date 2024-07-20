@@ -5,12 +5,6 @@ use mpsc::UnboundedReceiver;
 use tokio::sync::mpsc;
 
 use crate::{
-    data_subscriber::{
-        connector::Connector,
-        socket_error::SocketError,
-        subscriber::{Identifier, SubKind, WebSocketSubscriber},
-        Subscriber,
-    },
     simulated_exchange::account::account_market_feed::Subscription,
 };
 use crate::common_skeleton::datafeed::event::MarketEvent;

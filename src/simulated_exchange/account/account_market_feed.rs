@@ -5,19 +5,15 @@ use std::{
 
     ,
 };
-use mpsc::UnboundedReceiver;
-use tokio::sync::mpsc;
 
-use crate::{
-    common_skeleton::{
-        datafeed::{historical::HistoricalFeed, live::LiveFeed},
-        instrument::Instrument,
-    },
-    data_subscriber::{
-        connector::Connector,
-        socket_error::SocketError,
-        subscriber::{Identifier, SubKind},
-    },
+use cerebro_data::exchange::Connector;
+use cerebro_data::Identifier;
+use cerebro_data::streams::builder::SocketError;
+use cerebro_data::subscription::SubKind;
+
+use crate::common_skeleton::{
+    datafeed::{historical::HistoricalFeed, live::LiveFeed},
+    instrument::Instrument,
 };
 
 // 定义一个数据流别名，用于标识每个数据流。
@@ -94,56 +90,3 @@ pub enum DataStreams<Event>
 }
 
 
-impl<T> DataStreams<T> {
-    /// Construct a [`StreamBuilder`] for configuring new
-    /// [`MarketEvent<SubKind::Event>`](crate::event::MarketEvent) [`DataStreams`].
-
-    pub fn builder<Kind>() -> StreamBuilder<Kind>
-                           where
-                               Kind: SubKind,
-    {
-        StreamBuilder::<Kind>::new()
-    }
-
-    /// Construct a [`MultiStreamBuilder`] for configuring new
-    /// [`MarketEvent<T>`](crate::event::MarketEvent) [`DataStreams`].
-
-    pub fn builder_multi() -> MultiStreamBuilder<T> {
-        MultiStreamBuilder::<T>::new()
-    }
-
-
-    pub fn select(&mut self, exchange: ExchangeId) -> Option<UnboundedReceiver<T>> {
-        self.streams.remove(&exchange)
-    }
-
-
-    pub async fn join(self) -> UnboundedReceiver<T>
-                      where
-                          T: Send + 'static,
-    {
-        let (joined_tx, joined_rx) = mpsc::unbounded_channel();
-
-        for mut exchange_rx in self.streams.into_values() {
-            let joined_tx = joined_tx.clone();
-
-            tokio::spawn(async move {
-                while let Some(event) = exchange_rx.recv().await {
-                    let _ = joined_tx.send(event);
-                }
-            });
-        }
-
-        joined_rx
-    }
-
-    /// Join all exchange [`UnboundedReceiver`] streams into a unified [`StreamMap`].
-
-    pub async fn join_map(self) -> StreamMap<ExchangeId, UnboundedReceiverStream<T>> {
-        self.streams.into_iter().fold(StreamMap::new(), |mut map, (exchange, rx)| {
-            map.insert(exchange, UnboundedReceiverStream::new(rx));
-
-            map
-        })
-    }
-}

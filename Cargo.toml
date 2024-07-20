@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+
+# API
+cerebro-data = {path = "../cerebro-data"}
 # Logging 日志
 tracing = "0.1.36" # 高性能事件记录库，用于结构化日志和分布式跟踪
 

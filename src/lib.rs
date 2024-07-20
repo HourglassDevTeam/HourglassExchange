@@ -15,7 +15,6 @@ use crate::{
 
 mod binance_exchange;
 pub mod common_skeleton;
-pub mod data_subscriber;
 pub mod error;
 pub mod okex_exchange;
 pub mod simulated_exchange;
