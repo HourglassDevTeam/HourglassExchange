@@ -46,6 +46,8 @@ async fn main()
             while let Some(event) = receiver.recv().await {
                 println!("Received event in stream {}: {:?}", stream_id, event);
             }
+            // 打印完成消息，以确认循环结束
+            println!("Stream {} has ended.", stream_id);
         });
     }
 }
