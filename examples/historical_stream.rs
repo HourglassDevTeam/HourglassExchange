@@ -1,4 +1,5 @@
 use std::sync::Arc;
+
 use lazy_static::lazy_static;
 use tokio::sync::mpsc::unbounded_channel;
 
@@ -13,7 +14,8 @@ lazy_static! {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     // 定义交易所、金融工具、频道和日期的字符串变量
     let stream_params = vec![("binance", "futures", "trades", "2024_03_03", 1000000)];
 
@@ -24,7 +26,7 @@ async fn main() {
     for (exchange, instrument, channel, date, batch_size) in stream_params {
         // 调用 CLIENT 的 query_unioned_trade_table_batched_for_dates 方法获取数据流
         let events = CLIENT.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, date, date, batch_size)
-            .await;
+                           .await;
         println!("Query returned {} events", events.len());
 
         // 创建一个 MPSC 通道
@@ -45,21 +47,4 @@ async fn main() {
 
         println!("new stream has been added.");
     }
-    //
-    // // 处理每个数据流中的事件
-    // let mut handles = vec![];
-    // for (stream_id, mut receiver) in account_streams.streams {
-    //     let handle = tokio::spawn(async move {
-    //         while let Some(event) = receiver.recv().await {
-    //             println!("Received event in stream {}: {:?}", stream_id, event);
-    //         }
-    //         println!("Stream {} has ended.", stream_id);
-    //     });
-    //     handles.push(handle);
-    // }
-    //
-    // // 等待所有任务完成
-    // for handle in handles {
-    //     handle.await.expect("task failed");
-    // }
 }
