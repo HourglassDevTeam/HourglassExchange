@@ -217,7 +217,7 @@ impl ClickHouseClient
 
 
     pub async fn query_unioned_trade_table_batched_for_dates(
-        &self,
+        self: Arc<Self>,
         exchange: &str,
         instrument: &str,
         channel: &str,
@@ -232,8 +232,7 @@ impl ClickHouseClient
             .map_err(|e| format!("Invalid end date format: {}", e))?;
         let mut current_date = start_date;
 
-        let client = self.client.clone();  // 直接使用self.client
-
+        let client = Arc::clone(&self.client);
         let exchange = exchange.to_owned();
         let instrument = instrument.to_owned();
         let channel = channel.to_owned();
