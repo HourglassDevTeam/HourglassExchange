@@ -45,6 +45,6 @@ async fn main()
             }
         }
 
-        println!("new stream has been added.");
+        println!("Hooooray ! New stream has been added.");
     }
 }
