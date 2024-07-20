@@ -262,7 +262,6 @@ impl ClickHouseClient
                                     quote,
                                     ExchangeID::from(exchange.clone()),
                                 );
-                                println!("Sending event: {:?}", market_event);
                                 if tx.send(market_event).is_err() {
                                     eprintln!("Failed to send market event");
                                     return;
