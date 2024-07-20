@@ -1,8 +1,6 @@
 use std::sync::Arc;
-
 use lazy_static::lazy_static;
 use tokio::sync::mpsc::unbounded_channel;
-
 use unilink_execution::{
     common_skeleton::datafeed::event::MarketEvent,
     simulated_exchange::{account::account_market_feed::*, load_from_clickhouse::queries_operations::*},
