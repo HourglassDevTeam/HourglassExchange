@@ -43,13 +43,19 @@ async fn main()
     }
 
     // 示例：处理每个数据流中的事件
+    let mut handles = vec![];
     for (stream_id, mut receiver) in account_streams.streams {
-        tokio::spawn(async move {
+        let handle = tokio::spawn(async move {
             while let Some(event) = receiver.recv().await {
                 println!("Received event in stream {}: {:?}", stream_id, event);
             }
-            // 打印完成消息，以确认循环结束
             println!("Stream {} has ended.", stream_id);
         });
+        handles.push(handle);
+    }
+
+    // 等待所有任务完成
+    for handle in handles {
+        handle.await.expect("task failed");
     }
 }
