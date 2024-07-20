@@ -158,17 +158,3 @@ impl<Event> Stream for DataStream<Event> where Event: Clone + Send + Sync + Debu
         }
     }
 }
-
-// 为 DataStream 实现额外的方法，方便获取下一个元素。
-impl<Event> DataStream<Event>
-    where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性，并且可排序（Ord） */
-{
-    // 将DataStream转换为一个Stream。
-    pub fn into_stream(self) -> impl Stream<Item = Event> + 'static
-    {
-        match self {
-            | Live(feed) => feed.stream,
-            | Historical(feed) => feed.receiver,
-        }
-    }
-}

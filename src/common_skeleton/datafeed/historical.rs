@@ -12,10 +12,12 @@ pub struct HistoricalFeed<Event>
     pub receiver: UnboundedReceiver<Event>,
 }
 
-impl<Event> HistoricalFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
+
+impl<Event> HistoricalFeed<Event>
+where
+    Event: Clone + Send + Sync + Debug + 'static,
 {
-    pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item = Event> + Send)>
-    {
-        self.receiver.as_mut()
+    pub async fn recv_next(&mut self) -> Option<Event> {
+        self.receiver.recv().await
     }
 }
