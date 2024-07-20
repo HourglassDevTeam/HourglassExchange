@@ -48,7 +48,7 @@ impl AccountOrders
     }
 
     /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
-    /// 并且新的总数被用作[`OrderId`]。
+    /// 在 increment_request_counter 方法中，使用 Ordering::Relaxed 进行递增。
     pub fn initiate_order_open(&mut self, request: Order<RequestOpen>) -> Order<Open>
     {
         self.increment_request_counter();
@@ -59,7 +59,7 @@ impl AccountOrders
     {
         self.request_counter.fetch_add(1, Ordering::Relaxed);
     }
-
+    // 在 order_id 方法中，使用 Ordering::Acquire 确保读取到最新的计数器值。
     pub fn order_id(&self) -> OrderId
     {
         OrderId(self.request_counter.load(Ordering::Acquire).to_string())
