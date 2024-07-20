@@ -11,7 +11,6 @@ use unilink_execution::{
 lazy_static! {
     pub static ref CLIENT: Arc<ClickHouseClient> = Arc::new(ClickHouseClient::new());
 }
-
 #[tokio::main]
 async fn main() {
     let client = Arc::new(ClickHouseClient::new());
@@ -25,22 +24,23 @@ async fn main() {
     // 存储所有的异步任务句柄
     let mut handles = Vec::new();
 
-    // Voila.录入循环开始。
+    // 录入循环开始
     for (exchange, instrument, channel, start_date, end_date, batch_size) in stream_params {
         let client = client.clone();
         let stream_id = format!("{}_{}_{}", exchange, instrument, channel);
 
         // 在循环外部创建 unbounded_channel
-        let (tx, rx_clone) = unbounded_channel::<MarketEvent<ClickhouseTrade>>();
+        let (tx, rx) = unbounded_channel::<MarketEvent<ClickhouseTrade>>();
 
-        account_streams.add_stream(stream_id.clone(), rx_clone);
+        // 将接收者添加到 AccountMarketStreams 中
+        account_streams.add_stream(stream_id.clone(), rx);
 
         // 创建异步任务并将句柄存储到 handles 向量中
         let handle = task::spawn(async move {
             match client.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, start_date, end_date, batch_size).await {
                 Ok(mut rx) => {
                     while let Some(event) = rx.recv().await {
-                        println!("{event:?}"); // NOTE 调试开关
+                        println!("{:?}", event); // NOTE 调试开关
                         if tx.send(event).is_err() {
                             eprintln!("发送市场事件失败");
                             break;
