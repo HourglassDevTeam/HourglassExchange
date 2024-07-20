@@ -14,7 +14,7 @@ lazy_static! {
 #[tokio::main]
 async fn main() {
     // 定义交易所、金融工具、频道和日期的字符串变量
-    let stream_params = vec![("binance", "futures", "trades", "2024_03_03", 100000)];
+    let stream_params = vec![("binance", "futures", "trades", "2024_03_03", 1000000)];
 
     // 创建 AccountMarketStreams 实例
     let mut account_streams: AccountDataStreams<MarketEvent<ClickhouseTrade>> = AccountDataStreams::new();
