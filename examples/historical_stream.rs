@@ -17,12 +17,13 @@ async fn main()
 {
     let client = Arc::new(ClickHouseClient::new());
 
-    // 定义交易所、金融工具、频道和日期的字符串变量
+    // 定义Exchange、Instrument、Channel和起止日期的字符串变量
     let stream_params = vec![("binance", "futures", "trades", "2024_03_03", "2024_07_03", 1000000)];
 
     // 创建 AccountMarketStreams 实例
     let mut account_streams: AccountDataStreams<MarketEvent<ClickhouseTrade>> = AccountDataStreams::new();
 
+    // Voila.循环开始
     for (exchange, instrument, channel, start_date, end_date, batch_size) in stream_params {
         let client = client.clone();
         match client.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, start_date, end_date, batch_size)
