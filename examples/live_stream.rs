@@ -3,10 +3,7 @@ use cerebro_data::{
     event::{DataKind, MarketEvent},
     exchange::okx::Okx,
     streams::Streams,
-    subscription::{
-        book::{OrderBooksL1, OrderBooksL2},
-        trade::PublicTrades,
-    },
+    subscription::trade::PublicTrades,
 };
 use cerebro_integration::model::instrument::kind::InstrumentKind;
 use tokio_stream::StreamExt;
