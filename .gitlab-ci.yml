@@ -64,7 +64,8 @@ mergeCode:
       if [ -n "$(git ls-files -u)" ]; then
         echo "Cleaning up existing conflicts..."
         git reset --hard HEAD
-    - git clean -fd
+        git clean -fd
+      fi
     
     ##
     ## Fetch and checkout the branch
