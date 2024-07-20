@@ -42,14 +42,14 @@ async fn main() {
                     while let Some(event) = rx.recv().await {
                         // println!("{event:?}"); // NOTE 调试开关
                         if tx.send(event).is_err() {
-                            eprintln!("Failed to send event");
+                            eprintln!("发送市场事件失败");
                             break;
                         }
                     }
-                    println!("Finished processing events for stream: {}", stream_id);
+                    println!("完成数据流推送: {}", stream_id);
                 }
                 Err(e) => {
-                    eprintln!("Failed to query events: {}", e);
+                    eprintln!("查询事件失败: {}", e);
                 }
             }
         });
