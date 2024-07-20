@@ -17,9 +17,9 @@ impl <Data>SlippageRegistry<Data> {
         self.events.push(event);
     }
 }
-/// NOTE 在回测场景下仅使用这种Pending状态。
+
+/// NOTE 在需要模拟延迟的回测场景下仅使用这种Pending状态。
 #[allow(dead_code)]
-// 包含 slippage_registry 字段的结构体
 pub struct SimulatedPending<Data> {
     slippage_registry: SlippageRegistry<Data>,
 }
