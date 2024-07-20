@@ -54,20 +54,22 @@ impl<S> From<S> for SubscriptionId where S: Into<String>
 pub struct SubscriptionMeta
 {
     pub instrument_map: SubscriptionMap<Instrument>,
+    /// 存储 WebSocket 消息的向量。
     pub subscriptions: Vec<WsMessage>,
 }
 
 /// 用于存储 [`SubscriptionId`] 与泛型类型 `T` 之间的映射。
 pub struct SubscriptionMap<T>(pub HashMap<SubscriptionId, T>);
 
-pub type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
+/// 使用 tokio-tungstenite 库的 [WebSocketStream]，可能是 TLS 或非 TLS 的 TcpStream。
+pub type WebSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 #[async_trait]
 pub trait Subscriber
 {
     type SubscriptionMapper: SubscriptionMapper;
 
-    async fn subscribe<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<(WsStream, SubscriptionMap<Instrument>), SocketError>
+    async fn subscribe<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<(WebSocket, SubscriptionMap<Instrument>), SocketError>
         where Exchange: Connector + Send + Sync,
               Kind: SubKind + Send + Sync,
               Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>;

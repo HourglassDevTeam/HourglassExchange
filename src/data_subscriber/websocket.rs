@@ -54,9 +54,9 @@ pub trait StreamParser
 }
 impl StreamParser for WebSocketParser
 {
-    type Error = WsError;
-    type Message = WsMessage;
     type Stream = WebSocket;
+    type Message = WsMessage;
+    type Error = WsError;
 
     fn parse<Output>(input: Result<Self::Message, Self::Error>) -> Option<Result<Output, SocketError>>
         where Output: DeserializeOwned
