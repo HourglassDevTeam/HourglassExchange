@@ -8,7 +8,7 @@ use crate::{
         socket_error::SocketError,
         validator::SubscriptionValidator,
         websocket::connect,
-        Subscriber, SubscriptionId, SubscriptionMap, SubscriptionMeta, WebSocket,
+        Subscriber, SubscriptionId, SubscriptionMap, SubscriptionMeta, WsStream,
     },
     simulated_exchange::account::account_market_feed::Subscription,
 };
@@ -69,7 +69,7 @@ impl Subscriber for WebSocketSubscriber
     /// 订阅方法
     /// 通过 WebSocket 连接到交易所，并发送订阅请求。
     /// 返回包含 WebSocket 和订阅映射的结果，或返回 `SocketError`。
-    async fn subscribe<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<(WebSocket, SubscriptionMap<Instrument>), SocketError>
+    async fn subscribe<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<(WsStream, SubscriptionMap<Instrument>), SocketError>
         where Exchange: Connector + Send + Sync,
               Kind: SubKind + Send + Sync,
               Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>

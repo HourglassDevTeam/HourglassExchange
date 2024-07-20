@@ -4,7 +4,7 @@ use std::{collections::HashMap, fmt};
 use async_trait::async_trait;
 use tokio::net::TcpStream;
 pub use tokio_tungstenite::tungstenite::Message as WsMessage;
-use tokio_tungstenite::MaybeTlsStream;
+use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 use crate::{
     common_skeleton::instrument::Instrument,
@@ -61,15 +61,14 @@ pub struct SubscriptionMeta
 /// 用于存储 [`SubscriptionId`] 与泛型类型 `T` 之间的映射。
 pub struct SubscriptionMap<T>(pub HashMap<SubscriptionId, T>);
 
-/// 使用 tokio-tungstenite 库的 [WebSocketStream]，可能是 TLS 或非 TLS 的 TcpStream。
-pub type WebSocket = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream>>;
+pub type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 #[async_trait]
 pub trait Subscriber
 {
     type SubscriptionMapper: SubscriptionMapper;
 
-    async fn subscribe<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<(WebSocket, SubscriptionMap<Instrument>), SocketError>
+    async fn subscribe<Exchange, Kind>(subscriptions: &[Subscription<Exchange, Kind>]) -> Result<(WsStream, SubscriptionMap<Instrument>), SocketError>
         where Exchange: Connector + Send + Sync,
               Kind: SubKind + Send + Sync,
               Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>;
