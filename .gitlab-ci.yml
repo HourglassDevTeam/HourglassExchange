@@ -78,7 +78,7 @@ mergeCode:
     
     
     ## Force push changes to gitee
-    ##
+    - git add .gitlab-ci.yml
     - git push -f gitee $PCF_DEPLOY_BRANCH 
 
   tags:
