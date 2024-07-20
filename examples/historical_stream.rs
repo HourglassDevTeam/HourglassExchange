@@ -1,9 +1,6 @@
 use lazy_static::lazy_static;
 use std::sync::Arc;
-use tokio::{
-    sync::{mpsc::unbounded_channel},
-    task,
-};
+use tokio::{sync::mpsc::unbounded_channel, task};
 use unilink_execution::{
     common_skeleton::datafeed::event::MarketEvent,
     simulated_exchange::{account::account_market_feed::*, load_from_clickhouse::queries_operations::*},
@@ -13,7 +10,8 @@ lazy_static! {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     let client = Arc::new(ClickHouseClient::new());
 
     // 定义单个参数集
@@ -38,8 +36,10 @@ async fn main() {
 
     // 创建异步任务并将句柄存储到 handles 向量中
     let handle = task::spawn(async move {
-        match client.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, start_date, end_date, batch_size).await {
-            Ok(mut rx) => {
+        match client.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, start_date, end_date, batch_size)
+                    .await
+        {
+            | Ok(mut rx) => {
                 while let Some(event) = rx.recv().await {
                     // println!("{:?}", event); // NOTE 调试开关
                     if tx.send(event).is_err() {
@@ -49,7 +49,7 @@ async fn main() {
                 }
                 println!("完成数据流推送: {}", stream_id);
             }
-            Err(e) => {
+            | Err(e) => {
                 eprintln!("查询事件失败: {}", e);
             }
         }
