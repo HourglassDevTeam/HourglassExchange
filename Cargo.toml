@@ -47,4 +47,5 @@ futures-util = "0.3.30"
 serde_json = "1.0.120"
 tokio-tungstenite = "0.21.0"
 reqwest = "0.12.4"
-url = "2.5.2" # 用于处理Pin的实用工具库
+url = "2.5.2"
+tokio-stream = "0.1.15" # 用于处理Pin的实用工具库

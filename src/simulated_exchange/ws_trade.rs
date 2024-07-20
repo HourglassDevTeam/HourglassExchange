@@ -5,13 +5,13 @@ use crate::{
     common_skeleton::{
         datafeed::event::MarketEvent,
         instrument::{
-            Instrument,
             kind::{InstrumentKind, InstrumentKind::Perpetual},
+            Instrument,
         },
         token::Token,
     },
-    ExchangeID,
     simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
+    ExchangeID,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd)]

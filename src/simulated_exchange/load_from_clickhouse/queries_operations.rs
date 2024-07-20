@@ -4,19 +4,19 @@
 use async_stream::stream;
 use chrono::{Duration, NaiveDate};
 pub use clickhouse::{
-    Client,
-    error::{Error, Result}, Row,
+    error::{Error, Result},
+    Client, Row,
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     common_skeleton::datafeed::event::MarketEvent,
-    ExchangeID,
     simulated_exchange::{
         utils::chrono_operations::extract_date,
         ws_trade::{parse_base_and_quote, WsTrade},
     },
+    ExchangeID,
 };
 
 pub struct ClickHouseClient
@@ -211,55 +211,55 @@ impl ClickHouseClient
         }
     }
 
-    pub fn query_unioned_trade_table_batched_for_dates<'a>(&'a self,
-                                                           exchange: &'a str,
-                                                           instrument: &'a str,
-                                                           channel: &'a str,
-                                                           start_date: &'a str,
-                                                           end_date: &'a str,
-                                                           batch_size: usize)
-                                                           -> impl Stream<Item = MarketEvent<ClickhouseTrade>> + 'a
+    pub async fn query_unioned_trade_table_batched_for_dates(&self,
+                                                             exchange: &str,
+                                                             instrument: &str,
+                                                             channel: &str,
+                                                             start_date: &str,
+                                                             end_date: &str,
+                                                             batch_size: usize)
+                                                             -> Vec<MarketEvent<ClickhouseTrade>>
     {
-        stream! {
-            let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d").expect("Invalid start date format");
-            let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d").expect("Invalid end date format");
-            let mut current_date = start_date;
-            while current_date <= end_date {
-                let date = current_date.format("%Y_%m_%d").to_string();
-                let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
-                let database = format!("{}_{}_{}", exchange, instrument, channel);
-                let mut offset = 0;
-                loop {
-                    let query = format!(
-                        "SELECT symbol, side, price, timestamp FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {} ",
-                        database, table_name, batch_size, offset
-                    );
-                    println!("[UnilinkExecution] : Executing query: {}", query);
+        let mut results = Vec::new();
+        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d").expect("Invalid start date format");
+        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d").expect("Invalid end date format");
+        let mut current_date = start_date;
 
-                    match self.client.query(&query).fetch_all::<ClickhouseTrade>().await {
-                        Ok(trade_datas) => {
-                            for trade_data in &trade_datas {
-                                                            let (base, quote) = parse_base_and_quote(&trade_data.basequote);
+        while current_date <= end_date {
+            let date = current_date.format("%Y_%m_%d").to_string();
+            let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
+            let database = format!("{}_{}_{}", exchange, instrument, channel);
+            let mut offset = 0;
 
-                                let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(),base, quote,ExchangeID::from(exchange.to_string()));
-                                yield market_event;
-                            }
+            loop {
+                let query = format!("SELECT symbol, side, price, timestamp FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}",
+                                    database, table_name, batch_size, offset);
+                println!("[UnilinkExecution] : Executing query: {}", query);
 
-                            if trade_datas.len() < batch_size {
-                                break;
-                            }
+                match self.client.query(&query).fetch_all::<ClickhouseTrade>().await {
+                    | Ok(trade_datas) => {
+                        for trade_data in &trade_datas {
+                            let (base, quote) = parse_base_and_quote(&trade_data.basequote);
+                            let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote, ExchangeID::from(exchange.to_string()));
+                            results.push(market_event);
+                        }
 
-                            offset += batch_size;
-                        },
-                        Err(e) => {
-                            eprintln!("Failed query: {}", e);
+                        if trade_datas.len() < batch_size {
                             break;
                         }
+
+                        offset += batch_size;
+                    }
+                    | Err(e) => {
+                        eprintln!("Failed query: {}", e);
+                        break;
                     }
                 }
-
-                current_date += Duration::days(1);
             }
+
+            current_date += Duration::days(1);
         }
+
+        results
     }
 }
