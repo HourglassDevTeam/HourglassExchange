@@ -14,36 +14,36 @@ lazy_static! {
 }
 
 
-
-
 #[tokio::main]
 async fn main() {
     let client = Arc::new(ClickHouseClient::new());
 
-    // 定义交易所、金融工具、频道和日期的字符串变量
+    // 测试连接
+    match client.client.read().await.ping().await {
+        Ok(_) => println!("Connected to ClickHouse!"),
+        Err(e) => {
+            eprintln!("Failed to connect to ClickHouse: {}", e);
+            return;
+        }
+    }
+
     let stream_params = vec![("binance", "futures", "trades", "2024_03_03", 1000000)];
 
-    // 创建 AccountMarketStreams 实例
     let mut account_streams: AccountDataStreams<MarketEvent<ClickhouseTrade>> = AccountDataStreams::new();
 
-    // 循环创建和添加数据流
     for (exchange, instrument, channel, date, batch_size) in stream_params {
-        // 调用 CLIENT 的 query_unioned_trade_table_batched_for_dates 方法获取数据流
         match client
             .clone()
             .query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, date, date, batch_size)
             .await
         {
             Ok(mut rx) => {
-                // 创建一个 MPSC 通道
                 let (tx, rx_clone) = unbounded_channel::<MarketEvent<ClickhouseTrade>>();
 
-                // 将通道接收端添加到 AccountDataStreams
                 let stream_id = format!("{}_{}_{}_{}", exchange, instrument, channel, date);
                 account_streams.add_stream(stream_id.clone(), rx_clone);
                 println!("Hooooray! New stream has been added.");
 
-                // 遍历事件并打印和发送
                 tokio::spawn(async move {
                     while let Some(event) = rx.recv().await {
                         println!("{:?}", event);
