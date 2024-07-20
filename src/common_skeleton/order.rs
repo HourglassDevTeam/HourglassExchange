@@ -74,7 +74,7 @@ impl Order<RequestOpen>
 
 /// 发送RequestOpen到client后尚未收到确认响应时的状态
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub struct Pending;
+pub struct RealPending;
 
 /// 在RequestCancel结构体中只记录OrderId的原因主要是因为取消订单操作通常只需要知道哪个订单需要被取消。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -180,7 +180,7 @@ impl<Id> From<Id> for OrderId where Id: Display
     }
 }
 
-impl From<&Order<RequestOpen>> for Order<Pending>
+impl From<&Order<RequestOpen>> for Order<RealPending>
 {
     fn from(request: &Order<RequestOpen>) -> Self
     {
@@ -188,7 +188,8 @@ impl From<&Order<RequestOpen>> for Order<Pending>
                instrument: request.instrument.clone(),
                cid: request.cid,
                side: request.side,
-               state: Pending }
+               state: RealPending
+        }
     }
 }
 
