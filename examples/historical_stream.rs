@@ -60,7 +60,7 @@ async fn main() {
     // 等待所有异步任务完成
     for handle in handles {
         if let Err(e) = handle.await {
-            eprintln!("Task failed: {:?}", e);
+            eprintln!("任务失败: {:?}", e);
         }
     }
 }
