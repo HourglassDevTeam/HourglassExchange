@@ -1,5 +1,5 @@
-use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
 use crate::{
     common_skeleton::{instrument::Instrument, trade::Trade},

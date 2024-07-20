@@ -15,7 +15,6 @@ pub struct AccountDataStreams<Event>
     pub streams: HashMap<StreamID, UnboundedReceiver<Event>>, // 使用HashMap存储数据流，键为StreamID
 }
 
-
 // NOTE this is foreign to this module
 pub struct Subscription<Exchange, Kind>
 {
@@ -46,7 +45,6 @@ impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync +
     }
 }
 
-
 // 为 AccountDataStreams 实现 Debug trait，方便调试。
 impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static + Ord
 {
@@ -54,8 +52,6 @@ impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Sen
     {
         // 打印 AccountDataStreams 的调试信息，包括流的标识符。
         let stream_keys: Vec<_> = self.streams.keys().collect();
-        f.debug_struct("AccountDataStreams")
-            .field("streams", &stream_keys)
-            .finish()
+        f.debug_struct("AccountDataStreams").field("streams", &stream_keys).finish()
     }
 }
