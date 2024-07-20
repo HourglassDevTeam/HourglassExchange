@@ -28,7 +28,7 @@ async fn main()
                                     receiver: Box::pin(stream) };
 
         let stream_id = format!("{}_{}_{}", exchange, instrument, channel);
-        account_streams.add_stream(stream_id, DataStream::Historical(feed));
+        account_streams.add_stream(stream_id, DataReceiver::Historical(feed));
     }
 
     loop {
