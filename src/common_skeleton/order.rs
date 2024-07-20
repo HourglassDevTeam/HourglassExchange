@@ -188,8 +188,7 @@ impl From<&Order<RequestOpen>> for Order<RealPending>
                instrument: request.instrument.clone(),
                cid: request.cid,
                side: request.side,
-               state: RealPending
-        }
+               state: RealPending }
     }
 }
 
