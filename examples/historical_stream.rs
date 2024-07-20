@@ -35,6 +35,7 @@ async fn main()
         // 将通道接收端添加到 AccountDataStreams
         let stream_id = format!("{}_{}_{}_{}", exchange, instrument, channel, date);
         account_streams.add_stream(stream_id.clone(), rx);
+        println!("Hooooray ! New stream has been added.");
 
         // 遍历事件并打印和发送
         for event in events {
@@ -45,6 +46,5 @@ async fn main()
             }
         }
 
-        println!("Hooooray ! New stream has been added.");
     }
 }
