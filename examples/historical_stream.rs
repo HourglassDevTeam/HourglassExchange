@@ -23,13 +23,14 @@ async fn main()
     // 创建 AccountMarketStreams 实例
     let mut account_streams: AccountDataStreams<MarketEvent<ClickhouseTrade>> = AccountDataStreams::new();
 
-    // Voila.循环开始
+    // Voila.录入循环开始。
     for (exchange, instrument, channel, start_date, end_date, batch_size) in stream_params {
         let client = client.clone();
         match client.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, start_date, end_date, batch_size)
                     .await
         {
             | Ok(mut rx) => {
+                // FIXME 注意这个channel在内部构建了 可能不是最好的解决方案。
                 let (tx, rx_clone) = unbounded_channel::<MarketEvent<ClickhouseTrade>>();
 
                 let stream_id = format!("{}_{}_{}", exchange, instrument, channel);
