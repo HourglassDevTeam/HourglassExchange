@@ -14,17 +14,18 @@ lazy_static! {
 }
 
 
+
 #[tokio::main]
 async fn main() {
-    let client = Arc::new(ClickHouseClient::new());
+    let client = CLIENT.clone();
 
     let stream_params = vec![("binance", "futures", "trades", "2024_03_03", 1000000)];
 
     let mut account_streams: AccountDataStreams<MarketEvent<ClickhouseTrade>> = AccountDataStreams::new();
 
     for (exchange, instrument, channel, date, batch_size) in stream_params {
+        let client = client.clone();
         match client
-            .clone()
             .query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, date, date, batch_size)
             .await
         {
@@ -51,3 +52,6 @@ async fn main() {
         }
     }
 }
+
+
+

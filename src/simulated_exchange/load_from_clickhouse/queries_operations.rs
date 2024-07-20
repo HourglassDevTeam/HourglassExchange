@@ -216,6 +216,7 @@ impl ClickHouseClient
     }
 
 
+
     pub async fn query_unioned_trade_table_batched_for_dates(
         self: Arc<Self>,
         exchange: &str,
@@ -251,7 +252,8 @@ impl ClickHouseClient
                     );
                     println!("[UnilinkExecution] : Executing query: {}", query);
 
-                    match client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await {
+                    let client = client.read().await;
+                    match client.query(&query).fetch_all::<ClickhouseTrade>().await {
                         Ok(trade_datas) => {
                             for trade_data in &trade_datas {
                                 let (base, quote) = parse_base_and_quote(&trade_data.basequote);
@@ -275,6 +277,7 @@ impl ClickHouseClient
                         }
                         Err(e) => {
                             eprintln!("Failed query: {}", e);
+                            eprintln!("Query: {}", query);
                             return;
                         }
                     }
