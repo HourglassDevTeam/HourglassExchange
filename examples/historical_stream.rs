@@ -8,10 +8,10 @@ use unilink_execution::{
     simulated_exchange::{account::account_market_feed::*, load_from_clickhouse::queries_operations::*},
 };
 
-// 使用 lazy_static 宏来创建一个全局静态变量 CLIENT
 lazy_static! {
     pub static ref CLIENT: Arc<ClickHouseClient> = Arc::new(ClickHouseClient::new());
 }
+
 #[tokio::main]
 async fn main()
 {
