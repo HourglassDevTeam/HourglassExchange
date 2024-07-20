@@ -38,7 +38,7 @@ async fn main()
 
         // 遍历事件并打印和发送
         for event in events {
-            println!("Event: {:?}", event);
+            println!("{:?}", event);
             if tx.send(event).is_err() {
                 eprintln!("Failed to send event");
                 break;
