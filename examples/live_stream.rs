@@ -25,7 +25,7 @@ async fn main() {
 
     let mut live_feed = LiveFeed::new(okx_feed);
 
-    while let Some(trade) = live_feed.recv_next().await {
+    while let Some(trade) = live_feed.recv().await {
         println!("MarketEvent<PublicTrade>: {trade:?}");
     }
 }

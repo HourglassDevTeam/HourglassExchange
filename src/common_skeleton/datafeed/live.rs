@@ -13,7 +13,7 @@ pub struct LiveFeed<Event>
 
 impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
 {
-    pub async fn recv_next(&mut self) -> Option<MarketEvent<Event>>
+    pub async fn recv(&mut self) -> Option<MarketEvent<Event>>
     {
         // 尝试从接收器中接收事件
         self.receiver.recv().await
