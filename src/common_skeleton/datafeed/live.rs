@@ -6,6 +6,7 @@ use tokio::sync::mpsc;
 use crate::common_skeleton::datafeed::event::MarketEvent;
 
 /// Live feed for events.
+#[allow(dead_code)]
 pub struct LiveFeed<Event>
 {
     pub(crate) receiver: UnboundedReceiver<MarketEvent<Event>>,
