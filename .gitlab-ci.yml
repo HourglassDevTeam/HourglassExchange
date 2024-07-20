@@ -87,7 +87,7 @@ mergeCode:
       fi
     
     ## Force push changes to gitee
-    ##
+    
     - git push -f gitee $PCF_DEPLOY_BRANCH 
 
   tags:
