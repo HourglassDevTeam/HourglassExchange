@@ -38,6 +38,8 @@ async fn main()
 
         // 将通道接收端添加到 AccountDataStreams
         account_streams.add_stream(format!("{}_{}_{}_{}", exchange, instrument, channel, date), rx);
+        println!("new stream has been added.");
+
     }
 
     // 示例：处理每个数据流中的事件
