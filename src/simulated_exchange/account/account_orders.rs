@@ -48,20 +48,18 @@ impl AccountOrders
     }
 
     /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
-    /// 并且新的总数被用作唯一的 [`OrderId`]。
+    /// 并且新的总数被用作[`OrderId`]。
     pub fn initiate_order_open(&mut self, request: Order<RequestOpen>) -> Order<Open>
     {
         self.increment_request_counter();
         Order::from((self.order_id(), request))
     }
 
-    /// 将 [`Order<RequestOpen>`] 计数器递增一以确保下一个生成的 [`OrderId`] 是唯一的。
     pub fn increment_request_counter(&self)
     {
         self.request_counter.fetch_add(1, Ordering::SeqCst);
     }
 
-    /// 生成一个唯一的 [`OrderId`]。
     pub fn order_id(&self) -> OrderId
     {
         OrderId(self.request_counter.load(Ordering::SeqCst).to_string())
