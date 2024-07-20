@@ -1,6 +1,7 @@
 // NOTE this module is previously built and imported into the main project as a dependency.
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
+use std::sync::Arc;
 use async_stream::stream;
 use chrono::{Duration, NaiveDate};
 pub use clickhouse::{
@@ -9,6 +10,8 @@ pub use clickhouse::{
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
+use tokio::sync::RwLock;
 
 use crate::{
     common_skeleton::datafeed::event::MarketEvent,
@@ -19,20 +22,21 @@ use crate::{
     ExchangeID,
 };
 
-pub struct ClickHouseClient
-{
-    pub client: Client,
-}
 
+pub struct ClickHouseClient {
+    pub client: Arc<RwLock<Client>>,
+}
 impl ClickHouseClient
 {
-    pub fn new() -> Self
-    {
-        let client = Client::default().with_url("http://localhost:8123").with_user("default").with_password("");
+    pub fn new() -> Self {
+        let client = Client::default()
+            .with_url("http://localhost:8123")
+            .with_user("default")
+            .with_password("");
 
         println!("[UnilinkExecution] : 连接到 ClickHouse 服务器成功。");
 
-        Self { client }
+        Self { client: Arc::new(RwLock::new(client)) }
     }
 }
 
@@ -106,7 +110,7 @@ impl ClickHouseClient
     {
         let table_names_query = format!("SHOW TABLES FROM {database}",);
         println!("{:?}", table_names_query);
-        let result = self.client.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
+        let result = self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
                                                                                           eprintln!("[UnilinkExecution] : Error loading table names: {:?}", e);
                                                                                           vec![]
                                                                                       });
@@ -141,7 +145,7 @@ impl ClickHouseClient
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp", full_table_path);
         println!("[UnilinkExecution] : 查询SQL语句 {}", query);
-        let trade_datas = self.client.query(&query).fetch_all::<ClickhouseTrade>().await?;
+        let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
@@ -153,17 +157,17 @@ impl ClickHouseClient
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
         println!("[UnilinkExecution] : 查询SQL语句 {}", query);
-        let trade_data = self.client.query(&query).fetch_one::<ClickhouseTrade>().await?;
+        let trade_data = self.client.read().await.query(&query).fetch_one::<ClickhouseTrade>().await?;
         Ok(WsTrade::from(trade_data))
     }
 
-    pub async fn query_unioned_trade_table(client: &ClickHouseClient, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<WsTrade>, Error>
+    pub async fn query_unioned_trade_table(&self, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<WsTrade>, Error>
     {
         let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
         let database = format!("{}_{}_{}", exchange, instrument, channel);
         let query = format!("SELECT * FROM {}.{}", database, table_name);
         println!("[UnilinkExecution] : Executing query: {}", query);
-        let trade_datas = client.client.query(&query).fetch_all::<ClickhouseTrade>().await?;
+        let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
@@ -188,7 +192,7 @@ impl ClickHouseClient
                 );
                 println!("[UnilinkExecution] : Executing query: {}", query);
 
-                match self.client.query(&query).fetch_all::<ClickhouseTrade>().await {
+                match self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await {
                     Ok(trade_datas) => {
                         for trade_data in &trade_datas {
                             let (base, quote) = parse_base_and_quote(&trade_data.basequote);
@@ -211,55 +215,75 @@ impl ClickHouseClient
         }
     }
 
-    pub async fn query_unioned_trade_table_batched_for_dates(&self,
-                                                             exchange: &str,
-                                                             instrument: &str,
-                                                             channel: &str,
-                                                             start_date: &str,
-                                                             end_date: &str,
-                                                             batch_size: usize)
-                                                             -> Vec<MarketEvent<ClickhouseTrade>>
-    {
-        let mut results = Vec::new();
-        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d").expect("Invalid start date format");
-        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d").expect("Invalid end date format");
+    pub async fn query_unioned_trade_table_batched_for_dates(
+        self: Arc<Self>,
+        exchange: &str,
+        instrument: &str,
+        channel: &str,
+        start_date: &str,
+        end_date: &str,
+        batch_size: usize,
+    ) -> Result<UnboundedReceiver<MarketEvent<ClickhouseTrade>>, String> {
+        let (tx, rx) = unbounded_channel();
+        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d")
+            .map_err(|e| format!("Invalid start date format: {}", e))?;
+        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d")
+            .map_err(|e| format!("Invalid end date format: {}", e))?;
         let mut current_date = start_date;
 
-        while current_date <= end_date {
-            let date = current_date.format("%Y_%m_%d").to_string();
-            let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
-            let database = format!("{}_{}_{}", exchange, instrument, channel);
-            let mut offset = 0;
+        let client = Arc::clone(&self.client);
+        let exchange = exchange.to_owned();
+        let instrument = instrument.to_owned();
+        let channel = channel.to_owned();
 
-            loop {
-                let query = format!("SELECT symbol, side, price, timestamp FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}",
-                                    database, table_name, batch_size, offset);
-                println!("[UnilinkExecution] : Executing query: {}", query);
+        tokio::spawn(async move {
+            while current_date <= end_date {
+                let date = current_date.format("%Y_%m_%d").to_string();
+                let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
+                let database = format!("{}_{}_{}", exchange, instrument, channel);
+                let mut offset = 0;
 
-                match self.client.query(&query).fetch_all::<ClickhouseTrade>().await {
-                    | Ok(trade_datas) => {
-                        for trade_data in &trade_datas {
-                            let (base, quote) = parse_base_and_quote(&trade_data.basequote);
-                            let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote, ExchangeID::from(exchange.to_string()));
-                            results.push(market_event);
+                loop {
+                    let query = format!(
+                        "SELECT symbol, side, price, timestamp FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}",
+                        database, table_name, batch_size, offset
+                    );
+                    println!("[UnilinkExecution] : Executing query: {}", query);
+
+                    let client = client.read().await;
+                    match client.query(&query).fetch_all::<ClickhouseTrade>().await {
+                        Ok(trade_datas) => {
+                            for trade_data in &trade_datas {
+                                let (base, quote) = parse_base_and_quote(&trade_data.basequote);
+                                let market_event = MarketEvent::from_swap_trade_clickhouse(
+                                    trade_data.clone(),
+                                    base,
+                                    quote,
+                                    ExchangeID::from(exchange.clone()),
+                                );
+                                if tx.send(market_event).is_err() {
+                                    eprintln!("Failed to send market event");
+                                    return;
+                                }
+                            }
+
+                            if trade_datas.len() < batch_size {
+                                break;
+                            }
+
+                            offset += batch_size;
                         }
-
-                        if trade_datas.len() < batch_size {
-                            break;
+                        Err(e) => {
+                            eprintln!("Failed query: {}", e);
+                            return;
                         }
-
-                        offset += batch_size;
-                    }
-                    | Err(e) => {
-                        eprintln!("Failed query: {}", e);
-                        break;
                     }
                 }
+
+                current_date += Duration::days(1);
             }
+        });
 
-            current_date += Duration::days(1);
-        }
-
-        results
+        Ok(rx)
     }
 }
