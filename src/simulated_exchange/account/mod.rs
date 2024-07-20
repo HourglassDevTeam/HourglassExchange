@@ -29,6 +29,7 @@ pub mod account_config;
 mod account_latency;
 pub mod account_market_feed;
 pub mod account_orders;
+pub mod slippage_registry;
 
 #[derive(Clone, Debug)]
 pub struct Account<Event>
