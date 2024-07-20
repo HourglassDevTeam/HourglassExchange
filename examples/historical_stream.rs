@@ -22,8 +22,8 @@ async fn main() {
     match client.client.read().await.query(test_query).fetch_all::<ClickhouseTrade>().await {
         Ok(trade_datas) => {
             println!("Query succeeded: fetched {} rows", trade_datas.len());
-            for trade_data in &trade_datas {
-                println!("Fetched data: {:?}", trade_data);
+            for _trade_data in &trade_datas {
+                continue
             }
         }
         Err(e) => {
