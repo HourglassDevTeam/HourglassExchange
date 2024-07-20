@@ -60,7 +60,8 @@ mergeCode:
     ##
     - git checkout -B $PCF_DEPLOY_BRANCH
     
-    
+    - git pull origin $PCF_DEPLOY_BRANCH
+
     - git pull gitee $PCF_DEPLOY_BRANCH
     
     ## Check if there are changes to push to origin
