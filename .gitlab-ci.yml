@@ -55,9 +55,19 @@ mergeCode:
     ## Debugging: Print the remotes again to ensure they are set correctly
     ##
     - git remote -v
+    - rm -fr ".git/rebase-merge"
     
     ##
-    ## Checkout and update branch
+    ## Clean up any existing conflicts
+    ##
+    - |
+      if [ -n "$(git ls-files -u)" ]; then
+        echo "Cleaning up existing conflicts..."
+        git reset --hard HEAD
+    - git clean -fd
+    
+    ##
+    ## Fetch and checkout the branch
     ##
     - git fetch origin
     - git fetch gitee
