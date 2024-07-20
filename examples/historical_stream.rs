@@ -16,22 +16,6 @@ lazy_static! {
 async fn main() {
     let client = Arc::new(ClickHouseClient::new());
 
-
-    // 测试查询
-    let test_query = "SELECT symbol, side, price, timestamp FROM binance_futures_trades.binance_futures_trades_union_2024_03_03 ORDER BY timestamp LIMIT 1000000 OFFSET 0";
-    match client.client.read().await.query(test_query).fetch_all::<ClickhouseTrade>().await {
-        Ok(trade_datas) => {
-            println!("Query succeeded: fetched {} rows", trade_datas.len());
-            for _trade_data in &trade_datas {
-                continue
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed test query: {}", e);
-            return;
-        }
-    }
-
     // 定义交易所、金融工具、频道和日期的字符串变量
     let stream_params = vec![("binance", "futures", "trades", "2024_03_03", 1000000)];
 
