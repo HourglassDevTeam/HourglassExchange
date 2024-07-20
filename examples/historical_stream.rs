@@ -36,7 +36,7 @@ async fn main() {
                 println!("Hooooray! New stream has been added.");
 
                 while let Some(event) = rx.recv().await {
-                    println!("Received event: {:?}", event);
+                    // println!("Received event: {:?}", event);
                     if tx.send(event).is_err() {
                         eprintln!("Failed to send event");
                         break;
