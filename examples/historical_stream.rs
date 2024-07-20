@@ -35,7 +35,6 @@ async fn main()
 
                 let stream_id = format!("{}_{}_{}", exchange, instrument, channel);
                 account_streams.add_stream(stream_id.clone(), rx_clone);
-                println!("Hooooray! New stream has been added.");
 
                 while let Some(event) = rx.recv().await {
                     println!("Received event: {:?}", event);  //打印开关
