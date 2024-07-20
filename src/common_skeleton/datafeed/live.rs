@@ -1,4 +1,4 @@
-// NOTE 先创建工作空间再启用这个模块。
+// NOTE 先创建Workspace再启用这个模块。
 // use std::fmt::Debug;
 //
 // use mpsc::UnboundedReceiver;
