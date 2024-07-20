@@ -46,12 +46,16 @@ impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync +
     }
 }
 
+
 // 为 AccountDataStreams 实现 Debug trait，方便调试。
 impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static + Ord
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
         // 打印 AccountDataStreams 的调试信息，包括流的标识符。
-        f.debug_struct("AccountDataStreams").field("streams", &self.streams.keys().collect::<Vec<_>>()).finish()
+        let stream_keys: Vec<_> = self.streams.keys().collect();
+        f.debug_struct("AccountDataStreams")
+            .field("streams", &stream_keys)
+            .finish()
     }
 }
