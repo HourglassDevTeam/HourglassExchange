@@ -36,19 +36,8 @@ impl<Event> Debug for AccountDataStreams<Event>
         f.debug_struct("AccountMarketStreams").field("streams", &self.streams.keys().collect::<Vec<_>>()).finish()
     }
 }
-impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
-{
-    // 添加一个新的方法用于添加WebSocket实时数据流
-    pub async fn add_websocket_stream<Exchange, Kind>(&mut self, id: StreamID, subscriptions: &[Subscription<Exchange, Kind>]) -> Result<(), SocketError>
-        where Exchange: Connector + Send + Sync,
-              Kind: SubKind + Send + Sync,
-              Subscription<Exchange, Kind>: Identifier<Exchange::Channel> + Identifier<Exchange::Market>
-    {
-        let stream = DataStreams::from_websocket::<Exchange, Kind>(subscriptions).await?;
-        self.add_stream(id, stream);
-        Ok(())
-    }
-}
+
+
 
 // NOTE this is foreign to this module
 #[derive(Debug)]
