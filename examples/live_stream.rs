@@ -22,6 +22,8 @@ async fn main() {
         .select(ExchangeId::Okx)
         .unwrap();
 
+    let live_feed = okx_feed.unwrap();
+
     while let Some(trade) = okx_feed.recv().await {
         println!("MarketEvent<PublicTrade>: {trade:?}");
     }
