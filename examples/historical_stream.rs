@@ -34,7 +34,7 @@ async fn main()
 
         // 创建一个 HistoricalFeed 实例
         let feed = HistoricalFeed { database_client: CLIENT.clone(), // 使用 to_owned 克隆 Arc<ClickHouseClient>
-                                    stream: Box::pin(stream) };
+                                    receiver: Box::pin(stream) };
 
         // 生成唯一的 stream_id 并将流添加到 account_streams 中
         let stream_id = format!("{}_{}_{}", exchange, instrument, channel);

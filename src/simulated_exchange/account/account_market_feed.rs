@@ -153,8 +153,8 @@ impl<Event> Stream for DataStream<Event> where Event: Clone + Send + Sync + Debu
     {
         // 根据数据流的类型，调用相应的poll_next方法。
         match self.get_mut() {
-            | Historical(feed) => Pin::new(&mut feed.stream).poll_next(cx),
-            | Live(feed) => Pin::new(&mut feed.stream).poll_next(cx),
+            | Historical(feed) => Pin::new(&mut feed.receiver).poll_recv(cx),
+            | Live(feed) => Pin::new(&mut feed.stream).poll_recv(cx),
         }
     }
 }
@@ -168,7 +168,7 @@ impl<Event> DataStream<Event>
     {
         match self {
             | Live(feed) => feed.stream,
-            | Historical(feed) => feed.stream,
+            | Historical(feed) => feed.receiver,
         }
     }
 }

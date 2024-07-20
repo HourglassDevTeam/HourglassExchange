@@ -25,7 +25,7 @@ async fn main()
         let stream = CLIENT.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, start_date, end_date, 1000000);
 
         let feed = HistoricalFeed { database_client: CLIENT.clone(),
-                                    stream: Box::pin(stream) };
+                                    receiver: Box::pin(stream) };
 
         let stream_id = format!("{}_{}_{}", exchange, instrument, channel);
         account_streams.add_stream(stream_id, DataStream::Historical(feed));

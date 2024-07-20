@@ -106,7 +106,6 @@ pub fn process_binary<ExchangeMessage>(payload: Vec<u8>) -> Option<Result<Exchan
                                                             }))
 }
 
-/// Basic process for a [`WebSocket`] ping message. Logs the payload at `trace` level.
 
 pub fn process_ping<ExchangeMessage>(ping: Vec<u8>) -> Option<Result<ExchangeMessage, SocketError>>
 {

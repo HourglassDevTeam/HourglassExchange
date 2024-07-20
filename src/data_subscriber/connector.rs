@@ -19,9 +19,8 @@ use crate::{
 #[derive(Debug)]
 pub struct PingInterval
 {
-    /// tokio 时间间隔
     pub interval: tokio::time::Interval,
-    /// 生成 Ping 消息的函数
+    /// 把 Ping 转化为消息的函数
     pub ping: fn() -> WsMessage,
 }
 
