@@ -3,13 +3,13 @@ use mpsc::UnboundedSender;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
-    common_skeleton::{
+    AccountEvent,
+    ClientExecution, common_skeleton::{
         balance::TokenBalance,
         instrument::Instrument,
         order::{Cancelled, Open, Order},
         trade::Trade,
-    },
-    AccountEvent, ClientExecution, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen,
+    }, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen,
 };
 
 #[derive(Clone, Debug)]
