@@ -25,6 +25,7 @@ mergeCode:
     ##
     - git config --global user.email "$PCF_COMMIT_USER_EMAIL"
     - git config --global user.name "$PCF_COMMIT_USER_NAME"
+    - git config pull.rebase false 
     
     ##
     ## Check if inside a git repository, if not, initialize one
@@ -52,18 +53,50 @@ mergeCode:
     
     ##
     ## Debugging: Print the remotes again to ensure they are set correctly
-
+    ##
     - git remote -v
+    - rm -fr ".git/rebase-merge"
     
     ##
-    ## Checkout and update branch
+    ## Clean up any existing conflicts
     ##
-    - git checkout -B $PCF_DEPLOY_BRANCH
+    - |
+      if [ -n "$(git ls-files -u)" ]; then
+        echo "Cleaning up existing conflicts..."
+        git reset --hard HEAD
+        git clean -fd
+      fi
     
-    - git pull origin $PCF_DEPLOY_BRANCH
+    ##
+    ## Fetch and checkout the branch
+    ##
+    - git fetch origin
+    - git fetch gitee
+    - git checkout -B $PCF_DEPLOY_BRANCH origin/$PCF_DEPLOY_BRANCH
+    
+    ##
+    ## Pull from origin and handle conflicts
+    ##
+    - git pull origin $PCF_DEPLOY_BRANCH || true
+    - |
+      if [ -n "$(git ls-files -u)" ]; then
+        git ls-files -u | cut -f 2 | sort -u | xargs git checkout --ours
+        git ls-files -u | cut -f 2 | sort -u | xargs git add
+        git commit -m "Resolved merge conflicts by choosing local changes from origin"
+      fi
 
-    - git pull gitee $PCF_DEPLOY_BRANCH
-    
+    ##
+    ## Pull from gitee and handle conflicts
+    ##
+    - git pull gitee $PCF_DEPLOY_BRANCH || true
+    - |
+      if [ -n "$(git ls-files -u)" ]; then
+        git ls-files -u | cut -f 2 | sort -u | xargs git checkout --ours
+        git ls-files -u | cut -f 2 | sort -u | xargs git add
+        git commit -m "Resolved merge conflicts by choosing local changes from gitee"
+      fi
+
+    ##
     ## Check if there are changes to push to origin
     ##
     - |
