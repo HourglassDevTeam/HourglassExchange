@@ -1,10 +1,6 @@
-use std::{
-    collections::HashMap,
-    fmt,
-    fmt::Debug
-
-    ,
-};
+use mpsc::UnboundedReceiver;
+use std::{collections::HashMap, fmt, fmt::Debug};
+use tokio::sync::mpsc;
 
 use crate::common_skeleton::{
     datafeed::{historical::HistoricalFeed, live::LiveFeed},
@@ -18,7 +14,7 @@ pub type StreamID = String;
 pub struct AccountDataStreams<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
 {
-    pub streams: HashMap<StreamID, DataReceiver<Event>>, // 使用HashMap存储数据流，键为StreamID
+    pub streams: HashMap<StreamID, UnboundedReceiver<Event>>, // 使用HashMap存储数据流，键为StreamID
 }
 
 // 为 AccountDataStreams 实现 Debug trait，方便调试。
@@ -31,7 +27,6 @@ impl<Event> Debug for AccountDataStreams<Event>
         f.debug_struct("AccountMarketStreams").field("streams", &self.streams.keys().collect::<Vec<_>>()).finish()
     }
 }
-
 
 // NOTE this is foreign to this module
 #[derive(Debug)]
@@ -52,9 +47,9 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
     }
 
     // 向AccountDataStreams中添加一个新的数据流。
-    pub fn add_stream(&mut self, id: StreamID, stream: DataReceiver<Event>)
+    pub fn add_stream(&mut self, id: StreamID, receiver: UnboundedReceiver<Event>)
     {
-        self.streams.insert(id, stream);
+        self.streams.insert(id, receiver);
     }
 
     // 从AccountDataStreams中移除一个数据流。
@@ -63,13 +58,3 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
         self.streams.remove(&id);
     }
 }
-
-// 定义一个枚举，表示数据流的类型，可以是实时数据流或历史数据流。
-pub enum DataReceiver<Event>
-    where Event: Clone + Send + Sync + Debug + 'static + Ord /* 约束Event类型必须满足Clone, Send, Sync, 'static特性 */
-{
-    Live(LiveFeed<Event>),             // 实时数据流
-    Historical(HistoricalFeed<Event>), // 历史数据流
-}
-
-
