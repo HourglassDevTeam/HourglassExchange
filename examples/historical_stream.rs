@@ -12,15 +12,27 @@ use unilink_execution::{
 lazy_static! {
     pub static ref CLIENT: Arc<ClickHouseClient> = Arc::new(ClickHouseClient::new());
 }
-
-
-
 #[tokio::main]
 async fn main() {
-    let client = CLIENT.clone();
+    let client = Arc::new(ClickHouseClient::new());
 
+
+    // 测试查询
+    let test_query = "SELECT symbol, side, price, timestamp FROM binance_futures_trades.binance_futures_trades_union_2024_03_03 ORDER BY timestamp LIMIT 1000000 OFFSET 0";
+    match client.client.read().await.query(test_query).fetch_all::<ClickhouseTrade>().await {
+        Ok(trade_datas) => {
+            println!("Query succeeded: fetched {} rows", trade_datas.len());
+        }
+        Err(e) => {
+            eprintln!("Failed test query: {}", e);
+            return;
+        }
+    }
+
+    // 定义交易所、金融工具、频道和日期的字符串变量
     let stream_params = vec![("binance", "futures", "trades", "2024_03_03", 1000000)];
 
+    // 创建 AccountMarketStreams 实例
     let mut account_streams: AccountDataStreams<MarketEvent<ClickhouseTrade>> = AccountDataStreams::new();
 
     for (exchange, instrument, channel, date, batch_size) in stream_params {
@@ -52,6 +64,3 @@ async fn main() {
         }
     }
 }
-
-
-
