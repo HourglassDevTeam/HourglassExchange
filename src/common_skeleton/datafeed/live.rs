@@ -23,7 +23,7 @@ pub struct LiveFeed<Event>
 
 impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
 {
-    pub fn poll_next(&mut self) -> Pin<&mut (dyn Stream<Item = Event> + Send)>
+    pub fn poll_next(&mut self) -> UnboundedReceiver<Event>
     {
         self.stream.as_mut()
     }

@@ -8,7 +8,6 @@ use std::{
 };
 
 use futures_core::Stream;
-use futures_util::{FutureExt, StreamExt};
 
 use crate::{
     common_skeleton::{
@@ -85,40 +84,6 @@ impl<Event> AccountDataStreams<Event> where Event: Clone + Send + Sync + Debug +
     pub fn remove_stream(&mut self, id: StreamID)
     {
         self.streams.remove(&id);
-    }
-
-    // 将多个数据流合并为一个数据流。
-    pub fn join(self) -> impl Stream<Item = Event>
-    {
-        let mut streams = self.streams.into_values().map(|s| s.into_stream().boxed()).collect::<Vec<_>>();
-        let mut heap = BinaryHeap::new();
-
-        // 初始化堆，将每个流的第一个事件放入堆中
-        for stream in &mut streams {
-            if let Some(event) = stream.next().now_or_never() {
-                heap.push(Reverse(event));
-            }
-        }
-
-        // 创建一个新的流，合并所有流的事件
-        futures_util::stream::unfold((heap, streams), |(mut heap, mut streams)| async move {
-            if let Some(Reverse(Some(event))) = heap.pop() {
-                let next_stream = streams.iter_mut().find_map(|stream| {
-                                                        let future = stream.next();
-                                                        match future.now_or_never() {
-                                                            | Some(event) => Some((event, stream)),
-                                                            | None => None,
-                                                        }
-                                                    });
-
-                if let Some((Some(new_event), _stream)) = next_stream {
-                    heap.push(Reverse(Some(new_event)));
-                }
-
-                return Some((event, (heap, streams)));
-            }
-            None
-        })
     }
 }
 
