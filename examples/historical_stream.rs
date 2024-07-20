@@ -30,7 +30,7 @@ async fn main()
                     .await
         {
             | Ok(mut rx) => {
-                // FIXME 注意这个channel在内部构建了 可能不是最好的解决方案。
+                // FIXME 注意这个 unbounded_channel 在循环内部构建了 可能不是最佳实践。
                 let (tx, rx_clone) = unbounded_channel::<MarketEvent<ClickhouseTrade>>();
 
                 let stream_id = format!("{}_{}_{}", exchange, instrument, channel);
