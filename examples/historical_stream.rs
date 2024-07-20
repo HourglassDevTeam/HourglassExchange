@@ -1,5 +1,4 @@
 use std::sync::Arc;
-
 use lazy_static::lazy_static;
 use tokio::sync::mpsc::unbounded_channel;
 
@@ -14,8 +13,7 @@ lazy_static! {
 }
 
 #[tokio::main]
-async fn main()
-{
+async fn main() {
     // 定义交易所、金融工具、频道和日期的字符串变量
     let stream_params = vec![("binance", "futures", "trades", "2024_03_03", 1000000)];
 
@@ -26,20 +24,26 @@ async fn main()
     for (exchange, instrument, channel, date, batch_size) in stream_params {
         // 调用 CLIENT 的 query_unioned_trade_table_batched_for_dates 方法获取数据流
         let events = CLIENT.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, date, date, batch_size)
-                           .await;
+            .await;
         println!("Query returned {} events", events.len());
+
         // 创建一个 MPSC 通道
-        let (tx, rx) = unbounded_channel();
+        let (tx, rx) = unbounded_channel::<MarketEvent<ClickhouseTrade>>();
+
+        // 将通道接收端添加到 AccountDataStreams
+        let stream_id = format!("{}_{}_{}_{}", exchange, instrument, channel, date);
+        account_streams.add_stream(stream_id.clone(), rx);
+
+        // 遍历事件并打印和发送
         for event in events {
-            if let Err(e) = tx.send(event) {
-                eprintln!("Failed to send event: {}", e);
+            println!("Event: {:?}", event);
+            if tx.send(event).is_err() {
+                eprintln!("Failed to send event");
+                break;
             }
         }
 
-        // 将通道接收端添加到 AccountDataStreams
-        account_streams.add_stream(format!("{}_{}_{}_{}", exchange, instrument, channel, date), rx);
         println!("new stream has been added.");
-
     }
 
     // 处理每个数据流中的事件
