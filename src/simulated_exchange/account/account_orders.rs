@@ -15,7 +15,7 @@ use crate::{
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct AccountOrders
 {
-    pub request_counter: AtomicU64, // 用来生成一个唯一的 [`OrderId`]。 NOTE：注意原子性
+    pub request_counter: AtomicU64, // 用来生成一个唯一的 [`OrderId`]。
     pub instrument_orders_map: HashMap<Instrument, InstrumentOrders>,
 }
 
