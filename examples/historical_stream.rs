@@ -37,7 +37,7 @@ async fn main()
                 account_streams.add_stream(stream_id.clone(), rx_clone);
 
                 while let Some(event) = rx.recv().await {
-                    // println!("Received event: {:?}", event);  //  NOTE 打印开关
+                    // println!("市场事件: {:?}", event);  //  NOTE 打印开关
                     if tx.send(event).is_err() {
                         eprintln!("Failed to send event");
                         break;
