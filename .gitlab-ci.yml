@@ -62,7 +62,17 @@ mergeCode:
     ##
     - git checkout -B $PCF_DEPLOY_BRANCH
     
-    - git pull origin $PCF_DEPLOY_BRANCH
+    - git pull origin $PCF_DEPLOY_BRANCH || true
+    
+    ##
+    ## Automatically resolve conflicts by choosing local changes
+    ##
+    - |
+      if [ -n "$(git ls-files -u)" ]; then
+        git ls-files -u | cut -f 2 | sort -u | xargs git checkout --ours
+        git ls-files -u | cut -f 2 | sort -u | xargs git add
+        git commit -m "Resolved merge conflicts by choosing local changes"
+      fi
 
     - git pull gitee $PCF_DEPLOY_BRANCH || true
     
@@ -72,7 +82,7 @@ mergeCode:
     - |
       if [ -n "$(git ls-files -u)" ]; then
         git ls-files -u | cut -f 2 | sort -u | xargs git checkout --ours
-        git add $(git ls-files -u | cut -f 2 | sort -u)
+        git ls-files -u | cut -f 2 | sort -u | xargs git add
         git commit -m "Resolved merge conflicts by choosing local changes"
       fi
 
@@ -87,7 +97,7 @@ mergeCode:
       fi
     
     ## Force push changes to gitee
-    
+    ##
     - git push -f gitee $PCF_DEPLOY_BRANCH 
 
   tags:
