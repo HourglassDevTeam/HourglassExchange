@@ -42,7 +42,7 @@ async fn main()
 
     }
 
-    // 示例：处理每个数据流中的事件
+    // 处理每个数据流中的事件
     let mut handles = vec![];
     for (stream_id, mut receiver) in account_streams.streams {
         let handle = tokio::spawn(async move {
