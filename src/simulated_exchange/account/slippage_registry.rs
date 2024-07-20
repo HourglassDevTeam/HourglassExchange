@@ -13,7 +13,7 @@ impl <Data>SlippageRegistry<Data> {
         }
     }
 
-    pub fn add_event(&mut self, event: MarketEvent<Data>) {
+    pub fn register_event(&mut self, event: MarketEvent<Data>) {
         self.events.push(event);
     }
 }
@@ -25,7 +25,7 @@ trait PendingWithSlippageRegistry<Data> {
     fn get_slippage_registry(&self) -> &SlippageRegistry<Data>;
 }
 
-// 为包含 slippage_registry 字段的 PendingWithRegistry 结构体实现特征
+/// 为包含 [slippage_registry] 字段的 [PendingWithRegistry] 结构体实现特征
 impl <Data>PendingWithSlippageRegistry<Data>for PendingWithRegistry<Data> {
     fn new() -> Self {
         PendingWithRegistry {
