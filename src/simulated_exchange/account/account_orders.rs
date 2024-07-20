@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::{Deserialize, Serialize};
 
@@ -11,20 +12,25 @@ use crate::{
     simulated_exchange::instrument_orders::InstrumentOrders,
 };
 
-#[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct AccountOrders
 {
-    pub request_counter: u64, // 用来生成一个唯一的 [`OrderId`]。 NOTE：注意原子性
+    pub request_counter: AtomicU64, // 用来生成一个唯一的 [`OrderId`]。 NOTE：注意原子性
     pub instrument_orders_map: HashMap<Instrument, InstrumentOrders>,
 }
+
+
+/// NOTE SeqCst 是 Rust 中的一个内存排序选项，代表“顺序一致性”（Sequential Consistency）。
+///     这是在使用原子操作（例如原子计数器、原子指针）时用于指定操作之间的内存顺序的一种模式。
+///     SeqCst 是最强的内存排序，它保证了所有线程看到的操作顺序是一致的，即所有线程按照相同的顺序看到内存操作。
 impl AccountOrders
 {
     /// 从提供的 [`Instrument`] 选择构造一个新的 [`AccountOrders`]。
     /// NOTE 在新的场景下怎么初始化比较好？
     pub fn new(instruments: Vec<Instrument>) -> Self
     {
-        Self { request_counter: 0,
-               instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect() }
+        Self { request_counter: AtomicU64::new(0),
+            instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect() }
     }
 
     /// 返回指定 [`Instrument`] 的客户端 [`InstrumentOrders`] 的可变引用。
@@ -50,14 +56,14 @@ impl AccountOrders
     }
 
     /// 将 [`Order<RequestOpen>`] 计数器递增一以确保下一个生成的 [`OrderId`] 是唯一的。
-    pub fn increment_request_counter(&mut self)
+    pub fn increment_request_counter(&self)
     {
-        self.request_counter += 1;
+        self.request_counter.fetch_add(1, Ordering::SeqCst);
     }
 
     /// 生成一个唯一的 [`OrderId`]。
     pub fn order_id(&self) -> OrderId
     {
-        OrderId(self.request_counter.to_string())
+        OrderId(self.request_counter.load(Ordering::SeqCst).to_string())
     }
 }
