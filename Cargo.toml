@@ -7,6 +7,8 @@ edition = "2021"
 
 # API
 cerebro-data = {path = "../cerebro-data"}
+cerebro-integration = {path = "../cerebro-integration"}
+
 # Logging 日志
 tracing = "0.1.36" # 高性能事件记录库，用于结构化日志和分布式跟踪
 
@@ -48,4 +50,5 @@ serde_json = "1.0.120"
 tokio-tungstenite = "0.21.0"
 reqwest = "0.12.4"
 url = "2.5.2"
-tokio-stream = "0.1.15" # 用于处理Pin的实用工具库
+tokio-stream = "0.1.15"
+tracing-subscriber = "0.3.18" # 用于处理Pin的实用工具库
