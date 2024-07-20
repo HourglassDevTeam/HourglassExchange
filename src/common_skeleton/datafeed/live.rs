@@ -2,9 +2,7 @@ use std::fmt::Debug;
 
 use mpsc::UnboundedReceiver;
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::UnboundedSender;
-
-use crate::common_skeleton::datafeed::event::MarketEvent;
+use cerebro_data::event::MarketEvent;
 
 /// Live feed for events.
 #[allow(dead_code)]
@@ -15,19 +13,18 @@ pub struct LiveFeed<Event>
 
 impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
 {
-    pub fn recv_next(&mut self) -> Option<MarketEvent<Event>>
+    pub async fn recv_next(&mut self) -> Option<MarketEvent<Event>>
     {
         // 尝试从接收器中接收事件
-        self.receiver.try_recv().ok()
+        self.receiver.recv().await
     }
 }
 
 
 impl<Event> LiveFeed<Event> {
-    /// Creates a new `LiveFeed`.
-    pub fn new(sender: UnboundedSender<MarketEvent<Event>>) -> Self {
+    pub fn new(receiver: UnboundedReceiver<MarketEvent<Event>>) -> Self {
         LiveFeed {
-            receiver: mpsc::unbounded_channel().1,
+            receiver,
         }
     }
 }

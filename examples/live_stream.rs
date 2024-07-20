@@ -6,6 +6,7 @@ use cerebro_data::{
 };
 use cerebro_data::exchange::ExchangeId;
 use cerebro_integration::model::instrument::kind::InstrumentKind;
+use unilink_execution::common_skeleton::datafeed::live::LiveFeed;
 
 #[tokio::main]
 async fn main() {
@@ -18,13 +19,13 @@ async fn main() {
         .await
         .unwrap();
 
-    let mut okx_feed = streams
+    let okx_feed = streams
         .select(ExchangeId::Okx)
         .unwrap();
 
-    let live_feed = okx_feed.unwrap();
+    let mut live_feed = LiveFeed::new(okx_feed);
 
-    while let Some(trade) = okx_feed.recv().await {
+    while let Some(trade) = live_feed.recv_next().await {
         println!("MarketEvent<PublicTrade>: {trade:?}");
     }
 }
