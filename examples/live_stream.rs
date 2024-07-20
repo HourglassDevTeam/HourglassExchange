@@ -1,4 +1,6 @@
 // 引入所需的模块
+// NOTE currently lacking underlying support for Okx Orderbooks from cerebro_data
+// NOTE currently lacking proxies for Binance from cerebro_data
 use cerebro_data::{
     exchange::okx::Okx,
     streams::Streams,
