@@ -31,7 +31,7 @@ async fn main()
         // 创建一个 MPSC 通道
         let (tx, rx) = unbounded_channel();
         for event in events {
-            if let Err(e) = tx.send(event).await {
+            if let Err(e) = tx.send(event) {
                 eprintln!("Failed to send event: {}", e);
             }
         }
