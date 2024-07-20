@@ -38,7 +38,6 @@ impl<Event> Debug for AccountDataStreams<Event>
 }
 
 
-
 // NOTE this is foreign to this module
 #[derive(Debug)]
 pub struct Subscription<Exchange, Kind>
