@@ -54,7 +54,6 @@ impl<S> From<S> for SubscriptionId where S: Into<String>
 pub struct SubscriptionMeta
 {
     pub instrument_map: SubscriptionMap<Instrument>,
-    /// 存储 WebSocket 消息的向量。
     pub subscriptions: Vec<WsMessage>,
 }
 
