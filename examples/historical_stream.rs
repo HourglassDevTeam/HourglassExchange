@@ -18,15 +18,6 @@ lazy_static! {
 async fn main() {
     let client = Arc::new(ClickHouseClient::new());
 
-    // 测试连接
-    match client.client.read().await.ping().await {
-        Ok(_) => println!("Connected to ClickHouse!"),
-        Err(e) => {
-            eprintln!("Failed to connect to ClickHouse: {}", e);
-            return;
-        }
-    }
-
     let stream_params = vec![("binance", "futures", "trades", "2024_03_03", 1000000)];
 
     let mut account_streams: AccountDataStreams<MarketEvent<ClickhouseTrade>> = AccountDataStreams::new();
