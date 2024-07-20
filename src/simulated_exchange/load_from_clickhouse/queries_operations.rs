@@ -216,7 +216,6 @@ impl ClickHouseClient
     }
 
 
-
     pub async fn query_unioned_trade_table_batched_for_dates(
         self: Arc<Self>,
         exchange: &str,
@@ -263,6 +262,7 @@ impl ClickHouseClient
                                     quote,
                                     ExchangeID::from(exchange.clone()),
                                 );
+                                println!("Sending event: {:?}", market_event);
                                 if tx.send(market_event).is_err() {
                                     eprintln!("Failed to send market event");
                                     return;
@@ -289,4 +289,5 @@ impl ClickHouseClient
 
         Ok(rx)
     }
+
 }
