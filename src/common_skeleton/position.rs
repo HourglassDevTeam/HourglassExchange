@@ -3,6 +3,7 @@
 
 use cerebro_integration::model::Exchange;
 use serde::{Deserialize, Serialize};
+use crate::common_skeleton::balance::{Balance, TokenBalance};
 
 use crate::common_skeleton::friction::Fees;
 use crate::common_skeleton::instrument::Instrument;
@@ -76,7 +77,7 @@ pub struct PositionMeta {
     pub position_id: String,
     pub enter_ts: i64,
     pub update_ts: i64,
-    // pub exit_balance: Balance, NOTE necessary but unsure currently
+    pub exit_balance: TokenBalance, //NOTE necessary but unsure currently
     pub account_exchange_ts: i64,
     pub exchange: Exchange,
     pub instrument: Instrument,
