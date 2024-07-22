@@ -1,6 +1,10 @@
 // FIXME : code below needs to be restructured and fitted to the framework. need to provide enums?
 // CONSIDER: can these positions coexist, if so enums might not be ideal.
 
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use crate::common_skeleton::balance::Balance;
+
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct AccountPositions
@@ -55,6 +59,20 @@ pub enum Position
     // Option(OptionPosition),
 }
 
+
+/// 包含与进入、更新和退出 [`Position`] 相关的跟踪UUID和时间戳的元数据。
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
+pub struct PositionMeta
+{
+    /// 触发进入此 [`Position`] 的 [`FillEvent`] 时间戳。
+    pub enter_time: DateTime<Utc>,
+    /// 最后一个触发 [`Position`] 状态变化（进入、更新、退出）的事件的时间戳。
+    pub update_time: DateTime<Utc>,
+    /// 在退出 [`Position`] 时计算的投资组合 [`Balance`]。
+    pub exit_balance: Option<Balance>,
+}
+
+
 // NOTE 此处为一个尽量详细的元Position案例
 // #[derive(Debug, Default, Clone)]
 // pub struct MetaPosition{
@@ -67,7 +85,7 @@ pub enum Position
 //     // 交易工具，Option类型，表示头寸相关的交易工具或资产
 //     pub instrument: Option<Instrument>,
 //     // 头寸元数据，Option类型，包含头寸的额外信息
-//     pub meta: Option<PositionMeta>, NOTE Cross comparison is due
+//     pub meta: Option<PositionMeta>, NOTE Cross comparison is due here.
 //     // 交易方向，Option类型，可以是多头(buy)或空头(sell)
 //     pub side: Option<Side>,
 //     // 头寸数量，Option类型，表示持有的资产数量
