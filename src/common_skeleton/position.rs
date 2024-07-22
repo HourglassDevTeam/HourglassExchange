@@ -12,7 +12,7 @@ use crate::common_skeleton::Side;
 #[derive(Clone, Debug)]
 pub struct AccountPositions
 {
-    margin_pos: Option<Vec<MarginPosition>>, // useless in backtest NOTE what exactly is this
+    margin_pos: Option<Vec<MarginPosition>>, // NOTE useless in backtest
     perpetual_pos: Option<Vec<PerpetualPosition>>,
     futures_pos: Option<Vec<FuturesPosition>>,
     option_pos: Option<Vec<OptionPosition>>,
@@ -71,9 +71,6 @@ pub struct PerpetualPosition {
     pub funding_fee: f64,
 }
 
-
-
-// NOTE 此处为一个尽量详细的Position案例
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionMeta {
     pub position_id: String,
