@@ -53,8 +53,8 @@ pub enum PositionMarginMode
 #[derive(Clone, Debug)]
 pub enum Position
 {
-    Swap(PerpetualPosition),
-    Margin(MarginPosition),
+    Perpetual(PerpetualPosition),
+    // Margin(MarginPosition),
     // Futures(FuturesPosition),
     // Option(OptionPosition),
 }
