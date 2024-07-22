@@ -72,11 +72,10 @@ pub struct PerpetualPosition
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Position {
     pub position_id: String,
-    pub enter_time: i64,
-    pub update_time: i64,
+    pub enter_ts: i64,
+    pub update_ts: i64,
     pub exit_balance: Balance,
-    // 交易所时间，使用DateTime<Utc>类型，表示与交易所同步的UTC时间
-    pub exchange_time: i64,
+    pub current_exchange_ts: i64,
     pub exchange: Exchange,
     pub instrument: Instrument,
     pub side: Side,
@@ -91,6 +90,6 @@ pub struct Position {
     pub exit_value_gross: f64,
     pub current_symbol_price: f64,
     pub current_value_gross: f64,
-    pub unrealised_profit_loss: f64,
-    pub realised_profit_loss: f64,
+    pub unrealised_pnl: f64,
+    pub realised_pnl: f64,
 }
