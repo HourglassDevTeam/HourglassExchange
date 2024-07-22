@@ -99,7 +99,7 @@ pub struct Open
     pub price: f64,
     pub size: f64,
     pub filled_quantity: f64,
-    // or [remaining_size]  , essentially the same.
+    // NOTE or [remaining_size]  , essentially the same.
 }
 
 impl Open
