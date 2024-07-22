@@ -28,14 +28,14 @@ pub struct OptionPosition {}
 
 
 #[allow(dead_code)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PerpetualPositionConfig
 {
     pos_margin_mode: PositionMarginMode,
     leverage: f64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum PositionMarginMode
 {
     Cross,
@@ -44,7 +44,7 @@ pub enum PositionMarginMode
 
 // NOTE 如果确实需要多种头寸类型共存，可以考虑如下设计：
 #[allow(dead_code)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum PositionKind
 {
     Perpetual(PerpetualPosition),
@@ -78,12 +78,12 @@ pub struct PositionMeta {
     pub quantity: f64,
     pub enter_fees: Fees,
     pub enter_fees_total: Fees,
-    pub enter_avg_price_gross: f64,
-    pub enter_value_gross: f64,
+    pub enter_avg_price_gross: f64,  // 开仓平均价格
+    pub enter_value_gross: f64,  // 开仓平均价格
     pub exit_fees: Fees,
     pub exit_fees_total: Fees,
-    pub exit_avg_price_gross: f64,
-    pub exit_value_gross: f64,
+    pub exit_avg_price_gross: f64, // 平仓平均价格
+    pub exit_value_gross: f64, // 平仓总价值
     pub current_symbol_price: f64,
     pub current_value_gross: f64,
     pub unrealised_pnl: f64,
