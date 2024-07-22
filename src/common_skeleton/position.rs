@@ -4,7 +4,6 @@
 use cerebro_integration::model::Exchange;
 use serde::{Deserialize, Serialize};
 
-use crate::common_skeleton::balance::Balance;
 use crate::common_skeleton::friction::Fees;
 use crate::common_skeleton::instrument::Instrument;
 use crate::common_skeleton::Side;
@@ -14,7 +13,7 @@ use crate::common_skeleton::Side;
 pub struct AccountPositions
 {
     margin_pos: Option<Vec<MarginPosition>>, // useless in backtest NOTE what exactly is this
-    swap_pos: Option<Vec<PerpetualPosition>>,
+    perpetual_pos: Option<Vec<PerpetualPosition>>,
     futures_pos: Option<Vec<FuturesPosition>>,
     option_pos: Option<Vec<OptionPosition>>,
 }
@@ -51,7 +50,7 @@ pub enum DirectionMode
     Double,
 }
 
-// NOTE 如果确实需要多种头寸类型共存，可以考虑如下设计：
+// NOTE 可能需要多种头寸类型共存
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum PositionKind
@@ -69,7 +68,6 @@ pub struct PerpetualPosition {
     pub pos_config: PerpetualPositionConfig,
     pub liquidation_price: f64,
     pub margin: f64,
-    pub current_accumulative_fees: f64,
     pub funding_fee: f64,
 }
 
