@@ -71,7 +71,7 @@ pub struct PositionMeta
 
 // NOTE 此处为一个尽量详细的Position案例
 // #[derive(Debug, Default, Clone)]
-// pub struct MetaPosition{
+// pub struct Position{
 //     // 交易所时间，使用DateTime<Utc>类型，表示与交易所同步的UTC时间
 //     pub exchange_time: DateTime<Utc>,
 //     // 头寸ID，Option类型，表示可能不存在头寸ID的情况
