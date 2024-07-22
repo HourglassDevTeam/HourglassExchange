@@ -110,9 +110,9 @@ impl Open
     }
 }
 
-/// 完全成交状态的订单, FullFill 以后在account层面AccountOrders删除对应open订单
+/// 完全成交状态的订单, FullFill 以后在account层面 [AccountOrders] 删除对应open订单
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
-pub struct FullyFilled
+pub struct FullyFill
 {
     pub id: OrderId,
     pub price: f64,
@@ -122,7 +122,7 @@ pub struct FullyFilled
 
 /// 完全成交状态的订单
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
-pub struct PartialFilled
+pub struct PartialFill
 {
     pub id: OrderId,
     pub price: f64,
