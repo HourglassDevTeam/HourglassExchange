@@ -10,7 +10,7 @@ use crate::common_skeleton::balance::Balance;
 pub struct AccountPositions
 {
     margin_pos: Vec<MarginPosition>, // useless in backtest NOTE what exactly is this
-    swap_pos: Vec<SwapPosition>,
+    swap_pos: Vec<PerpetualPosition>,
     // Note useful, and we're gonna build it
     // futures_pos: Vec<FuturesPosition>,
     // option_pos: Vec<OptionPosition>,
@@ -20,7 +20,7 @@ pub struct AccountPositions
 pub struct MarginPosition {}
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
-pub struct SwapPosition
+pub struct PerpetualPosition
 {
     token: String,                  // token字段，用于存储某种代币的名称，类型为String
     pos_config: SwapPositionConfig, // pos_config字段，用于存储与SwapPosition相关的配置，SwapPositionConfig类型
@@ -53,7 +53,7 @@ pub enum PositionMarginMode
 #[derive(Clone, Debug)]
 pub enum Position
 {
-    Swap(SwapPosition),
+    Swap(PerpetualPosition),
     Margin(MarginPosition),
     // Futures(FuturesPosition),
     // Option(OptionPosition),
