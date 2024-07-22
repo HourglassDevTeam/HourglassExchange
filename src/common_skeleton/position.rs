@@ -33,6 +33,7 @@ pub struct PerpetualPositionConfig
 {
     pos_margin_mode: PositionMarginMode,
     leverage: f64,
+    direction_mode:DirectionMode,
 
 }
 
@@ -41,6 +42,13 @@ pub enum PositionMarginMode
 {
     Cross,
     Isolated,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum DirectionMode
+{
+    Oneway,
+    Double,
 }
 
 // NOTE 如果确实需要多种头寸类型共存，可以考虑如下设计：
