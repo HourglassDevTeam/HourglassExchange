@@ -1,5 +1,7 @@
-use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -25,7 +27,7 @@ impl AccountOrders
     pub fn new(instruments: Vec<Instrument>) -> Self
     {
         Self { request_counter: AtomicU64::new(0),
-            instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect() }
+               instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect() }
     }
 
     /// 返回指定 [`Instrument`] 的客户端 [`InstrumentOrders`] 的可变引用。
@@ -39,7 +41,12 @@ impl AccountOrders
     /// 为每个 [`Instrument`] 获取出价和要价 [`Order<Open>`]。
     pub fn fetch_all(&self) -> Vec<Order<Open>>
     {
-        self.instrument_orders_map.values().flat_map(|market| [&market.bids, &market.asks]).flatten().cloned().collect()
+        self.instrument_orders_map
+            .values()
+            .flat_map(|market| [&market.bids, &market.asks])
+            .flatten()
+            .cloned()
+            .collect()
     }
 
     /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
@@ -54,6 +61,7 @@ impl AccountOrders
     {
         self.request_counter.fetch_add(1, Ordering::Relaxed);
     }
+
     // 在 order_id 方法中，使用 Ordering::Acquire 确保读取到最新的计数器值。
     pub fn order_id(&self) -> OrderId
     {

@@ -39,13 +39,12 @@ impl Display for OrderKind
     }
 }
 
-/// 订单结构体，注意State在这里是泛型
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
     pub exchange: ExchangeID,   // 交易所
     pub instrument: Instrument, // 交易工具
-    // Consider : 需要记录 OrderId 吗 ????
+    pub client_ts: i64,
     pub cid: ClientOrderId, // 客户端订单ID
     pub side: Side,         // 买卖方向
     pub state: State,       // 订单状态
@@ -187,6 +186,7 @@ impl From<&Order<RequestOpen>> for Order<RealPending>
         Self { exchange: request.exchange.clone(),
                instrument: request.instrument.clone(),
                cid: request.cid,
+               client_ts: request.client_ts,
                side: request.side,
                state: RealPending }
     }
@@ -199,6 +199,7 @@ impl From<(OrderId, Order<RequestOpen>)> for Order<Open>
         Self { exchange: request.exchange.clone(),
                instrument: request.instrument.clone(),
                cid: request.cid,
+            client_ts:request.client_ts,
                side: request.side,
                state: Open { id,
                              price: request.state.price,
@@ -214,6 +215,7 @@ impl From<Order<Open>> for Order<Cancelled>
         Self { exchange: order.exchange.clone(),
                instrument: order.instrument.clone(),
                cid: order.cid,
+               client_ts: order.client_ts,
                side: order.side,
                state: Cancelled { id: order.state.id } }
     }
