@@ -1,11 +1,8 @@
 // FIXME : code below needs to be restructured and fitted to the framework. need to provide enums?
 // CONSIDER: can these positions coexist, if so enums might not be ideal.
 
-use std::sync::atomic::AtomicI64;
-
 use cerebro_integration::model::Exchange;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::common_skeleton::balance::Balance;
 use crate::common_skeleton::friction::Fees;
