@@ -8,7 +8,7 @@ pub struct AccountPositions
     margin_pos: Vec<MarginPosition>, // useless in backtest
     swap_pos: Vec<SwapPosition>,
     // Note useful, and we're gonna build it
-    // futures_pos: Vec<MarginPosition>,
+    // futures_pos: Vec<FuturesPosition>,
     // option_pos: Vec<OptionPosition>,
 }
 
@@ -50,8 +50,7 @@ pub enum PositionMarginMode
 pub enum Position
 {
     Swap(SwapPosition),
-    // 如果未来需要添加其他类型，可以取消注释以下行：
-    // Margin(MarginPosition),
+    Margin(MarginPosition),
     // Futures(FuturesPosition),
     // Option(OptionPosition),
 }
