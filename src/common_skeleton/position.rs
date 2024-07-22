@@ -64,11 +64,8 @@ pub enum Position
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionMeta
 {
-    /// 触发进入此 [`Position`] 的 [`FillEvent`] 时间戳。
-    pub enter_time: DateTime<Utc>,
-    /// 最后一个触发 [`Position`] 状态变化（进入、更新、退出）的事件的时间戳。
-    pub update_time: DateTime<Utc>,
-    /// 在退出 [`Position`] 时计算的投资组合 [`Balance`]。
+    pub enter_time: i64,
+    pub update_time: i64,
     pub exit_balance: Option<Balance>,
 }
 
