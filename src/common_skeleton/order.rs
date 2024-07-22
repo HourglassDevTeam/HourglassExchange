@@ -99,7 +99,6 @@ pub struct Open
     pub price: f64,
     pub size: f64,
     pub filled_quantity: f64,
-    // or remain
     // or remaining size  , essentially the same.
 }
 
