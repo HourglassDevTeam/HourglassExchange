@@ -60,7 +60,7 @@ pub struct PerpetualPosition {
     pub pos_config: PerpetualPositionConfig,
     pub liquidation_price: f64,
     pub margin: f64,
-    pub fee: f64,
+    pub current_accumulative_fees: f64,
     pub funding_fee: f64,
 }
 
