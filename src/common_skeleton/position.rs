@@ -9,14 +9,19 @@ use crate::common_skeleton::balance::Balance;
 #[derive(Clone, Debug)]
 pub struct AccountPositions
 {
-    margin_pos: Vec<MarginPosition>, // useless in backtest NOTE what exactly is this
-    swap_pos: Vec<PerpetualPosition>,
-    // futures_pos: Vec<FuturesPosition>,
-    // option_pos: Vec<OptionPosition>,
+    margin_pos: Option<Vec<MarginPosition>>, // useless in backtest NOTE what exactly is this
+    swap_pos: Option<Vec<PerpetualPosition>>,
+    futures_pos: Option<Vec<FuturesPosition>>,
+    option_pos: Option<Vec<OptionPosition>>,
 }
 
 #[derive(Clone, Debug)]
 pub struct MarginPosition {}
+#[derive(Clone, Debug)]
+pub struct FuturesPosition {}
+#[derive(Clone, Debug)]
+pub struct OptionPosition {}
+
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct PerpetualPosition
