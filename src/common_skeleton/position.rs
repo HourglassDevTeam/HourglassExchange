@@ -1,9 +1,16 @@
 // FIXME : code below needs to be restructured and fitted to the framework. need to provide enums?
 // CONSIDER: can these positions coexist, if so enums might not be ideal.
 
-use chrono::{DateTime, Utc};
+use std::sync::atomic::AtomicI64;
+
+use cerebro_integration::model::Exchange;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
 use crate::common_skeleton::balance::Balance;
+use crate::common_skeleton::friction::Fees;
+use crate::common_skeleton::instrument::Instrument;
+use crate::common_skeleton::Side;
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
@@ -64,38 +71,29 @@ pub enum PositionKind
 }
 
 
-/// 包含与进入、更新和退出 [`PositionKind`] 相关的跟踪UUID和时间戳的元数据。
-#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct PositionMeta
-{
+// NOTE 此处为一个尽量详细的Position案例
+#[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
+pub struct Position {
+    pub position_id: Uuid,
     pub enter_time: i64,
     pub update_time: i64,
-    pub exit_balance: Option<Balance>,
+    pub exit_balance: Balance,
+    // 交易所时间，使用DateTime<Utc>类型，表示与交易所同步的UTC时间
+    pub exchange_time: i64,
+    pub exchange: Exchange,
+    pub instrument: Instrument,
+    pub side: Side,
+    pub quantity: f64,
+    pub enter_fees: Fees,
+    pub enter_fees_total: Fees,
+    pub enter_avg_price_gross: f64,
+    pub enter_value_gross: f64,
+    pub exit_fees: Fees,
+    pub exit_fees_total: Fees,
+    pub exit_avg_price_gross: f64,
+    pub exit_value_gross: f64,
+    pub current_symbol_price: f64,
+    pub current_value_gross: f64,
+    pub unrealised_profit_loss: f64,
+    pub realised_profit_loss: f64,
 }
-
-
-// NOTE 此处为一个尽量详细的Position案例
-// #[derive(Debug, Default, Clone)]
-// pub struct Position{
-//     // 交易所时间，使用DateTime<Utc>类型，表示与交易所同步的UTC时间
-//     pub exchange_time: DateTime<Utc>,
-//     // 头寸ID，Option类型，表示可能不存在头寸ID的情况
-//     pub position_id: Option<PositionID>,
-//     pub exchange: Option<Exchange>,
-//     pub instrument: Option<Instrument>,
-//     pub meta: Option<PositionMeta>, NOTE Cross comparison is due here.
-//     pub side: Option<Side>,
-//     pub quantity: Option<f64>,
-//     pub enter_fees: Option<CryptoFriction>,
-//     pub enter_fees_total: Option<Fees>,
-//     pub enter_avg_price_gross: Option<f64>,
-//     pub enter_value_gross: Option<f64>,
-//     pub exit_fees: Option<CryptoFriction>,
-//     pub exit_fees_total: Option<Fees>,
-//     pub exit_avg_price_gross: Option<f64>,
-//     pub exit_value_gross: Option<f64>,
-//     pub current_symbol_price: Option<f64>,
-//     pub current_value_gross: Option<f64>,
-//     pub unrealised_profit_loss: Option<f64>,
-//     pub realised_profit_loss: Option<f64>,
-// }
