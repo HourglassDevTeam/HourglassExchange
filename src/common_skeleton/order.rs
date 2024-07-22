@@ -110,7 +110,7 @@ impl Open
     }
 }
 
-/// 完全成交状态的订单
+/// 完全成交状态的订单,fullfill以后在account层面AccountOrders删除对应open订单
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct FullyFilled
 {
