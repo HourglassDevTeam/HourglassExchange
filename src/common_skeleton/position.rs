@@ -33,6 +33,7 @@ pub struct PerpetualPositionConfig
 {
     pos_margin_mode: PositionMarginMode,
     leverage: f64,
+
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -64,28 +65,24 @@ pub struct PerpetualPosition {
     pub funding_fee: f64,
 }
 
+
+
 // NOTE 此处为一个尽量详细的Position案例
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionMeta {
     pub position_id: String,
     pub enter_ts: i64,
     pub update_ts: i64,
-    pub exit_balance: Balance,
-    pub current_exchange_ts: i64,
+    // pub exit_balance: Balance, NOTE unsure
+    pub account_exchange_ts: i64,
     pub exchange: Exchange,
     pub instrument: Instrument,
     pub side: Side,
-    pub quantity: f64,
-    pub enter_fees: Fees,
-    pub enter_fees_total: Fees,
-    pub enter_avg_price_gross: f64,  // 开仓平均价格
-    pub enter_value_gross: f64,  // 开仓平均价格
-    pub exit_fees: Fees,
-    pub exit_fees_total: Fees,
-    pub exit_avg_price_gross: f64, // 平仓平均价格
-    pub exit_value_gross: f64, // 平仓总价值
+    pub current_size: f64,
+    pub current_fees_total: Fees,
+    pub current_avg_price_gross: f64,  // 开仓平均价格
     pub current_symbol_price: f64,
-    pub current_value_gross: f64,
+    pub current_avg_price:f64,
     pub unrealised_pnl: f64,
     pub realised_pnl: f64,
 }
