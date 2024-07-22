@@ -120,7 +120,7 @@ pub struct FullyFill
 }
 
 
-/// 完全成交状态的订单
+/// 完全成交状态的订单,FullFill 以后在account层面 [AccountOrders] 仍然保留open订单
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct PartialFill
 {
