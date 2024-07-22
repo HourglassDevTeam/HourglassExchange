@@ -67,7 +67,7 @@ pub enum Position
 //     // 交易工具，Option类型，表示头寸相关的交易工具或资产
 //     pub instrument: Option<Instrument>,
 //     // 头寸元数据，Option类型，包含头寸的额外信息
-//     pub meta: Option<PositionMeta>,
+//     pub meta: Option<PositionMeta>, NOTE Cross comparison is due
 //     // 交易方向，Option类型，可以是多头(buy)或空头(sell)
 //     pub side: Option<Side>,
 //     // 头寸数量，Option类型，表示持有的资产数量
