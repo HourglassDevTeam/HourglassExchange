@@ -81,14 +81,14 @@ pub struct PositionMeta {
     pub position_id: String,
     pub enter_ts: i64,
     pub update_ts: i64,
-    // pub exit_balance: Balance, NOTE unsure
+    // pub exit_balance: Balance, NOTE necessary but unsure currently
     pub account_exchange_ts: i64,
     pub exchange: Exchange,
     pub instrument: Instrument,
-    pub side: Side,
+    pub side: Side, // NOTE 注意和DirectionMode之间的兼容性
     pub current_size: f64,
     pub current_fees_total: Fees,
-    pub current_avg_price_gross: f64,  // 开仓平均价格
+    pub current_avg_price_gross: f64,
     pub current_symbol_price: f64,
     pub current_avg_price:f64,
     pub unrealised_pnl: f64,
