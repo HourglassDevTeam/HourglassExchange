@@ -50,7 +50,7 @@ pub enum PositionMarginMode
 // NOTE 如果确实需要多种头寸类型共存，可以考虑如下设计：
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
-pub enum Position
+pub enum PositionKind
 {
     Perpetual(PerpetualPosition),
     // Margin(MarginPosition),
@@ -59,7 +59,7 @@ pub enum Position
 }
 
 
-/// 包含与进入、更新和退出 [`Position`] 相关的跟踪UUID和时间戳的元数据。
+/// 包含与进入、更新和退出 [`PositionKind`] 相关的跟踪UUID和时间戳的元数据。
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionMeta
 {
