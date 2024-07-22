@@ -23,7 +23,7 @@ pub struct MarginPosition {}
 pub struct PerpetualPosition
 {
     token: String,                  // token字段，用于存储某种代币的名称，类型为String
-    pos_config: SwapPositionConfig, // pos_config字段，用于存储与SwapPosition相关的配置，SwapPositionConfig类型
+    pos_config: PerpetualPositionConfig, // pos_config字段，用于存储与SwapPosition相关的配置，SwapPositionConfig类型
     pos_size: f64,                  // pos_size字段，表示头寸大小，类型为f64（64位浮点数）
     average_price: f64,             // average_price字段，表示平均成交价格，类型为f64
     liquidation_price: f64,         // liquidation_price字段，表示清算价格，类型为f64
@@ -35,7 +35,7 @@ pub struct PerpetualPosition
 }
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
-pub struct SwapPositionConfig
+pub struct PerpetualPositionConfig
 {
     pos_margin_mode: PositionMarginMode,
     leverage: f64,
