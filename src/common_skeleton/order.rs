@@ -119,6 +119,17 @@ pub struct FullyFilled
     pub size: f64,
 }
 
+
+/// 完全成交状态的订单
+#[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
+pub struct PartialFilled
+{
+    pub id: OrderId,
+    pub price: f64,
+    pub size: f64,
+}
+
+
 /// 使得Order<Opened> 之间可以比较大小
 /// NOTE: 此处Self 等同于 Order<Opened>，表示 other 参数也是一个 Order<Opened> 类型的引用。
 impl Ord for Order<Open>
@@ -187,7 +198,7 @@ impl From<&Order<RequestOpen>> for Order<RealPending>
                cid: request.cid,
                client_ts: request.client_ts,
                side: request.side,
-               state: RealPending }
+               state: RealPending } // NOTE compatability with SimulatedPending
     }
 }
 
