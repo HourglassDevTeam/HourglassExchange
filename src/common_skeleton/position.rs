@@ -29,21 +29,7 @@ pub struct FuturesPosition {}
 #[derive(Clone, Debug)]
 pub struct OptionPosition {}
 
-#[allow(dead_code)]
-#[derive(Clone, Debug)]
-pub struct PerpetualPosition
-{
-    token: String,                  // token字段，用于存储某种代币的名称，类型为String
-    pos_config: PerpetualPositionConfig, // pos_config字段，用于存储与SwapPosition相关的配置，SwapPositionConfig类型
-    pos_size: f64,                  // pos_size字段，表示头寸大小，类型为f64（64位浮点数）
-    average_price: f64,             // average_price字段，表示平均成交价格，类型为f64
-    liquidation_price: f64,         // liquidation_price字段，表示清算价格，类型为f64
-    margin: f64,                    // margin字段，表示保证金比例，类型为f64
-    pnl: f64,                       // pnl字段，表示未实现盈亏（Profit and Loss），类型为f64
-    fee: f64,                       // fee字段，表示交易费用，类型为f64
-    funding_fee: f64,               // funding_fee字段，表示资金费用，类型为f64
-    update_time_stamp: i64,         // update_time_stamp字段，表示最后更新时间的时间戳，类型为i64（64位整数）
-}
+
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct PerpetualPositionConfig
@@ -70,11 +56,25 @@ pub enum PositionKind
     // Option(OptionPosition),
 }
 
-
+#[allow(dead_code)]
+#[derive(Clone, Debug)]
+pub struct PerpetualPosition
+{
+    token: String,                  // token字段，用于存储某种代币的名称，类型为String
+    pos_config: PerpetualPositionConfig, // pos_config字段，用于存储与SwapPosition相关的配置，SwapPositionConfig类型
+    pos_size: f64,                  // pos_size字段，表示头寸大小，类型为f64（64位浮点数）
+    average_price: f64,             // average_price字段，表示平均成交价格，类型为f64
+    liquidation_price: f64,         // liquidation_price字段，表示清算价格，类型为f64
+    margin: f64,                    // margin字段，表示保证金比例，类型为f64
+    pnl: f64,                       // pnl字段，表示未实现盈亏（Profit and Loss），类型为f64
+    fee: f64,                       // fee字段，表示交易费用，类型为f64
+    funding_fee: f64,               // funding_fee字段，表示资金费用，类型为f64
+    update_time_stamp: i64,         // update_time_stamp字段，表示最后更新时间的时间戳，类型为i64（64位整数）
+}
 // NOTE 此处为一个尽量详细的Position案例
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Position {
-    pub position_id: Uuid,
+    pub position_id: String,
     pub enter_time: i64,
     pub update_time: i64,
     pub exit_balance: Balance,
