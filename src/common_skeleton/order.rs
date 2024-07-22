@@ -198,7 +198,7 @@ impl From<&Order<RequestOpen>> for Order<RealPending>
                cid: request.cid,
                client_ts: request.client_ts,
                side: request.side,
-               state: RealPending } // NOTE compatability with SimulatedPending
+               state: RealPending } // NOTE compatability with SimulatedPending is due here
     }
 }
 
