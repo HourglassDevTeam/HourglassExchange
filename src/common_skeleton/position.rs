@@ -9,7 +9,7 @@ use crate::common_skeleton::balance::Balance;
 #[derive(Clone, Debug)]
 pub struct AccountPositions
 {
-    margin_pos: Vec<MarginPosition>, // useless in backtest
+    margin_pos: Vec<MarginPosition>, // useless in backtest NOTE what exactly is this
     swap_pos: Vec<SwapPosition>,
     // Note useful, and we're gonna build it
     // futures_pos: Vec<FuturesPosition>,
