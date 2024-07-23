@@ -44,7 +44,7 @@ impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + Debug + 
                     self.account.cancel_orders(cancel_requests, response_tx, current_timestamp).await
                 }
                 | SimulatedClientEvent::CancelOrdersAll(response_tx, current_timestamp) => self.account.cancel_orders_all(response_tx, current_timestamp).await,
-                | SimulatedClientEvent::FetchMarketEvent(market_event, current_timestamp) => self.account.match_orders(market_event).await,
+                | SimulatedClientEvent::FetchMarketEvent(market_event, current_timestamp) => self.account.match_orders(market_event, current_timestamp).await,
             }
         }
     }
