@@ -188,7 +188,7 @@ impl ClickHouseClient
 
             loop {
                 let query = format!(
-                    "SELECT symbol, side, price, timestamp FROM {}.{} LIMIT {} OFFSET {}",
+                    "SELECT * FROM {}.{} LIMIT {} OFFSET {}",
                     database, table_name, batch_size, offset
                 );
                 println!("[UniLinkExecution] : 正在执行 query: {}", query);
@@ -243,7 +243,7 @@ impl ClickHouseClient
                 let mut offset = 0;
 
                 loop {
-                    let query = format!("SELECT symbol, side, price, timestamp FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}",
+                    let query = format!("SELECT * FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}",
                                         database, table_name, batch_size, offset);
                     println!("[UniLinkExecution] : 正在执行 query: {}", query);
 
