@@ -17,7 +17,7 @@ use crate::{
     },
     error::ExecutionError,
     simulated_exchange::account::{
-        account_latency::{AccountLatency, fluctuate_latency},
+        account_latency::{fluctuate_latency, AccountLatency},
         account_market_feed::AccountDataStreams,
     },
 };
@@ -168,7 +168,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         let positions = self.positions.read().await.clone();
         respond(response_tx, Ok(positions));
     }
-    //
+
     // pub async fn match_orders(&mut self, _instrument: Instrument, _trade: ClickhouseTrade)
     // {
     //     let fees_percent = self.config.read().await.current_commission_rate.spot_maker;

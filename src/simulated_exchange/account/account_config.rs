@@ -182,7 +182,6 @@ impl AccountConfigInitiator
                            current_commission_rate: CommissionRates { spot_maker: 0.0,
                                                                       spot_taker: 0.0,
                                                                       perpetual_open: 0.0,
-                                                                      perpetual_close: 0.0,
-                                                                     } })
+                                                                      perpetual_close: 0.0 } })
     }
 }
