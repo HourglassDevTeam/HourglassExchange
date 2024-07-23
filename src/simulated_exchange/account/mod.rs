@@ -172,10 +172,10 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         respond(response_tx, Ok(positions));
     }
 
-    pub async fn match_in_trade_distribution_loop(&mut self, market_event: MarketEvent<ClickhouseTrade>)
-    {
-        todo!()
-    }
+    // pub async fn match_in_trade_distribution_loop(&mut self, market_event: MarketEvent<ClickhouseTrade>)
+    // {
+    //     todo!()
+    // }
 
     // pub async fn match_orders(&mut self, _instrument: Instrument, _trade: ClickhouseTrade)
     // {
