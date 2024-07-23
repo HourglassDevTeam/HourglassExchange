@@ -193,7 +193,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     pub async fn try_open_order_atomic(&mut self, request: Order<RequestOpen>, _current_timestamp: i64) -> Result<Order<Open>, ExecutionError>
     {
-        Self::order_validity_check(request.state.kind).unwrap();
+        Self::order_validity_check(request.kind).unwrap();
         todo!()
     }
 
