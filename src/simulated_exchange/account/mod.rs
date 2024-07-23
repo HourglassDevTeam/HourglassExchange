@@ -12,14 +12,12 @@ use crate::{
         balance::TokenBalance,
         datafeed::event::MarketEvent,
         event::AccountEvent,
-        instrument::Instrument,
         order::{Cancelled, Open, Order, OrderKind, RequestCancel, RequestOpen},
         position::AccountPositions,
-        trade::Trade,
     },
     error::ExecutionError,
     simulated_exchange::account::{
-        account_latency::{fluctuate_latency, AccountLatency},
+        account_latency::{AccountLatency, fluctuate_latency},
         account_market_feed::AccountDataStreams,
     },
 };
@@ -43,8 +41,9 @@ pub struct Account<Event>
     pub config: Arc<RwLock<AccountConfig>>,                         // 帐户配置
     pub balances: Arc<RwLock<AccountBalances<Event>>>,              // 帐户余额
     pub positions: Arc<RwLock<Vec<AccountPositions>>>,              // 帐户头寸
-    pub orders: Arc<RwLock<AccountOrders>>,                         // 帐户订单
+    pub orders: Arc<RwLock<AccountOrders>>,
 }
+
 #[derive(Clone, Debug)]
 pub struct AccountInitiator<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord
@@ -170,10 +169,46 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         respond(response_tx, Ok(positions));
     }
 
-    pub async fn match_orders(&mut self, _instrument: Instrument, _trade: Trade)
-    {
-        todo!()
-    }
+    // pub async fn match_orders(&mut self, _instrument: Instrument, _trade: Trade)
+    // {
+    //     let fees_percent = self.fees_percent;
+    //
+    //     // Access the ClientOrders relating to the Instrument of the PublicTrade
+    //     let orders = match self.orders.orders_mut(&instrument) {
+    //         | Ok(orders) => orders,
+    //         | Err(error) => {
+    //             warn!(
+    //                 ?error, %instrument, ?trade, "cannot match orders with unrecognised Instrument"
+    //             );
+    //             return;
+    //         }
+    //     };
+    //
+    //     // Match client Order<Open>s to incoming PublicTrade if the liquidity intersects
+    //     let trades = match orders.has_matching_order(&trade) {
+    //         | Some(Side::Buy) => orders.match_bids(&trade, fees_percent),
+    //         | Some(Side::Sell) => orders.match_asks(&trade, fees_percent),
+    //         | None => return,
+    //     };
+    //
+    //     // Apply Balance updates for each client Trade and send AccountEvents to client
+    //     for trade in trades {
+    //         // Update Balances
+    //         let balances_event = self.balances.update_from_trade(&trade);
+    //
+    //         self.event_account_tx
+    //             .send(balances_event)
+    //             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balances");
+    //
+    //         self.event_account_tx
+    //             .send(AccountEvent {
+    //                 received_time: Utc::now(),
+    //                 exchange: Exchange::from(ExchangeKind::Simulated),
+    //                 kind: AccountEventKind::Trade(trade),
+    //             })
+    //             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
+    //     }
+    // }
 
     pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>, current_timestamp: i64)
     {
