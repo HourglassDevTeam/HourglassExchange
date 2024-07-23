@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{event::ClientOrderId, instrument::Instrument, Side, token::Token},
+    common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
     ExchangeID,
 };
 
@@ -42,6 +42,7 @@ impl Display for OrderKind
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
+    pub kind: OrderKind,        // 订单种类
     pub exchange: ExchangeID,   // 交易所
     pub instrument: Instrument, // 交易工具
     pub client_ts: i64,
@@ -95,7 +96,6 @@ impl<Id> From<Id> for RequestCancel where Id: Into<OrderId>
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct Open
 {
-    pub kind: OrderKind,
     pub id: OrderId,
     pub price: f64,
     pub size: f64,
@@ -129,8 +129,8 @@ pub struct PartialFill
     pub size: f64,
 }
 
-/// 使得Order<Open> 之间可以比较大小
-/// NOTE: 此处Self 等同于 Order<Open>，表示 other 参数也是一个 Order<Open> 类型的引用。
+/// 使得Order<Opened> 之间可以比较大小
+/// NOTE: 此处Self 等同于 Order<Opened>，表示 other 参数也是一个 Order<Opened> 类型的引用。
 impl Ord for Order<Open>
 {
     fn cmp(&self, other: &Self) -> Ordering
@@ -158,7 +158,7 @@ impl PartialOrd for Order<Open>
     }
 }
 
-// 为Order<Open>实现Eq
+// 为Order<Opened>实现Eq
 impl Eq for Order<Open> {}
 
 /// 构建订单在被取消后的状态
@@ -192,7 +192,8 @@ impl From<&Order<RequestOpen>> for Order<RealPending>
 {
     fn from(request: &Order<RequestOpen>) -> Self
     {
-        Self { exchange: request.exchange.clone(),
+        Self { kind: request.kind,
+               exchange: request.exchange.clone(),
                instrument: request.instrument.clone(),
                cid: request.cid,
                client_ts: request.client_ts,
@@ -205,13 +206,13 @@ impl From<(OrderId, Order<RequestOpen>)> for Order<Open>
 {
     fn from((id, request): (OrderId, Order<RequestOpen>)) -> Self
     {
-        Self { exchange: request.exchange.clone(),
+        Self { kind: request.kind,
+               exchange: request.exchange.clone(),
                instrument: request.instrument.clone(),
                cid: request.cid,
                client_ts: request.client_ts,
                side: request.side,
                state: Open { id,
-                             kind: request.state.kind,
                              price: request.state.price,
                              size: request.state.size,
                              filled_quantity: 0.0 } }
@@ -222,7 +223,9 @@ impl From<Order<Open>> for Order<Cancelled>
 {
     fn from(order: Order<Open>) -> Self
     {
-        Self { exchange: order.exchange.clone(),
+        Self { kind: order.kind,
+
+               exchange: order.exchange.clone(),
                instrument: order.instrument.clone(),
                cid: order.cid,
                client_ts: order.client_ts,
