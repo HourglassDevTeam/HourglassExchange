@@ -1,7 +1,7 @@
 // FIXME : code below needs to be restructured and fitted to the framework. need to provide enums?
 // CONSIDER: can these positions coexist, if so enums might not be ideal.
 
-use crate::common_skeleton::balance::{TokenBalance};
+use crate::common_skeleton::balance::TokenBalance;
 use cerebro_integration::model::Exchange;
 use serde::{Deserialize, Serialize};
 

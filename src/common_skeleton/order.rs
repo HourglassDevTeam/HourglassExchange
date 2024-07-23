@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
+    common_skeleton::{event::ClientOrderId, instrument::Instrument, Side, token::Token},
     ExchangeID,
 };
 
@@ -119,7 +119,6 @@ pub struct FullyFill
     pub size: f64,
 }
 
-
 /// 完全成交状态的订单,FullFill 以后在account层面 [AccountOrders] 仍然保留open订单
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct PartialFill
@@ -128,7 +127,6 @@ pub struct PartialFill
     pub price: f64,
     pub size: f64,
 }
-
 
 /// 使得Order<Opened> 之间可以比较大小
 /// NOTE: 此处Self 等同于 Order<Opened>，表示 other 参数也是一个 Order<Opened> 类型的引用。
@@ -209,7 +207,7 @@ impl From<(OrderId, Order<RequestOpen>)> for Order<Open>
         Self { exchange: request.exchange.clone(),
                instrument: request.instrument.clone(),
                cid: request.cid,
-            client_ts:request.client_ts,
+               client_ts: request.client_ts,
                side: request.side,
                state: Open { id,
                              price: request.state.price,
