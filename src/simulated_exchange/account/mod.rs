@@ -168,10 +168,10 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         let positions = self.positions.read().await.clone();
         respond(response_tx, Ok(positions));
     }
-
-    // pub async fn match_orders(&mut self, _instrument: Instrument, _trade: Trade)
+    //
+    // pub async fn match_orders(&mut self, _instrument: Instrument, _trade: ClickhouseTrade)
     // {
-    //     let fees_percent = self.fees_percent;
+    //     let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
     //
     //     // Access the ClientOrders relating to the Instrument of the PublicTrade
     //     let orders = match self.orders.orders_mut(&instrument) {
