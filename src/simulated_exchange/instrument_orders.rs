@@ -12,7 +12,6 @@ pub struct InstrumentOrders
     pub bids: Vec<Order<Open>>,
     pub asks: Vec<Order<Open>>,
 }
-//
 // /// 添加一个 [`Order<Open>`] 到买单或卖单中，取决于它的 [`Side`]。
 // impl InstrumentOrders
 // {

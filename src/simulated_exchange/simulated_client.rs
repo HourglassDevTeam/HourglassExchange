@@ -3,14 +3,14 @@ use mpsc::UnboundedSender;
 use tokio::sync::{mpsc, mpsc::UnboundedReceiver, oneshot};
 
 use crate::{
-    AccountEvent,
-    ClientExecution, common_skeleton::{
+    common_skeleton::{
         balance::TokenBalance,
+        datafeed::event::MarketEvent,
         order::{Cancelled, Open, Order},
-    }, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen,
+    },
+    simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
+    AccountEvent, ClientExecution, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen,
 };
-use crate::common_skeleton::datafeed::event::MarketEvent;
-use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade;
 
 #[derive(Debug)]
 pub struct SimulatedClient

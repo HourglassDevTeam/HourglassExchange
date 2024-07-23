@@ -26,7 +26,7 @@ pub struct WsTrade
     px: String,
     #[serde(alias = "timestamp")]
     ts: String,
-    amount:f64,
+    amount: f64,
 }
 
 // NOTE 这是按照Okex交易所API数据类型构建的 WebsocketTrade 数据结构，回测选用。
@@ -78,7 +78,8 @@ impl From<ClickhouseTrade> for WsTrade
         WsTrade { instId: trade.basequote,
                   side: trade.side,
                   px: trade.price.to_string(),
-                  ts: trade.timestamp.to_string() }
+                  ts: trade.timestamp.to_string(),
+                  amount: trade.amount }
     }
 }
 
@@ -97,12 +98,13 @@ pub fn parse_base_and_quote(basequote: &str) -> (String, String)
 #[allow(dead_code)]
 impl WsTrade
 {
-    pub(crate) fn from_ref(data: &ClickhouseTrade) -> Self
+    pub(crate) fn from_ref(trade: &ClickhouseTrade) -> Self
     {
         WsTrade { // 这里假设 WsTrade 结构体字段和 TradeDataFromClickhouse 结构体字段对应
-                  instId: data.basequote.clone(),
-                  side: data.side.clone(),
-                  px: data.price.to_string(),
-                  ts: data.timestamp.to_string() }
+                  instId: trade.basequote.clone(),
+                  side: trade.side.clone(),
+                  px: trade.price.to_string(),
+                  ts: trade.timestamp.to_string(),
+                  amount: trade.amount }
     }
 }
