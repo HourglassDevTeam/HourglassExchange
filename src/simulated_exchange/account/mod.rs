@@ -148,7 +148,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     {
         let latency = self.latency.read().await.current_value;
         let orders = self.orders.read().await.fetch_all();
-        respond_with_latency(latency, response_tx, Ok(orders));
+        respond_with_latency(latency, response_tx, Ok(orders)); // 是否要模拟延迟
     }
 
     pub async fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>)
