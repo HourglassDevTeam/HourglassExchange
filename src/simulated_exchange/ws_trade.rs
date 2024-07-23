@@ -26,6 +26,7 @@ pub struct WsTrade
     px: String,
     #[serde(alias = "timestamp")]
     ts: String,
+    amount:f64,
 }
 
 // NOTE 这是按照Okex交易所API数据类型构建的 WebsocketTrade 数据结构，回测选用。
