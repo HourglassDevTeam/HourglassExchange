@@ -176,48 +176,45 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         respond(response_tx, Ok(positions));
     }
 
-    // pub async fn match_orders(&mut self, _market_event: MarketEvent<ClickhouseTrade>, _current_ts: i64)
-    // {
-    //     todo!()
-    // }
 
-    pub async fn match_orders(&mut self, instrument: Instrument, trade: ClickhouseTrade)
-    {
-        let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
 
-        // Access the ClientOrders relating to the Instrument of the PublicTrade
-        let orders = match self.orders.orders_mut(&instrument) {
-            | Ok(orders) => orders,
-            | Err(error) => {
-                warn!(
-                    ?error, %instrument, ?trade, "cannot match orders with unrecognised Instrument"
-                );
-                return;
-            }
-        };
-
-        // Match client Order<Open>s to incoming PublicTrade if the liquidity intersects
-        let trades = match orders.has_matching_order(&trade) {
-            | Some(Side::Buy) => orders.match_bids(&trade, fees_percent),
-            | Some(Side::Sell) => orders.match_asks(&trade, fees_percent),
-            | None => return,
-        };
-
-        // Apply Balance updates for each client Trade and send AccountEvents to client
-        for trade in trades {
-            // Update Balances
-            let balances_event = self.balances.update_from_trade(&trade);
-
-            self.account_event_tx
-                .send(balances_event)
-                .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Balances");
-
-            self.account_event_tx
-                .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
-                                     exchange: ExchangeVariant::Simulated,
-                                     kind: AccountEventKind::Trade(trade) })
-                .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Trade");
-        }
+    pub async fn match_orders(&mut self, market_event: MarketEvent< ClickhouseTrade>)
+    { todo!();
+        // let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
+        //
+        // // Access the ClientOrders relating to the Instrument of the PublicTrade
+        // let orders = match self.orders.read().await.orders_mut(&market_event.instrument) {
+        //     | Ok(orders) => orders,
+        //     | Err(error) => {
+        //         warn!(
+        //             ?error, %market_event.instrument, ?market_event.kind, "cannot match orders with unrecognised Instrument"
+        //         );
+        //         return;
+        //     }
+        // };
+        //
+        // // Match client Order<Open>s to incoming PublicTrade if the liquidity intersects
+        // let trades = match orders.has_matching_order(&market_event.kind) {
+        //     | Some(Side::Buy) => orders.match_bids(&market_event.kind, fees_percent),
+        //     | Some(Side::Sell) => orders.match_asks(&market_event.kind, fees_percent),
+        //     | None => return,
+        // };
+        //
+        // // Apply Balance updates for each client Trade and send AccountEvents to client
+        // for trade in trades {
+        //     // Update Balances
+        //     let balances_event = self.balances.update_from_trade(&trade);
+        //
+        //     self.account_event_tx
+        //         .send(balances_event)
+        //         .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Balances");
+        //
+        //     self.account_event_tx
+        //         .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
+        //                              exchange: ExchangeVariant::Simulated,
+        //                              kind: AccountEventKind::Trade(trade) })
+        //         .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Trade");
+        // }
     }
 
     pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>, _current_timestamp: i64)
