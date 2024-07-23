@@ -47,7 +47,7 @@ pub struct Order<State>
     pub kind: OrderKind,        // 订单种类
     pub exchange: ExchangeID,   // 交易所
     pub instrument: Instrument, // 交易工具
-    // pub client_ts: i64,
+    pub client_ts: i64,
     pub cid: ClientOrderId, // 客户端订单ID
     pub side: Side,         // 买卖方向
     pub state: State,       // 订单状态
@@ -198,7 +198,7 @@ impl From<&Order<RequestOpen>> for Order<RealPending>
                exchange: request.exchange.clone(),
                instrument: request.instrument.clone(),
                cid: request.cid,
-               // client_ts: request.client_ts,
+               client_ts: request.client_ts,
                side: request.side,
                state: RealPending } // NOTE compatability with SimulatedPending is due here
     }
@@ -212,7 +212,7 @@ impl From<(OrderId, Order<RequestOpen>)> for Order<Open>
                exchange: request.exchange.clone(),
                instrument: request.instrument.clone(),
                cid: request.cid,
-               // client_ts: request.client_ts,
+               client_ts: request.client_ts,
                side: request.side,
                state: Open { id,
                              price: request.state.price,
@@ -230,7 +230,7 @@ impl From<Order<Open>> for Order<Cancelled>
                exchange: order.exchange.clone(),
                instrument: order.instrument.clone(),
                cid: order.cid,
-               // client_ts: order.client_ts,
+               client_ts: order.client_ts,
                side: order.side,
                state: Cancelled { id: order.state.id } }
     }

@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use mpsc::UnboundedSender;
-use tokio::sync::{mpsc, oneshot};
-use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::{mpsc, mpsc::UnboundedReceiver, oneshot};
 
 use crate::{
     common_skeleton::{
@@ -19,9 +18,7 @@ pub struct SimulatedClient
     pub local_timestamp: i64,
     pub request_tx: UnboundedSender<SimulatedClientEvent>, // NOTE 这是向模拟交易所端发送信号的发射器。注意指令格式是SimulatedClientEvent
     pub strategy_signal_rx: UnboundedReceiver<SimulatedClientEvent>, // NOTE 这是从策略收取信号的接收器。注意指令格式是SimulatedClientEvent
-
 }
-
 
 // NOTE 模拟交易所客户端可向模拟交易所发送的命令
 #[derive(Debug)]
@@ -38,22 +35,21 @@ pub enum SimulatedClientEvent
 #[async_trait]
 impl ClientExecution for SimulatedClient
 {
+    // in our case the 'optional' config parameter in the simulated exchange is an UnboundedSender
+    type Config = (UnboundedSender<SimulatedClientEvent>, UnboundedReceiver<SimulatedClientEvent>);
+
     // very naturally, the client's kind is determined by and aligned the exchange.
     const CLIENT_KIND: ExchangeVariant = ExchangeVariant::Simulated;
 
-    // in our case the 'optional' config parameter in the simulated exchange is an UnboundedSender
-    type Config = (UnboundedSender<SimulatedClientEvent>,UnboundedReceiver<SimulatedClientEvent>);
-
-    async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>, local_timestamp: i64) -> Self {
+    async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>, local_timestamp: i64) -> Self
+    {
         // 从 config 元组中解构出 request_tx 和 request_rx
         let (request_tx, request_rx) = config;
 
         // 使用 request_tx 和 request_rx 初始化 SimulatedClient
-        Self {
-            request_tx,
-            strategy_signal_rx: request_rx,
-            local_timestamp,
-        }
+        Self { request_tx,
+               strategy_signal_rx: request_rx,
+               local_timestamp }
     }
 
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>
