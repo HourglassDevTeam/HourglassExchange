@@ -1,4 +1,5 @@
 use std::{fmt::Debug, sync::Arc};
+use cerebro_integration::model::Exchange;
 
 use futures::future::join_all;
 use tokio::sync::{mpsc, oneshot, RwLock};
@@ -7,23 +8,20 @@ use account_balances::AccountBalances;
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
 
-use crate::{
-    common_skeleton::{
-        balance::TokenBalance,
-        datafeed::event::MarketEvent,
-        event::AccountEvent,
-        order::{Cancelled, Open, Order, OrderKind, RequestCancel, RequestOpen},
-        position::AccountPositions,
+use crate::{common_skeleton::{
+    balance::TokenBalance,
+    datafeed::event::MarketEvent,
+    event::AccountEvent,
+    order::{Cancelled, Open, Order, OrderKind, RequestCancel, RequestOpen},
+    position::AccountPositions,
+}, error::ExecutionError, ExchangeVariant, simulated_exchange::{
+    account::{
+        account_latency::{fluctuate_latency, AccountLatency},
+        account_market_feed::AccountDataStreams,
     },
-    error::ExecutionError,
-    simulated_exchange::{
-        account::{
-            account_latency::{fluctuate_latency, AccountLatency},
-            account_market_feed::AccountDataStreams,
-        },
-        load_from_clickhouse::queries_operations::ClickhouseTrade,
-    },
-};
+    load_from_clickhouse::queries_operations::ClickhouseTrade,
+}};
+use crate::common_skeleton::event::AccountEventKind;
 
 pub mod account_balances;
 pub mod account_config;
@@ -222,7 +220,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     {
         let open_futures = open_requests.into_iter().map(|request| {
                                                         let mut this = self.clone();
-                                                        async move { this.try_open_order_atomic(request, current_timestamp).await }
+                                                        async move { this.try_open_order_atomic(request) }
                                                     });
 
         let open_results = join_all(open_futures).await;
@@ -231,10 +229,39 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                       });
     }
 
-    pub async fn try_open_order_atomic(&mut self, request: Order<RequestOpen>, _current_timestamp: i64) -> Result<Order<Open>, ExecutionError>
-    {
-        Self::order_validity_check(request.kind).unwrap();
-        todo!()
+    pub fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError> {
+        Self::order_validity_check(request.kind)?;
+
+        // Calculate required available balance to open order
+        let (symbol, required_balance) = request.calculate_required_available_balance();
+
+        // Check available balance is sufficient
+        self.balances.has_sufficient_available_balance(symbol, required_balance)?;
+
+        // Build Open<Order>
+        let open = self.orders.build_order_open(request);
+
+        // Retrieve client Instrument Orders
+        let orders = self.orders.orders_mut(&open.instrument)?;
+
+        // Now that fallible operations have succeeded, mutate ClientBalances & ClientOrders
+        orders.add_order_open(open.clone());
+        let balance_event = self.balances.update_from_open(&open, required_balance);
+
+        // Send AccountEvents to client
+        self.account_event_tx
+            .send(balance_event)
+            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
+
+        self.account_event_tx
+            .send(AccountEvent {
+                exchange_timestamp: self.exchange_timestamp,
+                exchange: Exchange::from(ExchangeVariant::Simulated),
+                kind: AccountEventKind::OrdersNew(vec![open.clone()]),
+            })
+            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
+
+        Ok(open)
     }
 
     pub async fn cancel_orders(&mut self,

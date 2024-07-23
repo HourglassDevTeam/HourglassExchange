@@ -7,21 +7,15 @@ use std::{
 
 use tokio::sync::RwLock;
 
-use crate::{
-    common_skeleton::{
-        balance::{Balance, BalanceDelta, TokenBalance},
-        event::{AccountEvent, AccountEventKind},
-        instrument::Instrument,
-        order::{Open, Order},
-        token::Token,
-        trade::Trade,
-        Side,
-    },
-    error::ExecutionError,
-    simulated_exchange::account::Account,
-    ExchangeID,
-    ExchangeVariant::Simulated,
-};
+use crate::{common_skeleton::{
+    balance::{Balance, BalanceDelta, TokenBalance},
+    event::{AccountEvent, AccountEventKind},
+    instrument::Instrument,
+    order::{Open, Order},
+    token::Token,
+    trade::Trade,
+    Side,
+}, error::ExecutionError, simulated_exchange::account::Account, ExchangeID, ExchangeVariant::Simulated, ExchangeVariant};
 
 #[derive(Clone, Debug)]
 pub struct AccountBalances<Event>
@@ -110,7 +104,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         };
 
         AccountEvent { exchange_timestamp: self.get_exchange_ts().await.unwrap(),
-                       exchange: ExchangeID::from(Simulated),
+                       exchange: ExchangeVariant::Simulated,
                        kind: AccountEventKind::Balance(_updated_balance) }
     }
 
@@ -180,7 +174,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         let _quote_balance = self.update(quote, quote_delta);
 
         AccountEvent { exchange_timestamp: self.get_exchange_ts().await.unwrap(),
-                       exchange: ExchangeID::from(Simulated),
+                       exchange: ExchangeVariant::Simulated,
                        kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), _base_balance), TokenBalance::new(quote.clone(), _quote_balance)]) }
     }
 
