@@ -17,8 +17,8 @@ use crate::{
 pub struct SimulatedClient
 {
     pub local_timestamp: i64,
-    pub request_tx: UnboundedSender<SimulatedClientEvent>,
-    pub request_rx: UnboundedReceiver<SimulatedClientEvent>,
+    pub request_tx: UnboundedSender<SimulatedClientEvent>, // NOTE 这是向模拟交易所端发送信号的发射器。注意指令格式是SimulatedClientEvent
+    pub strategy_signal_rx: UnboundedReceiver<SimulatedClientEvent>, // NOTE 这是从策略段收取信号的接收器。注意指令格式是SimulatedClientEvent
 
 }
 
@@ -51,7 +51,7 @@ impl ClientExecution for SimulatedClient
         // 使用 request_tx 和 request_rx 初始化 SimulatedClient
         Self {
             request_tx,
-            request_rx,
+            strategy_signal_rx: request_rx,
             local_timestamp,
         }
     }
