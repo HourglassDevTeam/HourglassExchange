@@ -204,7 +204,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     //
     //         self.event_account_tx
     //             .send(balances_event)
-    //             .expect("[UniLink] : Client is offline - failed to send AccountEvent::Balances");
+    //             .expect("[UniLink-Synth] : Client is offline - failed to send AccountEvent::Balances");
     //
     //         self.event_account_tx
     //             .send(AccountEvent {
@@ -212,7 +212,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     //                 exchange: Exchange::from(ExchangeKind::Simulated),
     //                 kind: AccountEventKind::Trade(trade),
     //             })
-    //             .expect("[UniLink] : Client is offline - failed to send AccountEvent::Trade");
+    //             .expect("[UniLink-Synth] : Client is offline - failed to send AccountEvent::Trade");
     //     }
     // }
 
@@ -243,20 +243,20 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             orders_guard.build_order_open(request)
         };
 
-        // Retrieve client Instrument Orders
-        let mut orders = {
+        {
+            // Retrieve client Instrument Orders and add order
             let mut orders_guard = self.orders.write().await;
-            orders_guard.orders_mut(&open.instrument)?
-        };
+            let orders = orders_guard.orders_mut(&open.instrument)?;
+            orders.add_order_open(open.clone());
+        }
 
-        // Now that fallible operations have succeeded, mutate ClientBalances & ClientOrders
-        orders.add_order_open(open.clone());
+        // Update ClientBalances
         let balance_event = self.balances.write().await.update_from_open(&open, required_balance).await;
 
         // Send AccountEvents to client
         self.account_event_tx
             .send(balance_event)
-            .expect("[UniLink] : Client is offline - failed to send AccountEvent::Balance");
+            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
 
         self.account_event_tx
             .send(AccountEvent {
@@ -264,10 +264,11 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 exchange: ExchangeVariant::Simulated,
                 kind: AccountEventKind::OrdersNew(vec![open.clone()]),
             })
-            .expect("[UniLink] : Client is offline - failed to send AccountEvent::Trade");
+            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         Ok(open)
     }
+
 
 
 
@@ -309,6 +310,6 @@ pub fn respond<Response>(response_tx: oneshot::Sender<Response>, response: Respo
 {
     tokio::spawn(async move {
         response_tx.send(response)
-                   .expect("[UniLinkExecution] : SimulatedExchange failed to send oneshot response to execution request")
+                   .expect("[UniLink-SynthExecution] : SimulatedExchange failed to send oneshot response to execution request")
     });
 }
