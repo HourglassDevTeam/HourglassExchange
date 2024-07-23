@@ -21,6 +21,7 @@ use crate::{
         account_market_feed::AccountDataStreams,
     },
 };
+use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade;
 
 pub mod account_balances;
 pub mod account_config;
@@ -168,6 +169,10 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         let positions = self.positions.read().await.clone();
         respond(response_tx, Ok(positions));
     }
+
+    pub async fn match_in_trade_distribution_loop(&mut self, market_event: MarketEvent<ClickhouseTrade>){
+        todo!()
+}
 
     // pub async fn match_orders(&mut self, _instrument: Instrument, _trade: ClickhouseTrade)
     // {
