@@ -2,10 +2,10 @@
 // CONSIDER: can these positions coexist, if so enums might not be ideal.
 
 use crate::common_skeleton::balance::TokenBalance;
-use cerebro_integration::model::Exchange;
 use serde::{Deserialize, Serialize};
 
 use crate::common_skeleton::{friction::Fees, instrument::Instrument, Side};
+use crate::ExchangeVariant;
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
@@ -77,7 +77,7 @@ pub struct PositionMeta
     pub update_ts: i64,
     pub exit_balance: TokenBalance, // NOTE necessary but unsure currently
     pub account_exchange_ts: i64,
-    pub exchange: Exchange,
+    pub exchange: ExchangeVariant,
     pub instrument: Instrument,
     pub side: Side, // NOTE 注意和DirectionMode之间的兼容性
     pub current_size: f64,
