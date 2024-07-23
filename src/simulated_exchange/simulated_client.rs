@@ -11,6 +11,8 @@ use crate::{
     },
     AccountEvent, ClientExecution, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen,
 };
+use crate::common_skeleton::datafeed::event::MarketEvent;
+use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade;
 
 #[derive(Debug)]
 pub struct SimulatedClient
@@ -24,7 +26,7 @@ pub struct SimulatedClient
 #[derive(Debug)]
 pub enum SimulatedClientEvent
 {
-    FetchMarketTrade((Instrument, Trade), i64),
+    FetchMarketEvent(MarketEvent<ClickhouseTrade>, i64),
     FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>, i64),
     FetchBalances(oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>, i64),
     OpenOrders((Vec<Order<RequestOpen>>, oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>), i64),
