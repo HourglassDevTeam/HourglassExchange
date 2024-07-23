@@ -144,7 +144,7 @@ impl ClickHouseClient
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
-        let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp", full_table_path);
+        let query = format!("SELECT * FROM {} ORDER BY timestamp", full_table_path);
         println!("[UniLinkExecution] : 查询SQL语句 {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
@@ -156,7 +156,7 @@ impl ClickHouseClient
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
-        let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
+        let query = format!("SELECT * FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
         println!("[UniLinkExecution] : 查询SQL语句 {}", query);
         let trade_data = self.client.read().await.query(&query).fetch_one::<ClickhouseTrade>().await?;
         Ok(WsTrade::from(trade_data))
