@@ -2,10 +2,7 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common_skeleton::{
-    order::{Open, Order},
-    Side,
-};
+use crate::common_skeleton::order::{Open, Order};
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
@@ -15,40 +12,37 @@ pub struct InstrumentOrders
     pub bids: Vec<Order<Open>>,
     pub asks: Vec<Order<Open>>,
 }
-
-/// 添加一个 [`Order<Open>`] 到买单或卖单中，取决于它的 [`Side`]。
-impl InstrumentOrders
-{
-    pub fn add_order_open(&mut self, new_open_order: Order<Open>)
-    {
-        match new_open_order.side {
-            | Side::Buy => {
-                // 添加 Order<Opened> 到买单
-                self.bids.push(new_open_order);
-                self.bids.sort();
-            }
-            | Side::Sell => {
-                // 添加 Order<Opened> 到卖单
-                self.asks.push(new_open_order);
-                self.asks.sort();
-            }
-        }
-    }
-}
-
-//     /// Check if an input [`PublicTrade`] matches an bid or ask client [`Open<Order>`].
+//
+// /// 添加一个 [`Order<Open>`] 到买单或卖单中，取决于它的 [`Side`]。
+// impl InstrumentOrders
+// {
+//     pub fn add_order_open(&mut self, new_open_order: Order<Open>)
+//     {
+//         match new_open_order.side {
+//             | Side::Buy => {
+//                 // 添加 Order<Opened> 到买单
+//                 self.bids.push(new_open_order);
+//                 self.bids.sort();
+//             }
+//             | Side::Sell => {
+//                 // 添加 Order<Opened> 到卖单
+//                 self.asks.push(new_open_order);
+//                 self.asks.sort();
+//             }
+//         }
+//     }
+//     /// 检查输入的 [`ClickhouseTrade`] 是否匹配买单或卖单的客户 [`Order<Open>`]
 //     ///
-//     /// Note:
-//     ///  - In the event that the client has opened both a bid and ask [`Order<Open>`] at the same
-//     ///    price, preferentially select the Order<Open> with the larger remaining quantity to
-//     ///    match on.
-//     pub fn has_matching_order(&self, trade: &PublicTrade) -> Option<Side> {
+//     /// 注意:
+//     ///  - 如果客户在同一价格同时开了买单和卖单 [`Order<Open>`]，优先选择剩余数量较大的
+//     ///    Order<Open> 进行匹配。
+//     pub fn has_matching_order(&self, trade: &ClickhouseTrade) -> Option<Side> {
 //         match (self.bids.last(), self.asks.last()) {
-//             // Check the best bid & ask Order<Open> for a match
+//             // 检查最佳买单和卖单的 Order<Open> 是否匹配
 //             | (Some(best_bid), Some(best_ask)) => {
-//                 // Note:
-//                 // In the unlikely case that: best_bid.price == best_ask.price == trade.price
-//                 // Preferentially select the larger remaining quantity Order<Open> to match on
+//                 // 注意:
+//                 // 在极少数情况下: best_bid.price == best_ask.price == trade.price
+//                 // 优先选择剩余数量较大的 Order<Open> 进行匹配
 //                 if best_bid.state.price == trade.price && best_ask.state.price == trade.price {
 //                     let best_bid_quantity = best_bid.state.remaining_quantity();
 //                     let best_ask_quantity = best_ask.state.remaining_quantity();
@@ -57,34 +51,34 @@ impl InstrumentOrders
 //                         | _ => Some(Side::Sell),
 //                     }
 //                 }
-//                 // Best bid matches
+//                 // 最佳买单匹配
 //                 else if best_bid.state.price >= trade.price {
 //                     Some(Side::Buy)
 //                 }
-//                 // Best ask matches
+//                 // 最佳卖单匹配
 //                 else if best_ask.state.price <= trade.price {
 //                     Some(Side::Sell)
 //                 }
-//                 // No matches
+//                 // 无匹配
 //                 else {
 //                     None
 //                 }
 //             }
 //
-//             // Best bid Order<Open> matches the input PublicTrade
+//             // 最佳买单 Order<Open> 匹配输入的 ClickhouseTrade
 //             | (Some(best_bid), None) if best_bid.state.price >= trade.price => Some(Side::Buy),
 //
-//             // Best ask Order<Open> matches the input PublicTrade
+//             // 最佳卖单 Order<Open> 匹配输入的 ClickhouseTrade
 //             | (None, Some(best_ask)) if best_ask.state.price <= trade.price => Some(Side::Sell),
 //
-//             // Either no bid or ask Order<Open>, or no matches
+//             // 要么没有买单或卖单 Order<Open>，要么没有匹配
 //             | _ => None,
 //         }
 //     }
 //
-//     /// Simulates [`Side::Buy`] trades by using the [`PublicTrade`] liquidity to match on open
+//     /// Simulates [`Side::Buy`] trades by using the [`ClickhouseTrade`] liquidity to match on open
 //     /// client bid [`Order<Open>`]s.
-//     pub fn match_bids(&mut self, trade: &PublicTrade, fees_percent: f64) -> Vec<Trade> {
+//     pub fn match_bids(&mut self, trade: &ClickhouseTrade, fees_percent: f64) -> Vec<ClickhouseTrade> {
 //         // Keep track of how much trade liquidity is remaining to match with
 //         let mut remaining_liquidity = trade.amount;
 //
@@ -144,12 +138,12 @@ impl InstrumentOrders
 //     }
 //
 //     /// Generate a client [`Trade`] with a unique [`TradeId`] for this [`Instrument`] market.
-//     pub fn generate_trade(&self, order: Order<Open>, trade_quantity: f64, fees_percent: f64) -> Trade {
+//     pub fn generate_trade(&self, order: Order<Open>, trade_quantity: f64, fees_percent: f64) -> ClickhouseTrade {
 //         // Calculate the trade fees (denominated in base or quote depending on Order Side)
 //         let fees = calculate_fees(&order, trade_quantity, fees_percent);
 //
 //         // Generate execution Trade from the Order<Open> match
-//         Trade {
+//         ClickhouseTrade {
 //             id: self.trade_id(),
 //             order_id: order.state.id,
 //             instrument: order.instrument,
@@ -158,7 +152,7 @@ impl InstrumentOrders
 //             quantity: trade_quantity,
 //             fees,
 //         }
-//     }
+//     }}
 //
 //     /// Use the `batch_id` value to generate a unique [`TradeId`] for this [`Instrument`]
 //     /// market.
@@ -166,9 +160,9 @@ impl InstrumentOrders
 //         TradeId(self.batch_id.to_string())
 //     }
 //
-//     /// Simulates [`Side::Sell`] trades by using the [`PublicTrade`] liquidity to match on open
+//     /// Simulates [`Side::Sell`] trades by using the [`ClickhouseTrade`] liquidity to match on open
 //     /// client bid [`Order<Open>`]s.
-//     pub fn match_asks(&mut self, trade: &PublicTrade, fees_percent: f64) -> Vec<Trade> {
+//     pub fn match_asks(&mut self, trade: &ClickhouseTrade, fees_percent: f64) -> Vec<Trade> {
 //         // Keep track of how much trade liquidity is remaining to match with
 //         let mut remaining_liquidity = trade.amount;
 //
