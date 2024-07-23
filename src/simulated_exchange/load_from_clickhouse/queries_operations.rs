@@ -34,7 +34,7 @@ impl ClickHouseClient
     {
         let client = Client::default().with_url("http://localhost:8123").with_user("default").with_password("");
 
-        println!("[UnilinkExecution] : 连接到 ClickHouse 服务器成功。");
+        println!("[UniLinkExecution] : 连接到 ClickHouse 服务器成功。");
 
         Self { client: Arc::new(RwLock::new(client)) }
     }
@@ -111,7 +111,7 @@ impl ClickHouseClient
         let table_names_query = format!("SHOW TABLES FROM {database}",);
         println!("{:?}", table_names_query);
         let result = self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
-                                                                                                       eprintln!("[UnilinkExecution] : Error loading table names: {:?}", e);
+                                                                                                       eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
                                                                                                        vec![]
                                                                                                    });
 
@@ -144,7 +144,7 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp", full_table_path);
-        println!("[UnilinkExecution] : 查询SQL语句 {}", query);
+        println!("[UniLinkExecution] : 查询SQL语句 {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
@@ -156,7 +156,7 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
-        println!("[UnilinkExecution] : 查询SQL语句 {}", query);
+        println!("[UniLinkExecution] : 查询SQL语句 {}", query);
         let trade_data = self.client.read().await.query(&query).fetch_one::<ClickhouseTrade>().await?;
         Ok(WsTrade::from(trade_data))
     }
@@ -166,7 +166,7 @@ impl ClickHouseClient
         let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
         let database = format!("{}_{}_{}", exchange, instrument, channel);
         let query = format!("SELECT * FROM {}.{}", database, table_name);
-        println!("[UnilinkExecution] : 正在执行 query: {}", query);
+        println!("[UniLinkExecution] : 正在执行 query: {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
@@ -190,7 +190,7 @@ impl ClickHouseClient
                     "SELECT symbol, side, price, timestamp FROM {}.{} LIMIT {} OFFSET {}",
                     database, table_name, batch_size, offset
                 );
-                println!("[UnilinkExecution] : 正在执行 query: {}", query);
+                println!("[UniLinkExecution] : 正在执行 query: {}", query);
 
                 match self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await {
                     Ok(trade_datas) => {
@@ -244,7 +244,7 @@ impl ClickHouseClient
                 loop {
                     let query = format!("SELECT symbol, side, price, timestamp FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}",
                                         database, table_name, batch_size, offset);
-                    println!("[UnilinkExecution] : 正在执行 query: {}", query);
+                    println!("[UniLinkExecution] : 正在执行 query: {}", query);
 
                     let client = client.read().await;
                     match client.query(&query).fetch_all::<ClickhouseTrade>().await {

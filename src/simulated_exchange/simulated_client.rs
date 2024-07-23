@@ -62,10 +62,10 @@ impl ClientExecution for SimulatedClient
         // 向模拟交易所发送获取开放订单的请求。
         self.request_tx
             .send(SimulatedClientEvent::FetchOrdersOpen(response_tx, self.local_timestamp))
-            .expect("[UnilinkExecution] : 模拟交易所目前离线 - 发送获取开放订单FetchOrdersOpen请求失败");
+            .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送获取开放订单FetchOrdersOpen请求失败");
         // 从模拟交易所接收开放订单的响应。
         response_rx.await
-                   .expect("[UnilinkExecution] : 模拟交易所目前离线 - 接收获取开放订单 FetchOrdersOpen 响应失败")
+                   .expect("[UniLinkExecution] : 模拟交易所目前离线 - 接收获取开放订单 FetchOrdersOpen 响应失败")
     }
 
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>
@@ -74,10 +74,10 @@ impl ClientExecution for SimulatedClient
         // 向模拟交易所发送获取账户余额的请求。
         self.request_tx
             .send(SimulatedClientEvent::FetchBalances(response_tx, self.local_timestamp))
-            .expect("[UnilinkExecution] : 模拟交易所目前离线 - 发送获取账户余额 FetchBalances 请求失败");
+            .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送获取账户余额 FetchBalances 请求失败");
         // 从模拟交易所接收账户余额的响应。
         response_rx.await
-                   .expect("[UnilinkExecution] : 模拟交易所目前离线 - 接收获取账户余额 FetchBalances 响应失败")
+                   .expect("[UniLinkExecution] : 模拟交易所目前离线 - 接收获取账户余额 FetchBalances 响应失败")
     }
 
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>
@@ -86,9 +86,9 @@ impl ClientExecution for SimulatedClient
         // 向模拟交易所发送开启订单的请求。
         self.request_tx
             .send(SimulatedClientEvent::OpenOrders((open_requests, response_tx), self.local_timestamp))
-            .expect("[UnilinkExecution] : 模拟交易所目前离线 - 发送 OpenOrders 请求失败");
+            .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送 OpenOrders 请求失败");
         // 从模拟交易所接收开启订单的响应。
-        response_rx.await.expect("[UnilinkExecution] : 模拟交易所目前离线 - 接收 OpenOrders 响应失败")
+        response_rx.await.expect("[UniLinkExecution] : 模拟交易所目前离线 - 接收 OpenOrders 响应失败")
     }
 
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>>
@@ -97,9 +97,9 @@ impl ClientExecution for SimulatedClient
         // 向模拟交易所发送取消订单的请求。
         self.request_tx
             .send(SimulatedClientEvent::CancelOrders((cancel_requests, response_tx), self.local_timestamp))
-            .expect("[UnilinkExecution] : 模拟交易所目前离线 - 发送 CancelOrders 请求失败");
+            .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送 CancelOrders 请求失败");
         // 从模拟交易所接收取消订单的响应。
-        response_rx.await.expect("[UnilinkExecution] : 模拟交易所目前离线 - 接收 CancelOrders 响应失败")
+        response_rx.await.expect("[UniLinkExecution] : 模拟交易所目前离线 - 接收 CancelOrders 响应失败")
     }
 
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>
@@ -109,8 +109,8 @@ impl ClientExecution for SimulatedClient
         // 向模拟交易所发送取消所有订单的请求。
         self.request_tx
             .send(SimulatedClientEvent::CancelOrdersAll(response_tx, self.local_timestamp))
-            .expect("[UnilinkExecution] : 模拟交易所目前离线 - 发送 CancelOrdersAll 请求失败");
+            .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送 CancelOrdersAll 请求失败");
         // 从模拟交易所接收取消所有订单的响应。
-        response_rx.await.expect("[UnilinkExecution] : 模拟交易所目前离线 - 接收 CancelOrdersAll 响应失败")
+        response_rx.await.expect("[UniLinkExecution] : 模拟交易所目前离线 - 接收 CancelOrdersAll 响应失败")
     }
 }

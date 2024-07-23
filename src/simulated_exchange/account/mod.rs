@@ -236,6 +236,6 @@ pub fn respond_with_latency<Response>(_latency: i64, response_tx: oneshot::Sende
 {
     tokio::spawn(async move {
         response_tx.send(response)
-                   .expect("[UnilinkExecution] : SimulatedExchange failed to send oneshot response to execution request")
+                   .expect("[UniLinkExecution] : SimulatedExchange failed to send oneshot response to execution request")
     });
 }
