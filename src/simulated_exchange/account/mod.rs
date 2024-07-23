@@ -254,7 +254,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         // 更新客户余额
         let balance_event = self.balances.write().await.update_from_open(&open, required_balance).await;
 
-        // 发送账户事件给客户端
+        // 发送账户事件给客户端 NOTE 或许需要单独建构变种。
         self.account_event_tx
             .send(balance_event)
             .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败");
