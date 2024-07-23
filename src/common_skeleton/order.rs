@@ -57,7 +57,7 @@ pub struct Order<State>
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct RequestOpen
 {
-    pub reduce_only:bool,
+    pub reduce_only: bool,
     pub price: f64,
     pub size: f64,
 }

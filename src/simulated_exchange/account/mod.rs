@@ -146,16 +146,14 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     pub async fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>)
     {
-        let latency = self.latency.read().await.current_value;
         let orders = self.orders.read().await.fetch_all();
-        respond_with_latency(latency, response_tx, Ok(orders)); // 是否要模拟延迟
+        respond(response_tx, Ok(orders)); // 是否要模拟延迟
     }
 
     pub async fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>)
     {
-        let latency = self.latency.read().await.current_value;
         let balances = self.balances.read().await.fetch_all();
-        respond_with_latency(latency, response_tx, Ok(balances));
+        respond(response_tx, Ok(balances));
     }
 
     pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError>
@@ -168,9 +166,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     pub async fn fetch_positions(&self, response_tx: oneshot::Sender<Result<Vec<AccountPositions>, ExecutionError>>)
     {
-        let latency = self.latency.read().await.current_value;
         let positions = self.positions.read().await.clone();
-        respond_with_latency(latency, response_tx, Ok(positions));
+        respond(response_tx, Ok(positions));
     }
 
     pub async fn match_orders(&mut self, _instrument: Instrument, _trade: Trade)
@@ -230,8 +227,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     }
 }
 
-// FIXME: currently erratic
-pub fn respond_with_latency<Response>(_latency: i64, response_tx: oneshot::Sender<Response>, response: Response)
+pub fn respond<Response>(response_tx: oneshot::Sender<Response>, response: Response)
     where Response: Debug + Send + 'static
 {
     tokio::spawn(async move {
