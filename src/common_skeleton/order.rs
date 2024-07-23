@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
+    common_skeleton::{event::ClientOrderId, instrument::Instrument, Side, token::Token},
     ExchangeID,
 };
 
@@ -16,6 +16,7 @@ pub enum OrderKind
 {
     Market,
     Limit,
+    PostOnly,
     ImmediateOrCancel,
     FillOrKill,
     GoodTilCancelled,
@@ -31,6 +32,7 @@ impl Display for OrderKind
             | OrderKind::ImmediateOrCancel => "immediate_or_cancel",
             | OrderKind::FillOrKill => "fill_or_kill",
             | OrderKind::GoodTilCancelled => "good_til_cancelled",
+            | OrderKind::PostOnly => "post_only",
             // | OrderKind::Stop => "stop",
             // | OrderKind::StopLimit => "stop_limit",
             // | OrderKind::TrailingStop => "trailing_stop",
