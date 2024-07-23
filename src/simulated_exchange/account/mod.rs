@@ -16,12 +16,14 @@ use crate::{
         position::AccountPositions,
     },
     error::ExecutionError,
-    simulated_exchange::account::{
-        account_latency::{fluctuate_latency, AccountLatency},
-        account_market_feed::AccountDataStreams,
+    simulated_exchange::{
+        account::{
+            account_latency::{fluctuate_latency, AccountLatency},
+            account_market_feed::AccountDataStreams,
+        },
+        load_from_clickhouse::queries_operations::ClickhouseTrade,
     },
 };
-use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade;
 
 pub mod account_balances;
 pub mod account_config;
@@ -170,9 +172,10 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         respond(response_tx, Ok(positions));
     }
 
-    pub async fn match_in_trade_distribution_loop(&mut self, market_event: MarketEvent<ClickhouseTrade>){
+    pub async fn match_in_trade_distribution_loop(&mut self, market_event: MarketEvent<ClickhouseTrade>)
+    {
         todo!()
-}
+    }
 
     // pub async fn match_orders(&mut self, _instrument: Instrument, _trade: ClickhouseTrade)
     // {

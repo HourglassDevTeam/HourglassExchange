@@ -16,19 +16,19 @@ pub struct InstrumentOrders
     pub asks: Vec<Order<Open>>,
 }
 
+/// 添加一个 [`Order<Open>`] 到买单或卖单中，取决于它的 [`Side`]。
 impl InstrumentOrders
 {
-    /// Add an [`Order<Open>`] to the bids or asks depending on it's [`Side`].
     pub fn add_order_open(&mut self, new_open_order: Order<Open>)
     {
         match new_open_order.side {
             | Side::Buy => {
-                // Add Order<Opened> to open bids
+                // 添加 Order<Opened> 到买单
                 self.bids.push(new_open_order);
                 self.bids.sort();
             }
             | Side::Sell => {
-                // Add Order<Opened> to open asks
+                // 添加 Order<Opened> 到卖单
                 self.asks.push(new_open_order);
                 self.asks.sort();
             }
