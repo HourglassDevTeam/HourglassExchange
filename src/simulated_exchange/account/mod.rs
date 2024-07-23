@@ -179,7 +179,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
 
     pub async fn match_orders(&mut self, market_event: MarketEvent< ClickhouseTrade>)
-    { todo!();
+    {
         // let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
         //
         // // Access the ClientOrders relating to the Instrument of the PublicTrade
