@@ -2,7 +2,6 @@ use std::{fmt::Debug, sync::Arc};
 
 use futures::future::join_all;
 use tokio::sync::{mpsc, oneshot, RwLock};
-use tracing::instrument::WithSubscriber;
 
 use account_balances::AccountBalances;
 use account_config::AccountConfig;
@@ -16,7 +15,7 @@ use crate::{common_skeleton::{
     position::AccountPositions,
 }, error::ExecutionError, ExchangeVariant, simulated_exchange::{
     account::{
-        account_latency::{fluctuate_latency, AccountLatency},
+        account_latency::{AccountLatency, fluctuate_latency},
         account_market_feed::AccountDataStreams,
     },
     load_from_clickhouse::queries_operations::ClickhouseTrade,
@@ -204,7 +203,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     //
     //         self.event_account_tx
     //             .send(balances_event)
-    //             .expect("[UniLink-Synth] : Client is offline - failed to send AccountEvent::Balances");
+    //             .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Balances");
     //
     //         self.event_account_tx
     //             .send(AccountEvent {
@@ -212,11 +211,11 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     //                 exchange: Exchange::from(ExchangeKind::Simulated),
     //                 kind: AccountEventKind::Trade(trade),
     //             })
-    //             .expect("[UniLink-Synth] : Client is offline - failed to send AccountEvent::Trade");
+    //             .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Trade");
     //     }
     // }
 
-    pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>, current_timestamp: i64)
+    pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>, _current_timestamp: i64)
     {
         let open_futures = open_requests.into_iter().map(|request| {
                                                         let mut this = self.clone();
@@ -256,7 +255,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         // Send AccountEvents to client
         self.account_event_tx
             .send(balance_event)
-            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
+            .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Balance");
 
         self.account_event_tx
             .send(AccountEvent {
@@ -264,7 +263,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 exchange: ExchangeVariant::Simulated,
                 kind: AccountEventKind::OrdersNew(vec![open.clone()]),
             })
-            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
+            .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Trade");
 
         Ok(open)
     }
@@ -310,6 +309,6 @@ pub fn respond<Response>(response_tx: oneshot::Sender<Response>, response: Respo
 {
     tokio::spawn(async move {
         response_tx.send(response)
-                   .expect("[UniLink-SynthExecution] : SimulatedExchange failed to send oneshot response to execution request")
+                   .expect("[UniLink_Execution] : SimulatedExchange failed to send oneshot response to execution request")
     });
 }

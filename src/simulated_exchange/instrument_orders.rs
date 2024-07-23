@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::common_skeleton::order::{Open, Order};
 use crate::common_skeleton::Side;
+
 // use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade;
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。

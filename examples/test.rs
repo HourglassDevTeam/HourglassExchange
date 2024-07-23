@@ -1,4 +1,5 @@
 use std::sync::Arc;
+
 use unilink_execution::simulated_exchange::load_from_clickhouse::queries_operations::{ClickHouseClient, ClickhouseTrade};
 
 #[tokio::main]

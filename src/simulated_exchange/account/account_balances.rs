@@ -12,10 +12,10 @@ use crate::{common_skeleton::{
     event::{AccountEvent, AccountEventKind},
     instrument::Instrument,
     order::{Open, Order},
+    Side,
     token::Token,
     trade::Trade,
-    Side,
-}, error::ExecutionError, simulated_exchange::account::Account, ExchangeID, ExchangeVariant::Simulated, ExchangeVariant};
+}, error::ExecutionError, ExchangeVariant, simulated_exchange::account::Account};
 
 #[derive(Clone, Debug)]
 pub struct AccountBalances<Event>
@@ -90,13 +90,13 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     {
         let _updated_balance = match open.side {
             | Side::Buy => {
-                let balance = self.balance_mut(&open.instrument.quote).expect("[UniLink-SynthExecution] : Balance existence is questionable");
+                let balance = self.balance_mut(&open.instrument.quote).expect("[UniLink_Execution] : Balance existence is questionable");
 
                 balance.available -= required_balance;
                 TokenBalance::new(open.instrument.quote.clone(), *balance)
             }
             | Side::Sell => {
-                let balance = self.balance_mut(&open.instrument.base).expect("[UniLink-SynthExecution] : Balance existence is questionable");
+                let balance = self.balance_mut(&open.instrument.base).expect("[UniLink_Execution] : Balance existence is questionable");
 
                 balance.available -= required_balance;
                 TokenBalance::new(open.instrument.base.clone(), *balance)
@@ -115,14 +115,14 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         match cancelled.side {
             | Side::Buy => {
                 let balance = self.balance_mut(&cancelled.instrument.quote)
-                                  .expect("[UniLink-SynthExecution] : Balance existence checked when opening Order");
+                                  .expect("[UniLink_Execution] : Balance existence checked when opening Order");
 
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
                 TokenBalance::new(cancelled.instrument.quote.clone(), *balance)
             }
             | Side::Sell => {
                 let balance = self.balance_mut(&cancelled.instrument.base)
-                                  .expect("[UniLink-SynthExecution] : Balance existence checked when opening Order");
+                                  .expect("[UniLink_Execution] : Balance existence checked when opening Order");
 
                 balance.available += cancelled.state.remaining_quantity();
                 TokenBalance::new(cancelled.instrument.base.clone(), *balance)

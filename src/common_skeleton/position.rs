@@ -1,10 +1,10 @@
 // FIXME : code below needs to be restructured and fitted to the framework. need to provide enums?
 // CONSIDER: can these positions coexist, if so enums might not be ideal.
 
-use crate::common_skeleton::balance::TokenBalance;
 use serde::{Deserialize, Serialize};
 
 use crate::common_skeleton::{friction::Fees, instrument::Instrument, Side};
+use crate::common_skeleton::balance::TokenBalance;
 use crate::ExchangeVariant;
 
 #[allow(dead_code)]
