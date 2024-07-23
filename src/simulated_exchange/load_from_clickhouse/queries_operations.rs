@@ -48,6 +48,7 @@ pub struct ClickhouseTrade
     pub side: String,
     pub price: f64,
     pub timestamp: i64,
+    pub amount:f64,
 }
 
 // 手动实现 Eq 和 PartialEq 特性
