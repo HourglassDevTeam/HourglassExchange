@@ -28,9 +28,9 @@ impl Display for OrderKind
         write!(f, "{}", match self {
             | OrderKind::Market => "market",
             | OrderKind::Limit => "limit",
-            | OrderKind::ImmediateOrCancel => "immediate_or_cancel (IOC)",
-            | OrderKind::FillOrKill => "fill_or_kill (FOK)",
-            | OrderKind::GoodTilCancelled => "good_til_cancelled (GTC)",
+            | OrderKind::ImmediateOrCancel => "immediate_or_cancel",
+            | OrderKind::FillOrKill => "fill_or_kill",
+            | OrderKind::GoodTilCancelled => "good_til_cancelled",
             // | OrderKind::Stop => "stop",
             // | OrderKind::StopLimit => "stop_limit",
             // | OrderKind::TrailingStop => "trailing_stop",
