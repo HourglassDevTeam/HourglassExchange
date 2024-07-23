@@ -18,7 +18,7 @@ pub struct SimulatedClient
 {
     pub local_timestamp: i64,
     pub request_tx: UnboundedSender<SimulatedClientEvent>, // NOTE 这是向模拟交易所端发送信号的发射器。注意指令格式是SimulatedClientEvent
-    pub strategy_signal_rx: UnboundedReceiver<SimulatedClientEvent>, // NOTE 这是从策略段收取信号的接收器。注意指令格式是SimulatedClientEvent
+    pub strategy_signal_rx: UnboundedReceiver<SimulatedClientEvent>, // NOTE 这是从策略收取信号的接收器。注意指令格式是SimulatedClientEvent
 
 }
 
