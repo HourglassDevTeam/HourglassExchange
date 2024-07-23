@@ -228,34 +228,36 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                       });
     }
     pub async fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError> {
+        // 验证订单合法性
         Self::order_validity_check(request.kind)?;
 
-        // Calculate required available balance to open order
+        // 计算开仓所需的可用余额
         let (symbol, required_balance) = request.calculate_required_available_balance();
 
-        // Check available balance is sufficient
+        // 检查可用余额是否充足
         self.balances.read().await.has_sufficient_available_balance(symbol, required_balance)?;
 
-        // Build Open<Order>
+        // 构建 Open<Order>
         let open = {
+            // 获取写锁并构建订单
             let mut orders_guard = self.orders.write().await;
             orders_guard.build_order_open(request)
         };
 
         {
-            // Retrieve client Instrument Orders and add order
+            // 获取写锁并检索客户的 Instrument Orders，添加订单
             let mut orders_guard = self.orders.write().await;
             let orders = orders_guard.orders_mut(&open.instrument)?;
             orders.add_order_open(open.clone());
         }
 
-        // Update ClientBalances
+        // 更新客户余额
         let balance_event = self.balances.write().await.update_from_open(&open, required_balance).await;
 
-        // Send AccountEvents to client
+        // 发送账户事件给客户端
         self.account_event_tx
             .send(balance_event)
-            .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Balance");
+            .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败");
 
         self.account_event_tx
             .send(AccountEvent {
@@ -263,8 +265,9 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 exchange: ExchangeVariant::Simulated,
                 kind: AccountEventKind::OrdersNew(vec![open.clone()]),
             })
-            .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Trade");
+            .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败");
 
+        // 返回已打开的订单
         Ok(open)
     }
 
