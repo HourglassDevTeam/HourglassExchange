@@ -3,11 +3,14 @@ use std::fmt::Formatter;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{common_skeleton::{
-    balance::TokenBalance,
-    order::{Cancelled, Open, Order},
-    trade::Trade,
-}, ExchangeVariant};
+use crate::{
+    common_skeleton::{
+        balance::TokenBalance,
+        order::{Cancelled, Open, Order},
+        trade::Trade,
+    },
+    ExchangeVariant,
+};
 
 /// NOTE: 如果需要记录交易所的时间戳，可以再添加一个专门的字段来表示交易所的时间，例如：    pub exchange_ts: DateTime<Utc> or i64
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -15,8 +18,8 @@ pub struct AccountEvent
 {
     pub exchange_timestamp: i64, // 交易所发送事件的时间,
     // pub client_ts: i64,        // 客户端接发送事件的时间
-    pub exchange: ExchangeVariant,   // 目标和源头交易所
-    pub kind: AccountEventKind, // 事件类型
+    pub exchange: ExchangeVariant, // 目标和源头交易所
+    pub kind: AccountEventKind,    // 事件类型
 }
 
 /// 定义账户事件[`AccountEvent`]的类型。

@@ -7,15 +7,20 @@ use std::{
 
 use tokio::sync::RwLock;
 
-use crate::{common_skeleton::{
-    balance::{Balance, BalanceDelta, TokenBalance},
-    event::{AccountEvent, AccountEventKind},
-    instrument::Instrument,
-    order::{Open, Order},
-    Side,
-    token::Token,
-    trade::Trade,
-}, error::ExecutionError, ExchangeVariant, simulated_exchange::account::Account};
+use crate::{
+    common_skeleton::{
+        balance::{Balance, BalanceDelta, TokenBalance},
+        event::{AccountEvent, AccountEventKind},
+        instrument::Instrument,
+        order::{Open, Order},
+        token::Token,
+        trade::Trade,
+        Side,
+    },
+    error::ExecutionError,
+    simulated_exchange::account::Account,
+    ExchangeVariant,
+};
 
 #[derive(Clone, Debug)]
 pub struct AccountBalances<Event>

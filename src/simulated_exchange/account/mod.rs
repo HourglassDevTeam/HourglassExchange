@@ -2,25 +2,32 @@ use std::{fmt::Debug, sync::Arc};
 
 use futures::future::join_all;
 use tokio::sync::{mpsc, oneshot, RwLock};
+use tracing::warn;
 
 use account_balances::AccountBalances;
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
 
-use crate::{common_skeleton::{
-    balance::TokenBalance,
-    datafeed::event::MarketEvent,
-    event::AccountEvent,
-    order::{Cancelled, Open, Order, OrderKind, RequestCancel, RequestOpen},
-    position::AccountPositions,
-}, error::ExecutionError, ExchangeVariant, simulated_exchange::{
-    account::{
-        account_latency::{AccountLatency, fluctuate_latency},
-        account_market_feed::AccountDataStreams,
+use crate::{
+    common_skeleton::{
+        balance::TokenBalance,
+        datafeed::event::MarketEvent,
+        event::{AccountEvent, AccountEventKind},
+        instrument::Instrument,
+        order::{Cancelled, Open, Order, OrderKind, RequestCancel, RequestOpen},
+        position::AccountPositions,
+        Side,
     },
-    load_from_clickhouse::queries_operations::ClickhouseTrade,
-}};
-use crate::common_skeleton::event::AccountEventKind;
+    error::ExecutionError,
+    simulated_exchange::{
+        account::{
+            account_latency::{fluctuate_latency, AccountLatency},
+            account_market_feed::AccountDataStreams,
+        },
+        load_from_clickhouse::queries_operations::ClickhouseTrade,
+    },
+    ExchangeVariant,
+};
 
 pub mod account_balances;
 pub mod account_config;
@@ -169,51 +176,49 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         respond(response_tx, Ok(positions));
     }
 
-    pub async fn match_orders(&mut self, _market_event: MarketEvent<ClickhouseTrade>, _current_ts: i64)
-    {
-        todo!()
-    }
-
-    // pub async fn match_orders(&mut self, _instrument: Instrument, _trade: ClickhouseTrade)
+    // pub async fn match_orders(&mut self, _market_event: MarketEvent<ClickhouseTrade>, _current_ts: i64)
     // {
-    //     let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
-    //
-    //     // Access the ClientOrders relating to the Instrument of the PublicTrade
-    //     let orders = match self.orders.orders_mut(&instrument) {
-    //         | Ok(orders) => orders,
-    //         | Err(error) => {
-    //             warn!(
-    //                 ?error, %instrument, ?trade, "cannot match orders with unrecognised Instrument"
-    //             );
-    //             return;
-    //         }
-    //     };
-    //
-    //     // Match client Order<Open>s to incoming PublicTrade if the liquidity intersects
-    //     let trades = match orders.has_matching_order(&trade) {
-    //         | Some(Side::Buy) => orders.match_bids(&trade, fees_percent),
-    //         | Some(Side::Sell) => orders.match_asks(&trade, fees_percent),
-    //         | None => return,
-    //     };
-    //
-    //     // Apply Balance updates for each client Trade and send AccountEvents to client
-    //     for trade in trades {
-    //         // Update Balances
-    //         let balances_event = self.balances.update_from_trade(&trade);
-    //
-    //         self.event_account_tx
-    //             .send(balances_event)
-    //             .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Balances");
-    //
-    //         self.event_account_tx
-    //             .send(AccountEvent {
-    //                 received_time: Utc::now(),
-    //                 exchange: Exchange::from(ExchangeKind::Simulated),
-    //                 kind: AccountEventKind::Trade(trade),
-    //             })
-    //             .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Trade");
-    //     }
+    //     todo!()
     // }
+
+    pub async fn match_orders(&mut self, instrument: Instrument, trade: ClickhouseTrade)
+    {
+        let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
+
+        // Access the ClientOrders relating to the Instrument of the PublicTrade
+        let orders = match self.orders.orders_mut(&instrument) {
+            | Ok(orders) => orders,
+            | Err(error) => {
+                warn!(
+                    ?error, %instrument, ?trade, "cannot match orders with unrecognised Instrument"
+                );
+                return;
+            }
+        };
+
+        // Match client Order<Open>s to incoming PublicTrade if the liquidity intersects
+        let trades = match orders.has_matching_order(&trade) {
+            | Some(Side::Buy) => orders.match_bids(&trade, fees_percent),
+            | Some(Side::Sell) => orders.match_asks(&trade, fees_percent),
+            | None => return,
+        };
+
+        // Apply Balance updates for each client Trade and send AccountEvents to client
+        for trade in trades {
+            // Update Balances
+            let balances_event = self.balances.update_from_trade(&trade);
+
+            self.account_event_tx
+                .send(balances_event)
+                .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Balances");
+
+            self.account_event_tx
+                .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
+                                     exchange: ExchangeVariant::Simulated,
+                                     kind: AccountEventKind::Trade(trade) })
+                .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Trade");
+        }
+    }
 
     pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>, _current_timestamp: i64)
     {
@@ -227,7 +232,9 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                           // Handle the error if sending fails
                                       });
     }
-    pub async fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError> {
+
+    pub async fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError>
+    {
         // 验证订单合法性
         Self::order_validity_check(request.kind)?;
 
@@ -260,19 +267,14 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败");
 
         self.account_event_tx
-            .send(AccountEvent {
-                exchange_timestamp: self.exchange_timestamp,
-                exchange: ExchangeVariant::Simulated,
-                kind: AccountEventKind::OrdersNew(vec![open.clone()]),
-            })
+            .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
+                                 exchange: ExchangeVariant::Simulated,
+                                 kind: AccountEventKind::OrdersNew(vec![open.clone()]) })
             .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败");
 
         // 返回已打开的订单
         Ok(open)
     }
-
-
-
 
     pub async fn cancel_orders(&mut self,
                                cancel_requests: Vec<Order<RequestCancel>>,

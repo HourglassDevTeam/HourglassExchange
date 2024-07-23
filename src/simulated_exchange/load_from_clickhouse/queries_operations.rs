@@ -6,8 +6,8 @@ use std::sync::Arc;
 use async_stream::stream;
 use chrono::{Duration, NaiveDate};
 pub use clickhouse::{
-    Client,
-    error::{Error, Result}, Row,
+    error::{Error, Result},
+    Client, Row,
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
@@ -18,11 +18,11 @@ use tokio::sync::{
 
 use crate::{
     common_skeleton::datafeed::event::MarketEvent,
-    ExchangeID,
     simulated_exchange::{
         utils::chrono_operations::extract_date,
         ws_trade::{parse_base_and_quote, WsTrade},
     },
+    ExchangeID,
 };
 
 pub struct ClickHouseClient
@@ -244,8 +244,7 @@ impl ClickHouseClient
                 let mut offset = 0;
 
                 loop {
-                    let query = format!("SELECT * FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}",
-                                        database, table_name, batch_size, offset);
+                    let query = format!("SELECT * FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}", database, table_name, batch_size, offset);
                     println!("[UniLinkExecution] : 正在执行 query: {}", query);
 
                     let client = client.read().await;

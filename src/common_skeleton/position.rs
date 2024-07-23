@@ -3,9 +3,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::common_skeleton::{friction::Fees, instrument::Instrument, Side};
-use crate::common_skeleton::balance::TokenBalance;
-use crate::ExchangeVariant;
+use crate::{
+    common_skeleton::{balance::TokenBalance, friction::Fees, instrument::Instrument, Side},
+    ExchangeVariant,
+};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
