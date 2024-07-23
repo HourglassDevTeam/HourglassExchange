@@ -95,6 +95,7 @@ impl<Id> From<Id> for RequestCancel where Id: Into<OrderId>
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct Open
 {
+    pub kind: OrderKind,
     pub id: OrderId,
     pub price: f64,
     pub size: f64,
@@ -210,6 +211,7 @@ impl From<(OrderId, Order<RequestOpen>)> for Order<Open>
                client_ts: request.client_ts,
                side: request.side,
                state: Open { id,
+                             kind: request.state.kind,
                              price: request.state.price,
                              size: request.state.size,
                              filled_quantity: 0.0 } }
