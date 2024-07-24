@@ -1,7 +1,7 @@
 use crate::common_skeleton::order::{Order, RequestOpen};
 use crate::common_skeleton::order::OrderId;
 
-/// NOTE 在需要模拟延迟的回测场景下仅使用这种Pending状态。
+/// NOTE 在需要模拟延迟的回测场景下仅使用这种Open订单状态。
 #[allow(dead_code)]
 pub struct SimulatedOpen
 {
