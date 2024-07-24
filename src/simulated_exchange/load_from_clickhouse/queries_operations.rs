@@ -6,8 +6,8 @@ use std::sync::Arc;
 use async_stream::stream;
 use chrono::{Duration, NaiveDate};
 pub use clickhouse::{
-    error::{Error, Result},
-    Client, Row,
+    Client,
+    error::{Error, Result}, Row,
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
@@ -18,11 +18,11 @@ use tokio::sync::{
 
 use crate::{
     common_skeleton::datafeed::event::MarketEvent,
+    ExchangeID,
     simulated_exchange::{
         utils::chrono_operations::extract_date,
         ws_trade::{parse_base_and_quote, WsTrade},
     },
-    ExchangeID,
 };
 
 pub struct ClickHouseClient
