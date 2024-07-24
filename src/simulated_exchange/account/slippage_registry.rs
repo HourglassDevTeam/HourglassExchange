@@ -5,7 +5,7 @@ use crate::common_skeleton::order::OrderId;
 #[allow(dead_code)]
 pub struct SimulatedOpen
 {
-    pub processed_ts: i64,
+    pub processed_ts: i64, // NOTE this timestamp is only applicable in the simulated environment.
     pub id: OrderId,
     pub price: f64,
     pub size: f64,
