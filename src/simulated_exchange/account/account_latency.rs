@@ -1,4 +1,5 @@
 use rand::Rng;
+use serde::Deserialize;
 // 引入随机数生成器
 use rand_distr::{Distribution, Normal};
 

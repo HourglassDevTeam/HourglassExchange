@@ -6,7 +6,10 @@ use std::{
 use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::client;
 
-use crate::{common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side}, ExchangeID, ExchangeVariant};
+use crate::{
+    common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
+    ExchangeID, ExchangeVariant,
+};
 
 /// 订单类型枚举
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -42,13 +45,13 @@ impl Display for OrderKind
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
-    pub kind: OrderKind,        // 订单种类
-    pub exchange: ExchangeVariant,   // 交易所
-    pub instrument: Instrument, // 交易工具
-    pub client_ts: i64, // 客户端下单时间
-    pub cid: ClientOrderId, // 客户端订单ID
-    pub side: Side,         // 买卖方向
-    pub state: State,       // 订单状态
+    pub kind: OrderKind,           // 订单种类
+    pub exchange: ExchangeVariant, // 交易所
+    pub instrument: Instrument,    // 交易工具
+    pub client_ts: i64,            // 客户端下单时间
+    pub cid: ClientOrderId,        // 客户端订单ID
+    pub side: Side,                // 买卖方向
+    pub state: State,              // 订单状态
 }
 
 /// 订单初始状态。发送到client进行操作
@@ -100,7 +103,7 @@ pub struct Open
     pub price: f64,
     pub size: f64,
     pub filled_quantity: f64,
-    pub received_ts: i64, // 交易所下单时间 NOTE this might be only applicable in a simulated exchange. 流动性充足的情况下received到trade状态的时间差不超过2ms，并且是交易所端不可避免的。‘
+    pub received_ts: i64, /* 交易所下单时间 NOTE this might be only applicable in a simulated exchange. 流动性充足的情况下received到trade状态的时间差不超过2ms，并且是交易所端不可避免的。‘ */
 }
 
 impl Open
@@ -201,8 +204,6 @@ impl From<&Order<RequestOpen>> for Order<Pending>
                state: Pending } // NOTE compatability with SimulatedPending is due here
     }
 }
-
-
 
 impl From<Order<Open>> for Order<Cancelled>
 {

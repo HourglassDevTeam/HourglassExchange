@@ -40,7 +40,6 @@ pub struct Account<Event>
     pub data: Arc<RwLock<AccountDataStreams<Event>>>,               // 帐户数据
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
-    pub latency: Arc<RwLock<AccountLatency>>,                       // 帐户延迟
     pub config: Arc<RwLock<AccountConfig>>,                         // 帐户配置
     pub balances: Arc<RwLock<AccountBalances<Event>>>,              // 帐户余额
     pub positions: Arc<RwLock<Vec<AccountPositions>>>,              // 帐户头寸
@@ -54,7 +53,6 @@ pub struct AccountInitiator<Event>
     data: Option<Arc<RwLock<AccountDataStreams<Event>>>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
     market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
-    latency: Option<Arc<RwLock<AccountLatency>>>,
     config: Option<Arc<RwLock<AccountConfig>>>,
     balances: Option<Arc<RwLock<AccountBalances<Event>>>>,
     positions: Option<Arc<RwLock<Vec<AccountPositions>>>>,
@@ -68,7 +66,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
         AccountInitiator { data: None,
                            account_event_tx: None,
                            market_event_tx: None,
-                           latency: None,
                            config: None,
                            balances: None,
                            positions: None,
@@ -90,12 +87,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
     pub fn market_event_tx(mut self, value: mpsc::UnboundedSender<MarketEvent<Event>>) -> Self
     {
         self.market_event_tx = Some(value);
-        self
-    }
-
-    pub fn latency(mut self, value: AccountLatency) -> Self
-    {
-        self.latency = Some(Arc::new(RwLock::new(value)));
         self
     }
 
@@ -129,7 +120,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
                      data: self.data.ok_or("datafeed is required")?,                                 // 检查并获取data
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
                      market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
-                     latency: self.latency.ok_or("latency is required")?,                            // 检查并获取latency
                      config: self.config.ok_or("config is required")?,                               // 检查并获取config
                      balances: self.balances.ok_or("balances is required")?,                         // 检查并获取balances
                      positions: self.positions.ok_or("positions are required")?,                     // 检查并获取positions
@@ -374,12 +364,6 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     pub async fn cancel_orders_all(&mut self, _response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, _current_timestamp: i64)
     {
         todo!()
-    }
-
-    pub async fn update_latency(&mut self, current_time: i64)
-    {
-        let mut latency = self.latency.write().await;
-        fluctuate_latency(&mut *latency, current_time);
     }
 }
 
