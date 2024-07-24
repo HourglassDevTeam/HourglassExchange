@@ -31,7 +31,6 @@ pub mod account_config;
 mod account_latency;
 pub mod account_market_feed;
 pub mod account_orders;
-pub mod slippage_registry;
 
 #[derive(Clone, Debug)]
 pub struct Account<Event>
@@ -327,7 +326,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         };
 
         {
-            // 获取写锁并检索客户的 Instrument Orders，添加订单
+            // 获取写锁并检索账户中的的 Instrument Orders，添加订单
             let mut orders_guard = self.orders.write().await;
             let orders = orders_guard.orders_mut(&open.instrument)?;
             orders.add_order_open(open.clone());

@@ -4,11 +4,9 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+use tokio_tungstenite::tungstenite::client;
 
-use crate::{
-    common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
-    ExchangeID,
-};
+use crate::{common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side}, ExchangeID, ExchangeVariant};
 
 /// 订单类型枚举
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -45,7 +43,7 @@ impl Display for OrderKind
 pub struct Order<State>
 {
     pub kind: OrderKind,        // 订单种类
-    pub exchange: ExchangeID,   // 交易所
+    pub exchange: ExchangeVariant,   // 交易所
     pub instrument: Instrument, // 交易工具
     pub client_ts: i64, // 客户端下单时间
     pub cid: ClientOrderId, // 客户端订单ID
@@ -204,33 +202,13 @@ impl From<&Order<RequestOpen>> for Order<Pending>
     }
 }
 
-impl From<(OrderId, Order<RequestOpen>)> for Order<Open>
-{
-    fn from((id, request): (OrderId, Order<RequestOpen>)) -> Self
-    {
-        Self { kind: request.kind,
-               exchange: request.exchange.clone(),
-               instrument: request.instrument.clone(),
-               cid: request.cid,
-               client_ts: request.client_ts,
-               side: request.side,
-               state: Open { id,
-                             price: request.state.price,
-                             size: request.state.size,
-                             filled_quantity: 0.0,
-                   received_ts: 0,
-               }
 
-        }
-    }
-}
 
 impl From<Order<Open>> for Order<Cancelled>
 {
     fn from(order: Order<Open>) -> Self
     {
         Self { kind: order.kind,
-
                exchange: order.exchange.clone(),
                instrument: order.instrument.clone(),
                cid: order.cid,

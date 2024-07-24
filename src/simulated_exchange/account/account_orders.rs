@@ -14,6 +14,31 @@ use crate::{
     simulated_exchange::instrument_orders::InstrumentOrders,
 };
 
+
+
+// NOTE as a matter of fact this is only usable in SimulatedExchange.
+impl From<(OrderId, Order<RequestOpen>)> for Order<Open>
+{
+    fn from((id, request): (OrderId, Order<RequestOpen>)) -> Self
+    {
+        Self { kind: request.kind,
+            exchange: request.exchange.clone(),
+            instrument: request.instrument.clone(),
+            cid: request.cid,
+            client_ts: request.client_ts,
+            side: request.side,
+            state: Open { id,
+                price: request.state.price,
+                size: request.state.size,
+                filled_quantity: 0.0,
+                received_ts: request.client_ts,   // add the delay to the client_ts
+            }
+
+        }
+    }
+}
+
+
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct AccountOrders
 {
