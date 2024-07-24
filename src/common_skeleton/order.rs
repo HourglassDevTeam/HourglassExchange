@@ -47,7 +47,8 @@ pub struct Order<State>
     pub kind: OrderKind,        // 订单种类
     pub exchange: ExchangeID,   // 交易所
     pub instrument: Instrument, // 交易工具
-    pub client_ts: i64,
+    pub client_ts: i64, // 客户端下单时间
+    pub processed_ts: i64, // 交易所下单时间 NOTE this might be  only applicable in a simulated exchange
     pub cid: ClientOrderId, // 客户端订单ID
     pub side: Side,         // 买卖方向
     pub state: State,       // 订单状态
