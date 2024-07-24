@@ -159,8 +159,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         respond(response_tx, Ok(positions));
     }
 
-    // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到对应的订单
-    pub async fn find_bids_for_an_trade(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>
+    // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到对应的订单 // TO BE CONFIRMED
+    pub async fn find_orders_for_an_trade_event(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>
     {
         // 读取 market_event 中的 instrument 和 side
         let instrument_kind = market_event.instrument;
