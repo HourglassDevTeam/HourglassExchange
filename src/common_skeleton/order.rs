@@ -48,7 +48,6 @@ pub struct Order<State>
     pub exchange: ExchangeID,   // 交易所
     pub instrument: Instrument, // 交易工具
     pub client_ts: i64, // 客户端下单时间
-    pub processed_ts: i64, // 交易所下单时间 NOTE this might be  only applicable in a simulated exchange
     pub cid: ClientOrderId, // 客户端订单ID
     pub side: Side,         // 买卖方向
     pub state: State,       // 订单状态
@@ -103,6 +102,7 @@ pub struct Open
     pub price: f64,
     pub size: f64,
     pub filled_quantity: f64,
+    pub received_ts: i64, // 交易所下单时间 NOTE this might be only applicable in a simulated exchange. 流动性充足的情况下received到trade状态的时间差不超过2ms，并且是交易所端不可避免的。‘
     // NOTE or [remaining_size]  , essentially the same.
 }
 
@@ -218,7 +218,9 @@ impl From<(OrderId, Order<RequestOpen>)> for Order<Open>
                state: Open { id,
                              price: request.state.price,
                              size: request.state.size,
-                             filled_quantity: 0.0 } }
+                             filled_quantity: 0.0 }
+
+        }
     }
 }
 
