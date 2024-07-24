@@ -2,7 +2,6 @@ use std::{fmt::Debug, sync::Arc};
 
 use futures::future::join_all;
 use tokio::sync::{mpsc, oneshot, RwLock};
-use tracing::warn;
 
 use account_balances::AccountBalances;
 use account_config::AccountConfig;
@@ -13,20 +12,18 @@ use crate::{
         balance::TokenBalance,
         datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
-        instrument::Instrument,
         order::{Cancelled, Open, Order, OrderKind, RequestCancel, RequestOpen},
         position::AccountPositions,
-        Side,
     },
     error::ExecutionError,
+    ExchangeVariant,
     simulated_exchange::{
         account::{
-            account_latency::{fluctuate_latency, AccountLatency},
+            account_latency::{AccountLatency, fluctuate_latency},
             account_market_feed::AccountDataStreams,
         },
         load_from_clickhouse::queries_operations::ClickhouseTrade,
     },
-    ExchangeVariant,
 };
 
 pub mod account_balances;
@@ -176,87 +173,118 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         respond(response_tx, Ok(positions));
     }
 
-    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {
-        // NOTE 根据 InstrumentKind 和 Side 来确定 applicable fees
-        match market_event.kind {
-            Spot => {
-                let side = market_event.kind.side;
-                match side.as_str() {
-                    "Buy" => {
-                        let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
-                        self.orders.read().await.match_bids(&market_event.kind, fees_percent);
-                    }
-                    "Sell" => {
-                        let fees_percent = self.config.read().await.current_commission_rate.spot_taker;
-                        self.orders.read().await.match_asks(&market_event.kind, fees_percent);
-                    }
-                    _ => {
-                        // Handle unexpected side value
-                        println!("Unexpected side: {}", side);
-                    }
-                }
-            }
-            Perpetual => {
-                let side = market_event.kind.side;
-                match side.as_str() {
-                    "Buy" => {
-                        let fees_percent = self.config.read().await.current_commission_rate.perpetual_open;
-                        self.orders.read().await.match_bids(&market_event.kind, fees_percent);
-                    }
-                    "Sell" => {
-                        let fees_percent = self.config.read().await.current_commission_rate.perpetual_close;
-                        self.orders.read().await.match_asks(&market_event.kind, fees_percent);
-                    }
-                    _ => {
-                        // Handle unexpected side value
-                        println!("Unexpected side: {}", side);
-                    }
-                }
+    // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到对应的订单
+    pub async fn find_bids_for_an_trade(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>> {
+        // 读取 market_event 中的 instrument 和 side
+        let instrument_kind = market_event.instrument;
+        let side = market_event.kind.side;
 
+        // 获取读锁以读取订单数据
+        let orders = self.orders.read().await;
+
+        // 从 instrument_orders_map 中查找对应的 InstrumentOrders
+        if let Some(instrument_orders) = orders.instrument_orders_map.get(&instrument_kind) {
+            match side.as_str() {
+                "Buy" => {
+                    // 返回所有买单
+                    instrument_orders.bids.clone()
+                }
+                "Sell" => {
+                    // 返回所有卖单
+                    instrument_orders.asks.clone()
+                }
+                _ => {
+                    // 处理意外的 side 值
+                    println!("Unexpected side: {}", side);
+                    vec![]
+                }
             }
-            _ => {
-                // Handle unexpected InstrumentKind
-                println!("Unexpected InstrumentKind: {:?}", market_event.kind);
-            }
+        } else {
+            // 没有找到对应的 InstrumentOrders
+            println!("未找到本则行情数据对应的未成交订单: {:?}", instrument_kind);
+            vec![]
         }
     }
-        // let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
-        //
-        // // Access the ClientOrders relating to the Instrument of the PublicTrade
-        // let orders = match self.orders.read().await.orders_mut(&market_event.instrument) {
-        //     | Ok(orders) => orders,
-        //     | Err(error) => {
-        //         warn!(
-        //             ?error, %market_event.instrument, ?market_event.kind, "cannot match orders with unrecognised Instrument"
-        //         );
-        //         return;
-        //     }
-        // };
-        //
-        // // Match client Order<Open>s to incoming PublicTrade if the liquidity intersects
-        // let trades = match orders.has_matching_order(&market_event.kind) {
-        //     | Some(Side::Buy) => orders.match_bids(&market_event.kind, fees_percent),
-        //     | Some(Side::Sell) => orders.match_asks(&market_event.kind, fees_percent),
-        //     | None => return,
-        // };
-        //
-        // // Apply Balance updates for each client Trade and send AccountEvents to client
-        // for trade in trades {
-        //     // Update Balances
-        //     let balances_event = self.balances.update_from_trade(&trade);
-        //
-        //     self.account_event_tx
-        //         .send(balances_event)
-        //         .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Balances");
-        //
-        //     self.account_event_tx
-        //         .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
-        //                              exchange: ExchangeVariant::Simulated,
-        //                              kind: AccountEventKind::Trade(trade) })
-        //         .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Trade");
-        // }
 
-
+    // pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {
+    //     // NOTE 根据 InstrumentKind 和 Side 来确定 applicable fees
+    //     match market_event.kind {
+    //         Spot => {
+    //             let side = market_event.kind.side;
+    //             match side.as_str() {
+    //                 "Buy" => {
+    //                     let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
+    //                     self.orders.read().await.match_bids(&market_event.kind, fees_percent);
+    //                 }
+    //                 "Sell" => {
+    //                     let fees_percent = self.config.read().await.current_commission_rate.spot_taker;
+    //                     self.orders.read().await.match_asks(&market_event.kind, fees_percent);
+    //                 }
+    //                 _ => {
+    //                     // Handle unexpected side value
+    //                     println!("Unexpected side: {}", side);
+    //                 }
+    //             }
+    //         }
+    //         Perpetual => {
+    //             let side = market_event.kind.side;
+    //             match side.as_str() {
+    //                 "Buy" => {
+    //                     let fees_percent = self.config.read().await.current_commission_rate.perpetual_open;
+    //                     self.orders.read().await.match_bids(&market_event.kind, fees_percent);
+    //                 }
+    //                 "Sell" => {
+    //                     let fees_percent = self.config.read().await.current_commission_rate.perpetual_close;
+    //                     self.orders.read().await.match_asks(&market_event.kind, fees_percent);
+    //                 }
+    //                 _ => {
+    //                     // Handle unexpected side value
+    //                     println!("Unexpected side: {}", side);
+    //                 }
+    //             }
+    //
+    //         }
+    //         _ => {
+    //             // Handle unexpected InstrumentKind
+    //             println!("Unexpected InstrumentKind: {:?}", market_event.kind);
+    //         }
+    //     }
+    // }
+    // let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
+    //
+    // // Access the ClientOrders relating to the Instrument of the PublicTrade
+    // let orders = match self.orders.read().await.orders_mut(&market_event.instrument) {
+    //     | Ok(orders) => orders,
+    //     | Err(error) => {
+    //         warn!(
+    //             ?error, %market_event.instrument, ?market_event.kind, "cannot match orders with unrecognised Instrument"
+    //         );
+    //         return;
+    //     }
+    // };
+    //
+    // // Match client Order<Open>s to incoming PublicTrade if the liquidity intersects
+    // let trades = match orders.has_matching_order(&market_event.kind) {
+    //     | Some(Side::Buy) => orders.match_bids(&market_event.kind, fees_percent),
+    //     | Some(Side::Sell) => orders.match_asks(&market_event.kind, fees_percent),
+    //     | None => return,
+    // };
+    //
+    // // Apply Balance updates for each client Trade and send AccountEvents to client
+    // for trade in trades {
+    //     // Update Balances
+    //     let balances_event = self.balances.update_from_trade(&trade);
+    //
+    //     self.account_event_tx
+    //         .send(balances_event)
+    //         .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Balances");
+    //
+    //     self.account_event_tx
+    //         .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
+    //                              exchange: ExchangeVariant::Simulated,
+    //                              kind: AccountEventKind::Trade(trade) })
+    //         .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Trade");
+    // }
 
     // NOTE a method that generates trade from matched order is missing for the time being.
 
