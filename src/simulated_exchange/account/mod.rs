@@ -16,14 +16,11 @@ use crate::{
         position::AccountPositions,
     },
     error::ExecutionError,
+    ExchangeVariant,
     simulated_exchange::{
-        account::{
-            account_latency::{fluctuate_latency, AccountLatency},
-            account_market_feed::AccountDataStreams,
-        },
+        account::account_market_feed::AccountDataStreams,
         load_from_clickhouse::queries_operations::ClickhouseTrade,
     },
-    ExchangeVariant,
 };
 
 pub mod account_balances;
@@ -312,7 +309,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         let open = {
             // 获取写锁并构建订单
             let mut orders_guard = self.orders.write().await;
-            orders_guard.build_order_open(request)
+            orders_guard.build_order_open(request).await
         };
 
         {

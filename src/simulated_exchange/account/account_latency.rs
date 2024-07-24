@@ -1,7 +1,7 @@
 use rand::Rng;
-use serde::Deserialize;
 // 引入随机数生成器
 use rand_distr::{Distribution, Normal};
+use serde::Deserialize;
 
 // 引入随机分布库，包括常态分布
 

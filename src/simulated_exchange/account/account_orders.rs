@@ -20,22 +20,28 @@ use crate::{
     },
 };
 
+
+
 // NOTE as a matter of fact this is only usable in SimulatedExchange.
-impl From<(OrderId, Order<RequestOpen>)> for Order<Open>
+impl From<(OrderId, Order<RequestOpen>, i64)> for Order<Open>
 {
-    fn from((id, request): (OrderId, Order<RequestOpen>)) -> Self
+    fn from((id, request, adjusted_client_ts): (OrderId, Order<RequestOpen>, i64)) -> Self
     {
-        Self { kind: request.kind,
-               exchange: request.exchange.clone(),
-               instrument: request.instrument.clone(),
-               cid: request.cid,
-               client_ts: request.client_ts,
-               side: request.side,
-               state: Open { id,
-                             price: request.state.price,
-                             size: request.state.size,
-                             filled_quantity: 0.0,
-                             received_ts: request.client_ts /* add the delay to the client_ts */ } }
+        Self {
+            kind: request.kind,
+            exchange: request.exchange.clone(),
+            instrument: request.instrument.clone(),
+            cid: request.cid,
+            client_ts: request.client_ts,
+            side: request.side,
+            state: Open {
+                id,
+                price: request.state.price,
+                size: request.state.size,
+                filled_quantity: 0.0,
+                received_ts: adjusted_client_ts,
+            },
+        }
     }
 }
 
@@ -78,10 +84,15 @@ impl AccountOrders
 
     /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
     /// 在 increment_request_counter 方法中，使用 Ordering::Relaxed 进行递增。
-    pub fn build_order_open(&mut self, request: Order<RequestOpen>) -> Order<Open>
+    pub async fn build_order_open(&mut self, request: Order<RequestOpen>) -> Order<Open>
     {
         self.increment_request_counter();
-        Order::from((self.order_id(), request))
+
+        // 获取当前的 AccountLatency 值并加到 client_ts 上
+        let latency = self.latency.read().await.current_value;
+        let adjusted_client_ts = request.client_ts + latency;
+
+        Order::from((self.order_id(), request, adjusted_client_ts))
     }
 
     pub fn increment_request_counter(&self)

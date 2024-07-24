@@ -4,11 +4,9 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use tokio_tungstenite::tungstenite::client;
 
 use crate::{
-    common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
-    ExchangeID, ExchangeVariant,
+    common_skeleton::{event::ClientOrderId, instrument::Instrument, Side, token::Token}, ExchangeVariant,
 };
 
 /// 订单类型枚举
