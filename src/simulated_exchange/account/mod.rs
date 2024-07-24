@@ -176,10 +176,50 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         respond(response_tx, Ok(positions));
     }
 
+    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {
+        // NOTE 根据 InstrumentKind 和 Side 来确定 applicable fees
+        match market_event.kind {
+            Spot => {
+                let side = market_event.kind.side;
+                match side.as_str() {
+                    "Buy" => {
+                        let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
+                        self.orders.read().await.match_bids(&market_event.kind, fees_percent);
+                    }
+                    "Sell" => {
+                        let fees_percent = self.config.read().await.current_commission_rate.spot_taker;
+                        self.orders.read().await.match_asks(&market_event.kind, fees_percent);
+                    }
+                    _ => {
+                        // Handle unexpected side value
+                        println!("Unexpected side: {}", side);
+                    }
+                }
+            }
+            Perpetual => {
+                let side = market_event.kind.side;
+                match side.as_str() {
+                    "Buy" => {
+                        let fees_percent = self.config.read().await.current_commission_rate.perpetual_open;
+                        self.orders.read().await.match_bids(&market_event.kind, fees_percent);
+                    }
+                    "Sell" => {
+                        let fees_percent = self.config.read().await.current_commission_rate.perpetual_close;
+                        self.orders.read().await.match_asks(&market_event.kind, fees_percent);
+                    }
+                    _ => {
+                        // Handle unexpected side value
+                        println!("Unexpected side: {}", side);
+                    }
+                }
 
-
-    pub async fn match_orders(&mut self, market_event: MarketEvent< ClickhouseTrade>)
-    {
+            }
+            _ => {
+                // Handle unexpected InstrumentKind
+                println!("Unexpected InstrumentKind: {:?}", market_event.kind);
+            }
+        }
+    }
         // let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
         //
         // // Access the ClientOrders relating to the Instrument of the PublicTrade
@@ -215,7 +255,10 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         //                              kind: AccountEventKind::Trade(trade) })
         //         .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Trade");
         // }
-    }
+
+
+
+    // NOTE a method that generates trade from matched order is missing for the time being.
 
     pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>, _current_timestamp: i64)
     {
