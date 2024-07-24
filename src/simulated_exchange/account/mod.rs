@@ -16,14 +16,14 @@ use crate::{
         position::AccountPositions,
     },
     error::ExecutionError,
-    ExchangeVariant,
     simulated_exchange::{
         account::{
-            account_latency::{AccountLatency, fluctuate_latency},
+            account_latency::{fluctuate_latency, AccountLatency},
             account_market_feed::AccountDataStreams,
         },
         load_from_clickhouse::queries_operations::ClickhouseTrade,
     },
+    ExchangeVariant,
 };
 
 pub mod account_balances;

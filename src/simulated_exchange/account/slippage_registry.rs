@@ -1,55 +1,30 @@
-use crate::common_skeleton::datafeed::event::MarketEvent;
+use crate::common_skeleton::{datafeed::event::MarketEvent, order::OrderId};
+use crate::common_skeleton::order::{Cancelled, Open, Order, RequestOpen};
 
-// SlippageRegistry 结构体，包含市场事件的 Vec
-#[derive(Debug, Default)]
-pub struct SlippageRegistry<Data>
-{
-    events: Vec<MarketEvent<Data>>,
-}
-
-impl<Data> SlippageRegistry<Data>
-{
-    pub fn new() -> Self
-    {
-        SlippageRegistry { events: Vec::new() }
-    }
-
-    pub fn register_event(&mut self, event: MarketEvent<Data>)
-    {
-        self.events.push(event);
-    }
-}
 
 /// NOTE 在需要模拟延迟的回测场景下仅使用这种Pending状态。
 #[allow(dead_code)]
-pub struct SimulatedPending<Data>
+pub struct SimulatedOpen
 {
-    slippage_registry: SlippageRegistry<Data>,
+    pub id: OrderId,
+    pub price: f64,
+    pub size: f64,
+    pub filled_quantity: f64,
 }
 
-#[allow(dead_code)]
-trait PendingWithSlippageRegistry<Data>
+impl From<(OrderId, Order<RequestOpen>)> for Order<SimulatedOpen>
 {
-    fn new() -> Self;
-    fn register_slippage_event(&mut self, event: MarketEvent<Data>);
-    fn get_slippage_registry(&self) -> &SlippageRegistry<Data>;
-}
-
-/// 为包含 [slippage_registry] 字段的 [SimulatedPending] 结构体实现特征
-impl<Data> PendingWithSlippageRegistry<Data> for SimulatedPending<Data>
-{
-    fn new() -> Self
+    fn from((id, request): (OrderId, Order<RequestOpen>)) -> Self
     {
-        SimulatedPending { slippage_registry: SlippageRegistry::new() }
-    }
-
-    fn register_slippage_event(&mut self, event: MarketEvent<Data>)
-    {
-        self.slippage_registry.register_event(event);
-    }
-
-    fn get_slippage_registry(&self) -> &SlippageRegistry<Data>
-    {
-        &self.slippage_registry
+        Self { kind: request.kind,
+            exchange: request.exchange.clone(),
+            instrument: request.instrument.clone(),
+            cid: request.cid,
+            client_ts: request.client_ts,
+            side: request.side,
+            state: SimulatedOpen { id,
+                price: request.state.price,
+                size: request.state.size,
+                filled_quantity: 0.0 } }
     }
 }
