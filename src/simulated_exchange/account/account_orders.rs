@@ -83,7 +83,7 @@ impl AccountOrders
             .collect()
     }
 
-    pub async fn keep_request_as_pending(&mut self, request: Order<RequestOpen>) -> Result<Order<Pending>, ExecutionError>
+    pub async fn keep_request_as_pending(&mut self, request: Order<RequestOpen>) -> Order<Pending>
     {
         // turn the request into an pending order with a predicted timestamp
         let latency = self.get_random_latency();
@@ -96,7 +96,7 @@ impl AccountOrders
                               side: request.side,
                               state: Pending { predicted_ts: adjusted_client_ts } };
         self.pending_registry.push(pending.clone());
-        Ok(pending)
+        pending
     }
 
 
