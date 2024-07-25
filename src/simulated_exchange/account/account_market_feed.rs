@@ -43,6 +43,55 @@ impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync +
     {
         self.streams.remove(&id);
     }
+
+    // 将所有数据流合并到一个新的接收器中，并按时间戳排序。
+    pub async fn join(self) -> UnboundedReceiver<Event>
+        where Event: Send + 'static
+    {
+        let mut joined_rx = self.merge_streams().await;
+
+        // 监听合并后的接收器，按时间戳排序后再发送到新的接收器中
+        let (sorted_tx, sorted_rx) = mpsc::unbounded_channel();
+        tokio::spawn(async move {
+            let mut buffer = Vec::new();
+
+            while let Some(event) = joined_rx.recv().await {
+                buffer.push(event);
+                buffer.sort(); // 按时间戳排序
+                for e in buffer.drain(..) {
+                    let _ = sorted_tx.send(e);
+                }
+            }
+        });
+
+        sorted_rx
+    }
+
+    // 将所有数据流合并到一个新的接收器中，不进行排序。
+    pub async fn join_without_sort(self) -> UnboundedReceiver<Event>
+        where Event: Send + 'static
+    {
+        self.merge_streams().await
+    }
+
+    // 合并所有数据流到一个新的接收器中。
+    async fn merge_streams(self) -> UnboundedReceiver<Event>
+        where Event: Send + 'static
+    {
+        let (joined_tx, joined_rx) = mpsc::unbounded_channel();
+
+        for mut exchange_rx in self.streams.into_values() {
+            let joined_tx = joined_tx.clone();
+
+            tokio::spawn(async move {
+                while let Some(event) = exchange_rx.recv().await {
+                    let _ = joined_tx.send(event);
+                }
+            });
+        }
+
+        joined_rx
+    }
 }
 
 // 为 AccountDataStreams 实现 Debug trait，方便调试。

@@ -1,11 +1,11 @@
 use crate::common_skeleton::order::{Order, RequestOpen};
 use crate::common_skeleton::order::OrderId;
 
-/// NOTE 在需要模拟延迟的回测场景下仅使用这种Open订单状态。
+/// NOTE 在需要模拟延迟的回测场景下仅使用这种Pending状态。
 #[allow(dead_code)]
 pub struct SimulatedOpen
 {
-    pub processed_ts: i64, // NOTE this timestamp is only applicable in the simulated environment.
+    pub processed_ts: i64,
     pub id: OrderId,
     pub price: f64,
     pub size: f64,

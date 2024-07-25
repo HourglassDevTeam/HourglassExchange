@@ -6,8 +6,8 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
-    ExchangeID,
+    common_skeleton::{event::ClientOrderId, instrument::Instrument, Side},
+    ExchangeVariant,
 };
 
 /// 订单类型枚举
@@ -44,13 +44,13 @@ impl Display for OrderKind
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
-    pub kind: OrderKind,        // 订单种类
-    pub exchange: ExchangeID,   // 交易所
-    pub instrument: Instrument, // 交易工具
-    pub client_ts: i64,
-    pub cid: ClientOrderId, // 客户端订单ID
-    pub side: Side,         // 买卖方向
-    pub state: State,       // 订单状态
+    pub kind: OrderKind,           // 订单种类
+    pub exchange: ExchangeVariant, // 交易所
+    pub instrument: Instrument,    // 交易工具
+    pub client_ts: i64,            // 客户端下单时间
+    pub cid: ClientOrderId,        // 客户端订单ID
+    pub side: Side,                // 买卖方向
+    pub state: State,              // 订单状态
 }
 
 /// 订单初始状态。发送到client进行操作
@@ -62,21 +62,15 @@ pub struct RequestOpen
     pub size: f64,
 }
 
-// NOTE that this needs to be adjusted according to the specifics of our trading instruments.
-impl Order<RequestOpen>
-{
-    pub fn calculate_required_available_balance(&self) -> (&Token, f64)
-    {
-        match self.side {
-            | Side::Buy => (&self.instrument.quote, self.state.price * self.state.size),
-            | Side::Sell => (&self.instrument.base, self.state.size),
-        }
-    }
-}
-
 /// 发送RequestOpen到client后尚未收到确认响应时的状态
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub struct Pending;
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
+pub struct Pending
+{
+    pub reduce_only: bool,
+    pub price: f64,
+    pub size: f64,
+    pub(crate) predicted_ts: i64,
+}
 
 /// 在RequestCancel结构体中只记录OrderId的原因主要是因为取消订单操作通常只需要知道哪个订单需要被取消。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -102,7 +96,8 @@ pub struct Open
     pub price: f64,
     pub size: f64,
     pub filled_quantity: f64,
-    // NOTE or [remaining_size]  , essentially the same.
+    pub order_role: OrderRole,
+    pub received_ts: i64, /* 交易所下单时间 NOTE this might be only applicable in a simulated exchange. 流动性充足的情况下received到trade状态的时间差不超过2ms，并且是交易所端不可避免的。‘ */
 }
 
 impl Open
@@ -129,6 +124,13 @@ pub struct PartialFill
     pub id: OrderId,
     pub price: f64,
     pub size: f64,
+}
+
+#[derive(Debug, Copy, Clone, PartialOrd, Serialize, Deserialize, PartialEq)]
+pub enum OrderRole
+{
+    Maker,
+    Taker,
 }
 
 /// 使得Order<Opened> 之间可以比较大小
@@ -190,43 +192,11 @@ impl<Id> From<Id> for OrderId where Id: Display
     }
 }
 
-impl From<&Order<RequestOpen>> for Order<Pending>
-{
-    fn from(request: &Order<RequestOpen>) -> Self
-    {
-        Self { kind: request.kind,
-               exchange: request.exchange.clone(),
-               instrument: request.instrument.clone(),
-               cid: request.cid,
-               client_ts: request.client_ts,
-               side: request.side,
-               state: Pending } // NOTE compatability with SimulatedPending is due here
-    }
-}
-
-impl From<(OrderId, Order<RequestOpen>)> for Order<Open>
-{
-    fn from((id, request): (OrderId, Order<RequestOpen>)) -> Self
-    {
-        Self { kind: request.kind,
-               exchange: request.exchange.clone(),
-               instrument: request.instrument.clone(),
-               cid: request.cid,
-               client_ts: request.client_ts,
-               side: request.side,
-               state: Open { id,
-                             price: request.state.price,
-                             size: request.state.size,
-                             filled_quantity: 0.0 } }
-    }
-}
-
 impl From<Order<Open>> for Order<Cancelled>
 {
     fn from(order: Order<Open>) -> Self
     {
         Self { kind: order.kind,
-
                exchange: order.exchange.clone(),
                instrument: order.instrument.clone(),
                cid: order.cid,

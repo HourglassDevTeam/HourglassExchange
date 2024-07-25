@@ -12,26 +12,21 @@ use crate::{
         balance::TokenBalance,
         datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
-        order::{Cancelled, Open, Order, OrderKind, RequestCancel, RequestOpen},
-        position::AccountPositions,
+        order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
+        position::AccountPositions
+
+        ,
     },
     error::ExecutionError,
-    simulated_exchange::{
-        account::{
-            account_latency::{fluctuate_latency, AccountLatency},
-            account_market_feed::AccountDataStreams,
-        },
-        load_from_clickhouse::queries_operations::ClickhouseTrade,
-    },
     ExchangeVariant,
+    simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
 };
 
 pub mod account_balances;
 pub mod account_config;
-mod account_latency;
+pub mod account_latency;
 pub mod account_market_feed;
 pub mod account_orders;
-pub mod slippage_registry;
 
 #[derive(Clone, Debug)]
 pub struct Account<Event>
@@ -41,7 +36,6 @@ pub struct Account<Event>
     pub data: Arc<RwLock<AccountDataStreams<Event>>>,               // 帐户数据
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
-    pub latency: Arc<RwLock<AccountLatency>>,                       // 帐户延迟
     pub config: Arc<RwLock<AccountConfig>>,                         // 帐户配置
     pub balances: Arc<RwLock<AccountBalances<Event>>>,              // 帐户余额
     pub positions: Arc<RwLock<Vec<AccountPositions>>>,              // 帐户头寸
@@ -55,7 +49,6 @@ pub struct AccountInitiator<Event>
     data: Option<Arc<RwLock<AccountDataStreams<Event>>>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
     market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
-    latency: Option<Arc<RwLock<AccountLatency>>>,
     config: Option<Arc<RwLock<AccountConfig>>>,
     balances: Option<Arc<RwLock<AccountBalances<Event>>>>,
     positions: Option<Arc<RwLock<Vec<AccountPositions>>>>,
@@ -69,7 +62,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
         AccountInitiator { data: None,
                            account_event_tx: None,
                            market_event_tx: None,
-                           latency: None,
                            config: None,
                            balances: None,
                            positions: None,
@@ -91,12 +83,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
     pub fn market_event_tx(mut self, value: mpsc::UnboundedSender<MarketEvent<Event>>) -> Self
     {
         self.market_event_tx = Some(value);
-        self
-    }
-
-    pub fn latency(mut self, value: AccountLatency) -> Self
-    {
-        self.latency = Some(Arc::new(RwLock::new(value)));
         self
     }
 
@@ -130,7 +116,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
                      data: self.data.ok_or("datafeed is required")?,                                 // 检查并获取data
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
                      market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
-                     latency: self.latency.ok_or("latency is required")?,                            // 检查并获取latency
                      config: self.config.ok_or("config is required")?,                               // 检查并获取config
                      balances: self.balances.ok_or("balances is required")?,                         // 检查并获取balances
                      positions: self.positions.ok_or("positions are required")?,                     // 检查并获取positions
@@ -173,8 +158,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         respond(response_tx, Ok(positions));
     }
 
-    // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到对应的订单
-    pub async fn find_bids_for_an_trade(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>
+    // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到对应的订单 // TO BE CONFIRMED
+    pub async fn find_orders_for_an_trade_event(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>
     {
         // 读取 market_event 中的 instrument 和 side
         let instrument_kind = market_event.instrument;
@@ -208,7 +193,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>)
+    pub async fn match_orders(&mut self, _market_event: MarketEvent<ClickhouseTrade>)
     {
         // todo()!
     }
@@ -295,62 +280,78 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     // NOTE a method that generates trade from matched order is missing for the time being.
 
-    pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>, _current_timestamp: i64)
+    pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
     {
-        let open_futures = open_requests.into_iter().map(|request| {
-                                                        let mut this = self.clone();
-                                                        async move { this.try_open_order_atomic(request).await }
-                                                    });
-
-        let open_results = join_all(open_futures).await;
-        response_tx.send(open_results).unwrap_or_else(|_| {
-                                          // Handle the error if sending fails
-                                      });
-    }
-
-    pub async fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError>
-    {
-        // 验证订单合法性
-        Self::order_validity_check(request.kind)?;
-
-        // 计算开仓所需的可用余额
-        let (symbol, required_balance) = request.calculate_required_available_balance();
-
-        // 检查可用余额是否充足
-        self.balances.read().await.has_sufficient_available_balance(symbol, required_balance)?;
-
-        // 构建 Open<Order>
-        let open = {
-            // 获取写锁并构建订单
-            let mut orders_guard = self.orders.write().await;
-            orders_guard.build_order_open(request)
-        };
+        // 循环处理每个请求并标记为 pending
+        let mut open_pending = Vec::new();
 
         {
-            // 获取写锁并检索客户的 Instrument Orders，添加订单
+            let mut orders = self.orders.write().await;
+            for request in &order_requests {
+                // 假设 process_request_as_pending 返回 Order<Pending>
+                // 将每个 Order<Pending> 包装在 Ok 中
+                let pending_order = orders.process_request_as_pending(request.clone()).await;
+                open_pending.push(Ok(pending_order));
+            }
+        }
+
+        // 发送结果
+        if response_tx.send(open_pending).is_err() {
+            eprintln!("[UniLinkExecution] : Failed to send OpenOrders response");
+        }
+    }
+    pub async fn try_open_order_atomic(
+        &mut self,
+        current_price: f64,
+        order: Order<Pending>,
+        leverage: f64,
+    ) -> Result<Order<Open>, ExecutionError> {
+        // 验证订单合法性
+        Self::order_validity_check(order.kind)?;
+
+        // 检查 maker 或 taker
+        let order_role = self.orders.read().await.determine_maker_taker(&order, current_price).unwrap();
+
+        // 计算可用余额
+        let orders_guard = self.orders.read().await;
+        let (token,required_balance) = orders_guard.calculate_required_available_balance(&order, current_price, leverage);
+
+        // 检查可用余额是否充足
+        self.balances.read().await.has_sufficient_available_balance(token, required_balance)?;
+
+        // 构建 Open<Order> 并获取写锁
+        let open = {
             let mut orders_guard = self.orders.write().await;
+
+            // 构建 Open<Order>
+            let open = orders_guard.build_order_open(order, order_role).await;
+
+            // 检索账户中的 Instrument Orders 并添加订单
             let orders = orders_guard.orders_mut(&open.instrument)?;
             orders.add_order_open(open.clone());
-        }
+
+            open
+        };
 
         // 更新客户余额
         let balance_event = self.balances.write().await.update_from_open(&open, required_balance).await;
 
-        // 发送账户事件给客户端 NOTE 或许需要单独建构变种。
+        // 发送账户事件给客户端
         self.account_event_tx
             .send(balance_event)
             .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
-                                 exchange: ExchangeVariant::Simulated,
-                                 kind: AccountEventKind::OrdersNew(vec![open.clone()]) })
+            .send(AccountEvent {
+                exchange_timestamp: self.exchange_timestamp,
+                exchange: ExchangeVariant::Simulated,
+                kind: AccountEventKind::OrdersNew(vec![open.clone()]),
+            })
             .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败");
 
         // 返回已打开的订单
         Ok(open)
     }
-
     pub async fn cancel_orders(&mut self,
                                cancel_requests: Vec<Order<RequestCancel>>,
                                response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>,
@@ -375,12 +376,6 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     pub async fn cancel_orders_all(&mut self, _response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, _current_timestamp: i64)
     {
         todo!()
-    }
-
-    pub async fn update_latency(&mut self, current_time: i64)
-    {
-        let mut latency = self.latency.write().await;
-        fluctuate_latency(&mut *latency, current_time);
     }
 }
 
