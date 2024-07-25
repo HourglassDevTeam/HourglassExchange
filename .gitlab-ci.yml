@@ -4,7 +4,7 @@ variables:
   PCF_DEPLOY_BRANCH: master
   PCF_COMMIT_USER_NAME: arthur
   PCF_COMMIT_USER_EMAIL: arthur@ciuyat.com
-  GIT_STRATEGY: False
+  GIT_STRATEGY: none
 
 stages:
   - mergeCode
@@ -82,7 +82,7 @@ mergeCode:
       if [ -n "$(git ls-files -u)" ]; then
         git ls-files -u | cut -f 2 | sort -u | while read file; do
           if [ ! -f "$file" ]; then
-            git rm --cached "$file"
+            git rm "$file"
           else
             git checkout --ours "$file"
             git add "$file"
@@ -99,7 +99,7 @@ mergeCode:
       if [ -n "$(git ls-files -u)" ]; then
         git ls-files -u | cut -f 2 | sort -u | while read file; do
           if [ ! -f "$file" ]; then
-            git rm --cached "$file"
+            git rm "$file"
           else
             git checkout --ours "$file"
             git add "$file"
