@@ -91,7 +91,7 @@ mergeCode:
     - git pull gitee $PCF_DEPLOY_BRANCH || true
     - |
       if [ -n "$(git ls-files -u)" ]; then
-        git ls-files -u | cut -f 2 | sort -u | xargs git checkout --ours
+        git ls-files -u | cut -f 2 | sort -u | xargs -I {} sh -c 'if [ ! -f {} ]; then git rm --cached {}; else git checkout --ours {}; fi'
         git ls-files -u | cut -f 2 | sort -u | xargs git add
         git commit -m "Resolved merge conflicts by choosing local changes from gitee"
       fi
