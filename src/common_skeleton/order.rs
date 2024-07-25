@@ -6,8 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{datafeed::event::MarketEvent, event::ClientOrderId, friction::Fees, instrument::Instrument, token::Token, Side},
-    simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
+    common_skeleton::{event::ClientOrderId, instrument::Instrument, Side},
     ExchangeVariant,
 };
 
