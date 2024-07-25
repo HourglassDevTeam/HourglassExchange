@@ -108,6 +108,7 @@ pub struct Open
     pub price: f64,
     pub size: f64,
     pub filled_quantity: f64,
+    pub order_role: OrderRole,
     pub received_ts: i64, /* 交易所下单时间 NOTE this might be only applicable in a simulated exchange. 流动性充足的情况下received到trade状态的时间差不超过2ms，并且是交易所端不可避免的。‘ */
 }
 

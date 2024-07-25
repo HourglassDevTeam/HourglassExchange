@@ -305,7 +305,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     }
 
     // NOTE 这里不用检查订单的合法性，而是应该要和行情的时间戳对比。
-    pub async fn try_open_order_atomic(&mut self, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
+    pub async fn try_open_order_atomic(&mut self, trade:ClickhouseTrade, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
     {
         // 验证订单合法性
         Self::order_validity_check(order.kind)?;

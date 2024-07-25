@@ -1,4 +1,3 @@
-use rand::Rng;
 use std::{
     collections::HashMap,
     sync::{
@@ -7,12 +6,13 @@ use std::{
     },
 };
 
+use rand::Rng;
 use tokio::sync::RwLock;
 
 use crate::{
     common_skeleton::{
         instrument::Instrument,
-        order::{Open, Order, OrderId, Pending, RequestOpen},
+        order::{Open, Order, OrderId, OrderRole, Pending, RequestOpen},
     },
     error::ExecutionError,
     simulated_exchange::{
@@ -121,7 +121,7 @@ impl AccountOrders
 
     /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
     /// 在 increment_request_counter 方法中，使用 Ordering::Relaxed 进行递增。
-    pub async fn build_order_open(&mut self, request: Order<Pending>) -> Order<Open>
+    pub async fn build_order_open(&mut self, request: Order<Pending>, role: OrderRole) -> Order<Open>
     {
         self.increment_request_counter();
 
@@ -136,7 +136,8 @@ impl AccountOrders
                               price: request.state.price,
                               size: request.state.size,
                               filled_quantity: 0.0,
-                              received_ts: request.state.predicted_ts } }
+                              received_ts: request.state.predicted_ts,
+                              order_role: role } }
     }
 
     pub fn increment_request_counter(&self)
