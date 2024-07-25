@@ -98,7 +98,8 @@ mergeCode:
     - |
       if [ -n "$(git ls-files -u)" ]; then
         git ls-files -u | cut -f 2 | sort -u | while read file; do
-          if [ ! -f "$file" ]; then
+          # For modify/delete conflict, prefer deletion (ours)
+          if [[ $(git status --porcelain | grep "$file" | grep "UD") ]]; then
             git rm "$file"
           else
             git checkout --ours "$file"
