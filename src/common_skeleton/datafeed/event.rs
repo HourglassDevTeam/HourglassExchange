@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common_skeleton::{instrument::Instrument, trade::Trade},
-    ExchangeID,
     simulated_exchange::ws_trade::WsTrade,
+    ExchangeID,
 };
 
 // 定义一个泛型结构体 MarketEvent，包含各种交易市场事件信息

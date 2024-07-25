@@ -6,7 +6,8 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{event::ClientOrderId, instrument::Instrument, Side, token::Token}, ExchangeVariant,
+    common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
+    ExchangeVariant,
 };
 
 /// 订单类型枚举
@@ -75,7 +76,10 @@ impl Order<RequestOpen>
 
 /// 发送RequestOpen到client后尚未收到确认响应时的状态
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub struct Pending;
+pub struct Pending
+{
+    pub(crate) predicted_ts: i64,
+}
 
 /// 在RequestCancel结构体中只记录OrderId的原因主要是因为取消订单操作通常只需要知道哪个订单需要被取消。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -102,7 +106,6 @@ pub struct Open
     pub size: f64,
     pub filled_quantity: f64,
     pub received_ts: i64, /* 交易所下单时间 NOTE this might be only applicable in a simulated exchange. 流动性充足的情况下received到trade状态的时间差不超过2ms，并且是交易所端不可避免的。‘ */
-
 }
 
 impl Open
@@ -187,20 +190,6 @@ impl<Id> From<Id> for OrderId where Id: Display
     fn from(id: Id) -> Self
     {
         Self(id.to_string())
-    }
-}
-
-impl From<&Order<RequestOpen>> for Order<Pending>
-{
-    fn from(request: &Order<RequestOpen>) -> Self
-    {
-        Self { kind: request.kind,
-               exchange: request.exchange.clone(),
-               instrument: request.instrument.clone(),
-               cid: request.cid,
-               client_ts: request.client_ts,
-               side: request.side,
-               state: Pending } // NOTE compatability with SimulatedPending is due here
     }
 }
 

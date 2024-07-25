@@ -17,10 +17,7 @@ use crate::{
     },
     error::ExecutionError,
     ExchangeVariant,
-    simulated_exchange::{
-        account::account_market_feed::AccountDataStreams,
-        load_from_clickhouse::queries_operations::ClickhouseTrade,
-    },
+    simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
 };
 
 pub mod account_balances;

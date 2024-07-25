@@ -44,12 +44,9 @@ impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync +
         self.streams.remove(&id);
     }
 
-
-
     // 将所有数据流合并到一个新的接收器中，并按时间戳排序。
     pub async fn join(self) -> UnboundedReceiver<Event>
-                      where
-                          Event: Send + 'static,
+        where Event: Send + 'static
     {
         let mut joined_rx = self.merge_streams().await;
 
@@ -72,16 +69,14 @@ impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync +
 
     // 将所有数据流合并到一个新的接收器中，不进行排序。
     pub async fn join_without_sort(self) -> UnboundedReceiver<Event>
-                                   where
-                                       Event: Send + 'static,
+        where Event: Send + 'static
     {
         self.merge_streams().await
     }
 
     // 合并所有数据流到一个新的接收器中。
     async fn merge_streams(self) -> UnboundedReceiver<Event>
-                           where
-                               Event: Send + 'static,
+        where Event: Send + 'static
     {
         let (joined_tx, joined_rx) = mpsc::unbounded_channel();
 
@@ -97,7 +92,6 @@ impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync +
 
         joined_rx
     }
-
 }
 
 // 为 AccountDataStreams 实现 Debug trait，方便调试。
