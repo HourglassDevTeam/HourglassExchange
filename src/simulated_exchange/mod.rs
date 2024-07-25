@@ -37,9 +37,7 @@ impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + Debug + 
             match event {
                 | SimulatedClientEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx).await,
                 | SimulatedClientEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx).await,
-                | SimulatedClientEvent::OpenOrders((open_requests, response_tx), current_timestamp) => {
-                    self.account.open_orders(open_requests, response_tx, current_timestamp).await
-                }
+                | SimulatedClientEvent::OpenOrders((open_requests, response_tx)) => self.account.open_requests_into_pendings(open_requests, response_tx).await,
                 | SimulatedClientEvent::CancelOrders((cancel_requests, response_tx), current_timestamp) => {
                     self.account.cancel_orders(cancel_requests, response_tx, current_timestamp).await
                 }

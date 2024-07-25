@@ -12,17 +12,16 @@ use crate::{
         balance::TokenBalance,
         datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
-        order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
+        instrument::Instrument,
+        order::{Cancelled, Open, Order, OrderKind, OrderRole, Pending, RequestCancel, RequestOpen},
         position::AccountPositions,
+        token::Token,
+        Side,
     },
     error::ExecutionError,
     simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
     ExchangeVariant,
 };
-use crate::common_skeleton::instrument::Instrument;
-use crate::common_skeleton::order::OrderRole;
-use crate::common_skeleton::Side;
-use crate::common_skeleton::token::Token;
 
 pub mod account_balances;
 pub mod account_config;
@@ -56,8 +55,6 @@ pub struct AccountInitiator<Event>
     positions: Option<Arc<RwLock<Vec<AccountPositions>>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
-
-
 
 impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
@@ -284,40 +281,34 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     // NOTE a method that generates trade from matched order is missing for the time being.
 
-    pub async fn open_orders(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>, _current_timestamp: i64)
-    {
+    pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Pending>, ExecutionError>>>) {
         // 循环处理每个请求并标记为 pending
         let mut open_pending = Vec::new();
+
         {
             let mut orders = self.orders.write().await;
             for request in &order_requests {
                 // 假设 process_request_as_pending 返回 Order<Pending>
-                open_pending.push(orders.process_request_as_pending(request.clone()).await);
+                // 将每个 Order<Pending> 包装在 Ok 中
+                let pending_order = orders.process_request_as_pending(request.clone()).await;
+                open_pending.push(Ok(pending_order));
             }
         }
 
-        // 使用 join_all 处理异步请求
-        let open_futures = open_pending.into_iter().map(|pending_order| {
-                                                       let mut this = self.clone();
-                                                       async move { this.try_open_order_atomic(pending_order).await }
-                                                   });
-
-        let open_results = join_all(open_futures).await;
-
         // 发送结果
-        response_tx.send(open_results).unwrap_or_else(|_| {
-                                          // 处理发送失败的情况
-                                      });
+        if response_tx.send(open_pending).is_err() {
+            eprintln!("[UniLinkExecution] : Failed to send OpenOrders response");
+        }
     }
 
-    // NOTE 这里不用检查订单的合法性，而是应该要和行情的时间戳对比。
-    pub async fn try_open_order_atomic(&mut self, trade:ClickhouseTrade, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
+
+    pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>,leverage: f64) -> Result<Order<Open>, ExecutionError>
     {
         // 验证订单合法性
         Self::order_validity_check(order.kind)?;
 
         // 计算开仓所需的可用余额
-        let (symbol, required_balance) = order.calculate_required_available_balance();
+        let (symbol, required_balance) = self.orders.read().await.calculate_required_available_balance(&order, current_price, leverage);
 
         // 检查可用余额是否充足
         self.balances.read().await.has_sufficient_available_balance(symbol, required_balance)?;

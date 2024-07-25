@@ -11,6 +11,7 @@ use crate::{
     simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
     AccountEvent, ClientExecution, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen,
 };
+use crate::common_skeleton::order::Pending;
 
 #[derive(Debug)]
 pub struct SimulatedClient
@@ -27,7 +28,7 @@ pub enum SimulatedClientEvent
     FetchMarketEvent(MarketEvent<ClickhouseTrade>),
     FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>),
     FetchBalances(oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>),
-    OpenOrders((Vec<Order<RequestOpen>>, oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>), i64),
+    OpenOrders((Vec<Order<RequestOpen>>, oneshot::Sender<Vec<Result<Order<Pending>, ExecutionError>>>)),
     CancelOrders((Vec<Order<RequestCancel>>, oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>), i64),
     CancelOrdersAll(oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, i64),
 }

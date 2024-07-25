@@ -12,7 +12,9 @@ use tokio::sync::RwLock;
 use crate::{
     common_skeleton::{
         instrument::Instrument,
-        order::{Open, Order, OrderId, OrderRole, Pending, RequestOpen},
+        order::{Open, Order, OrderId, OrderKind, OrderRole, Pending, RequestOpen},
+        token::Token,
+        Side,
     },
     error::ExecutionError,
     simulated_exchange::{
@@ -20,9 +22,6 @@ use crate::{
         instrument_orders::InstrumentOrders,
     },
 };
-use crate::common_skeleton::order::OrderKind;
-use crate::common_skeleton::Side;
-use crate::common_skeleton::token::Token;
 
 #[derive(Debug)]
 pub struct AccountOrders
@@ -86,7 +85,6 @@ impl AccountOrders
             .collect()
     }
 
-
     pub async fn process_request_as_pending(&mut self, order: Order<RequestOpen>) -> Order<Pending>
     {
         // turn the request into an pending order with a predicted timestamp
@@ -106,8 +104,6 @@ impl AccountOrders
         pending
     }
 
-
-
     pub async fn keep_new_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
     {
         // 检查请求是否有效 NOTE 这里或许可以添加更多的验证逻辑
@@ -126,85 +122,89 @@ impl AccountOrders
     }
 
     // 判断是Maker还是Taker单
-    pub fn determine_maker_taker(&self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError> {
+    pub fn determine_maker_taker(&self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    {
         match order.kind {
-            OrderKind::Market => Ok(OrderRole::Taker),
-            OrderKind::Limit => match order.side {
-                Side::Buy => {
+            | OrderKind::Market => Ok(OrderRole::Taker),
+            | OrderKind::Limit => match order.side {
+                | Side::Buy => {
                     // 对于买单，限价单的价格应高于或等于当前价格才为Maker
                     if order.state.price >= current_price {
                         Ok(OrderRole::Maker)
-                    } else {
+                    }
+                    else {
                         Ok(OrderRole::Taker)
                     }
                 }
-                Side::Sell => {
+                | Side::Sell => {
                     // 对于卖单，限价单的价格应低于或等于当前价格才为Maker
                     if order.state.price <= current_price {
                         Ok(OrderRole::Maker)
-                    } else {
+                    }
+                    else {
                         Ok(OrderRole::Taker)
                     }
                 }
             },
             // PostOnly: 只能作为挂单进入市场。如果无法作为挂单（即成为 Taker），则订单会被取消。
-            OrderKind::PostOnly => match order.side {
-                Side::Buy => {
+            | OrderKind::PostOnly => match order.side {
+                | Side::Buy => {
                     // PostOnly订单如果无法作为挂单（即成为Taker），则被取消
                     if order.state.price >= current_price {
                         Ok(OrderRole::Maker)
-                    } else {
+                    }
+                    else {
                         // 如果无法作为挂单，返回ExecutionError
                         Err(ExecutionError::OrderRejected("PostOnly order rejected".into()))
                     }
                 }
-                Side::Sell => {
+                | Side::Sell => {
                     if order.state.price <= current_price {
                         Ok(OrderRole::Maker)
-                    } else {
+                    }
+                    else {
                         // 如果无法作为挂单，返回ExecutionError
                         Err(ExecutionError::OrderRejected("PostOnly order rejected".into()))
                     }
                 }
             },
-            OrderKind::ImmediateOrCancel => Ok(OrderRole::Taker), // IOC订单总是作为Taker
-            OrderKind::FillOrKill => Ok(OrderRole::Taker), // FOK订单总是作为Taker
+            | OrderKind::ImmediateOrCancel => Ok(OrderRole::Taker), // IOC订单总是作为Taker
+            | OrderKind::FillOrKill => Ok(OrderRole::Taker),        // FOK订单总是作为Taker
             // GoodTilCancelled (GTC): 挂单直到被完全成交或被取消。
-            OrderKind::GoodTilCancelled => match order.side {
-                Side::Buy => {
+            | OrderKind::GoodTilCancelled => match order.side {
+                | Side::Buy => {
                     // GTC订单和Limit订单相似
                     if order.state.price >= current_price {
                         Ok(OrderRole::Maker)
-                    } else {
+                    }
+                    else {
                         Ok(OrderRole::Taker)
                     }
                 }
-                Side::Sell => {
+                | Side::Sell => {
                     if order.state.price <= current_price {
                         Ok(OrderRole::Maker)
-                    } else {
+                    }
+                    else {
                         Ok(OrderRole::Taker)
                     }
                 }
-            }
+            },
         }
     }
 
     // NOTE 注意size的单位
-    pub fn calculate_required_available_balance(&self, order: &Order<Pending>, current_price: f64, leverage: f64) -> (&Token, f64) {
+    pub fn calculate_required_available_balance(&self, order: &Order<Pending>, current_price: f64, leverage: f64) -> (&Token, f64)
+    {
         match order.kind {
-            Instrument::Spot => {
-                match order.side {
-                    Side::Buy => (&order.instrument.quote, current_price * order.state.size),
-                    Side::Sell => (&order.instrument.base, order.state.size),
-                }
-            }
-            Instrument::Perpetual => {
-                match order.side {
-                    Side::Buy => (&order.instrument.quote, current_price * order.state.size * leverage),
-                    Side::Sell => (&order.instrument.base, order.state.size * leverage),
-                }
-            }
+            | Instrument::Spot => match order.side {
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size),
+                | Side::Sell => (&order.instrument.base, order.state.size),
+            },
+            | Instrument::Perpetual => match order.side {
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * leverage),
+                | Side::Sell => (&order.instrument.base, order.state.size * leverage),
+            },
         }
     }
 

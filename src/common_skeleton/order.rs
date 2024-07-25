@@ -6,11 +6,10 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{event::ClientOrderId, friction::Fees, instrument::Instrument, token::Token, Side},
+    common_skeleton::{datafeed::event::MarketEvent, event::ClientOrderId, friction::Fees, instrument::Instrument, token::Token, Side},
+    simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
     ExchangeVariant,
 };
-use crate::common_skeleton::datafeed::event::MarketEvent;
-use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade;
 
 /// 订单类型枚举
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -63,7 +62,6 @@ pub struct RequestOpen
     pub price: f64,
     pub size: f64,
 }
-
 
 /// 发送RequestOpen到client后尚未收到确认响应时的状态
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
