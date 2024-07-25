@@ -98,8 +98,7 @@ mergeCode:
     - |
       if [ -n "$(git ls-files -u)" ]; then
         git ls-files -u | cut -f 2 | sort -u | while read file; do
-          # For modify/delete conflict, prefer deletion (ours)
-          if [[ $(git status --porcelain | grep "$file" | grep "UD") ]]; then
+          if [ "$(git status --porcelain | grep "$file" | grep -o 'D')" = "D" ]; then
             git rm "$file"
           else
             git checkout --ours "$file"
@@ -107,6 +106,19 @@ mergeCode:
           fi
         done
         git commit -m "Resolved merge conflicts by choosing origin changes over gitee"
+      fi
+
+    ##
+    ## Specific handling for modify/delete conflict
+    ##
+    - |
+      if [ "$(git status --porcelain | grep 'src/simulated_exchange/account/slippage_registry.rs' | grep -o 'D')" = "D" ]; then
+        git rm src/simulated_exchange/account/slippage_registry.rs
+        git commit -m "Removed conflicting file src/simulated_exchange/account/slippage_registry.rs"
+      else
+        git checkout --ours src/simulated_exchange/account/slippage_registry.rs
+        git add src/simulated_exchange/account/slippage_registry.rs
+        git commit -m "Kept local changes for src/simulated_exchange/account/slippage_registry.rs"
       fi
 
     ##
