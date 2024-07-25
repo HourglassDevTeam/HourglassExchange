@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{event::ClientOrderId, instrument::Instrument, token::Token, Side},
+    common_skeleton::{event::ClientOrderId, friction::Fees, instrument::Instrument, token::Token, Side},
     ExchangeVariant,
 };
 
@@ -63,7 +63,7 @@ pub struct RequestOpen
 }
 
 // NOTE that this needs to be adjusted according to the specifics of our trading instruments.
-impl Order<RequestOpen>
+impl Order<Pending>
 {
     pub fn calculate_required_available_balance(&self) -> (&Token, f64)
     {
@@ -135,6 +135,13 @@ pub struct PartialFill
     pub id: OrderId,
     pub price: f64,
     pub size: f64,
+}
+
+#[derive(Debug, Copy, Clone, PartialOrd, Serialize, Deserialize, PartialEq)]
+pub enum OrderRole
+{
+    Maker,
+    Taker,
 }
 
 /// 使得Order<Opened> 之间可以比较大小

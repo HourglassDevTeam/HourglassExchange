@@ -125,8 +125,6 @@ impl AccountOrders
     {
         self.increment_request_counter();
 
-
-
         // 直接构建 Order<Open>
         Order { kind: request.kind,
                 exchange: request.exchange,
