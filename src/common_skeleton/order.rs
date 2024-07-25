@@ -75,9 +75,12 @@ impl Order<RequestOpen>
 }
 
 /// 发送RequestOpen到client后尚未收到确认响应时的状态
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Pending
 {
+    pub reduce_only: bool,
+    pub price: f64,
+    pub size: f64,
     pub(crate) predicted_ts: i64,
 }
 

@@ -83,32 +83,49 @@ impl AccountOrders
             .collect()
     }
 
-    pub async fn keep_request_as_pending(&mut self, request: Order<RequestOpen>) -> Order<Pending>
+    pub async fn process_request_as_pending(&mut self, order: Order<RequestOpen>) -> Order<Pending>
     {
         // turn the request into an pending order with a predicted timestamp
         let latency = self.get_random_latency();
-        let adjusted_client_ts = request.client_ts + latency;
-        let pending = Order { kind: request.kind,
-                              exchange: request.exchange,
-                              instrument: request.instrument,
-                              cid: request.cid,
-                              client_ts: request.client_ts,
-                              side: request.side,
-                              state: Pending { predicted_ts: adjusted_client_ts } };
+        let adjusted_client_ts = order.client_ts + latency;
+        let pending = Order { kind: order.kind,
+                              exchange: order.exchange,
+                              instrument: order.instrument,
+                              cid: order.cid,
+                              client_ts: order.client_ts,
+                              side: order.side,
+                              state: Pending { reduce_only: order.state.reduce_only,
+                                               price: order.state.price,
+                                               size: order.state.size,
+                                               predicted_ts: adjusted_client_ts } };
         self.pending_registry.push(pending.clone());
         pending
     }
 
+    pub async fn keep_new_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
+    {
+        // 检查请求是否有效 NOTE 这里或许可以添加更多的验证逻辑
+        if self.pending_registry.iter().any(|pending| pending.cid == request.cid) {
+            return Err(ExecutionError::OrderAlreadyExists(request.cid));
+        }
+
+        // 尝试转换请求为挂起订单
+        let pending_order = self.process_request_as_pending(request).await;
+
+        // 将挂起订单添加到注册表
+        self.pending_registry.push(pending_order.clone());
+
+        // 返回成功结果
+        Ok(())
+    }
 
     /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
     /// 在 increment_request_counter 方法中，使用 Ordering::Relaxed 进行递增。
-    pub async fn build_order_open(&mut self, request: Order<RequestOpen>) -> Order<Open>
+    pub async fn build_order_open(&mut self, request: Order<Pending>) -> Order<Open>
     {
         self.increment_request_counter();
 
-        // 获取当前的 AccountLatency 值并加到 client_ts 上
-        let latency = self.get_random_latency();
-        let adjusted_client_ts = request.client_ts + latency;
+
 
         // 直接构建 Order<Open>
         Order { kind: request.kind,
@@ -121,7 +138,7 @@ impl AccountOrders
                               price: request.state.price,
                               size: request.state.size,
                               filled_quantity: 0.0,
-                              received_ts: adjusted_client_ts } }
+                              received_ts: request.state.predicted_ts } }
     }
 
     pub fn increment_request_counter(&self)

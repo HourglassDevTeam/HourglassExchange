@@ -16,9 +16,10 @@ use crate::{
         position::AccountPositions,
     },
     error::ExecutionError,
-    ExchangeVariant,
     simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
+    ExchangeVariant,
 };
+use crate::common_skeleton::order::Pending;
 
 pub mod account_balances;
 pub mod account_config;
@@ -291,13 +292,13 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                       });
     }
 
-    pub async fn try_open_order_atomic(&mut self, request: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError>
+    pub async fn try_open_order_atomic(&mut self, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
     {
         // 验证订单合法性
-        Self::order_validity_check(request.kind)?;
+        Self::order_validity_check(order.kind)?;
 
         // 计算开仓所需的可用余额
-        let (symbol, required_balance) = request.calculate_required_available_balance();
+        let (symbol, required_balance) = order.calculate_required_available_balance();
 
         // 检查可用余额是否充足
         self.balances.read().await.has_sufficient_available_balance(symbol, required_balance)?;
@@ -306,7 +307,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         let open = {
             // 获取写锁并构建订单
             let mut orders_guard = self.orders.write().await;
-            orders_guard.build_order_open(request).await
+            orders_guard.build_order_open(order).await
         };
 
         {
