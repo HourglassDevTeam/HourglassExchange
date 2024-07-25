@@ -19,6 +19,8 @@ use crate::{
     simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
     ExchangeVariant,
 };
+use crate::common_skeleton::Side;
+use crate::common_skeleton::token::Token;
 
 pub mod account_balances;
 pub mod account_config;
@@ -51,6 +53,20 @@ pub struct AccountInitiator<Event>
     balances: Option<Arc<RwLock<AccountBalances<Event>>>>,
     positions: Option<Arc<RwLock<Vec<AccountPositions>>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
+}
+
+
+
+// 为Order<Pending>实现一个计算所需余额的方法
+impl Order<Pending>
+{
+    pub fn calculate_required_available_balance(&self,trade:ClickhouseTrade) -> (&Token, f64)
+    {
+        match self.side {
+            | Side::Buy => (&self.instrument.quote, trade.price * self.state.size),
+            | Side::Sell => (&self.instrument.base, self.state.size),
+        }
+    }
 }
 
 impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord

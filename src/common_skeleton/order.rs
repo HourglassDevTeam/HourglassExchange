@@ -9,6 +9,8 @@ use crate::{
     common_skeleton::{event::ClientOrderId, friction::Fees, instrument::Instrument, token::Token, Side},
     ExchangeVariant,
 };
+use crate::common_skeleton::datafeed::event::MarketEvent;
+use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade;
 
 /// 订单类型枚举
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -62,17 +64,6 @@ pub struct RequestOpen
     pub size: f64,
 }
 
-// NOTE that this needs to be adjusted according to the specifics of our trading instruments.
-impl Order<Pending>
-{
-    pub fn calculate_required_available_balance(&self) -> (&Token, f64)
-    {
-        match self.side {
-            | Side::Buy => (&self.instrument.quote, self.state.price * self.state.size),
-            | Side::Sell => (&self.instrument.base, self.state.size),
-        }
-    }
-}
 
 /// 发送RequestOpen到client后尚未收到确认响应时的状态
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
