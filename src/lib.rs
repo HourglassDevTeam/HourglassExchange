@@ -12,6 +12,7 @@ use crate::{
     },
     error::ExecutionError,
 };
+use crate::common_skeleton::order::Pending;
 
 mod binance_exchange;
 pub mod common_skeleton;
@@ -30,7 +31,7 @@ pub trait ClientExecution
     async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<AccountEvent>, local_timestamp: i64) -> Self;
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>;
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>;
-    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>;
+    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Pending>, ExecutionError>>;
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>>;
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>;
 }

@@ -12,15 +12,14 @@ use crate::{
         balance::TokenBalance,
         datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
-        instrument::Instrument,
-        order::{Cancelled, Open, Order, OrderKind, OrderRole, Pending, RequestCancel, RequestOpen},
-        position::AccountPositions,
-        token::Token,
-        Side,
+        order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
+        position::AccountPositions
+
+        ,
     },
     error::ExecutionError,
-    simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
     ExchangeVariant,
+    simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
 };
 
 pub mod account_balances;
@@ -281,7 +280,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     // NOTE a method that generates trade from matched order is missing for the time being.
 
-    pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Pending>, ExecutionError>>>) {
+    pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
+    {
         // 循环处理每个请求并标记为 pending
         let mut open_pending = Vec::new();
 
@@ -301,23 +301,23 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-
-    pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>,leverage: f64) -> Result<Order<Open>, ExecutionError>
+    pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>, leverage: f64) -> Result<Order<Open>, ExecutionError>
     {
         // 验证订单合法性
         Self::order_validity_check(order.kind)?;
 
-        // 计算开仓所需的可用余额
-        let (symbol, required_balance) = self.orders.read().await.calculate_required_available_balance(&order, current_price, leverage);
-
-        // 检查可用余额是否充足
+        // check maker or taker
+        let order_role = self.orders.read().await.determine_maker_taker(&order, current_price).unwrap();
+        let orders_guard = self.orders.read().await;
+        let (symbol, required_balance) = orders_guard.calculate_required_available_balance(&order, current_price, leverage);
+        // 现在你可以在后续的语句中使用 symbol 和 required_balance
         self.balances.read().await.has_sufficient_available_balance(symbol, required_balance)?;
 
         // 构建 Open<Order>
         let open = {
             // 获取写锁并构建订单
             let mut orders_guard = self.orders.write().await;
-            orders_guard.build_order_open(order).await
+            orders_guard.build_order_open(order, order_role).await
         };
 
         {

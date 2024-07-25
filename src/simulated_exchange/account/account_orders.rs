@@ -1,8 +1,8 @@
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicU64, Ordering},
         Arc,
+        atomic::{AtomicU64, Ordering},
     },
 };
 
@@ -11,14 +11,14 @@ use tokio::sync::RwLock;
 
 use crate::{
     common_skeleton::{
-        instrument::Instrument,
+        instrument::{Instrument, kind::InstrumentKind},
         order::{Open, Order, OrderId, OrderKind, OrderRole, Pending, RequestOpen},
-        token::Token,
         Side,
+        token::Token,
     },
     error::ExecutionError,
     simulated_exchange::{
-        account::account_latency::{fluctuate_latency, AccountLatency},
+        account::account_latency::{AccountLatency, fluctuate_latency},
         instrument_orders::InstrumentOrders,
     },
 };
@@ -194,17 +194,23 @@ impl AccountOrders
     }
 
     // NOTE 注意size的单位
-    pub fn calculate_required_available_balance(&self, order: &Order<Pending>, current_price: f64, leverage: f64) -> (&Token, f64)
+    pub fn calculate_required_available_balance<'a>(&self, order: &'a Order<Pending>, current_price: f64, leverage: f64) -> (&'a Token, f64)
     {
-        match order.kind {
-            | Instrument::Spot => match order.side {
+        match order.instrument.kind {
+            | InstrumentKind::Spot => match order.side {
                 | Side::Buy => (&order.instrument.quote, current_price * order.state.size),
                 | Side::Sell => (&order.instrument.base, order.state.size),
             },
-            | Instrument::Perpetual => match order.side {
+            | InstrumentKind::Perpetual => match order.side {
                 | Side::Buy => (&order.instrument.quote, current_price * order.state.size * leverage),
                 | Side::Sell => (&order.instrument.base, order.state.size * leverage),
             },
+            | InstrumentKind::Future => {
+                todo!()
+            }
+            | InstrumentKind::Option => {
+                todo!()
+            }
         }
     }
 

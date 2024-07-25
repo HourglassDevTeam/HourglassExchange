@@ -3,15 +3,14 @@ use mpsc::UnboundedSender;
 use tokio::sync::{mpsc, mpsc::UnboundedReceiver, oneshot};
 
 use crate::{
+    AccountEvent,
+    ClientExecution,
     common_skeleton::{
         balance::TokenBalance,
         datafeed::event::MarketEvent,
-        order::{Cancelled, Open, Order},
-    },
-    simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
-    AccountEvent, ClientExecution, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen,
+        order::{Cancelled, Open, Order, Pending},
+    }, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen, simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
 };
-use crate::common_skeleton::order::Pending;
 
 #[derive(Debug)]
 pub struct SimulatedClient
@@ -77,12 +76,12 @@ impl ClientExecution for SimulatedClient
                    .expect("[UniLinkExecution] : 模拟交易所目前离线 - 接收获取账户余额 FetchBalances 响应失败")
     }
 
-    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>
+    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Pending>, ExecutionError>>
     {
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送开启订单的请求。
         self.request_tx
-            .send(SimulatedClientEvent::OpenOrders((open_requests, response_tx), self.local_timestamp))
+            .send(SimulatedClientEvent::OpenOrders((open_requests, response_tx)))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送 OpenOrders 请求失败");
         // 从模拟交易所接收开启订单的响应。
         response_rx.await.expect("[UniLinkExecution] : 模拟交易所目前离线 - 接收 OpenOrders 响应失败")
