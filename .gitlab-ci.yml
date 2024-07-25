@@ -98,8 +98,12 @@ mergeCode:
     - |
       if [ -n "$(git ls-files -u)" ]; then
         git ls-files -u | cut -f 2 | sort -u | while read file; do
-          git checkout --ours "$file"  # Always prefer origin changes
-          git add "$file"
+          if [ ! -f "$file" ]; then
+            git rm "$file"
+          else
+            git checkout --ours "$file"
+            git add "$file"
+          fi
         done
         git commit -m "Resolved merge conflicts by choosing origin changes over gitee"
       fi
