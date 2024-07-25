@@ -24,9 +24,9 @@ pub struct SimulatedClient
 #[derive(Debug)]
 pub enum SimulatedClientEvent
 {
-    FetchMarketEvent(MarketEvent<ClickhouseTrade>, i64),
-    FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>, i64),
-    FetchBalances(oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>, i64),
+    FetchMarketEvent(MarketEvent<ClickhouseTrade>),
+    FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>),
+    FetchBalances(oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>),
     OpenOrders((Vec<Order<RequestOpen>>, oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>), i64),
     CancelOrders((Vec<Order<RequestCancel>>, oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>), i64),
     CancelOrdersAll(oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, i64),
@@ -57,7 +57,7 @@ impl ClientExecution for SimulatedClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送获取开放订单的请求。
         self.request_tx
-            .send(SimulatedClientEvent::FetchOrdersOpen(response_tx, self.local_timestamp))
+            .send(SimulatedClientEvent::FetchOrdersOpen(response_tx))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送获取开放订单FetchOrdersOpen请求失败");
         // 从模拟交易所接收开放订单的响应。
         response_rx.await
@@ -69,7 +69,7 @@ impl ClientExecution for SimulatedClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送获取账户余额的请求。
         self.request_tx
-            .send(SimulatedClientEvent::FetchBalances(response_tx, self.local_timestamp))
+            .send(SimulatedClientEvent::FetchBalances(response_tx))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送获取账户余额 FetchBalances 请求失败");
         // 从模拟交易所接收账户余额的响应。
         response_rx.await

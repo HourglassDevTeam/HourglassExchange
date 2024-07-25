@@ -20,6 +20,7 @@ use crate::{
         instrument_orders::InstrumentOrders,
     },
 };
+use crate::common_skeleton::order::Pending;
 
 
 #[derive(Debug)]
@@ -28,6 +29,7 @@ pub struct AccountOrders
     pub latency_generator: Arc<RwLock<AccountLatency>>,
     pub selectable_latencies: [i64; 20],
     pub request_counter: AtomicU64, // 用来生成一个唯一的 [`OrderId`]。
+    pub pending_registry: Vec<Order<Pending>>,// Pending订单的寄存器。
     pub instrument_orders_map: HashMap<Instrument, InstrumentOrders>,
 }
 
@@ -41,6 +43,7 @@ impl AccountOrders
 
         Self {
             request_counter: AtomicU64::new(0),
+            pending_registry: vec![],
             instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
             latency_generator,
             selectable_latencies,

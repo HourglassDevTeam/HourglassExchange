@@ -35,8 +35,8 @@ impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + Debug + 
         // 不断接收并处理模拟事件。
         while let Some(event) = self.event_simulated_rx.recv().await {
             match event {
-                | SimulatedClientEvent::FetchOrdersOpen(response_tx, _current_timestamp) => self.account.fetch_orders_open(response_tx).await,
-                | SimulatedClientEvent::FetchBalances(response_tx, _current_timestamp) => self.account.fetch_balances(response_tx).await,
+                | SimulatedClientEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx).await,
+                | SimulatedClientEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx).await,
                 | SimulatedClientEvent::OpenOrders((open_requests, response_tx), current_timestamp) => {
                     self.account.open_orders(open_requests, response_tx, current_timestamp).await
                 }
@@ -44,7 +44,7 @@ impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + Debug + 
                     self.account.cancel_orders(cancel_requests, response_tx, current_timestamp).await
                 }
                 | SimulatedClientEvent::CancelOrdersAll(response_tx, current_timestamp) => self.account.cancel_orders_all(response_tx, current_timestamp).await,
-                | SimulatedClientEvent::FetchMarketEvent(market_event, current_timestamp) => self.account.match_orders(market_event).await,
+                | SimulatedClientEvent::FetchMarketEvent(market_event) => self.account.match_orders(market_event).await,
             }
         }
     }
