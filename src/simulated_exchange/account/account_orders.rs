@@ -57,11 +57,8 @@ impl AccountOrders
         latencies
     }
 
-   async fn get_random_latency(&mut self) -> i64
+    fn get_random_latency(&self) -> i64
     {
-        if self.selectable_latencies.iter().all(|&latency| latency == 0) {
-            self.selectable_latencies = Self::generate_latencies(&self.latency_generator).await;
-        }
         let mut rng = rand::thread_rng();
         let idx = rng.gen_range(0..self.selectable_latencies.len());
         self.selectable_latencies[idx]
@@ -89,7 +86,7 @@ impl AccountOrders
     pub async fn keep_request_as_pending(&mut self, request: Order<RequestOpen>) -> Result<Order<Pending>, ExecutionError>
     {
         // turn the request into an pending order with a predicted timestamp
-        let latency = self.get_random_latency().await;
+        let latency = self.get_random_latency();
         let adjusted_client_ts = request.client_ts + latency;
         let pending = Order { kind: request.kind,
                               exchange: request.exchange,
@@ -102,6 +99,7 @@ impl AccountOrders
         Ok(pending)
     }
 
+
     /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
     /// 在 increment_request_counter 方法中，使用 Ordering::Relaxed 进行递增。
     pub async fn build_order_open(&mut self, request: Order<RequestOpen>) -> Order<Open>
@@ -109,7 +107,7 @@ impl AccountOrders
         self.increment_request_counter();
 
         // 获取当前的 AccountLatency 值并加到 client_ts 上
-        let latency = self.get_random_latency().await;
+        let latency = self.get_random_latency();
         let adjusted_client_ts = request.client_ts + latency;
 
         // 直接构建 Order<Open>
