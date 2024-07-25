@@ -122,7 +122,7 @@ impl AccountOrders
         self.request_counter.fetch_add(1, Ordering::Relaxed);
     }
 
-    // 在 order_id 方法中，使用 Ordering::Acquire 确保读取到最新的计数器值。
+    /// 在 order_id 方法中，使用 [Ordering::Acquire] 确保读取到最新的计数器值。
     pub fn order_id(&self) -> OrderId
     {
         OrderId(self.request_counter.load(Ordering::Acquire).to_string())
