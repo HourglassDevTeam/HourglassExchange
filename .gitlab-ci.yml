@@ -109,19 +109,6 @@ mergeCode:
       fi
 
     ##
-    ## Specific handling for modify/delete conflict
-    ##
-    - |
-      if [ "$(git status --porcelain | grep 'src/simulated_exchange/account/slippage_registry.rs' | grep -o 'D')" = "D" ]; then
-        git rm src/simulated_exchange/account/slippage_registry.rs
-        git commit -m "Removed conflicting file src/simulated_exchange/account/slippage_registry.rs"
-      else
-        git checkout --ours src/simulated_exchange/account/slippage_registry.rs
-        git add src/simulated_exchange/account/slippage_registry.rs
-        git commit -m "Kept local changes for src/simulated_exchange/account/slippage_registry.rs"
-      fi
-
-    ##
     ## Check if there are changes to push to origin
     ##
     - |
