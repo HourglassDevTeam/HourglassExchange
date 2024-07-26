@@ -183,19 +183,17 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                        kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), _base_balance), TokenBalance::new(quote.clone(), _quote_balance)]) }
     }
 
-    /// Apply the [`BalanceDelta`] to the [`Balance`] of the specified [`Token`], returning a
-    /// `Copy` of the updated [`Balance`].
-    pub fn update(&mut self, token: &Token, delta: BalanceDelta) -> Balance
-    {
+    /// 将 [`BalanceDelta`] 应用于指定 [`Token`] 的 [`Balance`]，并返回更新后的 [`Balance`] 。
+    pub fn update(&mut self, token: &Token, delta: BalanceDelta) -> Balance {
         let base_balance = self.balance_mut(token).unwrap();
 
         base_balance.apply(delta);
 
         *base_balance
-    }
-}
+    }}
 
-impl<Event> Deref for AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+
+    impl<Event> Deref for AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     type Target = HashMap<Token, Balance>;
 
