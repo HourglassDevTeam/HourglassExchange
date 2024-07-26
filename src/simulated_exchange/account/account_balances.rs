@@ -61,6 +61,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     }
 
     /// 获取指定 [`InstrumentKind`] 的手续费。
+    /// NOTE The method looks good. Ensure the fees_book is always properly populated to avoid unexpected None values.
     pub async fn get_fee(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
     {
         if let Some(account) = &self.account_ref {
@@ -89,13 +90,13 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     }
 
     /// 获取所有[`Token`]的[`Balance`]。
+    /// NOTE Cloning the entire balance_map could be costly if it is large. Monitor the performance impact.
     pub fn fetch_all(&self) -> Vec<TokenBalance>
     {
         self.balance_map.clone().into_iter().map(|(token, balance)| TokenBalance::new(token, balance)).collect()
     }
 
     /// 判断client是否有足够的可用[`Balance`]来执行[`Order<RequestOpen>`]。
-    /// NOTE 这个方法不应该导致panic,Client要能妥善处理这种状况。
     pub fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExecutionError>
     {
         let available = self.balance(token)?.available;
@@ -156,6 +157,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     /// 从交易中更新余额并返回 [`AccountEvent`]
     pub async fn update_from_trade(&mut self, market_event: &MarketEvent<ClickhouseTrade>) -> AccountEvent
     {
+        // let's start with a destructuring assignment
         let Instrument { base, quote, kind, .. } = &market_event.instrument;
 
         // 获取手续费
