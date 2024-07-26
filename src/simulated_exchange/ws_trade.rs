@@ -1,18 +1,14 @@
 /// NOTE code below is to be merged later
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    common_skeleton::{
-        datafeed::event::MarketEvent,
-        instrument::{
-            kind::{InstrumentKind, InstrumentKind::Perpetual},
-            Instrument,
-        },
-        token::Token,
+use crate::{common_skeleton::{
+    datafeed::event::MarketEvent,
+    instrument::{
+        Instrument,
+        kind::{InstrumentKind, InstrumentKind::Perpetual},
     },
-    simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
-    ExchangeID,
-};
+    token::Token,
+}, ExchangeVariant, simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd)]
 #[allow(non_snake_case)]
@@ -32,7 +28,7 @@ pub struct WsTrade
 // NOTE 这是按照Okex交易所API数据类型构建的 WebsocketTrade 数据结构，回测选用。
 impl MarketEvent<WsTrade>
 {
-    pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, instrument: InstrumentKind, exchange: ExchangeID) -> Self
+        pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, instrument: InstrumentKind) -> Self
     {
         let exchange_time = ws_trade.ts.parse::<i64>().unwrap_or(0);
         let received_time = ws_trade.ts.parse::<i64>().unwrap_or(0); // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
@@ -43,7 +39,7 @@ impl MarketEvent<WsTrade>
 
         MarketEvent { exchange_time,
                       received_time,
-                      exchange: ExchangeID(exchange.to_string()),
+                      exchange:ExchangeVariant::Simulated,
 
                       instrument,
                       kind: ws_trade }
@@ -53,7 +49,7 @@ impl MarketEvent<WsTrade>
 // NOTE 这是按照Clickhouse中存储的数据类型构建的 WebsocketTrade 数据结构，回测选用。
 impl MarketEvent<ClickhouseTrade>
 {
-    pub fn from_swap_trade_clickhouse(trade: ClickhouseTrade, base: String, quote: String, exchange: ExchangeID) -> Self
+    pub fn from_swap_trade_clickhouse(trade: ClickhouseTrade, base: String, quote: String) -> Self
     {
         let exchange_time = trade.timestamp;
         let received_time = trade.timestamp; // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
@@ -64,7 +60,7 @@ impl MarketEvent<ClickhouseTrade>
 
         MarketEvent { exchange_time,
                       received_time,
-                      exchange: ExchangeID(exchange.to_string()),
+                      exchange: ExchangeVariant::Simulated,
                       instrument,
                       kind: trade }
     }

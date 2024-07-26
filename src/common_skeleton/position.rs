@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountPositions
 {
     margin_pos: Option<Vec<MarginPosition>>, // NOTE useless in backtest
@@ -19,15 +19,15 @@ pub struct AccountPositions
 }
 
 // TODO the below code is under construction
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct MarginPosition {}
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct FuturesPosition {}
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct OptionPosition {}
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize,PartialEq, Serialize)]
 pub struct PerpetualPositionConfig
 {
     pos_margin_mode: PositionMarginMode,
@@ -35,14 +35,14 @@ pub struct PerpetualPositionConfig
     direction_mode: DirectionMode,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq,Deserialize, Serialize)]
 pub enum PositionMarginMode
 {
     Cross,
     Isolated,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug,PartialEq, Deserialize, Serialize)]
 pub enum DirectionMode
 {
     Oneway,
@@ -61,7 +61,7 @@ pub enum PositionKind
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize,PartialEq)]
 pub struct PerpetualPosition
 {
     pub base: PositionMeta,

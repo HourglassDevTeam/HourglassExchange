@@ -160,6 +160,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         let (base_delta, quote_delta) = match side {
             | Side::Buy => {
                 let base_increase = market_event.kind.amount - fee;
+                // Note: available was already decreased by the opening of the Side::Buy order
                 let base_delta = BalanceDelta { total: base_increase,
                                                 available: base_increase };
                 let quote_delta = BalanceDelta { total: -market_event.kind.amount * market_event.kind.price,
@@ -167,6 +168,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                 (base_delta, quote_delta)
             }
             | Side::Sell => {
+                // Note: available was already decreased by the opening of the Side::Sell order
                 let base_delta = BalanceDelta { total: -market_event.kind.amount,
                                                 available: 0.0 };
                 let quote_increase = (market_event.kind.amount * market_event.kind.price) - fee;
@@ -415,4 +417,112 @@ mod tests
             panic!("Unexpected account event kind");
         }
     }
+    #[tokio::test]
+    async fn test_update_from_cancel() {
+        let token = Token::new("BTC");
+        let balance = Balance::new(100.0, 50.0); // Initial total balance: 100, available balance: 50
+        let mut balance_map = HashMap::new();
+        balance_map.insert(token.clone(), balance);
+
+        let account = create_test_account().await;
+        let account_ref = Arc::downgrade(&account);
+
+        let mut balances = AccountBalances {
+            balance_map,
+            account_ref,
+        };
+
+        let instrument = Instrument {
+            base: token.clone(),
+            quote: token.clone(),
+            kind: InstrumentKind::Spot,
+        };
+        let client_order_id = Uuid::new_v4();
+
+        let open_state = Open {
+            id: client_order_id.into(),
+            price: 50000.0,
+            size: 1.0,
+            filled_quantity: 0.0,
+            order_role: OrderRole::Maker,
+            received_ts: 0,
+        };
+        let order = Order {
+            kind: OrderKind::Limit,
+            exchange: ExchangeVariant::Simulated,
+            instrument: instrument.clone(),
+            client_ts: 0,
+            cid: ClientOrderId(client_order_id.clone()),
+            side: Side::Buy,
+            state: open_state,
+        };
+
+        let token_balance = balances.update_from_cancel(&order);
+
+        assert_eq!(balances.balance(&token).unwrap().available, 50.0 + (50000.0 * 1.0)); // 50050.0
+        assert_eq!(token_balance.balance.available, 50.0 + (50000.0 * 1.0)); // 50050.0
+    }
+
+
+    #[tokio::test]
+    async fn test_update_from_trade() {
+        let base_token = Token::new("BTC");
+        let quote_token = Token::new("USDT");
+
+        let base_balance = Balance::new(1.0, 1.0); // Initial balance: 1 BTC
+        let quote_balance = Balance::new(50000.0, 50000.0); // Initial balance: 50,000 USDT
+
+        let mut balance_map = HashMap::new();
+        balance_map.insert(base_token.clone(), base_balance);
+        balance_map.insert(quote_token.clone(), quote_balance);
+
+        let account = create_test_account().await;
+        let account_ref = Arc::downgrade(&account);
+
+        let mut balances = AccountBalances {
+            balance_map,
+            account_ref,
+        };
+
+        let instrument = Instrument {
+            base: base_token.clone(),
+            quote: quote_token.clone(),
+            kind: InstrumentKind::Spot,
+        };
+
+        let market_event = MarketEvent {
+            exchange_time: 0,
+            instrument: instrument.clone(),
+            kind: ClickhouseTrade {
+                basequote: "BTC/USDT".to_string(),
+                side: "Buy".to_string(),
+                price: 50000.0,
+                timestamp: 0,
+                amount: 0.1,
+            },
+            exchange: ExchangeVariant::Simulated,
+            received_time: 0,
+        };
+
+        let account_event = balances.update_from_trade(&market_event).await;
+
+        println!("Base Token Balance: {:?}", balances.balance(&base_token).unwrap());
+        println!("Quote Token Balance: {:?}", balances.balance(&quote_token).unwrap());
+        println!("Account Event: {:?}", account_event);
+
+        let expected_base_balance = Balance::new(1.1, 1.1); // 1 BTC + 0.1 BTC
+        let expected_quote_balance = Balance::new(45000.0, 45000.0); // 50,000 USDT - 0.1 * 50,000
+
+        assert_eq!(balances.balance(&base_token).unwrap().total, expected_base_balance.total);
+        assert_eq!(balances.balance(&base_token).unwrap().available, expected_base_balance.available);
+        assert_eq!(balances.balance(&quote_token).unwrap().total, expected_quote_balance.total);
+        assert_eq!(balances.balance(&quote_token).unwrap().available, expected_quote_balance.available);
+
+        assert_eq!(account_event.kind, AccountEventKind::Balances(vec![
+            TokenBalance::new(base_token.clone(), expected_base_balance),
+            TokenBalance::new(quote_token.clone(), expected_quote_balance),
+        ]));
+    }
+
+
 }

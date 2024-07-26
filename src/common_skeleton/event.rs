@@ -24,7 +24,7 @@ pub struct AccountEvent
 }
 
 /// 定义账户事件[`AccountEvent`]的类型。
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug,PartialEq, Deserialize, Serialize)]
 pub enum AccountEventKind
 {
     // Order Events
