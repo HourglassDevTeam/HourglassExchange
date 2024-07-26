@@ -27,7 +27,7 @@ pub struct AccountBalances<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord + Ord
 {
     pub balance_map: HashMap<Token, Balance>,
-    pub account_ref: Option<Arc<RwLock<Account<Event>>>>,
+    pub account_ref: Arc<RwLock<Account<Event>>>,
 }
 
 impl<Event> PartialEq for AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
@@ -55,54 +55,43 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
     }
 
-    pub fn set_account(&mut self, account: Arc<RwLock<Account<Event>>>)
-    {
-        self.account_ref = Some(account);
+    pub fn set_account(&mut self, account: Arc<RwLock<Account<Event>>>) {
+        self.account_ref = account;
     }
+
 
     /// 获取指定 [`InstrumentKind`] 的手续费。
-    /// NOTE The method looks good. Ensure the fees_book is always properly populated to avoid unexpected None values.
-    pub async fn get_fee(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
-    {
-        if let Some(account) = &self.account_ref {
-            let account_read = account.read().await;
-            let config_read = account_read.config.read().await;
-            config_read.fees_book
-                       .get(instrument_kind)
-                       .cloned()
-                       .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for InstrumentKind: {:?}", instrument_kind)))
-        }
-        else {
-            Err(ExecutionError::Simulated("Account reference is not set".to_string()))
-        }
+    pub async fn get_fee(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError> {
+        let account_read = self.account_ref.read().await;
+        let config_read = account_read.config.read().await;
+        config_read.fees_book
+            .get(instrument_kind)
+            .cloned()
+            .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for InstrumentKind: {:?}", instrument_kind)))
     }
+
+
 
     // 异步方法来获取 Account 的某个字段
-    pub async fn get_exchange_ts(&self) -> Option<i64>
-    {
-        if let Some(account) = &self.account_ref {
-            let account_read = account.read().await;
-            Some(account_read.exchange_timestamp)
-        }
-        else {
-            None
-        }
+    pub async fn get_exchange_ts(&self) -> Result<i64, ExecutionError> {
+        let account_read = self.account_ref.read().await;
+        Ok(account_read.exchange_timestamp)
     }
 
+
+
     /// 获取所有[`Token`]的[`Balance`]。
-    /// NOTE Cloning the entire balance_map could be costly if it is large. Monitor the performance impact.
-    pub fn fetch_all(&self) -> Vec<TokenBalance>
-    {
+    pub fn fetch_all(&self) -> Vec<TokenBalance> {
         self.balance_map.clone().into_iter().map(|(token, balance)| TokenBalance::new(token, balance)).collect()
     }
 
     /// 判断client是否有足够的可用[`Balance`]来执行[`Order<RequestOpen>`]。
-    pub fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExecutionError>
-    {
+    pub fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExecutionError> {
         let available = self.balance(token)?.available;
-        match available >= required_balance {
-            | true => Ok(()),
-            | false => Err(ExecutionError::InsufficientBalance(token.clone())),
+        if available >= required_balance {
+            Ok(())
+        } else {
+            Err(ExecutionError::InsufficientBalance(token.clone()))
         }
     }
 
@@ -125,7 +114,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             }
         };
 
-        AccountEvent { exchange_timestamp: self.get_exchange_ts().await.unwrap(),
+        AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
                        exchange: ExchangeVariant::Simulated,
                        kind: AccountEventKind::Balance(_updated_balance) }
     }
@@ -198,7 +187,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         let _base_balance = self.update(base, base_delta);
         let _quote_balance = self.update(quote, quote_delta);
 
-        AccountEvent { exchange_timestamp: self.get_exchange_ts().await.unwrap(),
+        AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
                        exchange: ExchangeVariant::Simulated,
                        kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), _base_balance), TokenBalance::new(quote.clone(), _quote_balance),]) }
     }
