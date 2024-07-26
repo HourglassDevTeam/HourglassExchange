@@ -474,9 +474,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }).collect();
 
         // 调用现有的 cancel_orders 方法
-        let mut this = self.clone();
         let (tx, rx) = oneshot::channel();
-        this.cancel_orders(cancel_requests, tx).await;
+        self.cancel_orders(cancel_requests, tx).await;
 
         // 等待取消操作完成并返回结果
         match rx.await {
