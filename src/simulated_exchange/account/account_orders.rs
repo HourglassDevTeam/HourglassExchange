@@ -1,8 +1,8 @@
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicU64, Ordering},
         Arc,
+        atomic::{AtomicU64, Ordering},
     },
 };
 
@@ -11,18 +11,17 @@ use tokio::sync::RwLock;
 
 use crate::{
     common_skeleton::{
-        instrument::{kind::InstrumentKind, Instrument},
+        event::ClientOrderId,
+        instrument::Instrument,
         order::{Open, Order, OrderId, OrderKind, OrderRole, Pending, RequestOpen},
-        token::Token,
         Side,
     },
     error::ExecutionError,
     simulated_exchange::{
-        account::account_latency::{fluctuate_latency, AccountLatency},
+        account::account_latency::{AccountLatency, fluctuate_latency},
         instrument_orders::InstrumentOrders,
     },
 };
-use crate::common_skeleton::event::ClientOrderId;
 
 #[derive(Debug)]
 pub struct AccountOrders
@@ -86,19 +85,19 @@ impl AccountOrders
             .collect()
     }
 
-
     // 从PendingRegistry中删除订单的函数
-    pub fn remove_order_from_pending_registry(&mut self, order_id: ClientOrderId) -> Result<(), ExecutionError> {
+    pub fn remove_order_from_pending_registry(&mut self, order_id: ClientOrderId) -> Result<(), ExecutionError>
+    {
         // 假设你有方法来找到并删除PendingRegistry中的订单
         // 这里只是一个简单的示例
         if let Some(index) = self.pending_registry.iter().position(|x| x.cid == order_id) {
             self.pending_registry.remove(index);
             Ok(())
-        } else {
+        }
+        else {
             Err(ExecutionError::OrderNotFound(order_id))
         }
     }
-
 
     pub async fn process_request_as_pending(&mut self, order: Order<RequestOpen>) -> Order<Pending>
     {
@@ -204,27 +203,6 @@ impl AccountOrders
                     }
                 }
             },
-        }
-    }
-
-    // NOTE 注意size的单位
-    pub fn calculate_required_available_balance<'a>(&self, order: &'a Order<Pending>, current_price: f64, leverage: f64) -> (&'a Token, f64)
-    {
-        match order.instrument.kind {
-            | InstrumentKind::Spot => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size),
-                | Side::Sell => (&order.instrument.base, order.state.size),
-            },
-            | InstrumentKind::Perpetual => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * leverage),
-                | Side::Sell => (&order.instrument.base, order.state.size * leverage),
-            },
-            | InstrumentKind::Future => {
-                todo!()
-            }
-            | InstrumentKind::Option => {
-                todo!()
-            }
         }
     }
 

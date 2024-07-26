@@ -12,8 +12,11 @@ use crate::{
         balance::TokenBalance,
         datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
+        instrument::kind::InstrumentKind,
         order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
         position::AccountPositions,
+        token::Token,
+        Side,
     },
     error::ExecutionError,
     simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
@@ -300,58 +303,74 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
+    // NOTE 注意size的单位
+    pub async fn calculate_required_available_balance<'a>(&self, order: &'a Order<Pending>, current_price: f64, leverage: f64) -> (&'a Token, f64)
+    {
+        match order.instrument.kind {
+            | InstrumentKind::Spot => match order.side {
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size),
+                | Side::Sell => (&order.instrument.base, order.state.size),
+            },
+            | InstrumentKind::Perpetual => match order.side {
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * leverage),
+                | Side::Sell => (&order.instrument.base, order.state.size * leverage),
+            },
+            | InstrumentKind::Future => {
+                todo!()
+            }
+            | InstrumentKind::Option => {
+                todo!()
+            }
+        }
+    }
+
     pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>, leverage: f64) -> Result<Order<Open>, ExecutionError>
-{
-    // 验证订单合法性
-    Self::order_validity_check(order.kind)?;
+    {
+        // 验证订单合法性
+        Self::order_validity_check(order.kind)?;
 
-    // 获取订单角色（maker 或 taker），现在使用写锁
-    let order_role = {
-        let mut orders_guard = self.orders.write().await;
-        orders_guard.determine_maker_taker(&order, current_price)?
-    };
+        // 获取订单角色（maker 或 taker），现在使用写锁
+        let order_role = {
+            let mut orders_guard = self.orders.write().await;
+            orders_guard.determine_maker_taker(&order, current_price)?
+        };
 
-    // 计算所需的可用余额
-    let (token, required_balance) = {
-        // 只读访问用于计算余额，因此这里使用读锁
-        let orders_guard = self.orders.read().await;
-        orders_guard.calculate_required_available_balance(&order, current_price, leverage)
-    };
+        // 计算所需的可用余额
+        let (token, required_balance) = self.calculate_required_available_balance(&order, current_price, leverage).await;
 
-    // 检查可用余额是否充足
-    self.balances.read().await.has_sufficient_available_balance(token, required_balance)?;
+        // 检查可用余额是否充足
+        self.balances.read().await.has_sufficient_available_balance(token, required_balance)?;
 
-    // 构建 Open<Order> 并获取写锁
-    let open_order = {
-        let mut orders_guard = self.orders.write().await;
+        // 构建 Open<Order> 并获取写锁
+        let open_order = {
+            let mut orders_guard = self.orders.write().await;
 
-        // 构建 Open<Order>
-        let open = orders_guard.build_order_open(order, order_role).await;
+            // 构建 Open<Order>
+            let open = orders_guard.build_order_open(order, order_role).await;
 
-        // 添加订单到 Instrument Orders
-        orders_guard.orders_mut(&open.instrument)?.add_order_open(open.clone());
+            // 添加订单到 Instrument Orders
+            orders_guard.orders_mut(&open.instrument)?.add_order_open(open.clone());
 
-        open
-    };
+            open
+        };
 
-    // 更新客户余额
-    let balance_event = self.balances.write().await.update_from_open(&open_order, required_balance).await;
+        // 更新客户余额
+        let balance_event = self.balances.write().await.update_from_open(&open_order, required_balance).await;
 
-    // 发送账户事件给客户端
-    self.account_event_tx
-        .send(balance_event)
-        .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败");
+        // 发送账户事件给客户端
+        self.account_event_tx
+            .send(balance_event)
+            .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败");
 
-    self.account_event_tx
-        .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
-            exchange: ExchangeVariant::Simulated,
-            kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
-        .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败");
+        self.account_event_tx
+            .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
+                                 exchange: ExchangeVariant::Simulated,
+                                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
+            .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败");
 
-    // 返回已打开的订单
-    Ok(open_order)
-}
-
+        // 返回已打开的订单
+        Ok(open_order)
+    }
 
     pub async fn cancel_orders(&mut self,
                                cancel_requests: Vec<Order<RequestCancel>>,
