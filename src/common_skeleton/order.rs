@@ -133,8 +133,8 @@ pub enum OrderRole
     Taker,
 }
 
-/// 使得Order<Opened> 之间可以比较大小
-/// NOTE: 此处Self 等同于 Order<Opened>，表示 other 参数也是一个 Order<Opened> 类型的引用。
+/// 使得Order<Open> 之间可以比较大小
+/// NOTE: 此处Self 等同于 Order<Open>，表示 other 参数也是一个 Order<Open> 类型的引用。
 impl Ord for Order<Open>
 {
     fn cmp(&self, other: &Self) -> Ordering
@@ -162,7 +162,7 @@ impl PartialOrd for Order<Open>
     }
 }
 
-// 为Order<Opened>实现Eq
+// 为Order<Open>实现Eq
 impl Eq for Order<Open> {}
 
 /// 构建订单在被取消后的状态

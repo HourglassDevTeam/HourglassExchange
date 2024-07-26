@@ -25,12 +25,12 @@ impl InstrumentOrders
     {
         match new_open_order.side {
             | Side::Buy => {
-                // 添加 Order<Opened> 到买单
+                // 添加 Order<Open> 到买单
                 self.bids.push(new_open_order);
                 self.bids.sort();
             }
             | Side::Sell => {
-                // 添加 Order<Opened> 到卖单
+                // 添加 Order<Open> 到卖单
                 self.asks.push(new_open_order);
                 self.asks.sort();
             }

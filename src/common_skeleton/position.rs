@@ -18,6 +18,9 @@ pub struct AccountPositions
     option_pos: Option<Vec<OptionPosition>>,
 }
 
+
+
+// TODO the below code is under construction
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MarginPosition {}
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -54,9 +57,9 @@ pub enum DirectionMode
 pub enum PositionKind
 {
     Perpetual(PerpetualPosition),
-    // Margin(MarginPosition),
-    // Futures(FuturesPosition),
-    // Option(OptionPosition),
+    Margin(MarginPosition),
+    Futures(FuturesPosition),
+    Option(OptionPosition),
 }
 
 #[allow(dead_code)]
