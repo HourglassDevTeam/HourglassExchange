@@ -388,54 +388,65 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                             // 如果发送失败，处理错误
                                         });
     }
+    pub async fn try_cancel_order_atomic(
+        &mut self,
+        request: Order<RequestCancel>
+    ) -> Result<Order<Cancelled>, ExecutionError> {
+        // 获取写锁并查找到对应的Instrument Orders，以便修改订单
+        let mut orders_guard = self.orders.write().await;
+        let orders = orders_guard.orders_mut(&request.instrument)?;
 
-    pub async fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError>
-    {todo!()
-        // // Retrieve client Instrument Orders
-        // let orders = self.orders.read().await.orders_mut(&request.instrument)?;
-        //
-        // // Find & remove Order<Open> associated with the Order<RequestCancel>
-        // let removed = match request.side {
-        //     | Side::Buy => {
-        //         // Search for Order<Open> using OrderId
-        //         let index = orders.bids
-        //                           .iter()
-        //                           .position(|bid| bid.state.id == request.state.id)
-        //                           .ok_or(ExecutionError::OrderNotFound(request.cid))?;
-        //         orders.bids.remove(index)
-        //     }
-        //     | Side::Sell => {
-        //         // Search for Order<Open> using OrderId
-        //         let index = orders.asks
-        //                           .iter()
-        //                           .position(|ask| ask.state.id == request.state.id)
-        //                           .ok_or(ExecutionError::OrderNotFound(request.cid))?;
-        //
-        //         orders.asks.remove(index)
-        //     }
-        // };
-        //
-        // // Now that fallible operations have succeeded, mutate ClientBalances
-        // let balance_event = self.balances.update_from_cancel(&removed);
-        //
-        // // Map Order<Open> to Order<Cancelled>
-        // let cancelled = Order::from(removed);
-        //
-        // // Send AccountEvents to client
-        // self.account_event_tx
-        //     .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
-        //                          exchange: ExchangeVariant::Simulated,
-        //                          kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
-        //     .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
-        //
-        // self.account_event_tx
-        //     .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
-        //                          exchange: ExchangeVariant::Simulated,
-        //                          kind: AccountEventKind::Balance(balance_event) })
-        //     .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
-        //
-        // Ok(cancelled)
+        // 找到并移除与 Order<RequestCancel> 关联的 Order<Open>
+        let removed = match request.side {
+            Side::Buy => {
+                // 使用 OrderId 查找 Order<Open>
+                let index = orders
+                    .bids
+                    .iter()
+                    .position(|bid| bid.state.id == request.state.id)
+                    .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                orders.bids.remove(index)
+            }
+            Side::Sell => {
+                // 使用 OrderId 查找 Order<Open>
+                let index = orders
+                    .asks
+                    .iter()
+                    .position(|ask| ask.state.id == request.state.id)
+                    .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                orders.asks.remove(index)
+            }
+        };
+
+        // 在可失败操作成功后，更新客户端余额
+        let balance_event = {
+            let mut balances_guard = self.balances.write().await;
+            balances_guard.update_from_cancel(&removed)
+        };
+
+        // 将 Order<Open> 映射到 Order<Cancelled>
+        let cancelled = Order::from(removed);
+
+        // 发送 AccountEvents 给客户端
+        self.account_event_tx
+            .send(AccountEvent {
+                exchange_timestamp: self.exchange_timestamp,
+                exchange: ExchangeVariant::Simulated,
+                kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
+            })
+            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
+
+        self.account_event_tx
+            .send(AccountEvent {
+                exchange_timestamp: self.exchange_timestamp,
+                exchange: ExchangeVariant::Simulated,
+                kind: AccountEventKind::Balance(balance_event),
+            })
+            .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
+
+        Ok(cancelled)
     }
+
 
     pub async fn cancel_orders_all(&mut self, _response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, _current_timestamp: i64)
     {
