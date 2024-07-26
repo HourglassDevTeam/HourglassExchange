@@ -1,4 +1,7 @@
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use crate::common_skeleton::instrument::Instrument;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AccountConfig
 {
@@ -6,6 +9,7 @@ pub struct AccountConfig
     pub position_mode: PositionMode,
     pub commission_level: CommissionLevel,
     pub current_commission_rate: CommissionRates,
+    pub leverage_registry: HashMap<Instrument, f64>,
 }
 
 // NOTE 增加假设的佣金费率结构, 用于模拟交易所账户上。每个账户都有自己的佣金费率。
