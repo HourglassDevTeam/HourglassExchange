@@ -28,13 +28,12 @@ pub struct AccountEvent
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum AccountEventKind
 {
-    // HTTP Events
+    // Order Events
     OrdersOpen(Vec<Order<Open>>),
     OrdersNew(Vec<Order<Open>>),
     OrdersCancelled(Vec<Order<Cancelled>>),
     OrdersFilled(Vec<Order<FullyFill>>),
     OrdersPartiallyFilled(Vec<Order<PartialFill>>),
-    // OrdersPartiallyFilled(Vec<Order<PartiallyFilled>>),
     Balance(TokenBalance),
     Trade(Trade),
     // OrderBookUpdate(OrderBookUpdate),
