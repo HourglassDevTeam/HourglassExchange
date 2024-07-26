@@ -312,12 +312,12 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 | Side::Sell => (&order.instrument.base, order.state.size),
             },
             | InstrumentKind::Perpetual => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.read().await.leverage_registry.get(&order.instrument).unwrap()),
-                | Side::Sell => (&order.instrument.base, order.state.size * self.config.read().await.leverage_registry.get(&order.instrument).unwrap()),
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.read().await.leverage_book.get(&order.instrument).unwrap()),
+                | Side::Sell => (&order.instrument.base, order.state.size * self.config.read().await.leverage_book.get(&order.instrument).unwrap()),
             },
             | InstrumentKind::Future => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.read().await.leverage_registry.get(&order.instrument).unwrap()),
-                | Side::Sell => (&order.instrument.base, order.state.size * self.config.read().await.leverage_registry.get(&order.instrument).unwrap()),
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.read().await.leverage_book.get(&order.instrument).unwrap()),
+                | Side::Sell => (&order.instrument.base, order.state.size * self.config.read().await.leverage_book.get(&order.instrument).unwrap()),
             },
             | InstrumentKind::Option => {
                 todo!()

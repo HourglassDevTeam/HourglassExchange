@@ -21,6 +21,8 @@ use crate::{
     simulated_exchange::account::Account,
     ExchangeVariant,
 };
+use crate::common_skeleton::datafeed::event::MarketEvent;
+use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade;
 
 #[derive(Clone, Debug)]
 pub struct AccountBalances<Event>
@@ -135,53 +137,63 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         }
     }
 
-    /// 当client[`Trade`]发生时，会导致base和quote[`Token`]的[`Balance`]发生变化。
-    /// 每个[`Balance`]变化的性质取决于匹配的[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
-    /// [`Side::Buy`]匹配会导致基础[`Token`] [`Balance`]增加`trade_quantity`，报价[`Token`]减少`trade_quantity * price`。
-    /// [`Side::Sell`]匹配会导致基础[`Token`] [`Balance`]减少`trade_quantity`，报价[`Token`]增加`trade_quantity * price`。
 
-    pub async fn update_from_trade(&mut self, trade: &Trade) -> AccountEvent
-    {
-        let Instrument { base, quote, .. } = &trade.instrument;
+    // /// 从交易中更新余额并返回 [`AccountEvent`]
+    // pub async fn update_from_trade(&mut self, market_event: &MarketEvent<ClickhouseTrade>) -> AccountEvent {
+    //     let Instrument { base, quote, .. } = &market_event.instrument;
+    //
+    //     // 计算 base 和 quote 余额的变化
+    //     let (base_delta, quote_delta) = match market_event.kind.side {
+    //         Side::Buy.to_string() => {
+    //             // Base 的总余额和可用余额增加 trade.size 减去 base 的交易费用
+    //             let base_increase = market_event.kind.amount - market_event.fees;
+    //             let base_delta = BalanceDelta {
+    //                 total: base_increase,
+    //                 available: base_increase,
+    //             };
+    //
+    //             // Quote 的总余额减少 (trade.size * price)
+    //             // 注意: 可用余额已在买单开单时减少
+    //             let quote_delta = BalanceDelta {
+    //                 total: -market_event.kind.amount * market_event.kind.price,
+    //                 available: 0.0,
+    //             };
+    //
+    //             (base_delta, quote_delta)
+    //         }
+    //         Side::Sell.to_string() => {
+    //             // Base 的总余额减少 trade.size
+    //             // 注意: 可用余额已在卖单开单时减少
+    //             let base_delta = BalanceDelta {
+    //                 total: -market_event.kind.amount,
+    //                 available: 0.0,
+    //             };
+    //
+    //             // Quote 的总余额和可用余额增加 (trade.size * price) 减去 quote 的交易费用
+    //             let quote_increase = (market_event.kind.amount * market_event.kind.price) - market_event.fees;
+    //             let quote_delta = BalanceDelta {
+    //                 total: quote_increase,
+    //                 available: quote_increase,
+    //             };
+    //
+    //             (base_delta, quote_delta)
+    //         }
+    //     };
+    //
+    //     // 应用 BalanceDelta 并返回更新后的余额
+    //     let _base_balance = self.update(base, base_delta);
+    //     let _quote_balance = self.update(quote, quote_delta);
+    //
+    //     AccountEvent {
+    //         exchange_timestamp: self.get_exchange_ts().await.unwrap(),
+    //         exchange: ExchangeVariant::Simulated,
+    //         kind: AccountEventKind::Balances(vec![
+    //             TokenBalance::new(base.clone(), _base_balance),
+    //             TokenBalance::new(quote.clone(), _quote_balance),
+    //         ]),
+    //     }
+    // }
 
-        // Calculate the base & quote Balance deltas
-        let (base_delta, quote_delta) = match trade.side {
-            | Side::Buy => {
-                // Base total & available increase by trade.size minus base trade.fees
-                let base_increase = trade.size - trade.fees;
-                let base_delta = BalanceDelta { total: base_increase,
-                                                available: base_increase };
-
-                // Quote total decreases by (trade.size * price)
-                // Note: available was already decreased by the opening of the Side::Buy order
-                let quote_delta = BalanceDelta { total: -trade.size * trade.price,
-                                                 available: 0.0 };
-
-                (base_delta, quote_delta)
-            }
-            | Side::Sell => {
-                // Base total decreases by trade.size
-                // Note: available was already decreased by the opening of the Side::Sell order
-                let base_delta = BalanceDelta { total: -trade.size,
-                                                available: 0.0 };
-
-                // Quote total & available increase by (trade.size * price) minus quote fees
-                let quote_increase = (trade.size * trade.price) - trade.fees;
-                let quote_delta = BalanceDelta { total: quote_increase,
-                                                 available: quote_increase };
-
-                (base_delta, quote_delta)
-            }
-        };
-
-        // Apply BalanceDelta & return updated Balance
-        let _base_balance = self.update(base, base_delta);
-        let _quote_balance = self.update(quote, quote_delta);
-
-        AccountEvent { exchange_timestamp: self.get_exchange_ts().await.unwrap(),
-                       exchange: ExchangeVariant::Simulated,
-                       kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), _base_balance), TokenBalance::new(quote.clone(), _quote_balance)]) }
-    }
 
     /// 将 [`BalanceDelta`] 应用于指定 [`Token`] 的 [`Balance`]，并返回更新后的 [`Balance`] 。
     pub fn update(&mut self, token: &Token, delta: BalanceDelta) -> Balance {

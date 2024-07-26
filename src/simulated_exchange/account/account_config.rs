@@ -1,6 +1,7 @@
 use crate::common_skeleton::instrument::Instrument;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::common_skeleton::instrument::kind::InstrumentKind;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AccountConfig
@@ -9,7 +10,8 @@ pub struct AccountConfig
     pub position_mode: PositionMode,
     pub commission_level: CommissionLevel,
     pub current_commission_rate: CommissionRates,
-    pub leverage_registry: HashMap<Instrument, f64>,
+    pub leverage_book: HashMap<Instrument, f64>,
+    pub fees_book: HashMap<InstrumentKind, f64>, // 每种金融工具的手续费 NOTE 某种些交易所的设置颗粒读会精确到金融工具。
 }
 
 // NOTE 增加假设的佣金费率结构, 用于模拟交易所账户上。每个账户都有自己的佣金费率。
@@ -188,6 +190,6 @@ impl AccountConfigInitiator
                                                                       spot_taker: 0.0,
                                                                       perpetual_open: 0.0,
                                                                       perpetual_close: 0.0 },
-                           leverage_registry: Default::default() })
+                           leverage_book: Default::default() })
     }
 }
