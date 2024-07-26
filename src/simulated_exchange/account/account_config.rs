@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use crate::common_skeleton::instrument::Instrument;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AccountConfig
@@ -187,6 +187,7 @@ impl AccountConfigInitiator
                            current_commission_rate: CommissionRates { spot_maker: 0.0,
                                                                       spot_taker: 0.0,
                                                                       perpetual_open: 0.0,
-                                                                      perpetual_close: 0.0 } })
+                                                                      perpetual_close: 0.0 },
+                           leverage_registry: Default::default() })
     }
 }

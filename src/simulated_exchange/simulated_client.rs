@@ -28,7 +28,7 @@ pub enum SimulatedClientEvent
     FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>),
     FetchBalances(oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>),
     OpenOrders((Vec<Order<RequestOpen>>, oneshot::Sender<Vec<Result<Order<Pending>, ExecutionError>>>)),
-    CancelOrders((Vec<Order<RequestCancel>>, oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>), i64),
+    CancelOrders((Vec<Order<RequestCancel>>, oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)),
     CancelOrdersAll(oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, i64),
 }
 
@@ -92,7 +92,7 @@ impl ClientExecution for SimulatedClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送取消订单的请求。
         self.request_tx
-            .send(SimulatedClientEvent::CancelOrders((cancel_requests, response_tx), self.local_timestamp))
+            .send(SimulatedClientEvent::CancelOrders((cancel_requests, response_tx)))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送 CancelOrders 请求失败");
         // 从模拟交易所接收取消订单的响应。
         response_rx.await.expect("[UniLinkExecution] : 模拟交易所目前离线 - 接收 CancelOrders 响应失败")

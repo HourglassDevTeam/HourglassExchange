@@ -15,12 +15,12 @@ use crate::{
         instrument::kind::InstrumentKind,
         order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
         position::AccountPositions,
-        token::Token,
         Side,
+        token::Token,
     },
     error::ExecutionError,
-    simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
     ExchangeVariant,
+    simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
 };
 
 pub mod account_balances;
@@ -304,7 +304,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     }
 
     // NOTE 注意size的单位
-    pub async fn calculate_required_available_balance<'a>(&self, order: &'a Order<Pending>, current_price: f64, leverage: f64) -> (&'a Token, f64)
+    pub async fn calculate_required_available_balance<'a>(&'a self, order: &'a Order<Pending>, current_price: f64) -> (&Token, f64)
     {
         match order.instrument.kind {
             | InstrumentKind::Spot => match order.side {
@@ -312,19 +312,20 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 | Side::Sell => (&order.instrument.base, order.state.size),
             },
             | InstrumentKind::Perpetual => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * leverage),
-                | Side::Sell => (&order.instrument.base, order.state.size * leverage),
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.read().await.leverage_registry.get(&order.instrument).unwrap()),
+                | Side::Sell => (&order.instrument.base, order.state.size * self.config.read().await.leverage_registry.get(&order.instrument).unwrap()),
             },
-            | InstrumentKind::Future => {
-                todo!()
-            }
+            | InstrumentKind::Future => match order.side {
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.read().await.leverage_registry.get(&order.instrument).unwrap()),
+                | Side::Sell => (&order.instrument.base, order.state.size * self.config.read().await.leverage_registry.get(&order.instrument).unwrap()),
+            },
             | InstrumentKind::Option => {
                 todo!()
             }
         }
     }
 
-    pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>, leverage: f64) -> Result<Order<Open>, ExecutionError>
+    pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
     {
         // 验证订单合法性
         Self::order_validity_check(order.kind)?;
@@ -336,7 +337,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         };
 
         // 计算所需的可用余额
-        let (token, required_balance) = self.calculate_required_available_balance(&order, current_price, leverage).await;
+        let (token, required_balance) = self.calculate_required_available_balance(&order, current_price).await;
 
         // 检查可用余额是否充足
         self.balances.read().await.has_sufficient_available_balance(token, required_balance)?;
@@ -374,23 +375,66 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     pub async fn cancel_orders(&mut self,
                                cancel_requests: Vec<Order<RequestCancel>>,
-                               response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>,
-                               current_timestamp: i64)
+                               response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>, )
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
                                                             let mut this = self.clone();
-                                                            async move { this.try_cancel_order_atomic(request, current_timestamp).await }
+                                                            async move { this.try_cancel_order_atomic(request).await }
                                                         });
 
+        // 等待所有的取消操作完成
         let cancel_results = join_all(cancel_futures).await;
         response_tx.send(cancel_results).unwrap_or_else(|_| {
-                                            // Handle the error if sending fails
+                                            // 如果发送失败，处理错误
                                         });
     }
 
-    pub async fn try_cancel_order_atomic(&mut self, _request: Order<RequestCancel>, _current_timestamp: i64) -> Result<Order<Cancelled>, ExecutionError>
-    {
-        todo!()
+    pub async fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError>
+    {todo!()
+        // // Retrieve client Instrument Orders
+        // let orders = self.orders.read().await.orders_mut(&request.instrument)?;
+        //
+        // // Find & remove Order<Open> associated with the Order<RequestCancel>
+        // let removed = match request.side {
+        //     | Side::Buy => {
+        //         // Search for Order<Open> using OrderId
+        //         let index = orders.bids
+        //                           .iter()
+        //                           .position(|bid| bid.state.id == request.state.id)
+        //                           .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+        //         orders.bids.remove(index)
+        //     }
+        //     | Side::Sell => {
+        //         // Search for Order<Open> using OrderId
+        //         let index = orders.asks
+        //                           .iter()
+        //                           .position(|ask| ask.state.id == request.state.id)
+        //                           .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+        //
+        //         orders.asks.remove(index)
+        //     }
+        // };
+        //
+        // // Now that fallible operations have succeeded, mutate ClientBalances
+        // let balance_event = self.balances.update_from_cancel(&removed);
+        //
+        // // Map Order<Open> to Order<Cancelled>
+        // let cancelled = Order::from(removed);
+        //
+        // // Send AccountEvents to client
+        // self.account_event_tx
+        //     .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
+        //                          exchange: ExchangeVariant::Simulated,
+        //                          kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
+        //     .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
+        //
+        // self.account_event_tx
+        //     .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
+        //                          exchange: ExchangeVariant::Simulated,
+        //                          kind: AccountEventKind::Balance(balance_event) })
+        //     .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
+        //
+        // Ok(cancelled)
     }
 
     pub async fn cancel_orders_all(&mut self, _response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, _current_timestamp: i64)

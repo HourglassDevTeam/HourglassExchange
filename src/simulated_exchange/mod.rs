@@ -38,8 +38,8 @@ impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + Debug + 
                 | SimulatedClientEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx).await,
                 | SimulatedClientEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx).await,
                 | SimulatedClientEvent::OpenOrders((open_requests, response_tx)) => self.account.open_requests_into_pendings(open_requests, response_tx).await,
-                | SimulatedClientEvent::CancelOrders((cancel_requests, response_tx), current_timestamp) => {
-                    self.account.cancel_orders(cancel_requests, response_tx, current_timestamp).await
+                | SimulatedClientEvent::CancelOrders((cancel_requests, response_tx)) => {
+                    self.account.cancel_orders(cancel_requests, response_tx).await
                 }
                 | SimulatedClientEvent::CancelOrdersAll(response_tx, current_timestamp) => self.account.cancel_orders_all(response_tx, current_timestamp).await,
                 | SimulatedClientEvent::FetchMarketEvent(market_event) => self.account.match_orders(market_event).await,
