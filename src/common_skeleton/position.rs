@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[allow(dead_code)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug,Deserialize, Serialize)]
 pub struct AccountPositions
 {
     margin_pos: Option<Vec<MarginPosition>>, // NOTE useless in backtest
@@ -18,11 +18,11 @@ pub struct AccountPositions
     option_pos: Option<Vec<OptionPosition>>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MarginPosition {}
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct FuturesPosition {}
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct OptionPosition {}
 
 #[allow(dead_code)]
