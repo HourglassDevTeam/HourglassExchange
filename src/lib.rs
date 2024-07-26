@@ -8,11 +8,10 @@ use crate::{
     common_skeleton::{
         balance::TokenBalance,
         event::AccountEvent,
-        order::{Cancelled, Open, Order, RequestCancel, RequestOpen},
+        order::{Cancelled, Open, Order, Pending, RequestCancel, RequestOpen},
     },
     error::ExecutionError,
 };
-use crate::common_skeleton::order::Pending;
 
 mod binance_exchange;
 pub mod common_skeleton;

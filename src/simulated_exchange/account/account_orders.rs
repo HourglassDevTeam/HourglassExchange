@@ -1,8 +1,8 @@
 use std::{
     collections::HashMap,
     sync::{
-        Arc,
         atomic::{AtomicU64, Ordering},
+        Arc,
     },
 };
 
@@ -11,17 +11,18 @@ use tokio::sync::RwLock;
 
 use crate::{
     common_skeleton::{
-        instrument::{Instrument, kind::InstrumentKind},
+        instrument::{kind::InstrumentKind, Instrument},
         order::{Open, Order, OrderId, OrderKind, OrderRole, Pending, RequestOpen},
-        Side,
         token::Token,
+        Side,
     },
     error::ExecutionError,
     simulated_exchange::{
-        account::account_latency::{AccountLatency, fluctuate_latency},
+        account::account_latency::{fluctuate_latency, AccountLatency},
         instrument_orders::InstrumentOrders,
     },
 };
+use crate::common_skeleton::event::ClientOrderId;
 
 #[derive(Debug)]
 pub struct AccountOrders
@@ -85,6 +86,20 @@ impl AccountOrders
             .collect()
     }
 
+
+    // 从PendingRegistry中删除订单的函数
+    pub fn remove_order_from_pending_registry(&mut self, order_id: ClientOrderId) -> Result<(), ExecutionError> {
+        // 假设你有方法来找到并删除PendingRegistry中的订单
+        // 这里只是一个简单的示例
+        if let Some(index) = self.pending_registry.iter().position(|x| x.cid == order_id) {
+            self.pending_registry.remove(index);
+            Ok(())
+        } else {
+            Err(ExecutionError::OrderNotFound(order_id))
+        }
+    }
+
+
     pub async fn process_request_as_pending(&mut self, order: Order<RequestOpen>) -> Order<Pending>
     {
         // turn the request into an pending order with a predicted timestamp
@@ -122,7 +137,7 @@ impl AccountOrders
     }
 
     // 判断是Maker还是Taker单
-    pub fn determine_maker_taker(&self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    pub fn determine_maker_taker(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
     {
         match order.kind {
             | OrderKind::Market => Ok(OrderRole::Taker),
@@ -154,7 +169,7 @@ impl AccountOrders
                         Ok(OrderRole::Maker)
                     }
                     else {
-                        // 如果无法作为挂单，返回ExecutionError
+                        self.remove_order_from_pending_registry(order.cid)?; // 处理删除操作
                         Err(ExecutionError::OrderRejected("PostOnly order rejected".into()))
                     }
                 }
@@ -163,14 +178,13 @@ impl AccountOrders
                         Ok(OrderRole::Maker)
                     }
                     else {
-                        // 如果无法作为挂单，返回ExecutionError
+                        self.remove_order_from_pending_registry(order.cid)?; // 处理删除操作
                         Err(ExecutionError::OrderRejected("PostOnly order rejected".into()))
                     }
                 }
             },
             | OrderKind::ImmediateOrCancel => Ok(OrderRole::Taker), // IOC订单总是作为Taker
             | OrderKind::FillOrKill => Ok(OrderRole::Taker),        // FOK订单总是作为Taker
-            // GoodTilCancelled (GTC): 挂单直到被完全成交或被取消。
             | OrderKind::GoodTilCancelled => match order.side {
                 | Side::Buy => {
                     // GTC订单和Limit订单相似

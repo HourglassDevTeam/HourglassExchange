@@ -6,20 +6,19 @@ use uuid::Uuid;
 use crate::{
     common_skeleton::{
         balance::TokenBalance,
-        order::{Cancelled, Open, Order},
+        order::{Cancelled, FullyFill, Open, Order, PartialFill},
+        position::AccountPositions,
         trade::Trade,
     },
+    simulated_exchange::account::account_config::AccountConfig,
     ExchangeVariant,
 };
-use crate::common_skeleton::order::{FullyFill, PartialFill};
-use crate::common_skeleton::position::AccountPositions;
-use crate::simulated_exchange::account::account_config::AccountConfig;
 
 /// NOTE: 如果需要记录交易所的时间戳，可以再添加一个专门的字段来表示交易所的时间，例如：    pub exchange_ts: DateTime<Utc> or i64
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AccountEvent
 {
-    pub exchange_timestamp: i64, // 交易所发送事件的时间,
+    pub exchange_timestamp: i64,   // 交易所发送事件的时间,
     pub exchange: ExchangeVariant, // 目标和源头交易所
     pub kind: AccountEventKind,    // 事件类型
 }
