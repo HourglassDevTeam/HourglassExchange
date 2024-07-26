@@ -1,7 +1,6 @@
-use crate::common_skeleton::instrument::Instrument;
+use crate::common_skeleton::instrument::{kind::InstrumentKind, Instrument};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::common_skeleton::instrument::kind::InstrumentKind;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AccountConfig
@@ -190,6 +189,7 @@ impl AccountConfigInitiator
                                                                       spot_taker: 0.0,
                                                                       perpetual_open: 0.0,
                                                                       perpetual_close: 0.0 },
-                           leverage_book: Default::default() })
+                           leverage_book: Default::default(),
+                           fees_book: Default::default() })
     }
 }

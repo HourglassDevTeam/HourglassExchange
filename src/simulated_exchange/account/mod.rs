@@ -15,12 +15,12 @@ use crate::{
         instrument::kind::InstrumentKind,
         order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
         position::AccountPositions,
-        Side,
         token::Token,
+        Side,
     },
     error::ExecutionError,
-    ExchangeVariant,
     simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
+    ExchangeVariant,
 };
 
 pub mod account_balances;
@@ -373,9 +373,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         Ok(open_order)
     }
 
-    pub async fn cancel_orders(&mut self,
-                               cancel_requests: Vec<Order<RequestCancel>>,
-                               response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>, )
+    pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
                                                             let mut this = self.clone();
@@ -388,32 +386,29 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                             // 如果发送失败，处理错误
                                         });
     }
-    pub async fn try_cancel_order_atomic(
-        &mut self,
-        request: Order<RequestCancel>
-    ) -> Result<Order<Cancelled>, ExecutionError> {
+
+    pub async fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError>
+    {
         // 获取写锁并查找到对应的Instrument Orders，以便修改订单
         let mut orders_guard = self.orders.write().await;
         let orders = orders_guard.orders_mut(&request.instrument)?;
 
         // 找到并移除与 Order<RequestCancel> 关联的 Order<Open>
         let removed = match request.side {
-            Side::Buy => {
+            | Side::Buy => {
                 // 使用 OrderId 查找 Order<Open>
-                let index = orders
-                    .bids
-                    .iter()
-                    .position(|bid| bid.state.id == request.state.id)
-                    .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                let index = orders.bids
+                                  .iter()
+                                  .position(|bid| bid.state.id == request.state.id)
+                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                 orders.bids.remove(index)
             }
-            Side::Sell => {
+            | Side::Sell => {
                 // 使用 OrderId 查找 Order<Open>
-                let index = orders
-                    .asks
-                    .iter()
-                    .position(|ask| ask.state.id == request.state.id)
-                    .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                let index = orders.asks
+                                  .iter()
+                                  .position(|ask| ask.state.id == request.state.id)
+                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                 orders.asks.remove(index)
             }
         };
@@ -429,29 +424,22 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
         // 发送 AccountEvents 给客户端
         self.account_event_tx
-            .send(AccountEvent {
-                exchange_timestamp: self.exchange_timestamp,
-                exchange: ExchangeVariant::Simulated,
-                kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
-            })
+            .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
+                                 exchange: ExchangeVariant::Simulated,
+                                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.account_event_tx
-            .send(AccountEvent {
-                exchange_timestamp: self.exchange_timestamp,
-                exchange: ExchangeVariant::Simulated,
-                kind: AccountEventKind::Balance(balance_event),
-            })
+            .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
+                                 exchange: ExchangeVariant::Simulated,
+                                 kind: AccountEventKind::Balance(balance_event) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
 
         Ok(cancelled)
     }
 
-
-    pub async fn cancel_orders_all(
-        &mut self,
-        response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>,
-    ) {
+    pub async fn cancel_orders_all(&mut self, response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>)
+    {
         // 获取所有打开的订单
         let orders_to_cancel = {
             let orders_guard = self.orders.read().await;
@@ -459,19 +447,15 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         };
 
         // 将所有打开的订单转换为取消请求
-        let cancel_requests: Vec<Order<RequestCancel>> = orders_to_cancel.into_iter().map(|order| {
-            Order {
-                state: RequestCancel {
-                    id: order.state.id,
-                },
-                instrument: order.instrument,
-                side: order.side,
-                kind: order.kind,
-                cid: order.cid.clone(),
-                exchange: ExchangeVariant::Simulated,
-                client_ts: 0,
-            }
-        }).collect();
+        let cancel_requests: Vec<Order<RequestCancel>> = orders_to_cancel.into_iter()
+                                                                         .map(|order| Order { state: RequestCancel { id: order.state.id },
+                                                                                              instrument: order.instrument,
+                                                                                              side: order.side,
+                                                                                              kind: order.kind,
+                                                                                              cid: order.cid.clone(),
+                                                                                              exchange: ExchangeVariant::Simulated,
+                                                                                              client_ts: 0 })
+                                                                         .collect();
 
         // 调用现有的 cancel_orders 方法
         let (tx, rx) = oneshot::channel();
@@ -479,16 +463,17 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
         // 等待取消操作完成并返回结果
         match rx.await {
-            Ok(results) => {
+            | Ok(results) => {
                 let cancelled_orders: Vec<_> = results.into_iter().collect::<Result<Vec<_>, _>>().expect("Failed to collect cancel results");
                 response_tx.send(Ok(cancelled_orders)).unwrap_or_else(|_| {
-                    eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all response");
-                });
-            },
-            Err(_) => {
-                response_tx.send(Err(ExecutionError::InternalError("Failed to receive cancel results".to_string()))).unwrap_or_else(|_| {
-                    eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all error response");
-                });
+                                                          eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all response");
+                                                      });
+            }
+            | Err(_) => {
+                response_tx.send(Err(ExecutionError::InternalError("Failed to receive cancel results".to_string())))
+                           .unwrap_or_else(|_| {
+                               eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all error response");
+                           });
             }
         }
     }

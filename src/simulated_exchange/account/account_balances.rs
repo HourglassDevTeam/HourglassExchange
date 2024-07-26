@@ -10,19 +10,17 @@ use tokio::sync::RwLock;
 use crate::{
     common_skeleton::{
         balance::{Balance, BalanceDelta, TokenBalance},
+        datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
-        instrument::Instrument,
+        instrument::{Instrument, kind::InstrumentKind},
         order::{Open, Order},
-        token::Token,
-        trade::Trade,
         Side,
+        token::Token,
     },
     error::ExecutionError,
-    simulated_exchange::account::Account,
     ExchangeVariant,
+    simulated_exchange::{account::Account, load_from_clickhouse::queries_operations::ClickhouseTrade},
 };
-use crate::common_skeleton::datafeed::event::MarketEvent;
-use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade;
 
 #[derive(Clone, Debug)]
 pub struct AccountBalances<Event>
@@ -60,6 +58,22 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     pub fn set_account(&mut self, account: Arc<RwLock<Account<Event>>>)
     {
         self.account_ref = Some(account);
+    }
+
+    /// 获取指定 [`InstrumentKind`] 的手续费。
+    pub async fn get_fee(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
+    {
+        if let Some(account) = &self.account_ref {
+            let account_read = account.read().await;
+            let config_read = account_read.config.read().await;
+            config_read.fees_book
+                       .get(instrument_kind)
+                       .cloned()
+                       .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for InstrumentKind: {:?}", instrument_kind)))
+        }
+        else {
+            Err(ExecutionError::Simulated("Account reference is not set".to_string()))
+        }
     }
 
     // 异步方法来获取 Account 的某个字段
@@ -138,74 +152,68 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     }
 
 
-    // /// 从交易中更新余额并返回 [`AccountEvent`]
-    // pub async fn update_from_trade(&mut self, market_event: &MarketEvent<ClickhouseTrade>) -> AccountEvent {
-    //     let Instrument { base, quote, .. } = &market_event.instrument;
-    //
-    //     // 计算 base 和 quote 余额的变化
-    //     let (base_delta, quote_delta) = match market_event.kind.side {
-    //         Side::Buy.to_string() => {
-    //             // Base 的总余额和可用余额增加 trade.size 减去 base 的交易费用
-    //             let base_increase = market_event.kind.amount - market_event.fees;
-    //             let base_delta = BalanceDelta {
-    //                 total: base_increase,
-    //                 available: base_increase,
-    //             };
-    //
-    //             // Quote 的总余额减少 (trade.size * price)
-    //             // 注意: 可用余额已在买单开单时减少
-    //             let quote_delta = BalanceDelta {
-    //                 total: -market_event.kind.amount * market_event.kind.price,
-    //                 available: 0.0,
-    //             };
-    //
-    //             (base_delta, quote_delta)
-    //         }
-    //         Side::Sell.to_string() => {
-    //             // Base 的总余额减少 trade.size
-    //             // 注意: 可用余额已在卖单开单时减少
-    //             let base_delta = BalanceDelta {
-    //                 total: -market_event.kind.amount,
-    //                 available: 0.0,
-    //             };
-    //
-    //             // Quote 的总余额和可用余额增加 (trade.size * price) 减去 quote 的交易费用
-    //             let quote_increase = (market_event.kind.amount * market_event.kind.price) - market_event.fees;
-    //             let quote_delta = BalanceDelta {
-    //                 total: quote_increase,
-    //                 available: quote_increase,
-    //             };
-    //
-    //             (base_delta, quote_delta)
-    //         }
-    //     };
-    //
-    //     // 应用 BalanceDelta 并返回更新后的余额
-    //     let _base_balance = self.update(base, base_delta);
-    //     let _quote_balance = self.update(quote, quote_delta);
-    //
-    //     AccountEvent {
-    //         exchange_timestamp: self.get_exchange_ts().await.unwrap(),
-    //         exchange: ExchangeVariant::Simulated,
-    //         kind: AccountEventKind::Balances(vec![
-    //             TokenBalance::new(base.clone(), _base_balance),
-    //             TokenBalance::new(quote.clone(), _quote_balance),
-    //         ]),
-    //     }
-    // }
 
+    /// 从交易中更新余额并返回 [`AccountEvent`]
+    pub async fn update_from_trade(&mut self, market_event: &MarketEvent<ClickhouseTrade>) -> AccountEvent
+    {
+        let Instrument { base, quote, kind, .. } = &market_event.instrument;
+
+        // 获取手续费
+        let fee = self.get_fee(kind).await.unwrap_or(0.0);
+        // 将 side 字符串转换为 Side 枚举
+        let side = market_event.kind.parse_side();
+        // 计算 base 和 quote 余额的变化
+        let (base_delta, quote_delta) = match side {
+            | Side::Buy => {
+                // Base 的总余额和可用余额增加 trade.size 减去 base 的交易费用
+                let base_increase = market_event.kind.amount - fee;
+                let base_delta = BalanceDelta { total: base_increase,
+                                                available: base_increase };
+
+                // Quote 的总余额减少 (trade.size * price)
+                // 注意: 可用余额已在买单开单时减少
+                let quote_delta = BalanceDelta { total: -market_event.kind.amount * market_event.kind.price,
+                                                 available: 0.0 };
+
+                (base_delta, quote_delta)
+            }
+            | Side::Sell => {
+                // Base 的总余额减少 trade.size
+                // 注意: 可用余额已在卖单开单时减少
+                let base_delta = BalanceDelta { total: -market_event.kind.amount,
+                                                available: 0.0 };
+
+                // Quote 的总余额和可用余额增加 (trade.size * price) 减去 quote 的交易费用
+                let quote_increase = (market_event.kind.amount * market_event.kind.price) - fee;
+                let quote_delta = BalanceDelta { total: quote_increase,
+                                                 available: quote_increase };
+
+                (base_delta, quote_delta)
+            }
+        };
+
+        // 应用 BalanceDelta 并返回更新后的余额
+        let _base_balance = self.update(base, base_delta);
+        let _quote_balance = self.update(quote, quote_delta);
+
+        AccountEvent { exchange_timestamp: self.get_exchange_ts().await.unwrap(),
+                       exchange: ExchangeVariant::Simulated,
+                       kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), _base_balance), TokenBalance::new(quote.clone(), _quote_balance),]) }
+    }
 
     /// 将 [`BalanceDelta`] 应用于指定 [`Token`] 的 [`Balance`]，并返回更新后的 [`Balance`] 。
-    pub fn update(&mut self, token: &Token, delta: BalanceDelta) -> Balance {
+    pub fn update(&mut self, token: &Token, delta: BalanceDelta) -> Balance
+    {
         let base_balance = self.balance_mut(token).unwrap();
 
         base_balance.apply(delta);
 
         *base_balance
-    }}
+    }
+}
 
 
-    impl<Event> Deref for AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl<Event> Deref for AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     type Target = HashMap<Token, Balance>;
 

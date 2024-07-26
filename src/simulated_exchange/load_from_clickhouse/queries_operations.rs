@@ -24,6 +24,7 @@ use crate::{
     },
     ExchangeID,
 };
+use crate::common_skeleton::Side;
 
 pub struct ClickHouseClient
 {
@@ -52,6 +53,16 @@ pub struct ClickhouseTrade
     pub amount: f64,
 }
 
+impl ClickhouseTrade {
+    /// 将 `side` 字符串解析为 `Side` 枚举
+    pub fn parse_side(&self) -> Side {
+        match self.side.as_str() {
+            "Buy" => Side::Buy,
+            "Sell" => Side::Sell,
+            _ => panic!("Unknown side: {}", self.side),
+        }
+    }
+}
 // 手动实现 Eq 和 PartialEq 特性
 impl PartialEq for ClickhouseTrade
 {
@@ -82,6 +93,8 @@ impl Ord for ClickhouseTrade
 
 impl ClickHouseClient
 {
+
+
     fn construct_table_name(&self, exchange: &str, instrument: &str, channel: &str, date: &str, base: &str, quote: &str) -> String
     {
         match exchange {
