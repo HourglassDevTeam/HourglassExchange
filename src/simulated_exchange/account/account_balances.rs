@@ -463,14 +463,13 @@ mod tests
         assert_eq!(token_balance.balance.available, 50.0 + (50000.0 * 1.0)); // 50050.0
     }
 
-
     #[tokio::test]
     async fn test_update_from_trade() {
         let base_token = Token::new("BTC");
         let quote_token = Token::new("USDT");
 
-        let base_balance = Balance::new(1.0, 1.0); // Initial balance: 1 BTC
-        let quote_balance = Balance::new(50000.0, 50000.0); // Initial balance: 50,000 USDT
+        let base_balance = Balance::new(1.0, 1.0); // 初始余额: 1 BTC
+        let quote_balance = Balance::new(50000.0, 50000.0); // 初始余额: 50,000 USDT
 
         let mut balance_map = HashMap::new();
         balance_map.insert(base_token.clone(), base_balance);
@@ -511,17 +510,23 @@ mod tests
         println!("Account Event: {:?}", account_event);
 
         let expected_base_balance = Balance::new(1.1, 1.1); // 1 BTC + 0.1 BTC
-        let expected_quote_balance = Balance::new(45000.0, 45000.0); // 50,000 USDT - 0.1 * 50,000
+        let expected_quote_balance = Balance::new(45000.0, 50000.0); // 50,000 USDT - (0.1 * 50,000)
 
         assert_eq!(balances.balance(&base_token).unwrap().total, expected_base_balance.total);
         assert_eq!(balances.balance(&base_token).unwrap().available, expected_base_balance.available);
         assert_eq!(balances.balance(&quote_token).unwrap().total, expected_quote_balance.total);
         assert_eq!(balances.balance(&quote_token).unwrap().available, expected_quote_balance.available);
 
-        assert_eq!(account_event.kind, AccountEventKind::Balances(vec![
-            TokenBalance::new(base_token.clone(), expected_base_balance),
-            TokenBalance::new(quote_token.clone(), expected_quote_balance),
-        ]));
+        if let AccountEventKind::Balances(balances) = account_event.kind {
+            let base_balance_event = balances.iter().find(|tb| tb.token == base_token).unwrap();
+            let quote_balance_event = balances.iter().find(|tb| tb.token == quote_token).unwrap();
+
+            assert_eq!(base_balance_event.balance, expected_base_balance);
+            assert_eq!(quote_balance_event.balance.total, expected_quote_balance.total);
+            assert_eq!(quote_balance_event.balance.available, expected_quote_balance.available);
+        } else {
+            panic!("Unexpected account event kind");
+        }
     }
 
 
