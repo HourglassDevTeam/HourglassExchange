@@ -448,9 +448,50 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     }
 
 
-    pub async fn cancel_orders_all(&mut self, _response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>, _current_timestamp: i64)
-    {
-        todo!()
+    pub async fn cancel_orders_all(
+        &mut self,
+        response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>,
+    ) {
+        // 获取所有打开的订单
+        let orders_to_cancel = {
+            let orders_guard = self.orders.read().await;
+            orders_guard.fetch_all() // 假设已经有 fetch_all 方法返回所有打开的订单
+        };
+
+        // 将所有打开的订单转换为取消请求
+        let cancel_requests: Vec<Order<RequestCancel>> = orders_to_cancel.into_iter().map(|order| {
+            Order {
+                state: RequestCancel {
+                    id: order.state.id,
+                },
+                instrument: order.instrument,
+                side: order.side,
+                kind: order.kind,
+                cid: order.cid.clone(),
+                exchange: ExchangeVariant::Simulated,
+                client_ts: 0,
+            }
+        }).collect();
+
+        // 调用现有的 cancel_orders 方法
+        let mut this = self.clone();
+        let (tx, rx) = oneshot::channel();
+        this.cancel_orders(cancel_requests, tx).await;
+
+        // 等待取消操作完成并返回结果
+        match rx.await {
+            Ok(results) => {
+                let cancelled_orders: Vec<_> = results.into_iter().collect::<Result<Vec<_>, _>>().expect("REASON");
+                response_tx.send(Ok(cancelled_orders)).unwrap_or_else(|_| {
+                    eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all response");
+                });
+            },
+            Err(_) => {
+                response_tx.send(Err(ExecutionError::InternalError("Failed to receive cancel results".to_string()))).unwrap_or_else(|_| {
+                    eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all error response");
+                });
+            }
+        }
     }
 }
 
