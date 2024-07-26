@@ -481,7 +481,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         // 等待取消操作完成并返回结果
         match rx.await {
             Ok(results) => {
-                let cancelled_orders: Vec<_> = results.into_iter().collect::<Result<Vec<_>, _>>().expect("REASON");
+                let cancelled_orders: Vec<_> = results.into_iter().collect::<Result<Vec<_>, _>>().expect("Failed to collect cancel results");
                 response_tx.send(Ok(cancelled_orders)).unwrap_or_else(|_| {
                     eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all response");
                 });
