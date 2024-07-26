@@ -17,14 +17,13 @@ use tokio::sync::{
 };
 
 use crate::{
-    common_skeleton::datafeed::event::MarketEvent,
+    common_skeleton::{datafeed::event::MarketEvent, Side},
     simulated_exchange::{
         utils::chrono_operations::extract_date,
         ws_trade::{parse_base_and_quote, WsTrade},
     },
     ExchangeID,
 };
-use crate::common_skeleton::Side;
 
 pub struct ClickHouseClient
 {
@@ -53,13 +52,15 @@ pub struct ClickhouseTrade
     pub amount: f64,
 }
 
-impl ClickhouseTrade {
+impl ClickhouseTrade
+{
     /// 将 `side` 字符串解析为 `Side` 枚举
-    pub fn parse_side(&self) -> Side {
+    pub fn parse_side(&self) -> Side
+    {
         match self.side.as_str() {
-            "Buy" => Side::Buy,
-            "Sell" => Side::Sell,
-            _ => panic!("Unknown side: {}", self.side),
+            | "Buy" => Side::Buy,
+            | "Sell" => Side::Sell,
+            | _ => panic!("Unknown side: {}", self.side),
         }
     }
 }
@@ -93,8 +94,6 @@ impl Ord for ClickhouseTrade
 
 impl ClickHouseClient
 {
-
-
     fn construct_table_name(&self, exchange: &str, instrument: &str, channel: &str, date: &str, base: &str, quote: &str) -> String
     {
         match exchange {

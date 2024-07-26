@@ -12,14 +12,14 @@ use crate::{
         balance::{Balance, BalanceDelta, TokenBalance},
         datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
-        instrument::{Instrument, kind::InstrumentKind},
+        instrument::{kind::InstrumentKind, Instrument},
         order::{Open, Order},
-        Side,
         token::Token,
+        Side,
     },
     error::ExecutionError,
-    ExchangeVariant,
     simulated_exchange::{account::Account, load_from_clickhouse::queries_operations::ClickhouseTrade},
+    ExchangeVariant,
 };
 
 #[derive(Clone, Debug)]
@@ -55,42 +55,43 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
     }
 
-    pub fn set_account(&mut self, account: Arc<RwLock<Account<Event>>>) {
+    pub fn set_account(&mut self, account: Arc<RwLock<Account<Event>>>)
+    {
         self.account_ref = account;
     }
 
-
     /// 获取指定 [`InstrumentKind`] 的手续费。
-    pub async fn get_fee(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError> {
+    pub async fn get_fee(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
+    {
         let account_read = self.account_ref.read().await;
         let config_read = account_read.config.read().await;
         config_read.fees_book
-            .get(instrument_kind)
-            .cloned()
-            .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for InstrumentKind: {:?}", instrument_kind)))
+                   .get(instrument_kind)
+                   .cloned()
+                   .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for InstrumentKind: {:?}", instrument_kind)))
     }
 
-
-
     // 异步方法来获取 Account 的某个字段
-    pub async fn get_exchange_ts(&self) -> Result<i64, ExecutionError> {
+    pub async fn get_exchange_ts(&self) -> Result<i64, ExecutionError>
+    {
         let account_read = self.account_ref.read().await;
         Ok(account_read.exchange_timestamp)
     }
 
-
-
     /// 获取所有[`Token`]的[`Balance`]。
-    pub fn fetch_all(&self) -> Vec<TokenBalance> {
+    pub fn fetch_all(&self) -> Vec<TokenBalance>
+    {
         self.balance_map.clone().into_iter().map(|(token, balance)| TokenBalance::new(token, balance)).collect()
     }
 
     /// 判断client是否有足够的可用[`Balance`]来执行[`Order<RequestOpen>`]。
-    pub fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExecutionError> {
+    pub fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExecutionError>
+    {
         let available = self.balance(token)?.available;
         if available >= required_balance {
             Ok(())
-        } else {
+        }
+        else {
             Err(ExecutionError::InsufficientBalance(token.clone()))
         }
     }
@@ -140,8 +141,6 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             }
         }
     }
-
-
 
     /// 从交易中更新余额并返回 [`AccountEvent`]
     pub async fn update_from_trade(&mut self, market_event: &MarketEvent<ClickhouseTrade>) -> AccountEvent
@@ -203,7 +202,6 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     }
 }
 
-
 impl<Event> Deref for AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     type Target = HashMap<Token, Balance>;
@@ -219,5 +217,43 @@ impl<Event> DerefMut for AccountBalances<Event> where Event: Clone + Send + Sync
     fn deref_mut(&mut self) -> &mut Self::Target
     {
         &mut self.balance_map
+    }
+}
+
+#[cfg(test)]
+mod tests
+{
+    use super::*;
+    use crate::common_skeleton::order::OrderKind;
+
+    #[test]
+    fn test_check_order_kind_support()
+    {
+        struct TestCase
+        {
+            kind: OrderKind,
+            expected: Result<(), ExecutionError>,
+        }
+
+        let tests = vec![TestCase { // TC0: Market
+                                    kind: OrderKind::Market,
+                                    expected: Ok(()) },
+                         TestCase { // TC1: Limit
+                                    kind: OrderKind::Limit,
+                                    expected: Ok(()) },
+                         TestCase { // TC2: PostOnly
+                                    kind: OrderKind::PostOnly,
+                                    expected: Ok(()) },
+                         TestCase { // TC3: Immediate Or Cancel
+                                    kind: OrderKind::ImmediateOrCancel,
+                                    expected: Ok(()) },];
+
+        for (index, test) in tests.into_iter().enumerate() {
+            let actual = Account::<()>::order_validity_check(test.kind); // Specify the generic type `()`
+            match test.expected {
+                | Ok(()) => assert!(actual.is_ok(), "TC{} is good", index),
+                | Err(_) => assert!(actual.is_err(), "TC{} failed", index),
+            }
+        }
     }
 }
