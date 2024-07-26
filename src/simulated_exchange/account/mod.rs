@@ -284,7 +284,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     {
         // 循环处理每个请求并标记为 pending
         let mut open_pending = Vec::new();
-
+        // CONSIDER IF open_pending IS DROPPED BEYOND THIS SCOPE
         {
             let mut orders = self.orders.write().await;
             for request in &order_requests {
@@ -297,7 +297,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
         // 发送结果
         if response_tx.send(open_pending).is_err() {
-            eprintln!("[UniLinkExecution] : Failed to send OpenOrders response");
+            eprintln!("[UniLinkExecution] : Failed to send RequestOpen response");
         }
     }
     pub async fn try_open_order_atomic(
