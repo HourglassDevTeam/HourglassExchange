@@ -242,7 +242,6 @@ mod tests
     };
 
     use super::*;
-    #[allow(dead_code)]
     async fn create_test_account() -> Arc<RwLock<Account<MarketEvent<ClickhouseTrade>>>>
     {
         let (account_event_tx, _account_event_rx) = unbounded_channel();

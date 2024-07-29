@@ -145,7 +145,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         respond(response_tx, Ok(balances));
     }
 
-    pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError>
+1    pub fn  order_validity_check(kind: OrderKind) -> Result<(), ExecutionError>
     {
         match kind {
             | OrderKind::Market | OrderKind::Limit | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill | OrderKind::PostOnly | OrderKind::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
