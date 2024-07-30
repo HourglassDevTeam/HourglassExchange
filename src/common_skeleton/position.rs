@@ -17,7 +17,7 @@ pub struct AccountPositions
     option_pos: Option<Vec<OptionPosition>>,
 }
 
-// TODO the below code is under construction
+/// TODO the below code is under construction
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct MarginPosition {}
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
