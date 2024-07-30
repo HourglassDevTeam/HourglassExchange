@@ -7,6 +7,8 @@ use crate::{
     ExchangeVariant,
 };
 
+
+/// This struct is generic and thus placed here in the common_skeleton.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountPositions
