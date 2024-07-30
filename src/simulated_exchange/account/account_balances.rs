@@ -38,7 +38,7 @@ impl<Event> PartialEq for AccountBalances<Event> where Event: Clone + Send + Syn
         // account_ref 是 Arc<RwLock<>>，一般不会比较其内容
     }
 }
-// CONSIDER 在哪个环节打上时间戳？
+
 impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     /// 返回指定[`Token`]的[`Balance`]的引用。
@@ -420,7 +420,8 @@ mod tests
         }
     }
     #[tokio::test]
-    async fn test_update_from_cancel() {
+    async fn test_update_from_cancel()
+    {
         let token = Token::new("BTC");
         let balance = Balance::new(100.0, 50.0); // Initial total balance: 100, available balance: 50
         let mut balance_map = HashMap::new();
@@ -429,35 +430,26 @@ mod tests
         let account = create_test_account().await;
         let account_ref = Arc::downgrade(&account);
 
-        let mut balances = AccountBalances {
-            balance_map,
-            account_ref,
-        };
+        let mut balances = AccountBalances { balance_map, account_ref };
 
-        let instrument = Instrument {
-            base: token.clone(),
-            quote: token.clone(),
-            kind: InstrumentKind::Spot,
-        };
+        let instrument = Instrument { base: token.clone(),
+                                      quote: token.clone(),
+                                      kind: InstrumentKind::Spot };
         let client_order_id = Uuid::new_v4();
 
-        let open_state = Open {
-            id: client_order_id.into(),
-            price: 50000.0,
-            size: 1.0,
-            filled_quantity: 0.0,
-            order_role: OrderRole::Maker,
-            received_ts: 0,
-        };
-        let order = Order {
-            kind: OrderKind::Limit,
-            exchange: ExchangeVariant::Simulated,
-            instrument: instrument.clone(),
-            client_ts: 0,
-            cid: ClientOrderId(client_order_id.clone()),
-            side: Side::Buy,
-            state: open_state,
-        };
+        let open_state = Open { id: client_order_id.into(),
+                                price: 50000.0,
+                                size: 1.0,
+                                filled_quantity: 0.0,
+                                order_role: OrderRole::Maker,
+                                received_ts: 0 };
+        let order = Order { kind: OrderKind::Limit,
+                            exchange: ExchangeVariant::Simulated,
+                            instrument: instrument.clone(),
+                            client_ts: 0,
+                            cid: ClientOrderId(client_order_id.clone()),
+                            side: Side::Buy,
+                            state: open_state };
 
         let token_balance = balances.update_from_cancel(&order);
 
@@ -466,7 +458,8 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_update_from_trade() {
+    async fn test_update_from_trade()
+    {
         let base_token = Token::new("BTC");
         let quote_token = Token::new("USDT");
 
@@ -480,30 +473,21 @@ mod tests
         let account = create_test_account().await;
         let account_ref = Arc::downgrade(&account);
 
-        let mut balances = AccountBalances {
-            balance_map,
-            account_ref,
-        };
+        let mut balances = AccountBalances { balance_map, account_ref };
 
-        let instrument = Instrument {
-            base: base_token.clone(),
-            quote: quote_token.clone(),
-            kind: InstrumentKind::Spot,
-        };
+        let instrument = Instrument { base: base_token.clone(),
+                                      quote: quote_token.clone(),
+                                      kind: InstrumentKind::Spot };
 
-        let market_event = MarketEvent {
-            exchange_time: 0,
-            instrument: instrument.clone(),
-            kind: ClickhouseTrade {
-                basequote: "BTC/USDT".to_string(),
-                side: "Buy".to_string(),
-                price: 50000.0,
-                timestamp: 0,
-                amount: 0.1,
-            },
-            exchange: ExchangeVariant::Simulated,
-            received_time: 0,
-        };
+        let market_event = MarketEvent { exchange_time: 0,
+                                         instrument: instrument.clone(),
+                                         kind: ClickhouseTrade { basequote: "BTC/USDT".to_string(),
+                                                                 side: "Buy".to_string(),
+                                                                 price: 50000.0,
+                                                                 timestamp: 0,
+                                                                 amount: 0.1 },
+                                         exchange: ExchangeVariant::Simulated,
+                                         received_time: 0 };
 
         let account_event = balances.update_from_trade(&market_event).await;
 
@@ -526,10 +510,9 @@ mod tests
             assert_eq!(base_balance_event.balance, expected_base_balance);
             assert_eq!(quote_balance_event.balance.total, expected_quote_balance.total);
             assert_eq!(quote_balance_event.balance.available, expected_quote_balance.available);
-        } else {
+        }
+        else {
             panic!("Unexpected account event kind");
         }
     }
-
-
 }

@@ -17,7 +17,7 @@ pub struct AccountPositions
     option_pos: Option<Vec<OptionPosition>>,
 }
 
-/// TODO the below code is under construction
+/// TODO : the below code is under construction
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct MarginPosition {}
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -34,6 +34,7 @@ pub struct PerpetualPositionConfig
     direction_mode: DirectionMode,
 }
 
+/// NOTE : PositionMarginMode has defined two modes of margin consumption.
 ///  [Cross]: 交叉保证金模式。在这种模式下，所有仓位共享一个保证金池，盈亏共用。如果仓位的保证金不足，将从账户余额中提取以补充不足。
 ///  [Isolated]: 逐仓保证金模式。在这种模式下，每个仓位都有独立的保证金，盈亏互不影响。如果某个仓位的保证金不足，该仓位将被强制平仓，而不会影响到其他仓位。
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -43,7 +44,7 @@ pub enum PositionMarginMode
     Isolated,
 }
 
-/// DirectionMode 枚举定义了两种交易方向模式：
+/// NOTE : DirectionMode 枚举定义了两种交易方向模式：
 ///  [Oneway] : 单向模式。在这种模式下，用户只能持有一个方向的仓位（多头或空头），而不能同时持有两个方向的仓位。
 /// [Double] : 双向模式。在这种模式下，用户可以同时持有多头和空头仓位。这在一些复杂的交易策略中可能会有用，例如对冲策略。
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
