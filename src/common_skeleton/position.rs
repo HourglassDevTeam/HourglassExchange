@@ -1,6 +1,5 @@
-// FIXME : code below needs to be restructured and fitted to the framework. need to provide enums?
-// CONSIDER: can these positions coexist, if so enums might not be ideal.
-
+/// FIXME  : code below needs to be restructured and fitted to the framework. need to provide enums?
+/// CONSIDER: can these positions coexist, if so enums might not be ideal.
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -27,7 +26,7 @@ pub struct FuturesPosition {}
 pub struct OptionPosition {}
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize,PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct PerpetualPositionConfig
 {
     pos_margin_mode: PositionMarginMode,
@@ -35,14 +34,14 @@ pub struct PerpetualPositionConfig
     direction_mode: DirectionMode,
 }
 
-#[derive(Clone, Debug, PartialEq,Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionMarginMode
 {
     Cross,
     Isolated,
 }
 
-#[derive(Clone, Debug,PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum DirectionMode
 {
     Oneway,
@@ -61,7 +60,7 @@ pub enum PositionKind
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, Serialize,PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct PerpetualPosition
 {
     pub base: PositionMeta,
