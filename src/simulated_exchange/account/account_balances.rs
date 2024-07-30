@@ -35,7 +35,7 @@ impl<Event> PartialEq for AccountBalances<Event> where Event: Clone + Send + Syn
     fn eq(&self, other: &Self) -> bool
     {
         self.balance_map == other.balance_map
-        // account_ref 是 Arc<RwLock<>>，一般不会比较其内容
+        // account_ref 是Weak<RwLock<>>，一般不会比较其内容
     }
 }
 
