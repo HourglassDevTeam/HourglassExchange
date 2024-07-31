@@ -13,12 +13,13 @@ use crate::common_skeleton::instrument::kind::InstrumentKind;
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountPositions
 {
-    spot_pos: Option<Vec<SpotPosition>>,
-    margin_pos: Option<Vec<MarginPosition>>, // NOTE useless in backtest
-    perpetual_pos: Option<Vec<PerpetualPosition>>,
-    futures_pos: Option<Vec<FuturesPosition>>,
-    option_pos: Option<Vec<OptionPosition>>,
+    pub spot_pos: Option<Vec<SpotPosition>>,
+    pub margin_pos: Option<Vec<MarginPosition>>, // NOTE useless in backtest
+    pub perpetual_pos: Option<Vec<PerpetualPosition>>,
+    pub futures_pos: Option<Vec<FuturesPosition>>,
+    pub option_pos: Option<Vec<OptionPosition>>,
 }
+
 impl AccountPositions {
     pub(crate) fn has_position(&self, instrument: &Instrument) -> bool {
         match instrument.kind {

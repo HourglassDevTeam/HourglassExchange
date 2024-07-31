@@ -359,7 +359,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         };
 
         // 更新客户余额
-        let balance_event = self.balances.write().await.update_from_open(&open_order, required_balance).await;
+        let balance_event = self.balances.write().await.update_from_open(&open_order, required_balance).await.unwrap();
 
         // 发送账户事件给客户端
         self.account_event_tx

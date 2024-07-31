@@ -164,27 +164,90 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         }
     }
 
-    /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
-    /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
-    pub async fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> AccountEvent
-    {
-        let updated_balance = match open.side {
-            | Side::Buy => {
-                let balance = self.balance_mut(&open.instrument.quote).expect("[UniLink_Execution] : Balance existence is questionable");
-                balance.available -= required_balance;
-                TokenBalance::new(open.instrument.quote.clone(), *balance)
-            }
-            | Side::Sell => {
-                let balance = self.balance_mut(&open.instrument.base).expect("[UniLink_Execution] : Balance existence is questionable");
-                balance.available -= required_balance;
-                TokenBalance::new(open.instrument.base.clone(), *balance)
-            }
-        };
+    pub async fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExecutionError> {
+        if let Some(account) = self.account_ref.upgrade() {
+            let position_mode = self.determine_position_mode().await?;
 
-        AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
-                       exchange: ExchangeVariant::Simulated,
-                       kind: AccountEventKind::Balance(updated_balance) }
+            // Check NetMode direction,如果在 LongShortMode 模式下确实不需要进行额外检查，
+            // 那么可以简化代码，直接处理 NetMode 模式的检查。简化后的代码如下：
+            if position_mode == PositionMode::NetMode {
+                let account_read = account.read().await;
+                let positions_read = account_read.positions.read().await;
+
+                for positions in positions_read.iter() {
+                    match open.instrument.kind {
+                        InstrumentKind::Perpetual => {
+                            if let Some(perpetual_positions) = &positions.perpetual_pos {
+                                for pos in perpetual_positions {
+                                    if pos.meta.instrument == open.instrument && pos.meta.side != open.side {
+                                        return Err(ExecutionError::InvalidDirection);
+                                    }
+                                }
+                            }
+                        }
+                        InstrumentKind::Future => {
+                            if let Some(futures_positions) = &positions.futures_pos {
+                                for pos in futures_positions {
+                                    if pos.meta.instrument == open.instrument && pos.meta.side != open.side {
+                                        return Err(ExecutionError::InvalidDirection);
+                                    }
+                                }
+                            }
+                        }
+                        InstrumentKind::Spot => {
+                            if let Some(spot_positions) = &positions.spot_pos {
+                                for pos in spot_positions {
+                                    if pos.meta.instrument == open.instrument && pos.meta.side != open.side {
+                                        return Err(ExecutionError::InvalidDirection);
+                                    }
+                                }
+                            }
+                        }
+                        InstrumentKind::Option => {
+                            if let Some(option_positions) = &positions.option_pos {
+                                for pos in option_positions {
+                                    if pos.meta.instrument == open.instrument && pos.meta.side != open.side {
+                                        return Err(ExecutionError::InvalidDirection);
+                                    }
+                                }
+                            }
+                        }
+                        InstrumentKind::Margin => {
+                            if let Some(margin_positions) = &positions.margin_pos {
+                                for pos in margin_positions {
+                                    if pos.meta.instrument == open.instrument && pos.meta.side != open.side {
+                                        return Err(ExecutionError::InvalidDirection);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 更新余额
+            let updated_balance = match open.side {
+                Side::Buy => {
+                    let delta = BalanceDelta { total: -required_balance, available: -required_balance };
+                    TokenBalance::new(open.instrument.quote.clone(), self.update(&open.instrument.quote, delta))
+                }
+                Side::Sell => {
+                    let delta = BalanceDelta { total: -required_balance, available: -required_balance };
+                    TokenBalance::new(open.instrument.base.clone(), self.update(&open.instrument.base, delta))
+                }
+            };
+
+            Ok(AccountEvent {
+                exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
+                exchange: ExchangeVariant::Simulated,
+                kind: AccountEventKind::Balance(updated_balance),
+            })
+        } else {
+            Err(ExecutionError::Simulated("Account reference is not set".to_string()))
+        }
     }
+
+
 
     /// 当client取消[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
@@ -208,28 +271,24 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
 
     /// 从交易中更新余额并返回 [`AccountEvent`]
     /// NOTE 注意[ClickhouseTrade]行情数据和此处所需Trade是否兼容。
-    pub async fn update_from_trade(&mut self, market_event: &MarketEvent<ClickhouseTrade>) -> AccountEvent
-    {
+    pub async fn update_from_trade(&mut self, market_event: &MarketEvent<ClickhouseTrade>) -> Result<AccountEvent, ExecutionError> {
         let Instrument { base, quote, kind, .. } = &market_event.instrument;
         let fee = self.get_fee(kind).await.unwrap_or(0.0);
         let side = market_event.kind.parse_side();
+
         let (base_delta, quote_delta) = match side {
-            | Side::Buy => {
+            Side::Buy => {
                 let base_increase = market_event.kind.amount - fee;
                 // Note: available was already decreased by the opening of the Side::Buy order
-                let base_delta = BalanceDelta { total: base_increase,
-                                                available: base_increase };
-                let quote_delta = BalanceDelta { total: -market_event.kind.amount * market_event.kind.price,
-                                                 available: 0.0 };
+                let base_delta = BalanceDelta { total: base_increase, available: base_increase };
+                let quote_delta = BalanceDelta { total: -market_event.kind.amount * market_event.kind.price, available: 0.0 };
                 (base_delta, quote_delta)
             }
-            | Side::Sell => {
+            Side::Sell => {
                 // Note: available was already decreased by the opening of the Side::Sell order
-                let base_delta = BalanceDelta { total: -market_event.kind.amount,
-                                                available: 0.0 };
+                let base_delta = BalanceDelta { total: -market_event.kind.amount, available: 0.0 };
                 let quote_increase = (market_event.kind.amount * market_event.kind.price) - fee;
-                let quote_delta = BalanceDelta { total: quote_increase,
-                                                 available: quote_increase };
+                let quote_delta = BalanceDelta { total: quote_increase, available: quote_increase };
                 (base_delta, quote_delta)
             }
         };
@@ -237,9 +296,14 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         let base_balance = self.update(base, base_delta);
         let quote_balance = self.update(quote, quote_delta);
 
-        AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
-                       exchange: ExchangeVariant::Simulated,
-                       kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) }
+        Ok(AccountEvent {
+            exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
+            exchange: ExchangeVariant::Simulated,
+            kind: AccountEventKind::Balances(vec![
+                TokenBalance::new(base.clone(), base_balance),
+                TokenBalance::new(quote.clone(), quote_balance),
+            ]),
+        })
     }
 
     /// 将 [`BalanceDelta`] 应用于指定 [`Token`] 的 [`Balance`]，并返回更新后的 [`Balance`] 。
@@ -468,7 +532,7 @@ mod tests
         let account_event = balances.update_from_open(&order, 50.0).await;
 
         assert_eq!(balances.balance(&token).unwrap().available, 50.0);
-        if let AccountEventKind::Balance(token_balance) = account_event.kind {
+        if let AccountEventKind::Balance(token_balance) = account_event.unwrap().kind {
             assert_eq!(token_balance.balance.available, 50.0);
         }
         else {
@@ -559,7 +623,7 @@ mod tests
         assert_eq!(balances.balance(&quote_token).unwrap().total, expected_quote_balance.total);
         assert_eq!(balances.balance(&quote_token).unwrap().available, expected_quote_balance.available);
 
-        if let AccountEventKind::Balances(balances) = account_event.kind {
+        if let AccountEventKind::Balances(balances) = account_event.unwrap().kind {
             let base_balance_event = balances.iter().find(|tb| tb.token == base_token).unwrap();
             let quote_balance_event = balances.iter().find(|tb| tb.token == quote_token).unwrap();
 

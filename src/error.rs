@@ -47,6 +47,10 @@ pub enum ExecutionError
     #[error("[UniLinkExecution] : 交易所维护中，无法执行操作")]
     ExchangeMaintenance,
 
+    /// 交易所维护中。
+    #[error("[UniLinkExecution] : 无效的开单方向")]
+    InvalidDirection,
+
     /// 未知的交易所错误。
     #[error("[UniLinkExecution] : 未知的交易所错误: {0}")]
     UnknownExchangeError(String),
