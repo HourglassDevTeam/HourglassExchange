@@ -86,7 +86,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         }
     }
 
-    // 异步方法来获取 Account 的某个字段
+    // 异步方法来获取 Exchange 的 timestamp.
     pub async fn get_exchange_ts(&self) -> Result<i64, ExecutionError>
     {
         if let Some(account) = self.account_ref.upgrade() {
