@@ -1,14 +1,18 @@
 /// NOTE code below is to be merged later
 use serde::{Deserialize, Serialize};
 
-use crate::{common_skeleton::{
-    datafeed::event::MarketEvent,
-    instrument::{
-        Instrument,
-        kind::{InstrumentKind, InstrumentKind::Perpetual},
+use crate::{
+    common_skeleton::{
+        datafeed::event::MarketEvent,
+        instrument::{
+            kind::{InstrumentKind, InstrumentKind::Perpetual},
+            Instrument,
+        },
+        token::Token,
     },
-    token::Token,
-}, ExchangeVariant, simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade};
+    simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
+    ExchangeVariant,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd)]
 #[allow(non_snake_case)]
@@ -28,7 +32,7 @@ pub struct WsTrade
 // NOTE 这是按照Okex交易所API数据类型构建的 WebsocketTrade 数据结构，回测选用。
 impl MarketEvent<WsTrade>
 {
-        pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, instrument: InstrumentKind) -> Self
+    pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, instrument: InstrumentKind) -> Self
     {
         let exchange_time = ws_trade.ts.parse::<i64>().unwrap_or(0);
         let received_time = ws_trade.ts.parse::<i64>().unwrap_or(0); // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
@@ -39,7 +43,7 @@ impl MarketEvent<WsTrade>
 
         MarketEvent { exchange_time,
                       received_time,
-                      exchange:ExchangeVariant::Simulated,
+                      exchange: ExchangeVariant::Simulated,
 
                       instrument,
                       kind: ws_trade }

@@ -18,10 +18,15 @@ use crate::{
         Side,
     },
     error::ExecutionError,
-    simulated_exchange::{account::Account, load_from_clickhouse::queries_operations::ClickhouseTrade},
+    simulated_exchange::{
+        account::{
+            account_config::{MarginMode, PositionMode},
+            Account,
+        },
+        load_from_clickhouse::queries_operations::ClickhouseTrade,
+    },
     ExchangeVariant,
 };
-use crate::simulated_exchange::account::account_config::{MarginMode, PositionMode};
 
 #[derive(Clone, Debug)]
 pub struct AccountBalances<Event>
@@ -110,22 +115,26 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         }
     }
 
-    pub async fn determine_position_mode(&self) -> Result<PositionMode, ExecutionError> {
+    async fn determine_position_mode(&self) -> Result<PositionMode, ExecutionError>
+    {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
             let config_read = account_read.config.read().await;
             Ok(config_read.position_mode.clone())
-        } else {
+        }
+        else {
             Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
 
-    pub async fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError> {
+    async fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError>
+    {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
             let config_read = account_read.config.read().await;
             Ok(config_read.margin_mode.clone())
-        } else {
+        }
+        else {
             Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }

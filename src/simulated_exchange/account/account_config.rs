@@ -14,7 +14,7 @@ pub struct AccountConfig
 }
 
 // NOTE 增加假设的佣金费率结构, 用于模拟交易所账户上。每个账户都有自己的佣金费率。
-#[derive(Clone, Debug, PartialEq,Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct CommissionRates
 {
     pub spot_maker: f64,
@@ -117,7 +117,7 @@ impl AccountConfig
     }
 }
 
-#[derive(Clone, Debug,PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum MarginMode
 {
     SimpleMode,
@@ -126,7 +126,7 @@ pub enum MarginMode
     PortfolioMargin,
 }
 
-#[derive(Clone, Debug, PartialEq,Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionMode
 {
     LongShortMode, // Note long/short, only applicable to Futures/Swap
@@ -134,7 +134,7 @@ pub enum PositionMode
 }
 
 // NOTE 本模拟交易所特有，实际情况可能不同
-#[derive(Clone, Debug, PartialEq,Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum CommissionLevel
 {
     Lv1,
