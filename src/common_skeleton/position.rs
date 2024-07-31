@@ -17,14 +17,31 @@ pub struct AccountPositions
     futures_pos: Option<Vec<FuturesPosition>>,
     option_pos: Option<Vec<OptionPosition>>,
 }
+impl AccountPositions {
+    fn has_position(&self, instrument: &Instrument) -> bool {
+        self.margin_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument))
+            || self.perpetual_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument))
+            || self.futures_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument))
+            || self.option_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument))
+    }
+}
 
 /// TODO : the below code is under construction
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct MarginPosition {}
+pub struct MarginPosition {
+    pub meta: PositionMeta,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct FuturesPosition {}
+pub struct FuturesPosition {
+    pub meta: PositionMeta,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct OptionPosition {}
+pub struct OptionPosition {
+    pub meta: PositionMeta,
+}
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -70,7 +87,7 @@ pub enum PositionKind
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct PerpetualPosition
 {
-    pub base: PositionMeta,
+    pub meta: PositionMeta,
     pub pos_config: PerpetualPositionConfig,
     pub liquidation_price: f64,
     pub margin: f64,
