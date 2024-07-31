@@ -12,20 +12,20 @@ use crate::{
         balance::{Balance, BalanceDelta, TokenBalance},
         datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
-        instrument::{kind::InstrumentKind, Instrument},
+        instrument::{Instrument, kind::InstrumentKind},
         order::{Open, Order},
-        token::Token,
         Side,
+        token::Token,
     },
     error::ExecutionError,
+    ExchangeVariant,
     simulated_exchange::{
         account::{
-            account_config::{MarginMode, PositionMode},
             Account,
+            account_config::{MarginMode, PositionMode},
         },
         load_from_clickhouse::queries_operations::ClickhouseTrade,
     },
-    ExchangeVariant,
 };
 
 #[derive(Clone, Debug)]
@@ -286,17 +286,18 @@ mod tests
         },
         simulated_exchange::{
             account::{
+                Account,
                 account_config::{AccountConfig, CommissionLevel, CommissionRates, MarginMode, PositionMode},
                 account_latency::{AccountLatency, FluctuationMode},
                 account_market_feed::AccountDataStreams,
                 account_orders::AccountOrders,
-                Account,
             },
             load_from_clickhouse::queries_operations::ClickhouseTrade,
         },
     };
 
     use super::*;
+
     #[allow(dead_code)]
     async fn create_test_account() -> Arc<RwLock<Account<MarketEvent<ClickhouseTrade>>>>
     {

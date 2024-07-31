@@ -15,12 +15,12 @@ use crate::{
         instrument::kind::InstrumentKind,
         order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
         position::AccountPositions,
-        token::Token,
         Side,
+        token::Token,
     },
     error::ExecutionError,
-    simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
     ExchangeVariant,
+    simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
 };
 
 pub mod account_balances;

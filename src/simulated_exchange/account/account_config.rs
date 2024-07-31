@@ -1,6 +1,8 @@
-use crate::common_skeleton::instrument::{kind::InstrumentKind, Instrument};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
+
+use crate::common_skeleton::instrument::{Instrument, kind::InstrumentKind};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountConfig

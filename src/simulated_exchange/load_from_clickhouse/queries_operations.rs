@@ -6,8 +6,8 @@ use std::sync::Arc;
 use async_stream::stream;
 use chrono::{Duration, NaiveDate};
 pub use clickhouse::{
-    error::{Error, Result},
-    Client, Row,
+    Client,
+    error::{Error, Result}, Row,
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
