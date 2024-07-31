@@ -525,44 +525,6 @@ mod tests
         assert!(balances.has_sufficient_available_balance(&token, 150.0).is_err());
     }
 
-    /// TODO code from this line on are tests for key methods of [AccountBalances] needs to be tested
-    // #[tokio::test]
-    // async fn test_update_from_open() {
-    //     let token = Token::new("BTC");
-    //     let balance = Balance::new(100.0, 100.0);
-    //     let mut balance_map = HashMap::new();
-    //     balance_map.insert(token.clone(), balance);
-    //
-    //     let account = create_test_account().await;
-    //     let account_ref = Arc::downgrade(&account);
-    //
-    //     let mut balances = AccountBalances { balance_map, account_ref };
-    //
-    //     let instrument = Instrument::new(token.clone(), token.clone(), InstrumentKind::Spot);
-    //     let client_order_id = Uuid::new_v4();
-    //     let open_state = Open { id: client_order_id.into(),
-    //         price: 50000.0,
-    //         size: 1.0,
-    //         filled_quantity: 0.0,
-    //         order_role: OrderRole::Maker,
-    //         received_ts: 0 };
-    //     let order = Order { kind: OrderKind::Limit,
-    //         exchange: ExchangeVariant::Simulated,
-    //         instrument: instrument.clone(),
-    //         client_ts: 0,
-    //         cid: ClientOrderId(client_order_id.clone()),
-    //         side: Side::Buy,
-    //         state: open_state };
-    //     let account_event = balances.update_from_open(&order, 50.0).await;
-    //
-    //     assert_eq!(balances.balance(&token).unwrap().available, 50.0);
-    //     if let AccountEventKind::Balance(token_balance) = account_event.unwrap().kind {
-    //         assert_eq!(token_balance.balance.available, 50.0);
-    //     }
-    //     else {
-    //         panic!("Unexpected account event kind");
-    //     }
-    // }
     #[tokio::test]
     async fn test_update_from_open() {
         let token = Token::new("BTC");
