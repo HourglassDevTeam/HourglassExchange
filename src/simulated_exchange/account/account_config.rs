@@ -1,4 +1,4 @@
-use crate::common_skeleton::position::PositionMode;
+use crate::common_skeleton::position::{PositionMarginMode, PositionMode};
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -10,6 +10,7 @@ pub struct AccountConfig
 {
     pub margin_mode: MarginMode,
     pub position_mode: PositionMode,
+    pub position_margin_mode: PositionMarginMode,
     pub commission_level: CommissionLevel,
     pub current_commission_rate: CommissionRates,
     pub leverage_book: HashMap<Instrument, f64>,
@@ -145,6 +146,7 @@ pub struct AccountConfigInitiator
 {
     margin_mode: Option<MarginMode>,
     position_mode: Option<PositionMode>,
+    position_margin_mode: Option<PositionMarginMode>,
     commission_level: Option<CommissionLevel>,
 }
 
@@ -154,6 +156,7 @@ impl AccountConfigInitiator
     {
         Self { margin_mode: None,
                position_mode: None,
+               position_margin_mode: None,
                commission_level: None }
     }
 
@@ -181,6 +184,7 @@ impl AccountConfigInitiator
     {
         Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
                            position_mode: self.position_mode.ok_or("position_mode is required")?,
+                           position_margin_mode:self.position_margin_mode.ok_or("position_mode is required")?,
                            commission_level: self.commission_level.ok_or("commission_level is required")?,
                            current_commission_rate: CommissionRates { spot_maker: 0.0,
                                                                       spot_taker: 0.0,

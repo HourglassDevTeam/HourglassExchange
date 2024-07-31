@@ -1,4 +1,4 @@
-use crate::common_skeleton::position::PositionMode;
+use crate::common_skeleton::position::{PositionMarginMode, PositionMode};
 use std::{
     collections::HashMap,
     fmt::Debug,
@@ -230,30 +230,55 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub async fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExecutionError> {
-        if let Some(_account) = self.account_ref.upgrade() {
+        if let Some(account) = self.account_ref.upgrade() {
             let position_mode = self.determine_position_mode().await?;
+            let position_margin_mode = account.read().await.config.read().await.position_margin_mode.clone();  // Assuming this field exists in the config
 
             // 检查NetMode方向
             if position_mode == PositionMode::NetMode {
                 self.check_position_direction_conflict(&open.instrument, open.side).await?;
             }
 
-            // 更新余额
+            // 更新余额，根据不同的 PositionMarginMode 处理
+            match position_margin_mode {
+                PositionMarginMode::Cross => {
+                    // FIXME : NOTE this is wrong and the common pool is yet to be built.
+                    // Cross margin: apply the required balance to a common pool
+                    match open.side {
+                        Side::Buy => {
+                            let delta = BalanceDelta { total: -required_balance, available: -required_balance };
+                            self.update(&open.instrument.quote, delta);
+                        }
+                        Side::Sell => {
+                            let delta = BalanceDelta { total: -required_balance, available: -required_balance };
+                            self.update(&open.instrument.base, delta);
+                        }
+                    }
+                }
+                PositionMarginMode::Isolated => {
+                    // Isolated margin: apply changes to the specific position's margin
+                    match open.side {
+                        Side::Buy => {
+                            let delta = BalanceDelta { total: -required_balance, available: -required_balance };
+                            self.update(&open.instrument.quote, delta);
+                        }
+                        Side::Sell => {
+                            let delta = BalanceDelta { total: -required_balance, available: -required_balance };
+                            self.update(&open.instrument.base, delta);
+                        }
+                    }
+                }
+            };
+
             let updated_balance = match open.side {
-                Side::Buy => {
-                    let delta = BalanceDelta { total: -required_balance, available: -required_balance };
-                    TokenBalance::new(open.instrument.quote.clone(), self.update(&open.instrument.quote, delta))
-                }
-                Side::Sell => {
-                    let delta = BalanceDelta { total: -required_balance, available: -required_balance };
-                    TokenBalance::new(open.instrument.base.clone(), self.update(&open.instrument.base, delta))
-                }
+                Side::Buy => self.balance(&open.instrument.quote)?.clone(),
+                Side::Sell => self.balance(&open.instrument.base)?.clone(),
             };
 
             Ok(AccountEvent {
                 exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
                 exchange: ExchangeVariant::Simulated,
-                kind: AccountEventKind::Balance(updated_balance),
+                kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)),
             })
         } else {
             Err(ExecutionError::Simulated("Account reference is not set".to_string()))
@@ -396,6 +421,7 @@ mod tests
                                        market_event_tx,
                                        config: Arc::new(RwLock::new(AccountConfig { margin_mode: MarginMode::SimpleMode,
                                                                                     position_mode: PositionMode::NetMode,
+position_margin_mode: PositionMarginMode::Cross,
                                                                                     commission_level: CommissionLevel::Lv3,
                                                                                     current_commission_rate: CommissionRates { spot_maker: 0.001,
                                                                                                                                spot_taker: 0.002,
