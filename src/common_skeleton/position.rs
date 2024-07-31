@@ -59,7 +59,7 @@ pub struct PerpetualPositionConfig
 {
     pos_margin_mode: PositionMarginMode,
     leverage: f64,
-    direction_mode: DirectionMode,
+    direction_mode: PositionMode,
 }
 
 /// NOTE : PositionMarginMode has defined two modes of margin consumption.
@@ -72,14 +72,14 @@ pub enum PositionMarginMode
     Isolated,
 }
 
-/// NOTE : DirectionMode 枚举定义了两种交易方向模式：
-///  [Oneway] : 单向模式。在这种模式下，用户只能持有一个方向的仓位（多头或空头），而不能同时持有两个方向的仓位。
-/// [Double] : 双向模式。在这种模式下，用户可以同时持有多头和空头仓位。这在一些复杂的交易策略中可能会有用，例如对冲策略。
+/// NOTE : PositionMode 枚举定义了两种交易方向模式：
+///  [NetMode] : 单向模式。在这种模式下，用户只能持有一个方向的仓位（多头或空头），而不能同时持有两个方向的仓位。
+/// [LongShortMode] : 双向模式。在这种模式下，用户可以同时持有多头和空头仓位。这在一些复杂的交易策略中可能会有用，例如对冲策略。
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub enum DirectionMode
+pub enum PositionMode
 {
-    Oneway,
-    Double,
+    LongShortMode, // Note long/short, only applicable to Futures/Swap
+    NetMode,       // Note one side per token per position
 }
 
 /// NOTE: 可能需要多种头寸类型共存

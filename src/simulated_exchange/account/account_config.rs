@@ -1,3 +1,4 @@
+use crate::common_skeleton::position::PositionMode;
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -128,12 +129,6 @@ pub enum MarginMode
     PortfolioMargin,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub enum PositionMode
-{
-    LongShortMode, // Note long/short, only applicable to Futures/Swap
-    NetMode,       // Note one side per token per position
-}
 
 // NOTE 本模拟交易所特有，实际情况可能不同
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]

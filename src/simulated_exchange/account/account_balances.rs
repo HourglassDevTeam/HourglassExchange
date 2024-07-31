@@ -1,3 +1,4 @@
+use crate::common_skeleton::position::PositionMode;
 use std::{
     collections::HashMap,
     fmt::Debug,
@@ -22,7 +23,7 @@ use crate::{
     simulated_exchange::{
         account::{
             Account,
-            account_config::{MarginMode, PositionMode},
+            account_config::{MarginMode},
         },
         load_from_clickhouse::queries_operations::ClickhouseTrade,
     },
@@ -287,7 +288,7 @@ mod tests
         simulated_exchange::{
             account::{
                 Account,
-                account_config::{AccountConfig, CommissionLevel, CommissionRates, MarginMode, PositionMode},
+                account_config::{AccountConfig, CommissionLevel, CommissionRates, MarginMode},
                 account_latency::{AccountLatency, FluctuationMode},
                 account_market_feed::AccountDataStreams,
                 account_orders::AccountOrders,
