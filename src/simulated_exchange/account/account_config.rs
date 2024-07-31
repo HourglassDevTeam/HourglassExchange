@@ -13,8 +13,8 @@ pub struct AccountConfig
     pub position_margin_mode: PositionMarginMode,
     pub commission_level: CommissionLevel,
     pub current_commission_rate: CommissionRates,
-    pub leverage_book: HashMap<Instrument, f64>,
-    pub fees_book: HashMap<InstrumentKind, f64>, // 每种金融工具的手续费 NOTE 某种些交易所的设置颗粒读会精确到金融工具。
+    pub leverage_book: HashMap<Instrument, f64>, // 每种金融工具的杠杆比例Registry
+    pub fees_book: HashMap<InstrumentKind, f64>, // 每种金融工具的手续费Registry NOTE 某种些交易所的设置颗粒会精确到Instrument.
 }
 
 // NOTE 增加假设的佣金费率结构, 用于模拟交易所账户上。每个账户都有自己的佣金费率。
