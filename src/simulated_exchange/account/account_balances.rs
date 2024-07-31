@@ -178,9 +178,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                     InstrumentKind::Spot => {
                         if let Some(spot_positions) = &positions.spot_pos {
                             for pos in spot_positions {
-                                println!("Spot position: {:?}", pos);
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                    println!("Conflict detected for Spot instrument: {:?}, existing side: {:?}, new side: {:?}", instrument, pos.meta.side, side);
                                     return Err(ExecutionError::InvalidDirection);
                                 }
                             }
@@ -189,9 +187,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                     InstrumentKind::Perpetual => {
                         if let Some(perpetual_positions) = &positions.perpetual_pos {
                             for pos in perpetual_positions {
-                                println!("Perpetual position: {:?}", pos);
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                    println!("Conflict detected for Perpetual instrument: {:?}, existing side: {:?}, new side: {:?}", instrument, pos.meta.side, side);
                                     return Err(ExecutionError::InvalidDirection);
                                 }
                             }
@@ -200,9 +196,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                     InstrumentKind::Future => {
                         if let Some(futures_positions) = &positions.futures_pos {
                             for pos in futures_positions {
-                                println!("Futures position: {:?}", pos);
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                    println!("Conflict detected for Futures instrument: {:?}, existing side: {:?}, new side: {:?}", instrument, pos.meta.side, side);
                                     return Err(ExecutionError::InvalidDirection);
                                 }
                             }
@@ -211,9 +205,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                     InstrumentKind::Option => {
                         if let Some(option_positions) = &positions.option_pos {
                             for pos in option_positions {
-                                println!("Option position: {:?}", pos);
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                    println!("Conflict detected for Option instrument: {:?}, existing side: {:?}, new side: {:?}", instrument, pos.meta.side, side);
                                     return Err(ExecutionError::InvalidDirection);
                                 }
                             }
@@ -222,9 +214,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                     InstrumentKind::Margin => {
                         if let Some(margin_positions) = &positions.margin_pos {
                             for pos in margin_positions {
-                                println!("Margin position: {:?}", pos);
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                    println!("Conflict detected for Margin instrument: {:?}, existing side: {:?}, new side: {:?}", instrument, pos.meta.side, side);
                                     return Err(ExecutionError::InvalidDirection);
                                 }
                             }
@@ -597,7 +587,6 @@ mod tests
             option_pos: None,
         });
         // Ensure the function is called with the correct context
-        println!("Attempting to open order with conflicting position...");
         let invalid_order_event = balances.update_from_open(&order, 50.0).await;
         assert!(invalid_order_event.is_err(), "Expected InvalidDirection error but got {:?}", invalid_order_event);
     }
@@ -638,9 +627,9 @@ mod tests
 
         let account_event = balances.update_from_trade(&market_event).await;
 
-        println!("Base Token Balance: {:?}", balances.balance(&base_token).unwrap());
-        println!("Quote Token Balance: {:?}", balances.balance(&quote_token).unwrap());
-        println!("Account Event: {:?}", account_event);
+        println!("[UniLinkExecution][TEST]: Base Token Balance: {:?}", balances.balance(&base_token).unwrap());
+        println!("[UniLinkExecution][TEST]: Quote Token Balance: {:?}", balances.balance(&quote_token).unwrap());
+        println!("[UniLinkExecution][TEST]: Account Event: {:?}", account_event);
 
         let expected_base_balance = Balance::new(1.1, 1.1); // 1 BTC + 0.1 BTC
         let expected_quote_balance = Balance::new(45000.0, 50000.0); // 50,000 USDT - (0.1 * 50,000)
