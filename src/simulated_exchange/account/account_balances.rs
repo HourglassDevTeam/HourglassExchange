@@ -147,7 +147,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
 
     /// Check if there is already some position of this instrument in the AccountPositions
     /// need to determine InstrumentKind from the open order first as position types vary
-    pub async fn is_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError> {
+    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
             let positions_read = account_read.positions.read().await;
