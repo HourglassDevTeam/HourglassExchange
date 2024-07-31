@@ -6,12 +6,14 @@ use crate::{
     common_skeleton::{balance::TokenBalance, friction::Fees, instrument::Instrument, Side},
     ExchangeVariant,
 };
+use crate::common_skeleton::instrument::kind::InstrumentKind;
 
 /// This struct is generic and thus placed here in the common_skeleton.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountPositions
 {
+    spot_pos: Option<Vec<SpotPosition>>,
     margin_pos: Option<Vec<MarginPosition>>, // NOTE useless in backtest
     perpetual_pos: Option<Vec<PerpetualPosition>>,
     futures_pos: Option<Vec<FuturesPosition>>,
@@ -19,14 +21,22 @@ pub struct AccountPositions
 }
 impl AccountPositions {
     pub(crate) fn has_position(&self, instrument: &Instrument) -> bool {
-        self.margin_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument))
-            || self.perpetual_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument))
-            || self.futures_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument))
-            || self.option_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument))
+        match instrument.kind {
+            InstrumentKind::Spot => self.spot_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+            InstrumentKind::Perpetual => self.perpetual_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+            InstrumentKind::Future => self.futures_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+            InstrumentKind::Option => self.option_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+            InstrumentKind::Margin => self.margin_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+        }
     }
 }
 
 /// TODO : the below code is under construction
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct SpotPosition {
+    pub meta: PositionMeta,
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct MarginPosition {

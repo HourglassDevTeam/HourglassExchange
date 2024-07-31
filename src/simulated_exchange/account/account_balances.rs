@@ -151,6 +151,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
             let positions_read = account_read.positions.read().await;
+
             for positions in positions_read.iter() {
                 if positions.has_position(&open.instrument) {
                     return Ok(true);
@@ -161,7 +162,6 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
-
 
     /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。

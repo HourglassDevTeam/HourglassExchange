@@ -322,6 +322,9 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             | InstrumentKind::Option => {
                 todo!()
             }
+            | InstrumentKind::Margin => {
+                todo!()
+            }
         }
     }
 

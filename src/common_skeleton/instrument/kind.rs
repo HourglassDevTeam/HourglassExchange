@@ -11,6 +11,8 @@ pub enum InstrumentKind
     Perpetual, // [NOTE] 注意：Perpetual 指的是永续合约，此处现缺乏合约细节字段，不适合MarketID的唯一识别。
     Future,
     Option,
+    Margin,
+
 }
 
 impl Default for InstrumentKind
@@ -33,6 +35,9 @@ impl Display for InstrumentKind
             | InstrumentKind::Perpetual => write!(f, "perpetual"),
             | InstrumentKind::Option => {
                 write!(f, "option")
+            }
+            | InstrumentKind::Margin => {
+                write!(f, "margin")
             }
         }
     }
