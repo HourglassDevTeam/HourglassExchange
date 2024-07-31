@@ -18,7 +18,7 @@ pub struct AccountPositions
     option_pos: Option<Vec<OptionPosition>>,
 }
 impl AccountPositions {
-    fn has_position(&self, instrument: &Instrument) -> bool {
+    pub(crate) fn has_position(&self, instrument: &Instrument) -> bool {
         self.margin_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument))
             || self.perpetual_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument))
             || self.futures_pos.as_ref().map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument))

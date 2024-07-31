@@ -117,6 +117,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
 
 
     /// 判断Account的当前持仓模式。
+    #[allow(dead_code)]
     async fn determine_position_mode(&self) -> Result<PositionMode, ExecutionError>
     {
         if let Some(account) = self.account_ref.upgrade() {
@@ -129,7 +130,9 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         }
     }
 
+
     /// 判断Account的当前保证金模式。
+    #[allow(dead_code)]
     async fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError>
     {
         if let Some(account) = self.account_ref.upgrade() {
@@ -144,17 +147,21 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
 
     /// Check if there is already some position of this instrument in the AccountPositions
     /// need to determine InstrumentKind from the open order first as position types vary
-     async fn is_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError>
-    {
+    pub async fn is_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
-            let positions = account_read.positions.read().await;
-            Ok(positions.get(&open.instrument).is_some())
-        }
-        else {
+            let positions_read = account_read.positions.read().await;
+            for positions in positions_read.iter() {
+                if positions.has_position(&open.instrument) {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        } else {
             Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
+
 
     /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
