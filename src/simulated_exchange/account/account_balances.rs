@@ -21,13 +21,14 @@ use crate::{
     simulated_exchange::{account::Account, load_from_clickhouse::queries_operations::ClickhouseTrade},
     ExchangeVariant,
 };
+use crate::simulated_exchange::account::account_config::{MarginMode, PositionMode};
 
 #[derive(Clone, Debug)]
 pub struct AccountBalances<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord + Ord
 {
     pub balance_map: HashMap<Token, Balance>,
-    pub account_ref: Weak<RwLock<Account<Event>>>, // NOTE 如果不使用弱引用，可能会导致循环引用和内存泄漏。
+    pub account_ref: Weak<RwLock<Account<Event>>>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
 }
 
 impl<Event> PartialEq for AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
@@ -106,6 +107,26 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         }
         else {
             Err(ExecutionError::InsufficientBalance(token.clone()))
+        }
+    }
+
+    pub async fn determine_position_mode(&self) -> Result<PositionMode, ExecutionError> {
+        if let Some(account) = self.account_ref.upgrade() {
+            let account_read = account.read().await;
+            let config_read = account_read.config.read().await;
+            Ok(config_read.position_mode.clone())
+        } else {
+            Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
+        }
+    }
+
+    pub async fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError> {
+        if let Some(account) = self.account_ref.upgrade() {
+            let account_read = account.read().await;
+            let config_read = account_read.config.read().await;
+            Ok(config_read.margin_mode.clone())
+        } else {
+            Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
 
