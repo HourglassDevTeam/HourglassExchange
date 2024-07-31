@@ -60,7 +60,7 @@ pub struct PerpetualPositionConfig
 {
     pos_margin_mode: PositionMarginMode,
     leverage: f64,
-    direction_mode: PositionMode,
+    position_mode: PositionMode,
 }
 
 /// NOTE : PositionMarginMode has defined two modes of margin consumption.
