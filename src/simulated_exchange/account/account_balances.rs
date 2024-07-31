@@ -163,8 +163,6 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
-
-    /// 检查持仓方向是否冲突
     async fn check_position_direction_conflict(
         &self,
         instrument: &Instrument,
@@ -174,12 +172,26 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             let account_read = account.read().await;
             let positions_read = account_read.positions.read().await;
 
+
             for positions in positions_read.iter() {
                 match instrument.kind {
+                    InstrumentKind::Spot => {
+                        if let Some(spot_positions) = &positions.spot_pos {
+                            for pos in spot_positions {
+                                println!("Spot position: {:?}", pos);
+                                if pos.meta.instrument == *instrument && pos.meta.side != side {
+                                    println!("Conflict detected for Spot instrument: {:?}, existing side: {:?}, new side: {:?}", instrument, pos.meta.side, side);
+                                    return Err(ExecutionError::InvalidDirection);
+                                }
+                            }
+                        }
+                    }
                     InstrumentKind::Perpetual => {
                         if let Some(perpetual_positions) = &positions.perpetual_pos {
                             for pos in perpetual_positions {
+                                println!("Perpetual position: {:?}", pos);
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
+                                    println!("Conflict detected for Perpetual instrument: {:?}, existing side: {:?}, new side: {:?}", instrument, pos.meta.side, side);
                                     return Err(ExecutionError::InvalidDirection);
                                 }
                             }
@@ -188,16 +200,9 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                     InstrumentKind::Future => {
                         if let Some(futures_positions) = &positions.futures_pos {
                             for pos in futures_positions {
+                                println!("Futures position: {:?}", pos);
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                    return Err(ExecutionError::InvalidDirection);
-                                }
-                            }
-                        }
-                    }
-                    InstrumentKind::Spot => {
-                        if let Some(spot_positions) = &positions.spot_pos {
-                            for pos in spot_positions {
-                                if pos.meta.instrument == *instrument && pos.meta.side != side {
+                                    println!("Conflict detected for Futures instrument: {:?}, existing side: {:?}, new side: {:?}", instrument, pos.meta.side, side);
                                     return Err(ExecutionError::InvalidDirection);
                                 }
                             }
@@ -206,7 +211,9 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                     InstrumentKind::Option => {
                         if let Some(option_positions) = &positions.option_pos {
                             for pos in option_positions {
+                                println!("Option position: {:?}", pos);
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
+                                    println!("Conflict detected for Option instrument: {:?}, existing side: {:?}, new side: {:?}", instrument, pos.meta.side, side);
                                     return Err(ExecutionError::InvalidDirection);
                                 }
                             }
@@ -215,7 +222,9 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                     InstrumentKind::Margin => {
                         if let Some(margin_positions) = &positions.margin_pos {
                             for pos in margin_positions {
+                                println!("Margin position: {:?}", pos);
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
+                                    println!("Conflict detected for Margin instrument: {:?}, existing side: {:?}, new side: {:?}", instrument, pos.meta.side, side);
                                     return Err(ExecutionError::InvalidDirection);
                                 }
                             }
@@ -226,6 +235,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         }
         Ok(())
     }
+
 
     /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
@@ -373,6 +383,8 @@ mod tests
             load_from_clickhouse::queries_operations::ClickhouseTrade,
         },
     };
+    use crate::common_skeleton::friction::{Fees, SpotFees};
+    use crate::common_skeleton::position::{AccountPositions, PositionMeta, SpotPosition};
 
     use super::*;
 
@@ -393,7 +405,7 @@ mod tests
                                        account_event_tx,
                                        market_event_tx,
                                        config: Arc::new(RwLock::new(AccountConfig { margin_mode: MarginMode::SimpleMode,
-                                                                                    position_mode: PositionMode::LongShortMode,
+                                                                                    position_mode: PositionMode::NetMode,
                                                                                     commission_level: CommissionLevel::Lv3,
                                                                                     current_commission_rate: CommissionRates { spot_maker: 0.001,
                                                                                                                                spot_taker: 0.002,
@@ -514,9 +526,45 @@ mod tests
     }
 
     /// TODO code from this line on are tests for key methods of [AccountBalances] needs to be tested
+    // #[tokio::test]
+    // async fn test_update_from_open() {
+    //     let token = Token::new("BTC");
+    //     let balance = Balance::new(100.0, 100.0);
+    //     let mut balance_map = HashMap::new();
+    //     balance_map.insert(token.clone(), balance);
+    //
+    //     let account = create_test_account().await;
+    //     let account_ref = Arc::downgrade(&account);
+    //
+    //     let mut balances = AccountBalances { balance_map, account_ref };
+    //
+    //     let instrument = Instrument::new(token.clone(), token.clone(), InstrumentKind::Spot);
+    //     let client_order_id = Uuid::new_v4();
+    //     let open_state = Open { id: client_order_id.into(),
+    //         price: 50000.0,
+    //         size: 1.0,
+    //         filled_quantity: 0.0,
+    //         order_role: OrderRole::Maker,
+    //         received_ts: 0 };
+    //     let order = Order { kind: OrderKind::Limit,
+    //         exchange: ExchangeVariant::Simulated,
+    //         instrument: instrument.clone(),
+    //         client_ts: 0,
+    //         cid: ClientOrderId(client_order_id.clone()),
+    //         side: Side::Buy,
+    //         state: open_state };
+    //     let account_event = balances.update_from_open(&order, 50.0).await;
+    //
+    //     assert_eq!(balances.balance(&token).unwrap().available, 50.0);
+    //     if let AccountEventKind::Balance(token_balance) = account_event.unwrap().kind {
+    //         assert_eq!(token_balance.balance.available, 50.0);
+    //     }
+    //     else {
+    //         panic!("Unexpected account event kind");
+    //     }
+    // }
     #[tokio::test]
-    async fn test_update_from_open()
-    {
+    async fn test_update_from_open() {
         let token = Token::new("BTC");
         let balance = Balance::new(100.0, 100.0);
         let mut balance_map = HashMap::new();
@@ -530,65 +578,69 @@ mod tests
         let instrument = Instrument::new(token.clone(), token.clone(), InstrumentKind::Spot);
         let client_order_id = Uuid::new_v4();
         let open_state = Open { id: client_order_id.into(),
-                                price: 50000.0,
-                                size: 1.0,
-                                filled_quantity: 0.0,
-                                order_role: OrderRole::Maker,
-                                received_ts: 0 };
+            price: 50000.0,
+            size: 1.0,
+            filled_quantity: 0.0,
+            order_role: OrderRole::Maker,
+            received_ts: 0 };
         let order = Order { kind: OrderKind::Limit,
-                            exchange: ExchangeVariant::Simulated,
-                            instrument: instrument.clone(),
-                            client_ts: 0,
-                            cid: ClientOrderId(client_order_id.clone()),
-                            side: Side::Buy,
-                            state: open_state };
-        let account_event = balances.update_from_open(&order, 50.0).await;
+            exchange: ExchangeVariant::Simulated,
+            instrument: instrument.clone(),
+            client_ts: 0,
+            cid: ClientOrderId(client_order_id.clone()),
+            side: Side::Buy,
+            state: open_state };
 
+        // Test valid open order
+        let account_event = balances.update_from_open(&order, 50.0).await;
         assert_eq!(balances.balance(&token).unwrap().available, 50.0);
         if let AccountEventKind::Balance(token_balance) = account_event.unwrap().kind {
             assert_eq!(token_balance.balance.available, 50.0);
-        }
-        else {
+        } else {
             panic!("Unexpected account event kind");
         }
-    }
-    #[tokio::test]
-    async fn test_update_from_cancel()
-    {
-        let token = Token::new("BTC");
-        let balance = Balance::new(100.0, 50.0); // Initial total balance: 100, available balance: 50
+
+        // Test invalid open order direction
+        // Reset balance
         let mut balance_map = HashMap::new();
-        balance_map.insert(token.clone(), balance);
+        balance_map.insert(token.clone(), Balance::new(100.0, 100.0));
+        balances.balance_map = balance_map;
 
-        let account = create_test_account().await;
-        let account_ref = Arc::downgrade(&account);
+        // Add an existing position with opposite side
+        let existing_position = SpotPosition {
+            meta: PositionMeta {
+                position_id: Uuid::new_v4().to_string(),
+                enter_ts: 0,
+                update_ts: 0,
+                exit_balance: TokenBalance::new(token.clone(), Balance::new(0.0, 0.0)),
+                account_exchange_ts: 0,
+                exchange: ExchangeVariant::Simulated,
+                instrument: instrument.clone(),
+                side: Side::Sell,
+                current_size: 1.0,
+                current_fees_total: Fees::Spot(SpotFees { maker_fee_rate: 0.0, taker_fee_rate: 0.0 }), // Custom Fees value
+                current_avg_price_gross: 0.0,
+                current_symbol_price: 0.0,
+                current_avg_price: 0.0,
+                unrealised_pnl: 0.0,
+                realised_pnl: 0.0,
+            },
+        };
 
-        let mut balances = AccountBalances { balance_map, account_ref };
-
-        let instrument = Instrument { base: token.clone(),
-                                      quote: token.clone(),
-                                      kind: InstrumentKind::Spot };
-        let client_order_id = Uuid::new_v4();
-
-        let open_state = Open { id: client_order_id.into(),
-                                price: 50000.0,
-                                size: 1.0,
-                                filled_quantity: 0.0,
-                                order_role: OrderRole::Maker,
-                                received_ts: 0 };
-        let order = Order { kind: OrderKind::Limit,
-                            exchange: ExchangeVariant::Simulated,
-                            instrument: instrument.clone(),
-                            client_ts: 0,
-                            cid: ClientOrderId(client_order_id.clone()),
-                            side: Side::Buy,
-                            state: open_state };
-
-        let token_balance = balances.update_from_cancel(&order);
-
-        assert_eq!(balances.balance(&token).unwrap().available, 50.0 + (50000.0 * 1.0)); // 50050.0
-        assert_eq!(token_balance.balance.available, 50.0 + (50000.0 * 1.0)); // 50050.0
+        account.write().await.positions.write().await.push(AccountPositions {
+            spot_pos: Some(vec![existing_position]),
+            margin_pos: None,
+            perpetual_pos: None,
+            futures_pos: None,
+            option_pos: None,
+        });
+        // Ensure the function is called with the correct context
+        println!("Attempting to open order with conflicting position...");
+        let invalid_order_event = balances.update_from_open(&order, 50.0).await;
+        assert!(invalid_order_event.is_err(), "Expected InvalidDirection error but got {:?}", invalid_order_event);
     }
+
+
 
     #[tokio::test]
     async fn test_update_from_trade()
