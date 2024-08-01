@@ -23,7 +23,7 @@ impl TokenBalance
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Balance
 {
-    pub current_price: f64,
+    pub current_price: f64, // NOTE 当前价格 newly added on 1st Aug 2024
     pub total: f64,     // 总额
     pub available: f64, // 可用余额
 }
