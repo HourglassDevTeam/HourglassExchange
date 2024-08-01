@@ -17,6 +17,13 @@ impl TokenBalance
     {
         Self { token: token.into(), balance }
     }
+
+    // update balance price's current price on a MarketEvent's new price
+    pub fn update_current_price(&mut self, price:f64)
+    {
+        self.balance.current_price = price;
+    }
+
 }
 
 /// 总余额和可用余额。
