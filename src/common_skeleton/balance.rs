@@ -23,6 +23,7 @@ impl TokenBalance
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Balance
 {
+    pub current_price: f64,
     pub total: f64,     // 总额
     pub available: f64, // 可用余额
 }
@@ -30,9 +31,9 @@ pub struct Balance
 impl Balance
 {
     /// 构造一个新的[`Balance`]。
-    pub fn new(total: f64, available: f64) -> Self
+    pub fn new(total: f64, available: f64,current_price:f64) -> Self
     {
-        Self { total, available }
+        Self { total, available, current_price }
     }
 
     /// 计算使用过的余额（`total` - `available`）。
