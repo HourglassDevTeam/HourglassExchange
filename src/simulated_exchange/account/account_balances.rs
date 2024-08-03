@@ -246,11 +246,11 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                     // Cross margin: apply the required balance to a common pool
                     match open.side {
                         Side::Buy => {
-                            let delta = BalanceDelta { total: -required_balance, available: -required_balance };
+                            let delta = BalanceDelta { total: 0.0, available: -required_balance };
                             self.update(&open.instrument.quote, delta);
                         }
                         Side::Sell => {
-                            let delta = BalanceDelta { total: -required_balance, available: -required_balance };
+                            let delta = BalanceDelta { total: 0.0, available: -required_balance };
                             self.update(&open.instrument.base, delta);
                         }
                     }
@@ -259,11 +259,11 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                     // Isolated margin: apply changes to the specific position's margin
                     match open.side {
                         Side::Buy => {
-                            let delta = BalanceDelta { total: -required_balance, available: -required_balance };
+                            let delta = BalanceDelta { total: 0.0, available: -required_balance };
                             self.update(&open.instrument.quote, delta);
                         }
                         Side::Sell => {
-                            let delta = BalanceDelta { total: -required_balance, available: -required_balance };
+                            let delta = BalanceDelta { total: 0.0, available: -required_balance };
                             self.update(&open.instrument.base, delta);
                         }
                     }
