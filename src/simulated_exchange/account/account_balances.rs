@@ -242,7 +242,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             // 更新余额，根据不同的 PositionMarginMode 处理
             match position_margin_mode {
                 PositionMarginMode::Cross => {
-                    // FIXME : NOTE this is wrong and the common pool is yet to be built.
+                    // FIXME : NOTE this is DEMONSTRATIVE AND PROBLEMATIC and the common pool is yet to be built.
                     // Cross margin: apply the required balance to a common pool
                     match open.side {
                         Side::Buy => {
