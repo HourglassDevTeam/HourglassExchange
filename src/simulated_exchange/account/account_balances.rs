@@ -310,7 +310,6 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             }
         }
     }
-
     /// 从交易中更新余额并返回 [`AccountEvent`]
     /// NOTE 注意[ClickhouseTrade]行情数据和此处所需Trade是否兼容。
     /// NOTE this is currently buggy!
@@ -319,35 +318,46 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
         let fee = self.get_fee(kind).await.unwrap_or(0.0);
         let side = market_event.kind.parse_side();
 
-        let (base_delta, quote_delta) = match side {
-            Side::Buy => {
-                let base_increase = market_event.kind.amount - fee;
-                // Note: available was already decreased by the opening of the Side::Buy order
-                let base_delta = BalanceDelta { total: base_increase, available: base_increase };
-                let quote_delta = BalanceDelta { total: -market_event.kind.amount * market_event.kind.price, available: 0.0 };
-                (base_delta, quote_delta)
+        match kind {
+            InstrumentKind::Spot => {
+                todo!("Spot handling is not implemented yet");
             }
-            Side::Sell => {
-                // Note: available was already decreased by the opening of the Side::Sell order
-                let base_delta = BalanceDelta { total: -market_event.kind.amount, available: 0.0 };
-                let quote_increase = (market_event.kind.amount * market_event.kind.price) - fee;
-                let quote_delta = BalanceDelta { total: quote_increase, available: quote_increase };
-                (base_delta, quote_delta)
+            InstrumentKind::Option => {
+                todo!("Option handling is not implemented yet");
             }
-        };
+            InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::Margin => {
+                let (base_delta, quote_delta) = match side {
+                    Side::Buy => {
+                        let base_increase = market_event.kind.amount - fee;
+                        // Note: available was already decreased by the opening of the Side::Buy order
+                        let base_delta = BalanceDelta { total: base_increase, available: base_increase };
+                        let quote_delta = BalanceDelta { total: -market_event.kind.amount * market_event.kind.price, available: 0.0 };
+                        (base_delta, quote_delta)
+                    }
+                    Side::Sell => {
+                        // Note: available was already decreased by the opening of the Side::Sell order
+                        let base_delta = BalanceDelta { total: -market_event.kind.amount, available: 0.0 };
+                        let quote_increase = (market_event.kind.amount * market_event.kind.price) - fee;
+                        let quote_delta = BalanceDelta { total: quote_increase, available: quote_increase };
+                        (base_delta, quote_delta)
+                    }
+                };
 
-        let base_balance = self.update(base, base_delta);
-        let quote_balance = self.update(quote, quote_delta);
+                let base_balance = self.update(base, base_delta);
+                let quote_balance = self.update(quote, quote_delta);
 
-        Ok(AccountEvent {
-            exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
-            exchange: ExchangeVariant::Simulated,
-            kind: AccountEventKind::Balances(vec![
-                TokenBalance::new(base.clone(), base_balance),
-                TokenBalance::new(quote.clone(), quote_balance),
-            ]),
-        })
+                Ok(AccountEvent {
+                    exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
+                    exchange: ExchangeVariant::Simulated,
+                    kind: AccountEventKind::Balances(vec![
+                        TokenBalance::new(base.clone(), base_balance),
+                        TokenBalance::new(quote.clone(), quote_balance),
+                    ]),
+                })
+            }
+        }
     }
+
 
     /// 将 [`BalanceDelta`] 应用于指定 [`Token`] 的 [`Balance`]，并返回更新后的 [`Balance`] 。
     pub fn update(&mut self, token: &Token, delta: BalanceDelta) -> Balance
