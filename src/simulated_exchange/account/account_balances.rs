@@ -313,6 +313,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
 
     /// 从交易中更新余额并返回 [`AccountEvent`]
     /// NOTE 注意[ClickhouseTrade]行情数据和此处所需Trade是否兼容。
+    /// NOTE this is currently buggy!
     pub async fn update_from_trade(&mut self, market_event: &MarketEvent<ClickhouseTrade>) -> Result<AccountEvent, ExecutionError> {
         let Instrument { base, quote, kind, .. } = &market_event.instrument;
         let fee = self.get_fee(kind).await.unwrap_or(0.0);
