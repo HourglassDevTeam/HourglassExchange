@@ -7,7 +7,7 @@ use crate::{
     common_skeleton::{
         balance::TokenBalance,
         order::{Cancelled, FullyFill, Open, Order, PartialFill},
-        position::AccountPositions,
+        position::BalancePositions,
         trade::Trade,
     },
     ExchangeVariant,
@@ -38,7 +38,7 @@ pub enum AccountEventKind
     // OrderBookUpdate(OrderBookUpdate),
     // MarketStatus(MarketStatus),
     Balances(Vec<TokenBalance>),
-    Positions(AccountPositions),
+    Positions(BalancePositions),
     AccountConfig(AccountConfig),
     // MarginUpdate(MarginUpdate),
     // Transfer(Transfer),

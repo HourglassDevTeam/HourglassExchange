@@ -15,7 +15,6 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::kind::InstrumentKind,
         order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
-        position::AccountPositions,
         Side,
         token::Token,
     },
@@ -40,7 +39,6 @@ pub struct Account<Event>
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub config: Arc<RwLock<AccountConfig>>,                         // 帐户配置
     pub balances: Arc<RwLock<AccountBalances<Event>>>,              // 帐户余额
-    pub positions: Arc<RwLock<Vec<AccountPositions>>>,              // 帐户头寸
     pub orders: Arc<RwLock<AccountOrders>>,
 }
 
@@ -53,7 +51,6 @@ pub struct AccountInitiator<Event>
     market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
     config: Option<Arc<RwLock<AccountConfig>>>,
     balances: Option<Arc<RwLock<AccountBalances<Event>>>>,
-    positions: Option<Arc<RwLock<Vec<AccountPositions>>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
@@ -66,7 +63,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
                            market_event_tx: None,
                            config: None,
                            balances: None,
-                           positions: None,
                            orders: None }
     }
 
@@ -100,11 +96,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
         self
     }
 
-    pub fn positions(mut self, value: Vec<AccountPositions>) -> Self
-    {
-        self.positions = Some(Arc::new(RwLock::new(value)));
-        self
-    }
 
     pub fn orders(mut self, value: AccountOrders) -> Self
     {
@@ -120,7 +111,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
                      market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
                      config: self.config.ok_or("config is required")?,                               // 检查并获取config
                      balances: self.balances.ok_or("balances is required")?,                         // 检查并获取balances
-                     positions: self.positions.ok_or("positions are required")?,                     // 检查并获取positions
                      orders: self.orders.ok_or("orders are required")? })
     }
 }
@@ -154,11 +144,12 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    pub async fn fetch_positions(&self, response_tx: Sender<Result<Vec<AccountPositions>, ExecutionError>>)
-    {
-        let positions = self.positions.read().await.clone();
-        respond(response_tx, Ok(positions));
-    }
+    // TODO TO BE MOVED TO ACCOUNTBALANCES
+    // pub async fn fetch_positions(&self, response_tx: Sender<Result<Vec<AccountPositions>, ExecutionError>>)
+    // {
+    //     let positions = self.positions.read().await.clone();
+    //     respond(response_tx, Ok(positions));
+    // }
 
     // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到对应的订单 // TO BE CONFIRMED
     pub async fn find_orders_for_an_trade_event(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>

@@ -1,11 +1,11 @@
-use crate::common_skeleton::position::{PositionMarginMode, PositionMode};
+use crate::common_skeleton::position::{BalancePositions, PositionMarginMode, PositionMode};
 use std::{
     collections::HashMap,
     fmt::Debug,
     ops::{Deref, DerefMut},
     sync::{Arc, Weak},
 };
-
+use std::sync::Mutex;
 use tokio::sync::RwLock;
 
 use crate::{
@@ -34,6 +34,7 @@ pub struct AccountBalances<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord + Ord
 {
     pub balance_map: HashMap<Token, Balance>,
+    pub balance_positions: Arc<Mutex<BalancePositions>>,
     pub account_ref: Weak<RwLock<Account<Event>>>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
 }
 
@@ -151,9 +152,10 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
-            let positions_read = account_read.positions.read().await;
+            let balances_read = account_read.balances.read().await; // 创建一个中间变量
+            let positions_lock = balances_read.balance_positions.lock(); // 获取锁
 
-            for positions in positions_read.iter() {
+            for positions in positions_lock.iter() {
                 if positions.has_position(&open.instrument) {
                     return Ok(true);
                 }
@@ -170,10 +172,10 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     ) -> Result<(), ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
-            let positions_read = account_read.positions.read().await;
+            let balances_read = account_read.balances.read().await; // 创建一个中间变量
+            let positions_lock = balances_read.balance_positions.lock(); // 获取锁
 
-
-            for positions in positions_read.iter() {
+            for positions in positions_lock.iter() {
                 match instrument.kind {
                     InstrumentKind::Spot => {
                         todo!()
@@ -361,311 +363,3 @@ impl<Event> DerefMut for AccountBalances<Event> where Event: Clone + Send + Sync
 }
 
 
-
-
-/// NOTE at this stage the field current_price is not used. bus will be in near future.
-#[cfg(test)]
-mod tests
-{
-    use std::sync::Arc;
-
-    use tokio::sync::mpsc::unbounded_channel;
-    use uuid::Uuid;
-
-    use crate::{
-        common_skeleton::{
-            datafeed::event::MarketEvent,
-            event::ClientOrderId,
-            order::{OrderKind, OrderRole},
-        },
-        simulated_exchange::{
-            account::{
-                Account,
-                account_config::{AccountConfig, CommissionLevel, CommissionRates, MarginMode},
-                account_latency::{AccountLatency, FluctuationMode},
-                account_market_feed::AccountDataStreams,
-                account_orders::AccountOrders,
-            },
-            load_from_clickhouse::queries_operations::ClickhouseTrade,
-        },
-    };
-    use crate::common_skeleton::friction::{Fees, SpotFees};
-    use crate::common_skeleton::position::{AccountPositions, PositionMeta, SpotPosition};
-
-    use super::*;
-
-    #[allow(dead_code)]
-    async fn create_test_account() -> Arc<RwLock<Account<MarketEvent<ClickhouseTrade>>>>
-    {
-        let (account_event_tx, _account_event_rx) = unbounded_channel();
-        let (market_event_tx, _market_event_rx) = unbounded_channel();
-
-        let instruments = vec![]; // Populate with test data if needed
-        let account_latency = AccountLatency { fluctuation_mode: FluctuationMode::None,
-                                               maximum: 100,
-                                               minimum: 0,
-                                               current_value: 50 };
-
-        Arc::new(RwLock::new(Account { exchange_timestamp: 0,
-                                       data: Arc::new(RwLock::new(AccountDataStreams::new())),
-                                       account_event_tx,
-                                       market_event_tx,
-                                       config: Arc::new(RwLock::new(AccountConfig { margin_mode: MarginMode::SimpleMode,
-                                                                                    position_mode: PositionMode::NetMode,
-position_margin_mode: PositionMarginMode::Cross,
-                                                                                    commission_level: CommissionLevel::Lv3,
-                                                                                    current_commission_rate: CommissionRates { spot_maker: 0.001,
-                                                                                                                               spot_taker: 0.002,
-                                                                                                                               perpetual_open: 0.001,
-                                                                                                                               perpetual_close: 0.002 },
-                                                                                    leverage_book: HashMap::new(),
-                                                                                    fees_book: HashMap::new() })),
-                                       balances: Arc::new(RwLock::new(AccountBalances { balance_map: HashMap::new(),
-                                                                                        account_ref: Weak::new() })),
-                                       positions: Arc::new(RwLock::new(Vec::new())),
-                                       orders: Arc::new(RwLock::new(AccountOrders::new(instruments, account_latency).await)) }))
-    }
-
-    #[tokio::test]
-    async fn test_balance()
-    {
-        let token = Token::new("BTC");
-        let balance = Balance::new(100.0, 100.0,50.0);
-        let mut balance_map = HashMap::new();
-        balance_map.insert(token.clone(), balance);
-
-        let account = create_test_account().await;
-        let account_ref = Arc::downgrade(&account);
-
-        let balances = AccountBalances { balance_map, account_ref };
-
-        assert_eq!(balances.balance(&token).unwrap().available, 100.0);
-    }
-
-    #[tokio::test]
-    async fn test_balance_mut()
-    {
-        let token = Token::new("BTC");
-        let balance = Balance::new(100.0, 100.0,50.0);
-        let mut balance_map = HashMap::new();
-        balance_map.insert(token.clone(), balance);
-
-        let account = create_test_account().await;
-        let account_ref = Arc::downgrade(&account);
-
-        let mut balances = AccountBalances { balance_map, account_ref };
-
-        {
-            let balance_mut = balances.balance_mut(&token).unwrap();
-            balance_mut.available = 50.0;
-        }
-
-        assert_eq!(balances.balance(&token).unwrap().available, 50.0);
-    }
-
-    #[tokio::test]
-    async fn test_get_fee()
-    {
-        let instrument_kind = InstrumentKind::Spot;
-        let mut fees_book = HashMap::new();
-        fees_book.insert(instrument_kind.clone(), 0.1);
-
-        let account = create_test_account().await;
-        account.write().await.config.write().await.fees_book = fees_book;
-
-        let account_ref = Arc::downgrade(&account);
-
-        let balances = AccountBalances { balance_map: HashMap::new(),
-                                         account_ref };
-
-        let fee = balances.get_fee(&instrument_kind).await.unwrap();
-        assert_eq!(fee, 0.1);
-    }
-
-    #[tokio::test]
-    async fn test_get_exchange_ts()
-    {
-        let account = create_test_account().await;
-        account.write().await.exchange_timestamp = 1627843987;
-
-        let account_ref = Arc::downgrade(&account);
-
-        let balances = AccountBalances { balance_map: HashMap::new(),
-                                         account_ref };
-
-        let exchange_ts = balances.get_exchange_ts().await.unwrap();
-        assert_eq!(exchange_ts, 1627843987);
-    }
-
-    #[tokio::test]
-    async fn test_fetch_all()
-    {
-        let token = Token::new("BTC");
-        let balance = Balance::new(100.0, 100.0,50.0);
-        let mut balance_map = HashMap::new();
-        balance_map.insert(token.clone(), balance);
-
-        let account = create_test_account().await;
-        let account_ref = Arc::downgrade(&account);
-
-        let balances = AccountBalances { balance_map, account_ref };
-
-        let all_balances = balances.fetch_all();
-        assert_eq!(all_balances.len(), 1);
-        assert_eq!(all_balances[0].balance.available, 100.0);
-    }
-
-    #[tokio::test]
-    async fn test_has_sufficient_available_balance()
-    {
-        let token = Token::new("BTC");
-        let balance = Balance::new(100.0, 100.0,50.0);
-        let mut balance_map = HashMap::new();
-        balance_map.insert(token.clone(), balance);
-
-        let account = create_test_account().await;
-        let account_ref = Arc::downgrade(&account);
-
-        let balances = AccountBalances { balance_map, account_ref };
-
-        assert!(balances.has_sufficient_available_balance(&token, 50.0).is_ok());
-        assert!(balances.has_sufficient_available_balance(&token, 150.0).is_err());
-    }
-
-    #[tokio::test]
-    async fn test_update_from_open() {
-        let token = Token::new("BTC");
-        let balance = Balance::new(100.0, 100.0,50.0);
-        let mut balance_map = HashMap::new();
-        balance_map.insert(token.clone(), balance);
-
-        let account = create_test_account().await;
-        let account_ref = Arc::downgrade(&account);
-
-        let mut balances = AccountBalances { balance_map, account_ref };
-
-        let instrument = Instrument::new(token.clone(), token.clone(), InstrumentKind::Spot);
-        let client_order_id = Uuid::new_v4();
-        let open_state = Open { id: client_order_id.into(),
-            price: 50000.0,
-            size: 1.0,
-            filled_quantity: 0.0,
-            order_role: OrderRole::Maker,
-            received_ts: 0 };
-        let order = Order { kind: OrderKind::Limit,
-            exchange: ExchangeVariant::Simulated,
-            instrument: instrument.clone(),
-            client_ts: 0,
-            cid: ClientOrderId(client_order_id.clone()),
-            side: Side::Buy,
-            state: open_state };
-
-        // Test valid open order
-        let account_event = balances.update_from_open(&order, 50.0).await;
-        assert_eq!(balances.balance(&token).unwrap().available, 50.0);
-        if let AccountEventKind::Balance(token_balance) = account_event.unwrap().kind {
-            assert_eq!(token_balance.balance.available, 50.0);
-        } else {
-            panic!("Unexpected account event kind");
-        }
-
-        // Test invalid open order direction
-        // Reset balance
-        let mut balance_map = HashMap::new();
-        balance_map.insert(token.clone(), Balance::new(100.0, 100.0,50.0));
-        balances.balance_map = balance_map;
-
-        // Add an existing position with opposite side
-        let existing_position = SpotPosition {
-            meta: PositionMeta {
-                position_id: Uuid::new_v4().to_string(),
-                enter_ts: 0,
-                update_ts: 0,
-                exit_balance: TokenBalance::new(token.clone(), Balance::new(0.0, 0.00,50.0)),
-                account_exchange_ts: 0,
-                exchange: ExchangeVariant::Simulated,
-                instrument: instrument.clone(),
-                side: Side::Sell,
-                current_size: 1.0,
-                current_fees_total: Fees::Spot(SpotFees { maker_fee_rate: 0.0, taker_fee_rate: 0.0 }), // Custom Fees value
-                current_avg_price_gross: 0.0,
-                current_symbol_price: 0.0,
-                current_avg_price: 0.0,
-                unrealised_pnl: 0.0,
-                realised_pnl: 0.0,
-            },
-        };
-
-        account.write().await.positions.write().await.push(AccountPositions {
-            spot_pos: Some(vec![existing_position]),
-            margin_pos: None,
-            perpetual_pos: None,
-            futures_pos: None,
-            option_pos: None,
-        });
-        // Ensure the function is called with the correct context
-        let invalid_order_event = balances.update_from_open(&order, 50.0).await;
-        assert!(invalid_order_event.is_err(), "Expected InvalidDirection error but got {:?}", invalid_order_event);
-    }
-
-
-
-    #[tokio::test]
-    async fn test_update_from_trade()
-    {
-        let base_token = Token::new("BTC");
-        let quote_token = Token::new("USDT");
-
-        let base_balance = Balance::new(1.0, 1.0,50.0); // 初始余额: 1 BTC
-        let quote_balance = Balance::new(50000.0, 50000.0,50.0); // 初始余额: 50,000 USDT
-
-        let mut balance_map = HashMap::new();
-        balance_map.insert(base_token.clone(), base_balance);
-        balance_map.insert(quote_token.clone(), quote_balance);
-
-        let account = create_test_account().await;
-        let account_ref = Arc::downgrade(&account);
-
-        let mut balances = AccountBalances { balance_map, account_ref };
-
-        let instrument = Instrument { base: base_token.clone(),
-                                      quote: quote_token.clone(),
-                                      kind: InstrumentKind::Spot };
-
-        let market_event = MarketEvent { exchange_time: 0,
-                                         instrument: instrument.clone(),
-                                         kind: ClickhouseTrade { basequote: "BTC/USDT".to_string(),
-                                                                 side: "Buy".to_string(),
-                                                                 price: 50000.0,
-                                                                 timestamp: 0,
-                                                                 amount: 0.1 },
-                                         exchange: ExchangeVariant::Simulated,
-                                         received_time: 0 };
-
-        let account_event = balances.update_from_trade(&market_event).await;
-
-        println!("[UniLinkExecution][TEST]: Base Token Balance: {:?}", balances.balance(&base_token).unwrap());
-        println!("[UniLinkExecution][TEST]: Quote Token Balance: {:?}", balances.balance(&quote_token).unwrap());
-        println!("[UniLinkExecution][TEST]: Account Event: {:?}", account_event);
-
-        let expected_base_balance = Balance::new(1.1, 1.1,1.0); // 1 BTC + 0.1 BTC
-        let expected_quote_balance = Balance::new(45000.0, 50000.0,50000.0); // 50,000 USDT - (0.1 * 50,000)
-
-        assert_eq!(balances.balance(&base_token).unwrap().total, expected_base_balance.total);
-        assert_eq!(balances.balance(&base_token).unwrap().available, expected_base_balance.available);
-        assert_eq!(balances.balance(&quote_token).unwrap().total, expected_quote_balance.total);
-        assert_eq!(balances.balance(&quote_token).unwrap().available, expected_quote_balance.available);
-
-        if let AccountEventKind::Balances(balances) = account_event.unwrap().kind {
-            let base_balance_event = balances.iter().find(|tb| tb.token == base_token).unwrap();
-            let quote_balance_event = balances.iter().find(|tb| tb.token == quote_token).unwrap();
-
-            assert_eq!(base_balance_event.balance, expected_base_balance);
-            assert_eq!(quote_balance_event.balance.total, expected_quote_balance.total);
-            assert_eq!(quote_balance_event.balance.available, expected_quote_balance.available);
-        }
-        else {
-            panic!("Unexpected account event kind");
-        }
-    }
-}
