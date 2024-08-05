@@ -176,13 +176,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             for positions in positions_read.iter() {
                 match instrument.kind {
                     InstrumentKind::Spot => {
-                        if let Some(spot_positions) = &positions.spot_pos {
-                            for pos in spot_positions {
-                                if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                    return Err(ExecutionError::InvalidDirection);
-                                }
-                            }
-                        }
+                        todo!()
                     }
                     InstrumentKind::Perpetual => {
                         if let Some(perpetual_positions) = &positions.perpetual_pos {
@@ -190,7 +184,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
                                     return Err(ExecutionError::InvalidDirection);
                                 }
-                            }
+                            }k
                         }
                     }
                     InstrumentKind::Future => {
