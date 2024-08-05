@@ -244,16 +244,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                 PositionMarginMode::Cross => {
                     // FIXME : NOTE this is DEMONSTRATIVE AND PROBLEMATIC and the common pool is yet to be built.
                     // Cross margin: apply the required balance to a common pool
-                    match open.side {
-                        Side::Buy => {
-                            let delta = BalanceDelta { total: 0.0, available: -required_balance };
-                            self.update(&open.instrument.quote, delta);
-                        }
-                        Side::Sell => {
-                            let delta = BalanceDelta { total: 0.0, available: -required_balance };
-                            self.update(&open.instrument.base, delta);
-                        }
-                    }
+                    todo!()
                 }
                 PositionMarginMode::Isolated => {
                     // Isolated margin: apply changes to the specific position's margin

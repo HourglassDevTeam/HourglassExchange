@@ -57,7 +57,6 @@ pub struct Order<State>
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct RequestOpen
 {
-    pub required_margin:f64, // NOTE this filed is added on 5th August 2024，post.
     pub reduce_only: bool,
     pub price: f64,
     pub size: f64,
