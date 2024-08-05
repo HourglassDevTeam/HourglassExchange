@@ -37,7 +37,7 @@ pub struct Account<Event>
     pub data: Arc<RwLock<AccountDataStreams<Event>>>,               // 帐户数据
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
-    pub config: Arc<RwLock<AccountConfig>>,                         // 帐户配置
+    pub config: Arc<AccountConfig>,                         // 帐户配置
     pub balances: Arc<RwLock<AccountBalances<Event>>>,              // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
 }
@@ -49,7 +49,7 @@ pub struct AccountInitiator<Event>
     data: Option<Arc<RwLock<AccountDataStreams<Event>>>>,
     account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
     market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
-    config: Option<Arc<RwLock<AccountConfig>>>,
+    config: Option<Arc<AccountConfig>>,
     balances: Option<Arc<RwLock<AccountBalances<Event>>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
@@ -86,7 +86,7 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
 
     pub fn config(mut self, value: AccountConfig) -> Self
     {
-        self.config = Some(Arc::new(RwLock::new(value)));
+        self.config = Some(Arc::new(value));
         self
     }
 
@@ -304,12 +304,12 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 | Side::Sell => (&order.instrument.base, order.state.size),
             },
             | InstrumentKind::Perpetual => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.read().await.leverage_book.get(&order.instrument).unwrap()),
-                | Side::Sell => (&order.instrument.base, order.state.size * self.config.read().await.leverage_book.get(&order.instrument).unwrap()),
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.leverage_book.get(&order.instrument).unwrap()),
+                | Side::Sell => (&order.instrument.base, order.state.size * self.config.leverage_book.get(&order.instrument).unwrap()),
             },
             | InstrumentKind::Future => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.read().await.leverage_book.get(&order.instrument).unwrap()),
-                | Side::Sell => (&order.instrument.base, order.state.size * self.config.read().await.leverage_book.get(&order.instrument).unwrap()),
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.leverage_book.get(&order.instrument).unwrap()),
+                | Side::Sell => (&order.instrument.base, order.state.size * self.config.leverage_book.get(&order.instrument).unwrap()),
             },
             | InstrumentKind::Option => {
                 todo!()

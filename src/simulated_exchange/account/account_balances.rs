@@ -72,17 +72,14 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     }
 
     /// 获取指定 [`InstrumentKind`] 的手续费。
-    pub async fn get_fee(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
-    {
+    pub async fn get_fee(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
-            let config_read = account_read.config.read().await;
-            config_read.fees_book
-                       .get(instrument_kind)
-                       .cloned()
-                       .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for InstrumentKind: {:?}", instrument_kind)))
-        }
-        else {
+            account_read.config.fees_book
+                .get(instrument_kind)
+                .cloned()
+                .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for InstrumentKind: {:?}", instrument_kind)))
+        } else {
             Err(ExecutionError::Simulated("Account reference is not set".to_string()))
         }
     }
@@ -120,14 +117,11 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
 
     /// 判断Account的当前持仓模式。
     #[allow(dead_code)]
-    async fn determine_position_mode(&self) -> Result<PositionMode, ExecutionError>
-    {
+    async fn determine_position_mode(&self) -> Result<PositionMode, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
-            let config_read = account_read.config.read().await;
-            Ok(config_read.position_mode.clone())
-        }
-        else {
+            Ok(account_read.config.position_mode.clone())
+        } else {
             Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
@@ -135,14 +129,11 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
 
     /// 判断Account的当前保证金模式。
     #[allow(dead_code)]
-    async fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError>
-    {
+    async fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
-            let config_read = account_read.config.read().await;
-            Ok(config_read.margin_mode.clone())
-        }
-        else {
+            Ok(account_read.config.margin_mode.clone())
+        } else {
             Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
@@ -228,7 +219,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     pub async fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let position_mode = self.determine_position_mode().await?;
-            let position_margin_mode = account.read().await.config.read().await.position_margin_mode.clone();
+            let position_margin_mode = account.read().await.config.position_margin_mode.clone();
 
             // 前置检查 InstrumentKind 和 NetMode 方向
             match open.instrument.kind {
