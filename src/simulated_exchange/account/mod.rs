@@ -34,9 +34,7 @@ pub struct Account<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     pub exchange_timestamp: AtomicI64,
-    // NOTE 使用 Arc<RwLock> 是合理的，因为它允许多线程并发读取，并在需要时进行写入锁定。
     pub data: Arc<RwLock<AccountDataStreams<Event>>>,               // 帐户数据
-    // NOTE 这两个字段是用于事件传递的通道发送器，不需要额外的锁机制，因为 mpsc::UnboundedSender 本身是线程安全的。
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub config: Arc<AccountConfig>,                         // 帐户配置
