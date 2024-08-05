@@ -178,7 +178,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             for positions in positions_lock.iter() {
                 match instrument.kind {
                     InstrumentKind::Spot => {
-                        todo!()
+                        todo!() // not quite needed either
                     }
                     InstrumentKind::Perpetual => {
                         if let Some(perpetual_positions) = &positions.perpetual_pos {
