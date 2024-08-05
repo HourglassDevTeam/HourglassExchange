@@ -1,5 +1,4 @@
 use std::fmt::Formatter;
-
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

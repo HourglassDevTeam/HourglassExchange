@@ -1,5 +1,5 @@
 use std::{fmt::Debug, sync::Arc};
-
+use std::sync::atomic::{AtomicI64, Ordering};
 use futures::future::join_all;
 use oneshot::Sender;
 use tokio::sync::{mpsc, oneshot, RwLock};
@@ -29,12 +29,14 @@ pub mod account_latency;
 pub mod account_market_feed;
 pub mod account_orders;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Account<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
-    pub exchange_timestamp: i64,                                    // NOTE 日后可以用无锁结构原子锁包裹
+    pub exchange_timestamp: AtomicI64,
+    // NOTE 使用 Arc<RwLock> 是合理的，因为它允许多线程并发读取，并在需要时进行写入锁定。
     pub data: Arc<RwLock<AccountDataStreams<Event>>>,               // 帐户数据
+    // NOTE 这两个字段是用于事件传递的通道发送器，不需要额外的锁机制，因为 mpsc::UnboundedSender 本身是线程安全的。
     pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub config: Arc<AccountConfig>,                         // 帐户配置
@@ -42,6 +44,24 @@ pub struct Account<Event>
     pub orders: Arc<RwLock<AccountOrders>>,
 }
 
+
+// 手动实现 Clone trait
+impl<Event> Clone for Account<Event>
+where
+    Event: Clone + Send + Sync + Debug + 'static + Ord,
+{
+    fn clone(&self) -> Self {
+        Account {
+            exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
+            data: Arc::clone(&self.data),
+            account_event_tx: self.account_event_tx.clone(),
+            market_event_tx: self.market_event_tx.clone(),
+            config: Arc::clone(&self.config),
+            balances: Arc::clone(&self.balances),
+            orders: Arc::clone(&self.orders),
+        }
+    }
+}
 #[derive(Clone, Debug)]
 pub struct AccountInitiator<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord
@@ -105,7 +125,7 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
 
     pub fn build(self) -> Result<Account<Event>, String>
     {
-        Ok(Account { exchange_timestamp: 0,
+        Ok(Account { exchange_timestamp: 0.into(),
                      data: self.data.ok_or("datafeed is required")?,                                 // 检查并获取data
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
                      market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
@@ -123,6 +143,12 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     {
         AccountInitiator::new()
     }
+
+    // 新方法：更新 exchange_timestamp
+    pub fn update_exchange_timestamp(&self, timestamp: i64) {
+        self.exchange_timestamp.store(timestamp, Ordering::SeqCst);
+    }
+
 
     pub async fn fetch_orders_open(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>)
     {
@@ -353,21 +379,23 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         // 更新客户余额
         let balance_event = self.balances.write().await.update_from_open(&open_order, required_balance).await.unwrap();
 
+        // 获取当前的 exchange_timestamp
+        let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
+
         // 发送账户事件给客户端
         self.account_event_tx
             .send(balance_event)
             .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
-                                 exchange: ExchangeVariant::Simulated,
-                                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
+            .send(AccountEvent { exchange_timestamp,
+                exchange: ExchangeVariant::Simulated,
+                kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
             .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败");
 
         // 返回已打开的订单
         Ok(open_order)
     }
-
     pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
@@ -382,6 +410,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                         });
     }
 
+
     pub async fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError>
     {
         // 获取写锁并查找到对应的Instrument Orders，以便修改订单
@@ -393,17 +422,17 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             | Side::Buy => {
                 // 使用 OrderId 查找 Order<Open>
                 let index = orders.bids
-                                  .iter()
-                                  .position(|bid| bid.state.id == request.state.id)
-                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                    .iter()
+                    .position(|bid| bid.state.id == request.state.id)
+                    .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                 orders.bids.remove(index)
             }
             | Side::Sell => {
                 // 使用 OrderId 查找 Order<Open>
                 let index = orders.asks
-                                  .iter()
-                                  .position(|ask| ask.state.id == request.state.id)
-                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                    .iter()
+                    .position(|ask| ask.state.id == request.state.id)
+                    .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                 orders.asks.remove(index)
             }
         };
@@ -417,17 +446,20 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         // 将 Order<Open> 映射到 Order<Cancelled>
         let cancelled = Order::from(removed);
 
+        // 获取当前的 exchange_timestamp
+        let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
+
         // 发送 AccountEvents 给客户端
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
-                                 exchange: ExchangeVariant::Simulated,
-                                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
+            .send(AccountEvent { exchange_timestamp: exchange_timestamp.into(),
+                exchange: ExchangeVariant::Simulated,
+                kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
-                                 exchange: ExchangeVariant::Simulated,
-                                 kind: AccountEventKind::Balance(balance_event) })
+            .send(AccountEvent { exchange_timestamp: exchange_timestamp.into(),
+                exchange: ExchangeVariant::Simulated,
+                kind: AccountEventKind::Balance(balance_event) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
 
         Ok(cancelled)

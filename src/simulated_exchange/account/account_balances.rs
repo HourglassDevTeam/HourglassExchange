@@ -1,3 +1,4 @@
+use std::sync::atomic::Ordering;
 use crate::common_skeleton::position::{BalancePositions, PositionMarginMode, PositionMode};
 use std::{
     collections::HashMap,
@@ -89,9 +90,8 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
-            Ok(account_read.exchange_timestamp)
-        }
-        else {
+            Ok(account_read.exchange_timestamp.load(Ordering::SeqCst))
+        } else {
             Err(ExecutionError::Simulated("Account reference is not set".to_string()))
         }
     }
@@ -270,7 +270,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             };
 
             Ok(AccountEvent {
-                exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
+                exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp").into(),
                 exchange: ExchangeVariant::Simulated,
                 kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)),
             })
@@ -338,7 +338,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                 let quote_balance = self.update(quote, quote_delta);
 
                 Ok(AccountEvent {
-                    exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
+                    exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp").into(),
                     exchange: ExchangeVariant::Simulated,
                     kind: AccountEventKind::Balances(vec![
                         TokenBalance::new(base.clone(), base_balance),
