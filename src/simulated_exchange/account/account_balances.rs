@@ -228,21 +228,31 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
     pub async fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let position_mode = self.determine_position_mode().await?;
-            let position_margin_mode = account.read().await.config.read().await.position_margin_mode.clone();  // Assuming this field exists in the config
+            let position_margin_mode = account.read().await.config.read().await.position_margin_mode.clone();
 
-            // 检查NetMode方向
-            if position_mode == PositionMode::NetMode {
-                self.check_position_direction_conflict(&open.instrument, open.side).await?;
+            // 前置检查 InstrumentKind 和 NetMode 方向
+            match open.instrument.kind {
+                InstrumentKind::Spot => {
+                    todo!("Spot handling is not implemented yet");
+                }
+                InstrumentKind::Option => {
+                    todo!("Option handling is not implemented yet");
+                }
+                InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::Margin => {
+                    if position_mode == PositionMode::NetMode {
+                        self.check_position_direction_conflict(&open.instrument, open.side).await?;
+                    }
+                }
             }
 
             // 更新余额，根据不同的 PositionMarginMode 处理
-            match position_margin_mode {
-                PositionMarginMode::Cross => {
-                    // FIXME : NOTE this is DEMONSTRATIVE AND PROBLEMATIC and the common pool is yet to be built.
+            match (open.instrument.kind.clone(), position_margin_mode) {
+                (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::Margin, PositionMarginMode::Cross) => {
+                    // FIXME: NOTE this is DEMONSTRATIVE AND PROBLEMATIC and the common pool is yet to be built.
                     // Cross margin: apply the required balance to a common pool
                     todo!()
                 }
-                PositionMarginMode::Isolated => {
+                (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::Margin, PositionMarginMode::Isolated) => {
                     // Isolated margin: apply changes to the specific position's margin
                     match open.side {
                         Side::Buy => {
@@ -256,6 +266,10 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                             // position 中增加 deposited_margin
                         }
                     }
+                }
+                // 其他情况下，继续处理，当前返回错误
+                (_, _) => {
+                    return Err(ExecutionError::Simulated(format!("Unsupported InstrumentKind or PositionMarginMode for open order: {:?}", open.instrument.kind)));
                 }
             };
 
@@ -273,6 +287,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
             Err(ExecutionError::Simulated("Account reference is not set".to_string()))
         }
     }
+
 
 
 
