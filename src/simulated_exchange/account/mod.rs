@@ -168,7 +168,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    // TODO TO BE MOVED TO ACCOUNTBALANCES
+    // TODO TO BE MOVED TO [AccountBalances]
     // pub async fn fetch_positions(&self, response_tx: Sender<Result<Vec<AccountPositions>, ExecutionError>>)
     // {
     //     let positions = self.positions.read().await.clone();
