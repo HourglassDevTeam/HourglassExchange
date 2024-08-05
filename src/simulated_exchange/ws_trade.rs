@@ -5,19 +5,18 @@ use crate::{
     common_skeleton::{
         datafeed::event::MarketEvent,
         instrument::{
-            Instrument,
             kind::{InstrumentKind, InstrumentKind::Perpetual},
+            Instrument,
         },
         token::Token,
     },
-    ExchangeVariant,
     simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
+    ExchangeVariant,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd)]
 #[allow(non_snake_case)]
-pub struct WsTrade
-{
+pub struct WsTrade {
     #[serde(alias = "instrument_id", alias = "inst_id")]
     instId: String, // NOTE nomenclature of instrument ID ?
     #[serde(alias = "side")]
@@ -30,61 +29,64 @@ pub struct WsTrade
 }
 
 // NOTE 这是按照Okex交易所API数据类型构建的 WebsocketTrade 数据结构，回测选用。
-impl MarketEvent<WsTrade>
-{
-    pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, instrument: InstrumentKind) -> Self
-    {
+impl MarketEvent<WsTrade> {
+    pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, instrument: InstrumentKind) -> Self {
         let exchange_time = ws_trade.ts.parse::<i64>().unwrap_or(0);
         let received_time = ws_trade.ts.parse::<i64>().unwrap_or(0); // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
 
-        let instrument = Instrument { base: Token::from(base),
-                                      quote: Token::from(quote),
-                                      kind: instrument };
+        let instrument = Instrument {
+            base: Token::from(base),
+            quote: Token::from(quote),
+            kind: instrument,
+        };
 
-        MarketEvent { exchange_time,
-                      received_time,
-                      exchange: ExchangeVariant::Simulated,
+        MarketEvent {
+            exchange_time,
+            received_time,
+            exchange: ExchangeVariant::Simulated,
 
-                      instrument,
-                      kind: ws_trade }
+            instrument,
+            kind: ws_trade,
+        }
     }
 }
 
 // NOTE 这是按照Clickhouse中存储的数据类型构建的 WebsocketTrade 数据结构，回测选用。
-impl MarketEvent<ClickhouseTrade>
-{
-    pub fn from_swap_trade_clickhouse(trade: ClickhouseTrade, base: String, quote: String) -> Self
-    {
+impl MarketEvent<ClickhouseTrade> {
+    pub fn from_swap_trade_clickhouse(trade: ClickhouseTrade, base: String, quote: String) -> Self {
         let exchange_time = trade.timestamp;
         let received_time = trade.timestamp; // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
 
-        let instrument = Instrument { base: Token::from(base),
-                                      quote: Token::from(quote),
-                                      kind: Perpetual };
+        let instrument = Instrument {
+            base: Token::from(base),
+            quote: Token::from(quote),
+            kind: Perpetual,
+        };
 
-        MarketEvent { exchange_time,
-                      received_time,
-                      exchange: ExchangeVariant::Simulated,
-                      instrument,
-                      kind: trade }
+        MarketEvent {
+            exchange_time,
+            received_time,
+            exchange: ExchangeVariant::Simulated,
+            instrument,
+            kind: trade,
+        }
     }
 }
 
 // 从 TradeDataFromClickhouse 到 WsTrade 的转换实现
-impl From<ClickhouseTrade> for WsTrade
-{
-    fn from(trade: ClickhouseTrade) -> Self
-    {
-        WsTrade { instId: trade.basequote,
-                  side: trade.side,
-                  px: trade.price.to_string(),
-                  ts: trade.timestamp.to_string(),
-                  amount: trade.amount }
+impl From<ClickhouseTrade> for WsTrade {
+    fn from(trade: ClickhouseTrade) -> Self {
+        WsTrade {
+            instId: trade.basequote,
+            side: trade.side,
+            px: trade.price.to_string(),
+            ts: trade.timestamp.to_string(),
+            amount: trade.amount,
+        }
     }
 }
 
-pub fn parse_base_and_quote(basequote: &str) -> (String, String)
-{
+pub fn parse_base_and_quote(basequote: &str) -> (String, String) {
     let quote_assets = ["USDT", "USTC", "USDC", "USD", "UST", "DAI", "FDUSD", "BTC", "ETH", "EURT"];
     for &quote in &quote_assets {
         if basequote.ends_with(quote) {
@@ -96,15 +98,15 @@ pub fn parse_base_and_quote(basequote: &str) -> (String, String)
 }
 
 #[allow(dead_code)]
-impl WsTrade
-{
-    pub(crate) fn from_ref(trade: &ClickhouseTrade) -> Self
-    {
-        WsTrade { // 这里假设 WsTrade 结构体字段和 TradeDataFromClickhouse 结构体字段对应
-                  instId: trade.basequote.clone(),
-                  side: trade.side.clone(),
-                  px: trade.price.to_string(),
-                  ts: trade.timestamp.to_string(),
-                  amount: trade.amount }
+impl WsTrade {
+    pub(crate) fn from_ref(trade: &ClickhouseTrade) -> Self {
+        WsTrade {
+            // 这里假设 WsTrade 结构体字段和 TradeDataFromClickhouse 结构体字段对应
+            instId: trade.basequote.clone(),
+            side: trade.side.clone(),
+            px: trade.price.to_string(),
+            ts: trade.timestamp.to_string(),
+            amount: trade.amount,
+        }
     }
 }

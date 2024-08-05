@@ -16,22 +16,23 @@ pub mod ws_trade;
 
 #[derive(Debug)]
 pub struct SimulatedExchange<Event>
-    where Event: Clone + Send + Sync + Debug + 'static + Ord
+where
+    Event: Clone + Send + Sync + Debug + 'static + Ord,
 {
     pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedClientEvent>,
     pub account: Account<Event>,
 }
 
-impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl<Event> SimulatedExchange<Event>
+where
+    Event: Clone + Send + Sync + Debug + 'static + Ord,
 {
-    pub fn initiator() -> ExchangeInitiator<Event>
-    {
+    pub fn initiator() -> ExchangeInitiator<Event> {
         ExchangeInitiator::new()
     }
 
     /// 运行 [`SimulatedExchange`] 并响应各种[`SimulatedClientEvent`]。
-    pub async fn run(mut self)
-    {
+    pub async fn run(mut self) {
         // 不断接收并处理模拟事件。
         while let Some(event) = self.event_simulated_rx.recv().await {
             match event {
@@ -46,45 +47,52 @@ impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + Debug + 
     }
 }
 
-impl<Event> Default for ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl<Event> Default for ExchangeInitiator<Event>
+where
+    Event: Clone + Send + Sync + Debug + 'static + Ord,
 {
-    fn default() -> Self
-    {
+    fn default() -> Self {
         let (_tx, rx) = mpsc::unbounded_channel();
-        Self { event_simulated_rx: Some(rx),
-               account: None }
+        Self {
+            event_simulated_rx: Some(rx),
+            account: None,
+        }
     }
 }
 #[derive(Debug)]
 pub struct ExchangeInitiator<Event>
-    where Event: Clone + Send + Sync + Debug + 'static + Ord
+where
+    Event: Clone + Send + Sync + Debug + 'static + Ord,
 {
     event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedClientEvent>>,
     account: Option<Account<Event>>,
 }
 
-impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl<Event> ExchangeInitiator<Event>
+where
+    Event: Clone + Send + Sync + Debug + 'static + Ord,
 {
-    pub fn new() -> Self
-    {
+    pub fn new() -> Self {
         Self { ..Default::default() }
     }
 
-    pub fn event_simulated_rx(self, value: mpsc::UnboundedReceiver<SimulatedClientEvent>) -> Self
-    {
-        Self { event_simulated_rx: Some(value),
-               ..self }
+    pub fn event_simulated_rx(self, value: mpsc::UnboundedReceiver<SimulatedClientEvent>) -> Self {
+        Self {
+            event_simulated_rx: Some(value),
+            ..self
+        }
     }
 
-    pub fn account(self, value: Account<Event>) -> Self
-    {
+    pub fn account(self, value: Account<Event>) -> Self {
         Self { account: Some(value), ..self }
     }
 
-    pub fn initiate(self) -> Result<SimulatedExchange<Event>, ExecutionError>
-    {
-        Ok(SimulatedExchange { event_simulated_rx: self.event_simulated_rx
-                                                       .ok_or_else(|| ExecutionError::InitiatorIncomplete("event_simulated_rx".to_string()))?,
-                               account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
+    pub fn initiate(self) -> Result<SimulatedExchange<Event>, ExecutionError> {
+        Ok(SimulatedExchange {
+            event_simulated_rx: self
+                .event_simulated_rx
+                .ok_or_else(|| ExecutionError::InitiatorIncomplete("event_simulated_rx".to_string()))?,
+            account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))?,
+        })
     }
 }

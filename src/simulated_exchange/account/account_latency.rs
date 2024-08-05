@@ -5,8 +5,7 @@ use rand_distr::{Distribution, Normal};
 // 引入随机分布库，包括常态分布
 
 #[derive(Clone, Debug)] // 派生Clone和Debug特性
-pub struct AccountLatency
-{
+pub struct AccountLatency {
     pub fluctuation_mode: FluctuationMode,
     pub maximum: i64,
     pub minimum: i64,
@@ -14,8 +13,7 @@ pub struct AccountLatency
 }
 
 #[derive(Clone, Debug)]
-pub enum FluctuationMode
-{
+pub enum FluctuationMode {
     Sine,
     Cosine,
     NormalDistribution,
@@ -29,8 +27,7 @@ pub enum FluctuationMode
     None,
 }
 
-pub fn fluctuate_latency(latency: &mut AccountLatency, current_time: i64)
-{
+pub fn fluctuate_latency(latency: &mut AccountLatency, current_time: i64) {
     match latency.fluctuation_mode {
         | FluctuationMode::Sine => {
             // 使用正弦函数波动
@@ -91,127 +88,137 @@ pub fn fluctuate_latency(latency: &mut AccountLatency, current_time: i64)
 }
 
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use super::*;
 
     #[test]
-    fn test_fluctuate_latency_sine()
-    {
-        let mut latency = AccountLatency { fluctuation_mode: FluctuationMode::Sine,
-                                           maximum: 100,
-                                           minimum: 0,
-                                           current_value: 0 };
+    fn test_fluctuate_latency_sine() {
+        let mut latency = AccountLatency {
+            fluctuation_mode: FluctuationMode::Sine,
+            maximum: 100,
+            minimum: 0,
+            current_value: 0,
+        };
         fluctuate_latency(&mut latency, 0);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
-    fn test_fluctuate_latency_cosine()
-    {
-        let mut latency = AccountLatency { fluctuation_mode: FluctuationMode::Cosine,
-                                           maximum: 100,
-                                           minimum: 0,
-                                           current_value: 0 };
+    fn test_fluctuate_latency_cosine() {
+        let mut latency = AccountLatency {
+            fluctuation_mode: FluctuationMode::Cosine,
+            maximum: 100,
+            minimum: 0,
+            current_value: 0,
+        };
         fluctuate_latency(&mut latency, 0);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
-    fn test_fluctuate_latency_normal_distribution()
-    {
-        let mut latency = AccountLatency { fluctuation_mode: FluctuationMode::NormalDistribution,
-                                           maximum: 100,
-                                           minimum: 0,
-                                           current_value: 0 };
+    fn test_fluctuate_latency_normal_distribution() {
+        let mut latency = AccountLatency {
+            fluctuation_mode: FluctuationMode::NormalDistribution,
+            maximum: 100,
+            minimum: 0,
+            current_value: 0,
+        };
         fluctuate_latency(&mut latency, 0);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
-    fn test_fluctuate_latency_uniform()
-    {
-        let mut latency = AccountLatency { fluctuation_mode: FluctuationMode::Uniform,
-                                           maximum: 100,
-                                           minimum: 0,
-                                           current_value: 0 };
+    fn test_fluctuate_latency_uniform() {
+        let mut latency = AccountLatency {
+            fluctuation_mode: FluctuationMode::Uniform,
+            maximum: 100,
+            minimum: 0,
+            current_value: 0,
+        };
         fluctuate_latency(&mut latency, 0);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
-    fn test_fluctuate_latency_exponential()
-    {
-        let mut latency = AccountLatency { fluctuation_mode: FluctuationMode::Exponential,
-                                           maximum: 100,
-                                           minimum: 0,
-                                           current_value: 0 };
+    fn test_fluctuate_latency_exponential() {
+        let mut latency = AccountLatency {
+            fluctuation_mode: FluctuationMode::Exponential,
+            maximum: 100,
+            minimum: 0,
+            current_value: 0,
+        };
         fluctuate_latency(&mut latency, 1);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
-    fn test_fluctuate_latency_logarithmic()
-    {
-        let mut latency = AccountLatency { fluctuation_mode: FluctuationMode::Logarithmic,
-                                           maximum: 100,
-                                           minimum: 0,
-                                           current_value: 0 };
+    fn test_fluctuate_latency_logarithmic() {
+        let mut latency = AccountLatency {
+            fluctuation_mode: FluctuationMode::Logarithmic,
+            maximum: 100,
+            minimum: 0,
+            current_value: 0,
+        };
         fluctuate_latency(&mut latency, 1);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
-    fn test_fluctuate_latency_linear_increase()
-    {
-        let mut latency = AccountLatency { fluctuation_mode: FluctuationMode::LinearIncrease,
-                                           maximum: 100,
-                                           minimum: 0,
-                                           current_value: 0 };
+    fn test_fluctuate_latency_linear_increase() {
+        let mut latency = AccountLatency {
+            fluctuation_mode: FluctuationMode::LinearIncrease,
+            maximum: 100,
+            minimum: 0,
+            current_value: 0,
+        };
         fluctuate_latency(&mut latency, 1);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
-    fn test_fluctuate_latency_linear_decrease()
-    {
-        let mut latency = AccountLatency { fluctuation_mode: FluctuationMode::LinearDecrease,
-                                           maximum: 100,
-                                           minimum: 0,
-                                           current_value: 0 };
+    fn test_fluctuate_latency_linear_decrease() {
+        let mut latency = AccountLatency {
+            fluctuation_mode: FluctuationMode::LinearDecrease,
+            maximum: 100,
+            minimum: 0,
+            current_value: 0,
+        };
         fluctuate_latency(&mut latency, 1);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
-    fn test_fluctuate_latency_step_function()
-    {
-        let mut latency = AccountLatency { fluctuation_mode: FluctuationMode::StepFunction,
-                                           maximum: 100,
-                                           minimum: 0,
-                                           current_value: 0 };
+    fn test_fluctuate_latency_step_function() {
+        let mut latency = AccountLatency {
+            fluctuation_mode: FluctuationMode::StepFunction,
+            maximum: 100,
+            minimum: 0,
+            current_value: 0,
+        };
         fluctuate_latency(&mut latency, 1);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
-    fn test_fluctuate_latency_random_walk()
-    {
-        let mut latency = AccountLatency { fluctuation_mode: FluctuationMode::RandomWalk,
-                                           maximum: 100,
-                                           minimum: 0,
-                                           current_value: 50 };
+    fn test_fluctuate_latency_random_walk() {
+        let mut latency = AccountLatency {
+            fluctuation_mode: FluctuationMode::RandomWalk,
+            maximum: 100,
+            minimum: 0,
+            current_value: 50,
+        };
         fluctuate_latency(&mut latency, 1);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
-    fn test_fluctuate_latency_none()
-    {
-        let mut latency = AccountLatency { fluctuation_mode: FluctuationMode::None,
-                                           maximum: 100,
-                                           minimum: 0,
-                                           current_value: 50 };
+    fn test_fluctuate_latency_none() {
+        let mut latency = AccountLatency {
+            fluctuation_mode: FluctuationMode::None,
+            maximum: 100,
+            minimum: 0,
+            current_value: 50,
+        };
         fluctuate_latency(&mut latency, 1);
         assert_eq!(latency.current_value, latency.minimum);
     }
