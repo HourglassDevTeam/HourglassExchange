@@ -1,6 +1,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use futures::future::join_all;
+use oneshot::Sender;
 use tokio::sync::{mpsc, oneshot, RwLock};
 
 use account_balances::AccountBalances;
@@ -133,13 +134,13 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         AccountInitiator::new()
     }
 
-    pub async fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>)
+    pub async fn fetch_orders_open(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>)
     {
         let orders = self.orders.read().await.fetch_all();
         respond(response_tx, Ok(orders)); // 是否要模拟延迟
     }
 
-    pub async fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>)
+    pub async fn fetch_balances(&self, response_tx: Sender<Result<Vec<TokenBalance>, ExecutionError>>)
     {
         let balances = self.balances.read().await.fetch_all();
         respond(response_tx, Ok(balances));
@@ -153,7 +154,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    pub async fn fetch_positions(&self, response_tx: oneshot::Sender<Result<Vec<AccountPositions>, ExecutionError>>)
+    pub async fn fetch_positions(&self, response_tx: Sender<Result<Vec<AccountPositions>, ExecutionError>>)
     {
         let positions = self.positions.read().await.clone();
         respond(response_tx, Ok(positions));
@@ -281,7 +282,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     // NOTE a method that generates trade from matched order is missing for the time being.
 
-    pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
+    pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
     {
         // 创建一个用于存储 Pending 订单的临时向量
         let mut open_pending = Vec::new();
@@ -376,7 +377,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         Ok(open_order)
     }
 
-    pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)
+    pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
                                                             let mut this = self.clone();
@@ -441,7 +442,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         Ok(cancelled)
     }
 
-    pub async fn cancel_orders_all(&mut self, response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>)
+    pub async fn cancel_orders_all(&mut self, response_tx: Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>)
     {
         // 获取所有打开的订单
         let orders_to_cancel = {
@@ -482,7 +483,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     }
 }
 
-pub fn respond<Response>(response_tx: oneshot::Sender<Response>, response: Response)
+pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
     where Response: Debug + Send + 'static
 {
     tokio::spawn(async move {
