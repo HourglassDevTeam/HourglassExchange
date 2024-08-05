@@ -184,7 +184,7 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
                                     return Err(ExecutionError::InvalidDirection);
                                 }
-                            }k
+                            }
                         }
                     }
                     InstrumentKind::Future => {
@@ -246,10 +246,12 @@ impl<Event> AccountBalances<Event> where Event: Clone + Send + Sync + Debug + 's
                         Side::Buy => {
                             let delta = BalanceDelta { total: 0.0, available: -required_balance };
                             self.update(&open.instrument.quote, delta);
+                            // position 中增加 deposited_margin
                         }
                         Side::Sell => {
                             let delta = BalanceDelta { total: 0.0, available: -required_balance };
                             self.update(&open.instrument.base, delta);
+                            // position 中增加 deposited_margin
                         }
                     }
                 }
