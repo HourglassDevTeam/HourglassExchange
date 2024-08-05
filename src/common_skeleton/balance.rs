@@ -17,12 +17,20 @@ impl TokenBalance
     {
         Self { token: token.into(), balance }
     }
+
+    // update balance price's current price on a MarketEvent's new price
+    pub fn update_current_price(&mut self, price:f64)
+    {
+        self.balance.current_price = price;
+    }
+
 }
 
 /// 总余额和可用余额。
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Balance
 {
+    pub current_price: f64, // NOTE 当前价格 newly added on 1st Aug 2024
     pub total: f64,     // 总额
     pub available: f64, // 可用余额
 }
@@ -30,9 +38,9 @@ pub struct Balance
 impl Balance
 {
     /// 构造一个新的[`Balance`]。
-    pub fn new(total: f64, available: f64) -> Self
+    pub fn new(total: f64, available: f64,current_price:f64) -> Self
     {
-        Self { total, available }
+        Self { total, available, current_price }
     }
 
     /// 计算使用过的余额（`total` - `available`）。

@@ -373,6 +373,10 @@ impl<Event> DerefMut for AccountBalances<Event> where Event: Clone + Send + Sync
     }
 }
 
+
+
+
+/// NOTE at this stage the field current_price is not used. bus will be in near future.
 #[cfg(test)]
 mod tests
 {
@@ -439,7 +443,7 @@ position_margin_mode: PositionMarginMode::Cross,
     async fn test_balance()
     {
         let token = Token::new("BTC");
-        let balance = Balance::new(100.0, 100.0);
+        let balance = Balance::new(100.0, 100.0,50.0);
         let mut balance_map = HashMap::new();
         balance_map.insert(token.clone(), balance);
 
@@ -455,7 +459,7 @@ position_margin_mode: PositionMarginMode::Cross,
     async fn test_balance_mut()
     {
         let token = Token::new("BTC");
-        let balance = Balance::new(100.0, 100.0);
+        let balance = Balance::new(100.0, 100.0,50.0);
         let mut balance_map = HashMap::new();
         balance_map.insert(token.clone(), balance);
 
@@ -510,7 +514,7 @@ position_margin_mode: PositionMarginMode::Cross,
     async fn test_fetch_all()
     {
         let token = Token::new("BTC");
-        let balance = Balance::new(100.0, 100.0);
+        let balance = Balance::new(100.0, 100.0,50.0);
         let mut balance_map = HashMap::new();
         balance_map.insert(token.clone(), balance);
 
@@ -528,7 +532,7 @@ position_margin_mode: PositionMarginMode::Cross,
     async fn test_has_sufficient_available_balance()
     {
         let token = Token::new("BTC");
-        let balance = Balance::new(100.0, 100.0);
+        let balance = Balance::new(100.0, 100.0,50.0);
         let mut balance_map = HashMap::new();
         balance_map.insert(token.clone(), balance);
 
@@ -544,7 +548,7 @@ position_margin_mode: PositionMarginMode::Cross,
     #[tokio::test]
     async fn test_update_from_open() {
         let token = Token::new("BTC");
-        let balance = Balance::new(100.0, 100.0);
+        let balance = Balance::new(100.0, 100.0,50.0);
         let mut balance_map = HashMap::new();
         balance_map.insert(token.clone(), balance);
 
@@ -581,7 +585,7 @@ position_margin_mode: PositionMarginMode::Cross,
         // Test invalid open order direction
         // Reset balance
         let mut balance_map = HashMap::new();
-        balance_map.insert(token.clone(), Balance::new(100.0, 100.0));
+        balance_map.insert(token.clone(), Balance::new(100.0, 100.0,50.0));
         balances.balance_map = balance_map;
 
         // Add an existing position with opposite side
@@ -590,7 +594,7 @@ position_margin_mode: PositionMarginMode::Cross,
                 position_id: Uuid::new_v4().to_string(),
                 enter_ts: 0,
                 update_ts: 0,
-                exit_balance: TokenBalance::new(token.clone(), Balance::new(0.0, 0.0)),
+                exit_balance: TokenBalance::new(token.clone(), Balance::new(0.0, 0.00,50.0)),
                 account_exchange_ts: 0,
                 exchange: ExchangeVariant::Simulated,
                 instrument: instrument.clone(),
@@ -625,8 +629,8 @@ position_margin_mode: PositionMarginMode::Cross,
         let base_token = Token::new("BTC");
         let quote_token = Token::new("USDT");
 
-        let base_balance = Balance::new(1.0, 1.0); // 初始余额: 1 BTC
-        let quote_balance = Balance::new(50000.0, 50000.0); // 初始余额: 50,000 USDT
+        let base_balance = Balance::new(1.0, 1.0,50.0); // 初始余额: 1 BTC
+        let quote_balance = Balance::new(50000.0, 50000.0,50.0); // 初始余额: 50,000 USDT
 
         let mut balance_map = HashMap::new();
         balance_map.insert(base_token.clone(), base_balance);
@@ -657,8 +661,8 @@ position_margin_mode: PositionMarginMode::Cross,
         println!("[UniLinkExecution][TEST]: Quote Token Balance: {:?}", balances.balance(&quote_token).unwrap());
         println!("[UniLinkExecution][TEST]: Account Event: {:?}", account_event);
 
-        let expected_base_balance = Balance::new(1.1, 1.1); // 1 BTC + 0.1 BTC
-        let expected_quote_balance = Balance::new(45000.0, 50000.0); // 50,000 USDT - (0.1 * 50,000)
+        let expected_base_balance = Balance::new(1.1, 1.1,1.0); // 1 BTC + 0.1 BTC
+        let expected_quote_balance = Balance::new(45000.0, 50000.0,50000.0); // 50,000 USDT - (0.1 * 50,000)
 
         assert_eq!(balances.balance(&base_token).unwrap().total, expected_base_balance.total);
         assert_eq!(balances.balance(&base_token).unwrap().available, expected_base_balance.available);
