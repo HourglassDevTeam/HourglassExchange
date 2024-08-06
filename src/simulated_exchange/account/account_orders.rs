@@ -1,8 +1,8 @@
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicU64, Ordering},
         Arc,
+        atomic::{AtomicU64, Ordering},
     },
 };
 
@@ -18,7 +18,7 @@ use crate::{
     },
     error::ExecutionError,
     simulated_exchange::{
-        account::account_latency::{fluctuate_latency, AccountLatency},
+        account::account_latency::{AccountLatency, fluctuate_latency},
         instrument_orders::InstrumentOrders,
     },
 };

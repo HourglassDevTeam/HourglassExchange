@@ -1,4 +1,4 @@
-use chrono::{DateTime, Datelike, Local, TimeZone, Timelike, Utc};
+use chrono::{Datelike, DateTime, Local, Timelike, TimeZone, Utc};
 use regex::Regex;
 
 #[allow(dead_code)]

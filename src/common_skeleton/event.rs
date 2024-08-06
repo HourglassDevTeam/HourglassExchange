@@ -1,5 +1,6 @@
-use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
+
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
@@ -9,8 +10,8 @@ use crate::{
         position::AccountPositions,
         trade::Trade,
     },
-    simulated_exchange::account::account_config::AccountConfig,
     ExchangeVariant,
+    simulated_exchange::account::account_config::AccountConfig,
 };
 
 /// NOTE: 如果需要记录交易所的时间戳，可以再添加一个专门的字段来表示交易所的时间，例如：    pub exchange_ts: DateTime<Utc> or i64

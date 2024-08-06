@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
+
 use crate::common_skeleton::balance::TokenBalance;
 use crate::common_skeleton::friction::Fees;
 use crate::common_skeleton::instrument::Instrument;
 use crate::common_skeleton::Side;
 use crate::ExchangeVariant;
-
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionMeta {

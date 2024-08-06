@@ -2,14 +2,14 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
+use crate::{
+    common_skeleton::{instrument::Instrument, trade::Trade},
+    ExchangeVariant,
+    simulated_exchange::ws_trade::WsTrade,
+};
 use crate::common_skeleton::order::{FullyFill, Order, PartialFill};
 use crate::common_skeleton::Side;
 use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade;
-use crate::{
-    common_skeleton::{instrument::Instrument, trade::Trade},
-    simulated_exchange::ws_trade::WsTrade,
-    ExchangeVariant,
-};
 
 // 定义一个泛型结构体 MarketEvent，包含各种交易市场事件信息
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]

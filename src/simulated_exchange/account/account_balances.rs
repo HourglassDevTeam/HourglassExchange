@@ -1,12 +1,12 @@
-use crate::common_skeleton::position::{AccountPositions, PositionKind, PositionMarginMode, PositionDirectionMode};
-use std::sync::atomic::Ordering;
-use std::sync::Mutex;
 use std::{
     collections::HashMap,
     fmt::Debug,
     ops::{Deref, DerefMut},
     sync::{Arc, Weak},
 };
+use std::sync::atomic::Ordering;
+use std::sync::Mutex;
+
 use tokio::sync::RwLock;
 
 use crate::{
@@ -14,18 +14,19 @@ use crate::{
         balance::{Balance, BalanceDelta, TokenBalance},
         datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
-        instrument::{kind::InstrumentKind, Instrument},
+        instrument::{Instrument, kind::InstrumentKind},
         order::{Open, Order},
-        token::Token,
         Side,
+        token::Token,
     },
     error::ExecutionError,
+    ExchangeVariant,
     simulated_exchange::{
-        account::{account_config::MarginMode, Account},
+        account::{Account, account_config::MarginMode},
         load_from_clickhouse::queries_operations::ClickhouseTrade,
     },
-    ExchangeVariant,
 };
+use crate::common_skeleton::position::{AccountPositions, PositionDirectionMode, PositionKind, PositionMarginMode};
 
 #[derive(Clone, Debug)]
 pub struct AccountState<Event>

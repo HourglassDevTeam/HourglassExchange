@@ -1,8 +1,9 @@
+use std::{fmt::Debug, sync::Arc};
+use std::sync::atomic::{AtomicI64, Ordering};
+
 use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
-use std::sync::atomic::{AtomicI64, Ordering};
-use std::{fmt::Debug, sync::Arc};
 use tokio::sync::{mpsc, oneshot, RwLock};
 
 use account_balances::AccountState;
@@ -16,12 +17,12 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::kind::InstrumentKind,
         order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
-        token::Token,
         Side,
+        token::Token,
     },
     error::ExecutionError,
-    simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
     ExchangeVariant,
+    simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
 };
 
 pub mod account_balances;

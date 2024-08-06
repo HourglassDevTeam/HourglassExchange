@@ -1,8 +1,3 @@
-pub(crate) mod meta;
-pub mod perpetual;
-mod option;
-mod future;
-mod leveraged_token;
 /// FIXME  : code below needs to be restructured and fitted to the framework. need to provide enums?
 /// CONSIDER: can these positions coexist, if so enums might not be ideal.
 use serde::{Deserialize, Serialize};
@@ -10,10 +5,16 @@ use serde::{Deserialize, Serialize};
 use crate::common_skeleton::instrument::Instrument;
 use crate::common_skeleton::instrument::kind::InstrumentKind;
 use crate::common_skeleton::position::future::FuturesPosition;
+use crate::common_skeleton::position::leveraged_token::LeveragedTokenPosition;
 use crate::common_skeleton::position::option::OptionPosition;
 use crate::common_skeleton::position::perpetual::PerpetualPosition;
-use crate::common_skeleton::position::meta::PositionMeta;
 
+
+pub(crate) mod meta;
+pub mod perpetual;
+mod option;
+mod future;
+mod leveraged_token;
 /// This struct is generic and thus placed here in the common_skeleton.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -75,11 +76,5 @@ pub enum PositionKind {
     LeveragedToken(LeveragedTokenPosition),
     Future(FuturesPosition),
     Option(OptionPosition),
-}
-
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct LeveragedTokenPosition {
-    pub meta: PositionMeta,
 }
 
