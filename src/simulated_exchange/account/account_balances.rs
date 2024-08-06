@@ -65,10 +65,10 @@ where
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
     }
 
-    /// Sets the account reference.
-    pub fn set_account(&mut self, account: Arc<RwLock<Account<Event>>>) {
-        self.account_ref = Arc::downgrade(&account);
-    }
+    /// Sets the account reference. 设置 Account 实例的引用 FIXME to be moved to a AccountStateInitiator (TBD).
+    // pub fn set_account(&mut self, account: Arc<RwLock<Account<Event>>>) {
+    //     self.account_ref = Arc::downgrade(&account);
+    // }
 
     /// 获取指定 [`InstrumentKind`] 的手续费。
     pub async fn get_fee(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError> {
