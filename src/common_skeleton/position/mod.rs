@@ -9,7 +9,7 @@ use crate::common_skeleton::{
 
 mod future;
 mod leveraged_token;
-pub(crate) mod meta;
+pub(crate) mod position_meta;
 mod option;
 pub mod perpetual;
 /// This struct is generic and thus placed here in the common_skeleton.
