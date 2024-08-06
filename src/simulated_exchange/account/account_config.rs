@@ -98,9 +98,9 @@ impl CommissionRatesInitiator
 // NOTE 更新费率函数的样本：为 AccountConfig 添加一个方法来更新佣金费率
 impl AccountConfig
 {
-    pub fn new(file_path: &str) -> Result<AccountConfig, ExecutionError>
+    pub fn new() -> Result<AccountConfig, ExecutionError>
     {
-        read_config_file(file_path)
+        read_config_file()
     }
 
     // 更新当前佣金费率

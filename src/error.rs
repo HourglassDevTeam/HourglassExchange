@@ -75,6 +75,10 @@ pub enum ExecutionError
     #[error("[UniLinkExecution] : 解析响应失败: {0}")]
     ResponseConfigError(String),
 
+    /// ConfigMissing失败。
+    #[error("[UniLinkExecution] : 解析响应失败: {0}")]
+    ConfigMissing(String),
+
     /// 解析响应失败。
     #[error("[UniLinkExecution] : 解析响应失败: {0}")]
     ResponseParseError(String),
