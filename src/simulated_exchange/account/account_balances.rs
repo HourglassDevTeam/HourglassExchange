@@ -28,7 +28,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct AccountStates<Event>
+pub struct AccountState<Event>
 where
     Event: Clone + Send + Sync + Debug + 'static + Ord + Ord,
 {
@@ -37,7 +37,7 @@ where
     pub account_ref: Weak<RwLock<Account<Event>>>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
 }
 
-impl<Event> PartialEq for AccountStates<Event>
+impl<Event> PartialEq for AccountState<Event>
 where
     Event: Clone + Send + Sync + Debug + 'static + Ord,
 {
@@ -47,7 +47,7 @@ where
     }
 }
 
-impl<Event> AccountStates<Event>
+impl<Event> AccountState<Event>
 where
     Event: Clone + Send + Sync + Debug + 'static + Ord,
 {
@@ -364,7 +364,7 @@ where
     }
 }
 
-impl<Event> Deref for AccountStates<Event>
+impl<Event> Deref for AccountState<Event>
 where
     Event: Clone + Send + Sync + Debug + 'static + Ord,
 {
@@ -375,7 +375,7 @@ where
     }
 }
 
-impl<Event> DerefMut for AccountStates<Event>
+impl<Event> DerefMut for AccountState<Event>
 where
     Event: Clone + Send + Sync + Debug + 'static + Ord,
 {

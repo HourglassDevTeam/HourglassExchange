@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use std::{fmt::Debug, sync::Arc};
 use tokio::sync::{mpsc, oneshot, RwLock};
 
-use account_balances::AccountStates;
+use account_balances::AccountState;
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
 
@@ -40,7 +40,7 @@ where
     pub account_event_tx: UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub config: Arc<AccountConfig>,                           // 帐户配置
-    pub balances: Arc<RwLock<AccountStates<Event>>>,        // 帐户余额
+    pub balances: Arc<RwLock<AccountState<Event>>>,        // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
 }
 
@@ -70,7 +70,7 @@ where
     account_event_tx: Option<UnboundedSender<AccountEvent>>,
     market_event_tx: Option<UnboundedSender<MarketEvent<Event>>>,
     config: Option<Arc<AccountConfig>>,
-    balances: Option<Arc<RwLock<AccountStates<Event>>>>,
+    balances: Option<Arc<RwLock<AccountState<Event>>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
@@ -109,7 +109,7 @@ where
         self
     }
 
-    pub fn balances(mut self, value: AccountStates<Event>) -> Self {
+    pub fn balances(mut self, value: AccountState<Event>) -> Self {
         self.balances = Some(Arc::new(RwLock::new(value)));
         self
     }
