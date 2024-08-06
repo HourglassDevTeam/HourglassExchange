@@ -5,7 +5,7 @@ use crate::common_skeleton::instrument::Instrument;
 use crate::common_skeleton::Side;
 use crate::ExchangeVariant;
 
-pub(crate) mod meta;
+pub(crate) mod positon_meta;
 
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]

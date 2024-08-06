@@ -1,4 +1,4 @@
-use crate::common_skeleton::position::meta::{PositionMarginMode, PositionDirectionMode};
+use crate::common_skeleton::position::positon_meta::{PositionMarginMode, PositionDirectionMode};
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
