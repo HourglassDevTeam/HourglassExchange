@@ -1,4 +1,4 @@
-use crate::common_skeleton::position::{BalancePositions, PositionMarginMode, PositionMode};
+use crate::common_skeleton::position::{AccountPositions, PositionMarginMode, PositionMode};
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use std::{
@@ -28,39 +28,39 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct AccountBalances<Event>
+pub struct AccountStates<Event>
 where
     Event: Clone + Send + Sync + Debug + 'static + Ord + Ord,
 {
-    pub balance_map: HashMap<Token, Balance>,
-    pub balance_positions: Arc<Mutex<BalancePositions>>,
+    pub balances: HashMap<Token, Balance>,
+    pub positions: Arc<Mutex<AccountPositions>>,
     pub account_ref: Weak<RwLock<Account<Event>>>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
 }
 
-impl<Event> PartialEq for AccountBalances<Event>
+impl<Event> PartialEq for AccountStates<Event>
 where
     Event: Clone + Send + Sync + Debug + 'static + Ord,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.balance_map == other.balance_map
+        self.balances == other.balances
         // account_ref 是Weak<RwLock<>>，一般不会比较其内容
     }
 }
 
-impl<Event> AccountBalances<Event>
+impl<Event> AccountStates<Event>
 where
     Event: Clone + Send + Sync + Debug + 'static + Ord,
 {
     /// 返回指定[`Token`]的[`Balance`]的引用。
     pub fn balance(&self, token: &Token) -> Result<&Balance, ExecutionError> {
-        self.balance_map
+        self.balances
             .get(token)
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
     }
 
     /// 返回指定[`Token`]的[`Balance`]的可变引用。
     pub fn balance_mut(&mut self, token: &Token) -> Result<&mut Balance, ExecutionError> {
-        self.balance_map
+        self.balances
             .get_mut(token)
             .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
     }
@@ -97,7 +97,7 @@ where
 
     /// 获取所有[`Token`]的[`Balance`]。
     pub fn fetch_all(&self) -> Vec<TokenBalance> {
-        self.balance_map.clone().into_iter().map(|(token, balance)| TokenBalance::new(token, balance)).collect()
+        self.balances.clone().into_iter().map(|(token, balance)| TokenBalance::new(token, balance)).collect()
     }
 
     /// 判断client是否有足够的可用[`Balance`]来执行[`Order<RequestOpen>`]。
@@ -138,7 +138,7 @@ where
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
             let balances_read = account_read.balances.read().await; // 创建一个中间变量
-            let positions_lock = balances_read.balance_positions.lock(); // 获取锁
+            let positions_lock = balances_read.positions.lock(); // 获取锁
 
             for positions in positions_lock.iter() {
                 if positions.has_position(&open.instrument) {
@@ -154,7 +154,7 @@ where
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
             let balances_read = account_read.balances.read().await; // 创建一个中间变量
-            let positions_lock = balances_read.balance_positions.lock(); // 获取锁
+            let positions_lock = balances_read.positions.lock(); // 获取锁
 
             for positions in positions_lock.iter() {
                 match instrument.kind {
@@ -364,22 +364,22 @@ where
     }
 }
 
-impl<Event> Deref for AccountBalances<Event>
+impl<Event> Deref for AccountStates<Event>
 where
     Event: Clone + Send + Sync + Debug + 'static + Ord,
 {
     type Target = HashMap<Token, Balance>;
 
     fn deref(&self) -> &Self::Target {
-        &self.balance_map
+        &self.balances
     }
 }
 
-impl<Event> DerefMut for AccountBalances<Event>
+impl<Event> DerefMut for AccountStates<Event>
 where
     Event: Clone + Send + Sync + Debug + 'static + Ord,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.balance_map
+        &mut self.balances
     }
 }

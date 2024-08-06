@@ -11,7 +11,7 @@ use crate::{
 /// This struct is generic and thus placed here in the common_skeleton.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct BalancePositions {
+pub struct AccountPositions {
     pub spot_pos: Option<Vec<SpotPosition>>,
     pub margin_pos: Option<Vec<MarginPosition>>, // NOTE useless in backtest
     pub perpetual_pos: Option<Vec<PerpetualPosition>>,
@@ -19,7 +19,7 @@ pub struct BalancePositions {
     pub option_pos: Option<Vec<OptionPosition>>,
 }
 
-impl BalancePositions {
+impl AccountPositions {
     pub(crate) fn has_position(&self, instrument: &Instrument) -> bool {
         match instrument.kind {
             | InstrumentKind::Spot => self
