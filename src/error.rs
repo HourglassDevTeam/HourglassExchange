@@ -83,7 +83,7 @@ pub enum ExecutionError
     #[error("[UniLinkExecution] : 内部错误: {0}")]
     InternalError(String),
 
-    /// 内部错误。
+    /// 无效的金融工具。
     #[error("[UniLinkExecution] : 内部错误: {0}")]
     InvalidInstrument(String),
 }
