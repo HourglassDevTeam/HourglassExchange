@@ -162,7 +162,7 @@ where
             | InstrumentKind::Margin => {
                 if let Some(margin_positions) = &positions.margin_pos {
                     if let Some(position) = margin_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
-                        return Ok(Some(PositionKind::Margin(position.clone())));
+                        return Ok(Some(PositionKind::LeveragedToken(position.clone())));
                     }
                 }
             }
@@ -202,7 +202,7 @@ where
                 // TODO: Implement the update logic for Option positions
                 todo!("[UniLink_Execution] : Updating Option positions is not yet implemented")
             }
-            PositionKind::Margin(_) => {
+            PositionKind::LeveragedToken(_) => {
                 // TODO: Implement the update logic for Margin positions
                 todo!("[UniLink_Execution] : Updating Margin positions is not yet implemented")
             }

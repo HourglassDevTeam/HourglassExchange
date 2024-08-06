@@ -4,14 +4,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::common_skeleton::instrument::Instrument;
 use crate::common_skeleton::instrument::kind::InstrumentKind;
+use crate::common_skeleton::position::future::FuturesPosition;
+use crate::common_skeleton::position::option::OptionPosition;
+use crate::common_skeleton::position::perpetual::PerpetualPosition;
 use crate::common_skeleton::position::PositionMeta;
 
 /// This struct is generic and thus placed here in the common_skeleton.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountPositions {
-    pub spot_pos: Option<Vec<SpotPosition>>,
-    pub margin_pos: Option<Vec<MarginPosition>>, // NOTE useless in backtest
+    pub margin_pos: Option<Vec<LeveragedTokenPosition>>, // NOTE useless in backtest
     pub perpetual_pos: Option<Vec<PerpetualPosition>>,
     pub futures_pos: Option<Vec<FuturesPosition>>,
     pub option_pos: Option<Vec<OptionPosition>>,
@@ -20,10 +22,8 @@ pub struct AccountPositions {
 impl AccountPositions {
     pub(crate) fn has_position(&self, instrument: &Instrument) -> bool {
         match instrument.kind {
-            | InstrumentKind::Spot => self
-                .spot_pos
-                .as_ref()
-                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+            // NOTE : For Spot， check balance rather than position
+            | InstrumentKind::Spot =>todo!(),
             | InstrumentKind::Perpetual => self
                 .perpetual_pos
                 .as_ref()
@@ -46,7 +46,7 @@ impl AccountPositions {
 
 /// NOTE : PositionMode 枚举定义了两种交易方向模式：
 ///  [NetMode] : 单向模式。在这种模式下，用户只能持有一个方向的仓位（多头或空头），而不能同时持有两个方向的仓位。
-/// [LongShortMode] : 双向模式。在这种模式下，用户可以同时持有多头和空头仓位。这在一些复杂的交易策略中可能会有用，例如对冲策略。
+///  [LongShortMode] : 双向模式。在这种模式下，用户可以同时持有多头和空头仓位。这在一些复杂的交易策略中可能会有用，例如对冲策略。
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionDirectionMode {
     LongShortMode, // Note long/short, only applicable to Futures/Swap
@@ -67,45 +67,14 @@ pub enum PositionMarginMode {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum PositionKind {
     Perpetual(PerpetualPosition),
-    Margin(MarginPosition),
+    LeveragedToken(LeveragedTokenPosition),
     Future(FuturesPosition),
     Option(OptionPosition),
 }
 
-/// TODO : the below code is under construction
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct SpotPosition {
+pub struct LeveragedTokenPosition {
     pub meta: PositionMeta,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct MarginPosition {
-    pub meta: PositionMeta,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct FuturesPosition {
-    pub meta: PositionMeta,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct OptionPosition {
-    pub meta: PositionMeta,
-}
-
-#[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct PerpetualPosition {
-    pub meta: PositionMeta,
-    pub pos_config: PerpetualPositionConfig,
-    pub liquidation_price: f64,
-    pub margin: f64,
-    pub funding_fee: f64,
-}
-#[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct PerpetualPositionConfig {
-    pos_margin_mode: PositionMarginMode,
-    leverage: f64,
-    position_mode: PositionDirectionMode,
-}
