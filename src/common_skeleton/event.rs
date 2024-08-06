@@ -1,5 +1,5 @@
-use std::fmt::Formatter;
 use serde::{Deserialize, Serialize};
+use std::fmt::Formatter;
 use uuid::Uuid;
 
 use crate::{
