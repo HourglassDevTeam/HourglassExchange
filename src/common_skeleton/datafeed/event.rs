@@ -2,17 +2,26 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{common_skeleton::{instrument::Instrument, trade::Trade}, ExchangeVariant, simulated_exchange::ws_trade::WsTrade};
+use crate::{
+    common_skeleton::{
+        instrument::Instrument,
+        order::{FullyFill, Order, PartialFill},
+        trade::Trade,
+        Side,
+    },
+    simulated_exchange::{load_from_clickhouse::queries_operations::ClickhouseTrade, ws_trade::WsTrade},
+    ExchangeVariant,
+};
 
 // 定义一个泛型结构体 MarketEvent，包含各种交易市场事件信息
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
 pub struct MarketEvent<Data>
 {
-    pub exchange_time: i64,     // 交易所时间戳
-    pub received_time: i64,     // 接收到数据的时间戳
-    pub exchange: ExchangeVariant,   // 交易所信息
-    pub instrument: Instrument, // 交易工具信息
-    pub kind: Data,             // 事件的具体类型
+    pub exchange_time: i64,        // 交易所时间戳
+    pub received_time: i64,        // 接收到数据的时间戳
+    pub exchange: ExchangeVariant, // 交易所信息
+    pub instrument: Instrument,    // 交易工具信息
+    pub kind: Data,                // 事件的具体类型
 }
 
 // 定义一个枚举类型 DataKind，用于表示不同种类的数据
@@ -21,7 +30,7 @@ pub enum DataKind
 {
     WsTrade(WsTrade), // WebSocket 交易数据
     Trade(Trade),
-    // 普通交易数据
+    ClickhouseTrade(ClickhouseTrade),
     // OrderBook25(OrderBook25), // 订单簿数据
     // Candle(Candle),           // 蜡烛图数据
     // Liquidation(Liquidation), // 清算数据
@@ -52,5 +61,49 @@ impl From<MarketEvent<WsTrade>> for MarketEvent<DataKind>
                exchange: event.exchange,
                instrument: event.instrument,
                kind: DataKind::WsTrade(event.kind) }
+    }
+}
+
+// 为 Order<FullyFill> 实现 From trait
+impl From<Order<FullyFill>> for MarketEvent<ClickhouseTrade>
+{
+    fn from(order: Order<FullyFill>) -> Self
+    {
+        let clickhouse_trade = ClickhouseTrade { basequote: format!("{}/{}", order.instrument.base, order.instrument.quote),
+                                                 side: match order.side {
+                                                     | Side::Buy => "buy".to_string(),
+                                                     | Side::Sell => "sell".to_string(),
+                                                 },
+                                                 price: order.state.price,
+                                                 timestamp: order.state.id.0.parse().unwrap_or_default(),
+                                                 amount: order.state.size };
+
+        MarketEvent { exchange_time: order.state.id.0.parse().unwrap_or_default(),
+                      received_time: order.client_ts,
+                      exchange: order.exchange,
+                      instrument: order.instrument,
+                      kind: clickhouse_trade }
+    }
+}
+
+// 为 Order<PartialFill> 实现 From trait
+impl From<Order<PartialFill>> for MarketEvent<ClickhouseTrade>
+{
+    fn from(order: Order<PartialFill>) -> Self
+    {
+        let clickhouse_trade = ClickhouseTrade { basequote: format!("{}/{}", order.instrument.base, order.instrument.quote),
+                                                 side: match order.side {
+                                                     | Side::Buy => "buy".to_string(),
+                                                     | Side::Sell => "sell".to_string(),
+                                                 },
+                                                 price: order.state.price,
+                                                 timestamp: order.state.id.0.parse().unwrap_or_default(),
+                                                 amount: order.state.size };
+
+        MarketEvent { exchange_time: order.state.id.0.parse().unwrap_or_default(),
+                      received_time: order.client_ts,
+                      exchange: order.exchange,
+                      instrument: order.instrument,
+                      kind: clickhouse_trade }
     }
 }

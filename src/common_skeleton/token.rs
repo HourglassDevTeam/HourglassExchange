@@ -1,8 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
 
-use serde::{Deserialize, Serialize};
-
-/// eg/ "btc", "eth", "usdt", etc
+/// 表示加密货币或其他代币，例如 "btc", "eth", "usdt" 等
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct Token(String);
 
@@ -32,8 +31,7 @@ impl<S> From<S> for Token where S: Into<String>
 
 impl Token
 {
-    /// Construct a new [`Token`] new type using the provided `Into<Token>` value.
-
+    /// 使用提供的 `Into<String>` 值构造一个新的 [`Token`]。
     pub fn new<S>(input: S) -> Self
         where S: Into<String>
     {

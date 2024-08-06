@@ -47,6 +47,10 @@ pub enum ExecutionError
     #[error("[UniLinkExecution] : 交易所维护中，无法执行操作")]
     ExchangeMaintenance,
 
+    /// 交易所维护中。
+    #[error("[UniLinkExecution] : 无效的开单方向")]
+    InvalidDirection,
+
     /// 未知的交易所错误。
     #[error("[UniLinkExecution] : 未知的交易所错误: {0}")]
     UnknownExchangeError(String),
@@ -67,6 +71,14 @@ pub enum ExecutionError
     #[error("[UniLinkExecution] : 无效的签名")]
     InvalidSignature,
 
+    /// 解析config.toml失败。
+    #[error("[UniLinkExecution] : 解析响应失败: {0}")]
+    ResponseConfigError(String),
+
+    /// ConfigMissing失败。
+    #[error("[UniLinkExecution] : 解析响应失败: {0}")]
+    ConfigMissing(String),
+
     /// 解析响应失败。
     #[error("[UniLinkExecution] : 解析响应失败: {0}")]
     ResponseParseError(String),
@@ -74,4 +86,8 @@ pub enum ExecutionError
     /// 内部错误。
     #[error("[UniLinkExecution] : 内部错误: {0}")]
     InternalError(String),
+
+    /// 无效的金融工具。
+    #[error("[UniLinkExecution] : 内部错误: {0}")]
+    InvalidInstrument(String),
 }

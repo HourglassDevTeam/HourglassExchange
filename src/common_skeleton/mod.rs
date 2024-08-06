@@ -8,7 +8,7 @@ pub mod event; // 定义通用事件和状态
 pub mod friction;
 pub mod instrument;
 pub mod order;
-pub mod position;
+pub(crate) mod position;
 pub mod status;
 pub mod token;
 pub mod trade;

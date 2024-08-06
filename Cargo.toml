@@ -52,4 +52,5 @@ tokio-tungstenite = "0.21.0"
 reqwest = "0.12.4"
 url = "2.5.2"
 tokio-stream = "0.1.15"
-tracing-subscriber = "0.3.18" # 用于处理Pin的实用工具库
+tracing-subscriber = "0.3.18"
+toml = "0.8.19" # 用于处理Pin的实用工具库

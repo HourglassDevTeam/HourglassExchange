@@ -1,20 +1,30 @@
-use crate::common_skeleton::instrument::{kind::InstrumentKind, Instrument};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    common_skeleton::{
+        instrument::{kind::InstrumentKind, Instrument},
+        position::{PositionDirectionMode, PositionMarginMode},
+    },
+    error::ExecutionError,
+    simulated_exchange::utils::config_parser::read_config_file,
+};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountConfig
 {
     pub margin_mode: MarginMode,
-    pub position_mode: PositionMode,
+    pub position_mode: PositionDirectionMode,
+    pub position_margin_mode: PositionMarginMode,
     pub commission_level: CommissionLevel,
     pub current_commission_rate: CommissionRates,
-    pub leverage_book: HashMap<Instrument, f64>,
-    pub fees_book: HashMap<InstrumentKind, f64>, // 每种金融工具的手续费 NOTE 某种些交易所的设置颗粒读会精确到金融工具。
+    pub leverage_book: HashMap<Instrument, f64>, // 每种金融工具的杠杆比例Registry
+    pub fees_book: HashMap<InstrumentKind, f64>, // 每种金融工具的手续费Registry NOTE 某种些交易所的设置颗粒会精确到Instrument.
 }
 
 // NOTE 增加假设的佣金费率结构, 用于模拟交易所账户上。每个账户都有自己的佣金费率。
-#[derive(Clone, Debug, PartialEq,Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct CommissionRates
 {
     pub spot_maker: f64,
@@ -88,6 +98,11 @@ impl CommissionRatesInitiator
 // NOTE 更新费率函数的样本：为 AccountConfig 添加一个方法来更新佣金费率
 impl AccountConfig
 {
+    pub fn new() -> Result<AccountConfig, ExecutionError>
+    {
+        read_config_file()
+    }
+
     // 更新当前佣金费率
     pub fn update_commission_rate(mut self, commission_rates: &CommissionRates) -> Self
     {
@@ -117,7 +132,7 @@ impl AccountConfig
     }
 }
 
-#[derive(Clone, Debug,PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum MarginMode
 {
     SimpleMode,
@@ -126,15 +141,8 @@ pub enum MarginMode
     PortfolioMargin,
 }
 
-#[derive(Clone, Debug, PartialEq,Deserialize, Serialize)]
-pub enum PositionMode
-{
-    LongShortMode, // Note long/short, only applicable to Futures/Swap
-    NetMode,       // Note one side per token per position
-}
-
 // NOTE 本模拟交易所特有，实际情况可能不同
-#[derive(Clone, Debug, PartialEq,Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum CommissionLevel
 {
     Lv1,
@@ -147,7 +155,8 @@ pub enum CommissionLevel
 pub struct AccountConfigInitiator
 {
     margin_mode: Option<MarginMode>,
-    position_mode: Option<PositionMode>,
+    position_mode: Option<PositionDirectionMode>,
+    position_margin_mode: Option<PositionMarginMode>,
     commission_level: Option<CommissionLevel>,
 }
 
@@ -157,6 +166,7 @@ impl AccountConfigInitiator
     {
         Self { margin_mode: None,
                position_mode: None,
+               position_margin_mode: None,
                commission_level: None }
     }
 
@@ -166,7 +176,7 @@ impl AccountConfigInitiator
         self
     }
 
-    pub fn position_mode(mut self, position_mode: PositionMode) -> Self
+    pub fn position_mode(mut self, position_mode: PositionDirectionMode) -> Self
     {
         self.position_mode = Some(position_mode);
         self
@@ -184,6 +194,7 @@ impl AccountConfigInitiator
     {
         Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
                            position_mode: self.position_mode.ok_or("position_mode is required")?,
+                           position_margin_mode: self.position_margin_mode.ok_or("position_mode is required")?,
                            commission_level: self.commission_level.ok_or("commission_level is required")?,
                            current_commission_rate: CommissionRates { spot_maker: 0.0,
                                                                       spot_taker: 0.0,

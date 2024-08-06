@@ -1,9 +1,17 @@
-use std::{fmt::Debug, sync::Arc};
+use std::{
+    fmt::Debug,
+    sync::{
+        atomic::{AtomicI64, Ordering},
+        Arc,
+    },
+};
 
 use futures::future::join_all;
+use mpsc::UnboundedSender;
+use oneshot::Sender;
 use tokio::sync::{mpsc, oneshot, RwLock};
 
-use account_balances::AccountBalances;
+use account_balances::AccountState;
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
 
@@ -14,7 +22,6 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::kind::InstrumentKind,
         order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
-        position::AccountPositions,
         token::Token,
         Side,
     },
@@ -29,30 +36,42 @@ pub mod account_latency;
 pub mod account_market_feed;
 pub mod account_orders;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Account<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
-    pub exchange_timestamp: i64,                                    // NOTE 日后可以用无锁结构原子锁包裹
-    pub data: Arc<RwLock<AccountDataStreams<Event>>>,               // 帐户数据
-    pub account_event_tx: mpsc::UnboundedSender<AccountEvent>,      // 帐户事件发送器
-    pub market_event_tx: mpsc::UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
-    pub config: Arc<RwLock<AccountConfig>>,                         // 帐户配置
-    pub balances: Arc<RwLock<AccountBalances<Event>>>,              // 帐户余额
-    pub positions: Arc<RwLock<Vec<AccountPositions>>>,              // 帐户头寸
+    pub exchange_timestamp: AtomicI64,
+    pub data: Arc<RwLock<AccountDataStreams<Event>>>,         // 帐户数据
+    pub account_event_tx: UnboundedSender<AccountEvent>,      // 帐户事件发送器
+    pub market_event_tx: UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
+    pub config: Arc<AccountConfig>,                           // 帐户配置
+    pub balances: Arc<RwLock<AccountState<Event>>>,           // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
 }
 
+// 手动实现 Clone trait
+impl<Event> Clone for Account<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+{
+    fn clone(&self) -> Self
+    {
+        Account { exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
+                  data: Arc::clone(&self.data),
+                  account_event_tx: self.account_event_tx.clone(),
+                  market_event_tx: self.market_event_tx.clone(),
+                  config: Arc::clone(&self.config),
+                  balances: Arc::clone(&self.balances),
+                  orders: Arc::clone(&self.orders) }
+    }
+}
 #[derive(Clone, Debug)]
 pub struct AccountInitiator<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     data: Option<Arc<RwLock<AccountDataStreams<Event>>>>,
-    account_event_tx: Option<mpsc::UnboundedSender<AccountEvent>>,
-    market_event_tx: Option<mpsc::UnboundedSender<MarketEvent<Event>>>,
-    config: Option<Arc<RwLock<AccountConfig>>>,
-    balances: Option<Arc<RwLock<AccountBalances<Event>>>>,
-    positions: Option<Arc<RwLock<Vec<AccountPositions>>>>,
+    account_event_tx: Option<UnboundedSender<AccountEvent>>,
+    market_event_tx: Option<UnboundedSender<MarketEvent<Event>>>,
+    config: Option<Arc<AccountConfig>>,
+    balances: Option<Arc<RwLock<AccountState<Event>>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
@@ -65,7 +84,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
                            market_event_tx: None,
                            config: None,
                            balances: None,
-                           positions: None,
                            orders: None }
     }
 
@@ -75,13 +93,13 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
         self
     }
 
-    pub fn account_event_tx(mut self, value: mpsc::UnboundedSender<AccountEvent>) -> Self
+    pub fn account_event_tx(mut self, value: UnboundedSender<AccountEvent>) -> Self
     {
         self.account_event_tx = Some(value);
         self
     }
 
-    pub fn market_event_tx(mut self, value: mpsc::UnboundedSender<MarketEvent<Event>>) -> Self
+    pub fn market_event_tx(mut self, value: UnboundedSender<MarketEvent<Event>>) -> Self
     {
         self.market_event_tx = Some(value);
         self
@@ -89,19 +107,13 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
 
     pub fn config(mut self, value: AccountConfig) -> Self
     {
-        self.config = Some(Arc::new(RwLock::new(value)));
+        self.config = Some(Arc::new(value));
         self
     }
 
-    pub fn balances(mut self, value: AccountBalances<Event>) -> Self
+    pub fn balances(mut self, value: AccountState<Event>) -> Self
     {
         self.balances = Some(Arc::new(RwLock::new(value)));
-        self
-    }
-
-    pub fn positions(mut self, value: Vec<AccountPositions>) -> Self
-    {
-        self.positions = Some(Arc::new(RwLock::new(value)));
         self
     }
 
@@ -113,13 +125,12 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
 
     pub fn build(self) -> Result<Account<Event>, String>
     {
-        Ok(Account { exchange_timestamp: 0,
+        Ok(Account { exchange_timestamp: 0.into(),
                      data: self.data.ok_or("datafeed is required")?,                                 // 检查并获取data
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
                      market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
                      config: self.config.ok_or("config is required")?,                               // 检查并获取config
                      balances: self.balances.ok_or("balances is required")?,                         // 检查并获取balances
-                     positions: self.positions.ok_or("positions are required")?,                     // 检查并获取positions
                      orders: self.orders.ok_or("orders are required")? })
     }
 }
@@ -133,13 +144,19 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         AccountInitiator::new()
     }
 
-    pub async fn fetch_orders_open(&self, response_tx: oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>)
+    // 新方法：更新 exchange_timestamp
+    pub fn update_exchange_timestamp(&self, timestamp: i64)
+    {
+        self.exchange_timestamp.store(timestamp, Ordering::SeqCst);
+    }
+
+    pub async fn fetch_orders_open(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>)
     {
         let orders = self.orders.read().await.fetch_all();
         respond(response_tx, Ok(orders)); // 是否要模拟延迟
     }
 
-    pub async fn fetch_balances(&self, response_tx: oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>)
+    pub async fn fetch_balances(&self, response_tx: Sender<Result<Vec<TokenBalance>, ExecutionError>>)
     {
         let balances = self.balances.read().await.fetch_all();
         respond(response_tx, Ok(balances));
@@ -153,11 +170,12 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    pub async fn fetch_positions(&self, response_tx: oneshot::Sender<Result<Vec<AccountPositions>, ExecutionError>>)
-    {
-        let positions = self.positions.read().await.clone();
-        respond(response_tx, Ok(positions));
-    }
+    // TODO TO BE MOVED TO [AccountBalances]
+    // pub async fn fetch_positions(&self, response_tx: Sender<Result<Vec<AccountPositions>, ExecutionError>>)
+    // {
+    //     let positions = self.positions.read().await.clone();
+    //     respond(response_tx, Ok(positions));
+    // }
 
     // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到对应的订单 // TO BE CONFIRMED
     pub async fn find_orders_for_an_trade_event(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>
@@ -281,7 +299,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     // NOTE a method that generates trade from matched order is missing for the time being.
 
-    pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
+    pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
     {
         // 创建一个用于存储 Pending 订单的临时向量
         let mut open_pending = Vec::new();
@@ -312,14 +330,17 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 | Side::Sell => (&order.instrument.base, order.state.size),
             },
             | InstrumentKind::Perpetual => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.read().await.leverage_book.get(&order.instrument).unwrap()),
-                | Side::Sell => (&order.instrument.base, order.state.size * self.config.read().await.leverage_book.get(&order.instrument).unwrap()),
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.leverage_book.get(&order.instrument).unwrap()),
+                | Side::Sell => (&order.instrument.base, order.state.size * self.config.leverage_book.get(&order.instrument).unwrap()),
             },
             | InstrumentKind::Future => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.read().await.leverage_book.get(&order.instrument).unwrap()),
-                | Side::Sell => (&order.instrument.base, order.state.size * self.config.read().await.leverage_book.get(&order.instrument).unwrap()),
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.leverage_book.get(&order.instrument).unwrap()),
+                | Side::Sell => (&order.instrument.base, order.state.size * self.config.leverage_book.get(&order.instrument).unwrap()),
             },
             | InstrumentKind::Option => {
+                todo!()
+            }
+            | InstrumentKind::Margin => {
                 todo!()
             }
         }
@@ -356,7 +377,10 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         };
 
         // 更新客户余额
-        let balance_event = self.balances.write().await.update_from_open(&open_order, required_balance).await;
+        let balance_event = self.balances.write().await.update_from_open(&open_order, required_balance).await.unwrap();
+
+        // 获取当前的 exchange_timestamp
+        let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
         // 发送账户事件给客户端
         self.account_event_tx
@@ -364,7 +388,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
+            .send(AccountEvent { exchange_timestamp,
                                  exchange: ExchangeVariant::Simulated,
                                  kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
             .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败");
@@ -373,7 +397,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         Ok(open_order)
     }
 
-    pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)
+    pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
                                                             let mut this = self.clone();
@@ -422,15 +446,18 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         // 将 Order<Open> 映射到 Order<Cancelled>
         let cancelled = Order::from(removed);
 
+        // 获取当前的 exchange_timestamp
+        let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
+
         // 发送 AccountEvents 给客户端
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
+            .send(AccountEvent { exchange_timestamp: exchange_timestamp.into(),
                                  exchange: ExchangeVariant::Simulated,
                                  kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
+            .send(AccountEvent { exchange_timestamp: exchange_timestamp.into(),
                                  exchange: ExchangeVariant::Simulated,
                                  kind: AccountEventKind::Balance(balance_event) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
@@ -438,7 +465,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         Ok(cancelled)
     }
 
-    pub async fn cancel_orders_all(&mut self, response_tx: oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>)
+    pub async fn cancel_orders_all(&mut self, response_tx: Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>)
     {
         // 获取所有打开的订单
         let orders_to_cancel = {
@@ -479,7 +506,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     }
 }
 
-pub fn respond<Response>(response_tx: oneshot::Sender<Response>, response: Response)
+pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
     where Response: Debug + Send + 'static
 {
     tokio::spawn(async move {
