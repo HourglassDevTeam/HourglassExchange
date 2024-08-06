@@ -1,8 +1,8 @@
 use std::{
     fmt::Debug,
     sync::{
-        atomic::{AtomicI64, Ordering},
         Arc,
+        atomic::{AtomicI64, Ordering},
     },
 };
 
@@ -22,12 +22,12 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::kind::InstrumentKind,
         order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
-        token::Token,
         Side,
+        token::Token,
     },
     error::ExecutionError,
-    simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
     ExchangeVariant,
+    simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
 };
 
 pub mod account_balances;
@@ -35,7 +35,6 @@ pub mod account_config;
 pub mod account_latency;
 pub mod account_market_feed;
 pub mod account_orders;
-mod account_config_parser;
 
 #[derive(Debug)]
 pub struct Account<Event>
