@@ -1,4 +1,4 @@
-use crate::common_skeleton::position::{AccountPositions, PositionMarginMode, PositionMode};
+use crate::common_skeleton::position::{AccountPositions, PositionKind, PositionMarginMode, PositionMode};
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use std::{
@@ -131,6 +131,48 @@ where
             Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
+
+    /// 获取指定 `Instrument` 的仓位
+    pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<PositionKind>, ExecutionError> {
+        let positions = self.positions.lock().unwrap(); // 获取锁
+
+        match instrument.kind {
+            InstrumentKind::Spot => {
+                return Err(ExecutionError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)))
+            }
+            InstrumentKind::Perpetual => {
+                if let Some(perpetual_positions) = &positions.perpetual_pos {
+                    if let Some(position) = perpetual_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
+                        return Ok(Some(PositionKind::Perpetual(position.clone())));
+                    }
+                }
+            }
+            InstrumentKind::Future => {
+                if let Some(futures_positions) = &positions.futures_pos {
+                    if let Some(position) = futures_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
+                        return Ok(Some(PositionKind::Futures(position.clone())));
+                    }
+                }
+            }
+            InstrumentKind::Option => {
+                if let Some(option_positions) = &positions.option_pos {
+                    if let Some(position) = option_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
+                        return Ok(Some(PositionKind::Option(position.clone())));
+                    }
+                }
+            }
+            InstrumentKind::Margin => {
+                if let Some(margin_positions) = &positions.margin_pos {
+                    if let Some(position) = margin_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
+                        return Ok(Some(PositionKind::Margin(position.clone())));
+                    }
+                }
+            }
+        }
+
+        Ok(None) // 没有找到对应的仓位
+    }
+
 
     /// Check if there is already some position of this instrument in the AccountPositions
     /// need to determine InstrumentKind from the open order first as position types vary

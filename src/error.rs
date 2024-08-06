@@ -77,4 +77,8 @@ pub enum ExecutionError {
     /// 内部错误。
     #[error("[UniLinkExecution] : 内部错误: {0}")]
     InternalError(String),
+
+    /// 内部错误。
+    #[error("[UniLinkExecution] : 内部错误: {0}")]
+    InvalidInstrument(String),
 }
