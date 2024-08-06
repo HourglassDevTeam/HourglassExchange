@@ -148,7 +148,7 @@ where
             | InstrumentKind::Future => {
                 if let Some(futures_positions) = &positions.futures_pos {
                     if let Some(position) = futures_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
-                        return Ok(Some(PositionKind::Futures(position.clone())));
+                        return Ok(Some(PositionKind::Future(position.clone())));
                     }
                 }
             }
@@ -171,6 +171,43 @@ where
         Ok(None) // 没有找到对应的仓位
     }
 
+
+    /// 更新指定 `Instrument` 的仓位
+    pub async fn update_position(&mut self, position: PositionKind) -> Result<(), ExecutionError> {
+        let mut positions = self.positions.lock().unwrap(); // 获取锁
+
+        match position {
+            PositionKind::Perpetual(pos) => {
+                // 检查是否存在当前账户的 `perpetual_pos`，即是否有任何永续合约仓位
+                if let Some(perpetual_positions) = &mut positions.perpetual_pos {
+                    // 尝试在现有的永续合约仓位中找到与传入的 `pos` 相同的 `instrument`（金融工具）
+                    if let Some(existing_pos) = perpetual_positions.iter_mut().find(|p| p.meta.instrument == pos.meta.instrument) {
+                        // 如果找到了相同的 `instrument`，则更新现有仓位为传入的 `pos`
+                        *existing_pos = pos;
+                    } else {
+                        // 如果没有找到相同的 `instrument`，则将新的仓位 `pos` 添加到永续合约仓位列表中
+                        perpetual_positions.push(pos);
+                    }
+                } else {
+                    // 如果 `perpetual_pos` 为空，则初始化一个新的包含 `pos` 的永续合约仓位列表
+                    positions.perpetual_pos = Some(vec![pos]);
+                }
+                Ok(())
+            }
+            PositionKind::Future(_) => {
+                // TODO: Implement the update logic for Future positions
+                todo!("[UniLink_Execution] : Updating Future positions is not yet implemented")
+            }
+            PositionKind::Option(_) => {
+                // TODO: Implement the update logic for Option positions
+                todo!("[UniLink_Execution] : Updating Option positions is not yet implemented")
+            }
+            PositionKind::Margin(_) => {
+                // TODO: Implement the update logic for Margin positions
+                todo!("[UniLink_Execution] : Updating Margin positions is not yet implemented")
+            }
+        }
+    }
     /// Check if there is already some position of this instrument in the AccountPositions
     /// need to determine InstrumentKind from the open order first as position types vary
     pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError> {
@@ -252,10 +289,10 @@ where
             // 前置检查 InstrumentKind 和 NetMode 方向
             match open.instrument.kind {
                 | InstrumentKind::Spot => {
-                    todo!("Spot handling is not implemented yet");
+                    todo!("[UniLink_Execution] : Spot handling is not implemented yet");
                 }
                 | InstrumentKind::Option => {
-                    todo!("Option handling is not implemented yet");
+                    todo!("[UniLink_Execution] : Option handling is not implemented yet");
                 }
                 | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::Margin => {
                     if position_mode == PositionDirectionMode::NetMode {
@@ -295,7 +332,7 @@ where
                 // 其他情况下，继续处理，当前返回错误
                 | (_, _) => {
                     return Err(ExecutionError::Simulated(format!(
-                        "Unsupported InstrumentKind or PositionMarginMode for open order: {:?}",
+                        "[UniLink_Execution] : Unsupported InstrumentKind or PositionMarginMode for open order: {:?}",
                         open.instrument.kind
                     )));
                 }
@@ -312,7 +349,7 @@ where
                 kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)),
             })
         } else {
-            Err(ExecutionError::Simulated("Account reference is not set".to_string()))
+            Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
 
