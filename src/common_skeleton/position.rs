@@ -50,7 +50,7 @@ impl AccountPositions {
 ///  [NetMode] : 单向模式。在这种模式下，用户只能持有一个方向的仓位（多头或空头），而不能同时持有两个方向的仓位。
 /// [LongShortMode] : 双向模式。在这种模式下，用户可以同时持有多头和空头仓位。这在一些复杂的交易策略中可能会有用，例如对冲策略。
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub enum PositionMode {
+pub enum PositionDirectionMode {
     LongShortMode, // Note long/short, only applicable to Futures/Swap
     NetMode,       // Note one side per token per position
 }
@@ -109,7 +109,7 @@ pub struct PerpetualPosition {
 pub struct PerpetualPositionConfig {
     pos_margin_mode: PositionMarginMode,
     leverage: f64,
-    position_mode: PositionMode,
+    position_mode: PositionDirectionMode,
 }
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]

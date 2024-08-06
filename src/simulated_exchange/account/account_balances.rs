@@ -1,4 +1,4 @@
-use crate::common_skeleton::position::{AccountPositions, PositionKind, PositionMarginMode, PositionMode};
+use crate::common_skeleton::position::{AccountPositions, PositionKind, PositionMarginMode, PositionDirectionMode};
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use std::{
@@ -112,7 +112,7 @@ where
 
     /// 判断Account的当前持仓模式。
     #[allow(dead_code)]
-    async fn determine_position_mode(&self) -> Result<PositionMode, ExecutionError> {
+    async fn determine_position_mode(&self) -> Result<PositionDirectionMode, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
             Ok(account_read.config.position_mode.clone())
@@ -258,7 +258,7 @@ where
                     todo!("Option handling is not implemented yet");
                 }
                 | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::Margin => {
-                    if position_mode == PositionMode::NetMode {
+                    if position_mode == PositionDirectionMode::NetMode {
                         self.check_position_direction_conflict(&open.instrument, open.side).await?;
                     }
                 }

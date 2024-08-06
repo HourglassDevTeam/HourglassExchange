@@ -1,4 +1,4 @@
-use crate::common_skeleton::position::{PositionMarginMode, PositionMode};
+use crate::common_skeleton::position::{PositionMarginMode, PositionDirectionMode};
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use crate::common_skeleton::instrument::{kind::InstrumentKind, Instrument};
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountConfig {
     pub margin_mode: MarginMode,
-    pub position_mode: PositionMode,
+    pub position_mode: PositionDirectionMode,
     pub position_margin_mode: PositionMarginMode,
     pub commission_level: CommissionLevel,
     pub current_commission_rate: CommissionRates,
@@ -141,7 +141,7 @@ pub enum CommissionLevel {
 
 pub struct AccountConfigInitiator {
     margin_mode: Option<MarginMode>,
-    position_mode: Option<PositionMode>,
+    position_mode: Option<PositionDirectionMode>,
     position_margin_mode: Option<PositionMarginMode>,
     commission_level: Option<CommissionLevel>,
 }
@@ -161,7 +161,7 @@ impl AccountConfigInitiator {
         self
     }
 
-    pub fn position_mode(mut self, position_mode: PositionMode) -> Self {
+    pub fn position_mode(mut self, position_mode: PositionDirectionMode) -> Self {
         self.position_mode = Some(position_mode);
         self
     }
