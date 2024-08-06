@@ -1,9 +1,9 @@
-use crate::common_skeleton::position::positon_meta::{PositionMarginMode, PositionDirectionMode};
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
 use crate::common_skeleton::instrument::{kind::InstrumentKind, Instrument};
+use crate::common_skeleton::position::{PositionDirectionMode, PositionMarginMode};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountConfig {

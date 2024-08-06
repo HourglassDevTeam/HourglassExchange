@@ -1,4 +1,4 @@
-use crate::common_skeleton::position::positon_meta::{AccountPositions, PositionKind, PositionMarginMode, PositionDirectionMode};
+use crate::common_skeleton::position::{AccountPositions, PositionKind, PositionMarginMode, PositionDirectionMode};
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use std::{

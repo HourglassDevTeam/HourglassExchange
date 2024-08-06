@@ -6,7 +6,7 @@ use crate::{
     common_skeleton::{
         balance::TokenBalance,
         order::{Cancelled, FullyFill, Open, Order, PartialFill},
-        position::positon_meta::AccountPositions,
+        position::AccountPositions,
         trade::Trade,
     },
     simulated_exchange::account::account_config::AccountConfig,
