@@ -1,6 +1,7 @@
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
-pub enum ClientStatus {
+pub enum ClientStatus
+{
     Connected, // 已连接
     // CancelOnly, // 仅取消
     Disconnected,

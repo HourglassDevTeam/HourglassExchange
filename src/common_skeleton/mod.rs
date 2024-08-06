@@ -8,35 +8,36 @@ pub mod event; // 定义通用事件和状态
 pub mod friction;
 pub mod instrument;
 pub mod order;
+pub(crate) mod position;
 pub mod status;
 pub mod token;
 pub mod trade;
-pub(crate) mod position;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub enum Side {
+pub enum Side
+{
     #[serde(alias = "buy", alias = "BUY", alias = "b")]
     Buy,
     #[serde(alias = "sell", alias = "SELL", alias = "s")]
     Sell,
 }
 
-impl Display for Side {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                | Side::Buy => "buy",
-                | Side::Sell => "sell",
-            }
-        )
+impl Display for Side
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        write!(f, "{}", match self {
+            | Side::Buy => "buy",
+            | Side::Sell => "sell",
+        })
     }
 }
 
-impl Side {
+impl Side
+{
     // 定义一个方法来切换交易方向
-    pub fn toggle(&self) -> Self {
+    pub fn toggle(&self) -> Self
+    {
         match self {
             | Side::Buy => Side::Sell,
             | Side::Sell => Side::Buy,

@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common_skeleton::position::{PositionDirectionMode, PositionMarginMode};
-use crate::common_skeleton::position::meta::PositionMeta;
+use crate::common_skeleton::position::{meta::PositionMeta, PositionDirectionMode, PositionMarginMode};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct PerpetualPosition {
+pub struct PerpetualPosition
+{
     pub meta: PositionMeta,
     pub pos_config: PerpetualPositionConfig,
     pub liquidation_price: f64,
@@ -14,7 +14,8 @@ pub struct PerpetualPosition {
 }
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct PerpetualPositionConfig {
+pub struct PerpetualPositionConfig
+{
     pos_margin_mode: PositionMarginMode,
     leverage: f64,
     position_mode: PositionDirectionMode,

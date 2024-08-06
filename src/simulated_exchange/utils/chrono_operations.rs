@@ -1,8 +1,9 @@
-use chrono::{Datelike, DateTime, Local, Timelike, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Local, TimeZone, Timelike, Utc};
 use regex::Regex;
 
 #[allow(dead_code)]
-pub fn extract_date(table_name: &str) -> Option<String> {
+pub fn extract_date(table_name: &str) -> Option<String>
+{
     // 定义正则表达式模式
     let binance_pattern = Regex::new(r"(?i)binance_.+_(\d{4}_\d{2}_\d{2})").unwrap();
     let okex_pattern = Regex::new(r"(?i)okex_.+_(\d{4}_\d{2}_\d{2})").unwrap();
@@ -12,7 +13,8 @@ pub fn extract_date(table_name: &str) -> Option<String> {
         if let Some(caps) = binance_pattern.captures(table_name) {
             return Some(caps[1].to_string());
         }
-    } else if table_name.starts_with("okex") {
+    }
+    else if table_name.starts_with("okex") {
         if let Some(caps) = okex_pattern.captures(table_name) {
             return Some(caps[1].to_string());
         }
@@ -22,7 +24,8 @@ pub fn extract_date(table_name: &str) -> Option<String> {
 }
 #[allow(dead_code)]
 // 定义一个函数，接受UNIX时间戳并返回东八区精确时间
-pub fn local_datetime_from_unix(unix_time: i64) -> DateTime<Local> {
+pub fn local_datetime_from_unix(unix_time: i64) -> DateTime<Local>
+{
     // 将UNIX时间戳转换为UTC时间
     let utc_datetime = Utc.timestamp_millis_opt(unix_time).unwrap();
 
@@ -33,7 +36,8 @@ pub fn local_datetime_from_unix(unix_time: i64) -> DateTime<Local> {
 }
 #[allow(dead_code)]
 // 定义一个函数，接受short UNIX时间戳并返回东八区精确时间
-pub fn local_datetime_from_short_unix(unix_time: i64) -> DateTime<Local> {
+pub fn local_datetime_from_short_unix(unix_time: i64) -> DateTime<Local>
+{
     // 将UNIX时间戳转换为UTC时间
     let utc_datetime = DateTime::<Utc>::from_timestamp(unix_time, 0).unwrap();
 
@@ -44,7 +48,8 @@ pub fn local_datetime_from_short_unix(unix_time: i64) -> DateTime<Local> {
 }
 #[allow(dead_code)]
 // 定义一个函数，接受UNIX时间戳并返回东八区小时数
-pub fn local_hour_from_unix(unix_time: i64) -> u32 {
+pub fn local_hour_from_unix(unix_time: i64) -> u32
+{
     // 将UNIX时间戳转换为UTC时间
     let local_datetime = local_datetime_from_unix(unix_time);
 
@@ -52,7 +57,8 @@ pub fn local_hour_from_unix(unix_time: i64) -> u32 {
     local_datetime.hour()
 }
 #[allow(dead_code)]
-pub fn local_minute_from_unix(unix_time: i64) -> u32 {
+pub fn local_minute_from_unix(unix_time: i64) -> u32
+{
     // 将UNIX时间戳转换为UTC时间
     let local_datetime = local_datetime_from_unix(unix_time);
 
@@ -62,7 +68,8 @@ pub fn local_minute_from_unix(unix_time: i64) -> u32 {
 
 /// [注意] 此处返回时间格式为: 20220312
 #[allow(dead_code)]
-pub fn local_date_from_unix(unix_time: i64) -> u32 {
+pub fn local_date_from_unix(unix_time: i64) -> u32
+{
     // 将UNIX时间戳转换为UTC时间
     let local_datetime = local_datetime_from_unix(unix_time);
 
@@ -77,7 +84,8 @@ pub fn local_date_from_unix(unix_time: i64) -> u32 {
     year * 10000 + month * 100 + day
 }
 #[allow(dead_code)]
-pub fn expand_date_str(input_str: &str) -> String {
+pub fn expand_date_str(input_str: &str) -> String
+{
     if input_str.len() == 8 {
         // 确保输入字符串的长度是 8
         let year = &input_str[0..4];
@@ -90,7 +98,8 @@ pub fn expand_date_str(input_str: &str) -> String {
         let formatted_date_str = format!("{}-{}-{} 00:00:00", year, month, day);
 
         formatted_date_str
-    } else {
+    }
+    else {
         // 如果输入字符串不是有效的日期格式，可以返回错误消息或默认值，根据需要
         "Invalid Date".to_string()
     }
@@ -98,11 +107,13 @@ pub fn expand_date_str(input_str: &str) -> String {
 
 /// TODO: parse date string to unix timestamp
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
 
     #[test]
-    fn test_local_datetime_from_unix() {
+    fn test_local_datetime_from_unix()
+    {
         let unix_time: i64 = 1634817600000; // Replace with your desired UNIX timestamp
         let local_datetime = local_datetime_from_unix(unix_time);
 
@@ -110,7 +121,8 @@ mod tests {
     }
 
     #[test]
-    fn test_local_datetime_from_short_unix() {
+    fn test_local_datetime_from_short_unix()
+    {
         let short_unix_time: i64 = 1634817600; // Replace with your desired short UNIX timestamp
         let short_local_datetime = local_datetime_from_short_unix(short_unix_time);
 
@@ -118,7 +130,8 @@ mod tests {
     }
 
     #[test]
-    fn test_local_hour_from_unix() {
+    fn test_local_hour_from_unix()
+    {
         let unix_time: i64 = 1634817600000; // Replace with your desired UNIX timestamp
         let hour = local_hour_from_unix(unix_time);
 
@@ -126,7 +139,8 @@ mod tests {
     }
 
     #[test]
-    fn test_local_date_from_unix() {
+    fn test_local_date_from_unix()
+    {
         let unix_time: i64 = 1634817600000; // Replace with your desired UNIX timestamp
         let date = local_date_from_unix(unix_time);
 
@@ -134,7 +148,8 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_date_str() {
+    fn test_convert_date_str()
+    {
         let date_str = "20230314"; // 你的输入日期字符串
         let formatted_date_str = expand_date_str(date_str);
 
@@ -142,7 +157,8 @@ mod tests {
     }
 
     #[test]
-    fn test_local_minute_from_unix() {
+    fn test_local_minute_from_unix()
+    {
         let unix_time: i64 = 1634817600000; // Replace with your desired UNIX timestamp
         let local_datetime = local_datetime_from_unix(unix_time);
 
@@ -152,35 +168,40 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_date_binance() {
+    fn test_extract_date_binance()
+    {
         let file_name = "binance_futures_trades_2024_07_03_ZRXUSDT";
         let date = extract_date(file_name);
         assert_eq!(date, Some("2024_07_03".to_string()));
     }
 
     #[test]
-    fn test_extract_date_okex() {
+    fn test_extract_date_okex()
+    {
         let file_name = "okex_swap_trades_2024_03_03_BTC_USDT_SWAP";
         let date = extract_date(file_name);
         assert_eq!(date, Some("2024_03_03".to_string()));
     }
 
     #[test]
-    fn test_extract_date_invalid_binance() {
+    fn test_extract_date_invalid_binance()
+    {
         let file_name = "binance_futures_trades_invalid_ZRXUSDT";
         let date = extract_date(file_name);
         assert_eq!(date, None);
     }
 
     #[test]
-    fn test_extract_date_invalid_okex() {
+    fn test_extract_date_invalid_okex()
+    {
         let file_name = "okex_swap_trades_invalid_BTC_USDT_SWAP";
         let date = extract_date(file_name);
         assert_eq!(date, None);
     }
 
     #[test]
-    fn test_extract_date_unrecognized_exchange() {
+    fn test_extract_date_unrecognized_exchange()
+    {
         let file_name = "unrecognized_futures_trades_2024_07_03_ZRXUSDT";
         let date = extract_date(file_name);
         assert_eq!(date, None);
