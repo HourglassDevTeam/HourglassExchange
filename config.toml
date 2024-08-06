@@ -1,0 +1,19 @@
+# NOTE this is Demonstrative
+margin_mode = "SimpleMode"
+position_mode = "NetMode"
+position_margin_mode = "Isolated"
+commission_level = "Lv2"
+
+[current_commission_rate]
+spot_maker = 0.001
+spot_taker = 0.002
+perpetual_open = 0.0005
+perpetual_close = 0.0005
+
+[leverage_book]
+"btc_usd_perpetual" = 100.0
+"eth_usd_perpetual" = 50.0
+
+[fees_book]
+"spot" = 0.001
+"perpetual" = 0.0005

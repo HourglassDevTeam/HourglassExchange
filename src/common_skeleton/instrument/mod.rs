@@ -26,6 +26,7 @@ impl Display for Instrument
     }
 }
 
+
 // 允许从元组直接构造Instrument。
 impl<S> From<(S, S, InstrumentKind)> for Instrument where S: Into<Token>
 {

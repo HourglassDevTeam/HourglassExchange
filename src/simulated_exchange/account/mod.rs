@@ -35,6 +35,7 @@ pub mod account_config;
 pub mod account_latency;
 pub mod account_market_feed;
 pub mod account_orders;
+mod account_config_parser;
 
 #[derive(Debug)]
 pub struct Account<Event>
