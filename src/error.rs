@@ -71,6 +71,10 @@ pub enum ExecutionError
     #[error("[UniLinkExecution] : 无效的签名")]
     InvalidSignature,
 
+    /// 解析config.toml失败。
+    #[error("[UniLinkExecution] : 解析响应失败: {0}")]
+    ResponseConfigError(String),
+
     /// 解析响应失败。
     #[error("[UniLinkExecution] : 解析响应失败: {0}")]
     ResponseParseError(String),

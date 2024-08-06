@@ -1,8 +1,8 @@
 use std::{
     fmt::Debug,
     sync::{
-        Arc,
         atomic::{AtomicI64, Ordering},
+        Arc,
     },
 };
 
@@ -22,12 +22,12 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::kind::InstrumentKind,
         order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
-        Side,
         token::Token,
+        Side,
     },
     error::ExecutionError,
-    ExchangeVariant,
     simulated_exchange::{account::account_market_feed::AccountDataStreams, load_from_clickhouse::queries_operations::ClickhouseTrade},
+    ExchangeVariant,
 };
 
 pub mod account_balances;

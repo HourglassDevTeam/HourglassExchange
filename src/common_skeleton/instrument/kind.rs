@@ -41,15 +41,17 @@ impl Display for InstrumentKind
         }
     }
 }
-impl From<String> for InstrumentKind {
-    fn from(s: String) -> Self {
+impl From<String> for InstrumentKind
+{
+    fn from(s: String) -> Self
+    {
         match s.as_str() {
-            "Spot" => InstrumentKind::Spot,
-            "Perpetual" => InstrumentKind::Perpetual,
-            "Future" => InstrumentKind::Future,
-            "Option" => InstrumentKind::Option,
-            "Margin" => InstrumentKind::Margin,
-            _ => panic!("Unknown instrument kind: {}", s),
+            | "Spot" => InstrumentKind::Spot,
+            | "Perpetual" => InstrumentKind::Perpetual,
+            | "Future" => InstrumentKind::Future,
+            | "Option" => InstrumentKind::Option,
+            | "Margin" => InstrumentKind::Margin,
+            | _ => panic!("Unknown instrument kind: {}", s),
         }
     }
 }

@@ -44,7 +44,6 @@ pub struct PositionMetaBuilder
     realised_pnl: Option<f64>,
 }
 
-
 #[allow(dead_code)]
 impl PositionMetaBuilder
 {

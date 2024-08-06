@@ -2,9 +2,13 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common_skeleton::{
-    instrument::{kind::InstrumentKind, Instrument},
-    position::{PositionDirectionMode, PositionMarginMode},
+use crate::{
+    common_skeleton::{
+        instrument::{kind::InstrumentKind, Instrument},
+        position::{PositionDirectionMode, PositionMarginMode},
+    },
+    error::ExecutionError,
+    simulated_exchange::utils::config_parser::read_config_file,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -94,6 +98,11 @@ impl CommissionRatesInitiator
 // NOTE 更新费率函数的样本：为 AccountConfig 添加一个方法来更新佣金费率
 impl AccountConfig
 {
+    pub fn new(file_path: &str) -> Result<AccountConfig, ExecutionError>
+    {
+        read_config_file(file_path)
+    }
+
     // 更新当前佣金费率
     pub fn update_commission_rate(mut self, commission_rates: &CommissionRates) -> Self
     {
