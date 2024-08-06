@@ -40,7 +40,7 @@ where
     pub account_event_tx: UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub config: Arc<AccountConfig>,                           // 帐户配置
-    pub balances: Arc<RwLock<AccountState<Event>>>,        // 帐户余额
+    pub balances: Arc<RwLock<AccountState<Event>>>,           // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
 }
 

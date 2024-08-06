@@ -137,31 +137,29 @@ where
         let positions = self.positions.lock().unwrap(); // 获取锁
 
         match instrument.kind {
-            InstrumentKind::Spot => {
-                return Err(ExecutionError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)))
-            }
-            InstrumentKind::Perpetual => {
+            | InstrumentKind::Spot => return Err(ExecutionError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument))),
+            | InstrumentKind::Perpetual => {
                 if let Some(perpetual_positions) = &positions.perpetual_pos {
                     if let Some(position) = perpetual_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(PositionKind::Perpetual(position.clone())));
                     }
                 }
             }
-            InstrumentKind::Future => {
+            | InstrumentKind::Future => {
                 if let Some(futures_positions) = &positions.futures_pos {
                     if let Some(position) = futures_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(PositionKind::Futures(position.clone())));
                     }
                 }
             }
-            InstrumentKind::Option => {
+            | InstrumentKind::Option => {
                 if let Some(option_positions) = &positions.option_pos {
                     if let Some(position) = option_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(PositionKind::Option(position.clone())));
                     }
                 }
             }
-            InstrumentKind::Margin => {
+            | InstrumentKind::Margin => {
                 if let Some(margin_positions) = &positions.margin_pos {
                     if let Some(position) = margin_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(PositionKind::Margin(position.clone())));
@@ -172,7 +170,6 @@ where
 
         Ok(None) // 没有找到对应的仓位
     }
-
 
     /// Check if there is already some position of this instrument in the AccountPositions
     /// need to determine InstrumentKind from the open order first as position types vary
