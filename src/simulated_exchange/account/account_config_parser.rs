@@ -18,7 +18,7 @@ pub struct ConfigFile {
 }
 
 
-// 读取配置文件。
+// 读取配置文件
 #[allow(dead_code)]
 pub fn read_config_file(file_path: &str) -> Result<ConfigFile, Box<dyn std::error::Error>> {
     let config_content = std::fs::read_to_string(file_path)?;
@@ -26,7 +26,7 @@ pub fn read_config_file(file_path: &str) -> Result<ConfigFile, Box<dyn std::erro
     Ok(config)
 }
 
-// 从配置文件初始化 AccountConfig。
+// 从配置文件初始化 AccountConfig
 impl From<ConfigFile> for AccountConfig {
     fn from(config: ConfigFile) -> Self {
         let leverage_book = config
