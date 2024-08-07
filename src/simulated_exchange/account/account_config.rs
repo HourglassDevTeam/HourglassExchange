@@ -148,7 +148,7 @@ pub enum CommissionLevel {
     Lv4,
     Lv5,
 }
-/// NOTE : this initiator is nolonger useful as we now import config from config.toml.
+/// NOTE : this initiator is no longer useful as we now import config from config.
 // pub struct AccountConfigInitiator
 // {
 //     margin_mode: Option<MarginMode>,
