@@ -8,7 +8,7 @@ use crate::{
         datafeed::event::MarketEvent,
         order::{Cancelled, Open, Order, Pending},
     },
-    simulated_exchange::clickhouse_api::queries_operations::ClickhouseTrade,
+    simulated::clickhouse_api::queries_operations::ClickhouseTrade,
     AccountEvent, ClientExecution, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen,
 };
 

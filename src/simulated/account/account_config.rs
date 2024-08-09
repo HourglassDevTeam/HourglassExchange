@@ -8,7 +8,7 @@ use crate::{
         position::{PositionDirectionMode, PositionMarginMode},
     },
     error::ExecutionError,
-    simulated_exchange::utils::config_parser::read_config_file,
+    simulated::utils::config_parser::read_config_file,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

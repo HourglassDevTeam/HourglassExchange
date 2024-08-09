@@ -17,7 +17,7 @@ use crate::{
         Side,
     },
     error::ExecutionError,
-    simulated_exchange::{
+    simulated::{
         account::account_latency::{fluctuate_latency, AccountLatency},
         instrument_orders::InstrumentOrders,
     },

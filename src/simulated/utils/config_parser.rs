@@ -1,4 +1,4 @@
-use crate::{error::ExecutionError, simulated_exchange::account::account_config::AccountConfig};
+use crate::{error::ExecutionError, simulated::account::account_config::AccountConfig};
 use std::fs;
 use std::path::Path;
 

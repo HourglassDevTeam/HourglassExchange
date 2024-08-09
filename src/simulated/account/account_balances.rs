@@ -19,7 +19,7 @@ use crate::{
         Side,
     },
     error::ExecutionError,
-    simulated_exchange::{
+    simulated::{
         account::{account_config::MarginMode, Account},
         clickhouse_api::queries_operations::ClickhouseTrade,
     },

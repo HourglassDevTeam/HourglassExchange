@@ -4,7 +4,7 @@ use tokio::sync::mpsc;
 
 use account::Account;
 
-use crate::{error::ExecutionError, simulated_exchange::simulated_client::SimulatedClientEvent};
+use crate::{error::ExecutionError, simulated::simulated_client::SimulatedClientEvent};
 
 pub mod account;
 pub mod instrument_orders;
@@ -12,7 +12,7 @@ pub mod clickhouse_api;
 pub mod simulated_client;
 pub mod utils;
 pub mod ws_trade;
-pub mod orderbook;
+pub mod simulated_orderbook;
 
 #[derive(Debug)]
 pub struct SimulatedExchange<Event>

@@ -10,7 +10,7 @@ use crate::{
         position::AccountPositions,
         trade::Trade,
     },
-    simulated_exchange::account::account_config::AccountConfig,
+    simulated::account::account_config::AccountConfig,
     ExchangeVariant,
 };
 
