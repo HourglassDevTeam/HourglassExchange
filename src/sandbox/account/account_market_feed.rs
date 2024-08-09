@@ -3,7 +3,6 @@ use std::{collections::HashMap, fmt, fmt::Debug};
 use mpsc::UnboundedReceiver;
 use tokio::sync::mpsc;
 
-use crate::common_infrastructure::instrument::Instrument;
 
 // 定义一个数据流别名，用于标识每个数据流。
 pub type StreamID = String;
@@ -15,13 +14,13 @@ pub struct AccountDataStreams<Event>
     pub streams: HashMap<StreamID, UnboundedReceiver<Event>>, // 使用HashMap存储数据流，键为StreamID
 }
 
-// NOTE this is foreign to this module
-pub struct Subscription<Exchange, Kind>
-{
-    pub exchange: Exchange,
-    pub instrument: Instrument,
-    pub kind: Kind,
-}
+// // NOTE this is foreign to this module
+// pub struct Subscription<Exchange, Kind>
+// {
+//     pub exchange: Exchange,
+//     pub instrument: Instrument,
+//     pub kind: Kind,
+// }
 
 // 为 AccountDataStreams 实现创建和增减数据流的方法，用于管理数据流。
 impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static + Ord
