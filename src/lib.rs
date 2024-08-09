@@ -17,7 +17,7 @@ mod binance;
 pub mod common_infrastructure;
 pub mod error;
 pub mod okex;
-pub mod simulated;
+pub mod sandbox;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
@@ -83,7 +83,7 @@ impl ExchangeVariant
     pub fn as_str(&self) -> &'static str
     {
         match self {
-            | ExchangeVariant::Simulated => "simulated",
+            | ExchangeVariant::Simulated => "sandbox",
             | ExchangeVariant::Okex => "ftx",
             | ExchangeVariant::Binance => "binance",
         }

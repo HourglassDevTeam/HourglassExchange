@@ -20,13 +20,14 @@ impl PriceLevel {
         self.orders.push(order);
     }
 }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrderBook {
-    pub levels: Vec<PriceLevel>, // A vector of levels sorted by price
+pub struct SandBoxOrderBook {
+    pub levels: Vec<PriceLevel>,
 }
 
 
-impl OrderBook {
+impl SandBoxOrderBook {
     pub fn insert_order(&mut self, order: Order<Open>) {
         match self.levels.iter_mut().find(|level| level.price == order.state.price) {
             Some(level) => level.add_order(order),

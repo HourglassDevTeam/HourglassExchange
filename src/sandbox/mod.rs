@@ -4,12 +4,12 @@ use tokio::sync::mpsc;
 
 use account::Account;
 
-use crate::{error::ExecutionError, simulated::simulated_client::SimulatedClientEvent};
+use crate::{error::ExecutionError, sandbox::sandbox_client::SimulatedClientEvent};
 
 pub mod account;
 pub mod instrument_orders;
 pub mod clickhouse_api;
-pub mod simulated_client;
+pub mod sandbox_client;
 pub mod utils;
 pub mod ws_trade;
 pub mod simulated_orderbook;

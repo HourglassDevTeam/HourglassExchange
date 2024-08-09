@@ -8,7 +8,7 @@ use crate::{
         datafeed::event::MarketEvent,
         order::{Cancelled, Open, Order, Pending},
     },
-    simulated::clickhouse_api::queries_operations::ClickhouseTrade,
+    sandbox::clickhouse_api::queries_operations::ClickhouseTrade,
     AccountEvent, ClientExecution, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen,
 };
 
@@ -35,7 +35,7 @@ pub enum SimulatedClientEvent
 #[async_trait]
 impl ClientExecution for SimulatedClient
 {
-    // in our case the 'optional' config parameter in the simulated exchange is an UnboundedSender
+    // in our case the 'optional' config parameter in the sandbox exchange is an UnboundedSender
     type Config = (UnboundedSender<SimulatedClientEvent>, UnboundedReceiver<SimulatedClientEvent>);
 
     // very naturally, the client's kind is determined by and aligned the exchange.

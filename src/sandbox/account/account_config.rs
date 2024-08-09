@@ -8,7 +8,7 @@ use crate::{
         position::{PositionDirectionMode, PositionMarginMode},
     },
     error::ExecutionError,
-    simulated::utils::config_parser::read_config_file,
+    sandbox::utils::config_parser::read_config_file,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -187,7 +187,7 @@ pub enum CommissionLevel {
 //     }
 //
 //     // NOTE CommissionRates here are initiated as all zeros. this could be replaced with actual values fetched from the exchange,
-//     //      be it simulated or not.
+//     //      be it sandbox or not.
 //     pub fn initiate(self) -> Result<AccountConfig, &'static str>
 //     {
 //         Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
