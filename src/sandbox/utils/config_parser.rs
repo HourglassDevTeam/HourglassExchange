@@ -28,6 +28,6 @@ impl From<toml::de::Error> for ExecutionError
 {
     fn from(err: toml::de::Error) -> Self
     {
-        ExecutionError::ResponseConfigError(format!("TOML error: {}", err))
+        ExecutionError::ConfigParseError(format!("TOML error: {}", err))
     }
 }

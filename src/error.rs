@@ -59,6 +59,11 @@ pub enum ExecutionError
     #[error("[UniLinkExecution] : 无效的交易对: {0}")]
     InvalidTradingPair(String),
 
+    /// 无效的dates。
+    #[error("[UniLinkExecution] : 无效的日期: {0}")]
+    InvalidDates(String),
+
+
     /// API 限制，达到调用限制。
     #[error("[UniLinkExecution] : API 限制，达到调用限制")]
     ApiLimitReached,
@@ -72,11 +77,11 @@ pub enum ExecutionError
     InvalidSignature,
 
     /// 解析config.toml失败。
-    #[error("[UniLinkExecution] : 解析响应失败: {0}")]
-    ResponseConfigError(String),
+    #[error("[UniLinkExecution] : 解析配置失败: {0}")]
+    ConfigParseError(String),
 
     /// ConfigMissing失败。
-    #[error("[UniLinkExecution] : 解析响应失败: {0}")]
+    #[error("[UniLinkExecution] : 配置缺少: {0}")]
     ConfigMissing(String),
 
     /// 解析响应失败。
@@ -90,4 +95,6 @@ pub enum ExecutionError
     /// 无效的金融工具。
     #[error("[UniLinkExecution] : 内部错误: {0}")]
     InvalidInstrument(String),
+
+
 }
