@@ -12,13 +12,13 @@ pub mod clickhouse_api;
 pub mod sandbox_client;
 pub mod utils;
 pub mod ws_trade;
-pub mod simulated_orderbook;
+pub mod sandbox_orderbook;
 
 #[derive(Debug)]
 pub struct SimulatedExchange<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
-    pub event_simulated_rx: mpsc::UnboundedReceiver<SimulatedClientEvent>,
+    pub event_sandbox_rx: mpsc::UnboundedReceiver<SimulatedClientEvent>,
     pub account: Account<Event>,
 }
 
@@ -33,7 +33,7 @@ impl<Event> SimulatedExchange<Event> where Event: Clone + Send + Sync + Debug + 
     pub async fn run(mut self)
     {
         // 不断接收并处理模拟事件。
-        while let Some(event) = self.event_simulated_rx.recv().await {
+        while let Some(event) = self.event_sandbox_rx.recv().await {
             match event {
                 | SimulatedClientEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx).await,
                 | SimulatedClientEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx).await,
@@ -51,7 +51,7 @@ impl<Event> Default for ExchangeInitiator<Event> where Event: Clone + Send + Syn
     fn default() -> Self
     {
         let (_tx, rx) = mpsc::unbounded_channel();
-        Self { event_simulated_rx: Some(rx),
+        Self { event_sandbox_rx: Some(rx),
                account: None }
     }
 }
@@ -59,7 +59,7 @@ impl<Event> Default for ExchangeInitiator<Event> where Event: Clone + Send + Syn
 pub struct ExchangeInitiator<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
-    event_simulated_rx: Option<mpsc::UnboundedReceiver<SimulatedClientEvent>>,
+    event_sandbox_rx: Option<mpsc::UnboundedReceiver<SimulatedClientEvent>>,
     account: Option<Account<Event>>,
 }
 
@@ -70,9 +70,9 @@ impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 
         Self { ..Default::default() }
     }
 
-    pub fn event_simulated_rx(self, value: mpsc::UnboundedReceiver<SimulatedClientEvent>) -> Self
+    pub fn event_sandbox_rx(self, value: mpsc::UnboundedReceiver<SimulatedClientEvent>) -> Self
     {
-        Self { event_simulated_rx: Some(value),
+        Self { event_sandbox_rx: Some(value),
                ..self }
     }
 
@@ -83,8 +83,8 @@ impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 
 
     pub fn initiate(self) -> Result<SimulatedExchange<Event>, ExecutionError>
     {
-        Ok(SimulatedExchange { event_simulated_rx: self.event_simulated_rx
-                                                       .ok_or_else(|| ExecutionError::InitiatorIncomplete("event_simulated_rx".to_string()))?,
+        Ok(SimulatedExchange { event_sandbox_rx: self.event_sandbox_rx
+                                                       .ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
                                account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
     }
 }
