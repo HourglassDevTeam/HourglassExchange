@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::common_skeleton::{event::ClientOrderId, order::OrderKind, token::Token};
+use crate::common_infrastructure::{event::ClientOrderId, order::OrderKind, token::Token};
 
 /// 执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, Eq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
@@ -13,7 +13,7 @@ pub enum ExecutionError
 
     /// 模拟交易所出错。
     #[error("[UniLinkExecution] : 模拟交易所错误: {0}")]
-    Simulated(String),
+    SandBox(String),
 
     /// 余额不足，无法开单。
     #[error("[UniLinkExecution] : 符号{0}的余额不足，无法开单")]

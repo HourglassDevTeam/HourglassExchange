@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use unilink_execution::simulated_exchange::load_from_clickhouse::queries_operations::{ClickHouseClient, ClickhouseTrade};
+use unilink_execution::sandbox::clickhouse_api::queries_operations::{ClickHouseClient, ClickhouseTrade};
 
 #[tokio::main]
 async fn main()
