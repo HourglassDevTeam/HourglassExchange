@@ -88,6 +88,8 @@ impl SandBoxOrderBook {
         }
     }
 
+
+    // NOTE!! 注意和Account订单处理模块的兼容性
     pub fn process_trades(&mut self, current_time: i64) {
         // 清理过期的订单
         for level in &mut self.bid_levels {
