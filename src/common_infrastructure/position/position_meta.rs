@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{balance::TokenBalance, friction::Fees, instrument::Instrument, Side},
+    common_infrastructure::{balance::TokenBalance, friction::Fees, instrument::Instrument, Side},
     ExchangeVariant,
 };
 

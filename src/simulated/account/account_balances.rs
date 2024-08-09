@@ -8,7 +8,7 @@ use std::{
 use tokio::sync::RwLock;
 
 use crate::{
-    common_skeleton::{
+    common_infrastructure::{
         balance::{Balance, BalanceDelta, TokenBalance},
         datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},

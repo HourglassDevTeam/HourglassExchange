@@ -2,7 +2,7 @@
 /// CONSIDER: can these positions coexist, if so enums might not be ideal.
 use serde::{Deserialize, Serialize};
 
-use crate::common_skeleton::{
+use crate::common_infrastructure::{
     instrument::{kind::InstrumentKind, Instrument},
     position::{future::FuturesPosition, leveraged_token::LeveragedTokenPosition, option::OptionPosition, perpetual::PerpetualPosition},
 };
@@ -12,7 +12,7 @@ mod leveraged_token;
 mod option;
 pub mod perpetual;
 pub(crate) mod position_meta;
-/// This struct is generic and thus placed here in the common_skeleton.
+/// This struct is generic and thus placed here in the common_infrastructure.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountPositions

@@ -1,6 +1,6 @@
 use std::collections::BinaryHeap;
 use serde::{Deserialize, Serialize};
-use crate::common_skeleton::order::{Open, Order};
+use crate::common_infrastructure::order::{Open, Order};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceLevel {

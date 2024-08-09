@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common_skeleton::{
+use crate::common_infrastructure::{
     order::{Open, Order},
     Side,
 };

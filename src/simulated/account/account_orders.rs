@@ -10,7 +10,7 @@ use rand::Rng;
 use tokio::sync::RwLock;
 
 use crate::{
-    common_skeleton::{
+    common_infrastructure::{
         event::ClientOrderId,
         instrument::Instrument,
         order::{Open, Order, OrderId, OrderKind, OrderRole, Pending, RequestOpen},

@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt, fmt::Debug};
 use mpsc::UnboundedReceiver;
 use tokio::sync::mpsc;
 
-use crate::common_skeleton::instrument::Instrument;
+use crate::common_infrastructure::instrument::Instrument;
 
 // 定义一个数据流别名，用于标识每个数据流。
 pub type StreamID = String;

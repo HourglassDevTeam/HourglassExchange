@@ -3,7 +3,7 @@ use mpsc::UnboundedSender;
 use tokio::sync::{mpsc, mpsc::UnboundedReceiver, oneshot};
 
 use crate::{
-    common_skeleton::{
+    common_infrastructure::{
         balance::TokenBalance,
         datafeed::event::MarketEvent,
         order::{Cancelled, Open, Order, Pending},

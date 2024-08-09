@@ -16,7 +16,7 @@ use account_config::AccountConfig;
 use account_orders::AccountOrders;
 
 use crate::{
-    common_skeleton::{
+    common_infrastructure::{
         balance::TokenBalance,
         datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},

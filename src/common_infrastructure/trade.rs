@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // 引入相关模块和结构体。
-use crate::common_skeleton::{instrument::Instrument, Side};
+use crate::common_infrastructure::{instrument::Instrument, Side};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Trade

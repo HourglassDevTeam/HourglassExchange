@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{
+    common_infrastructure::{
         instrument::{kind::InstrumentKind, Instrument},
         position::{PositionDirectionMode, PositionMarginMode},
     },

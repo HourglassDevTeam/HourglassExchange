@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use tokio::{sync::mpsc::unbounded_channel, task};
 
 use unilink_execution::{
-    common_skeleton::datafeed::event::MarketEvent,
+    common_infrastructure::datafeed::event::MarketEvent,
     simulated::{account::account_market_feed::*, clickhouse_api::queries_operations::*},
 };
 

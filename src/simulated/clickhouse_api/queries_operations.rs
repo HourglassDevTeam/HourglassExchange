@@ -17,7 +17,7 @@ use tokio::sync::{
 };
 
 use crate::{
-    common_skeleton::{datafeed::event::MarketEvent, Side},
+    common_infrastructure::{datafeed::event::MarketEvent, Side},
     simulated::{
         utils::chrono_operations::extract_date,
         ws_trade::{parse_base_and_quote, WsTrade},

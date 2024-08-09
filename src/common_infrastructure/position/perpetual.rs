@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common_skeleton::position::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode};
+use crate::common_infrastructure::position::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

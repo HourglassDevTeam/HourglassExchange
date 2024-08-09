@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
 use crate::{
-    common_skeleton::{
+    common_infrastructure::{
         balance::TokenBalance,
         event::AccountEvent,
         order::{Cancelled, Open, Order, Pending, RequestCancel, RequestOpen},
@@ -13,10 +13,10 @@ use crate::{
     error::ExecutionError,
 };
 
-mod binance_exchange;
-pub mod common_skeleton;
+mod binance;
+pub mod common_infrastructure;
 pub mod error;
-pub mod okex_exchange;
+pub mod okex;
 pub mod simulated;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。

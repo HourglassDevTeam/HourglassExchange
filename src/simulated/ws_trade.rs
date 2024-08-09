@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{
+    common_infrastructure::{
         datafeed::event::MarketEvent,
         instrument::{
             kind::{InstrumentKind, InstrumentKind::Perpetual},

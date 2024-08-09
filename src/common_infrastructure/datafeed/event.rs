@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_skeleton::{
+    common_infrastructure::{
         instrument::Instrument,
         order::{FullyFill, Order, PartialFill},
         trade::Trade,
