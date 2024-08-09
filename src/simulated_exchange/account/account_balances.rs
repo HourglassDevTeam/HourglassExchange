@@ -21,7 +21,7 @@ use crate::{
     error::ExecutionError,
     simulated_exchange::{
         account::{account_config::MarginMode, Account},
-        load_from_clickhouse::queries_operations::ClickhouseTrade,
+        clickhouse_api::queries_operations::ClickhouseTrade,
     },
     ExchangeVariant,
 };

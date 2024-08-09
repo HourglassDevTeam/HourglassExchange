@@ -8,7 +8,7 @@ use crate::common_skeleton::{
     Side,
 };
 
-// use crate::simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade;
+// use crate::simulated_exchange::clickhouse_api::queries_operations::ClickhouseTrade;
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]

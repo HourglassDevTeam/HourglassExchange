@@ -2,7 +2,7 @@ use std::{fmt::Debug, sync::Arc};
 
 use tokio::sync::mpsc::UnboundedReceiver;
 
-use crate::{common_skeleton::datafeed::event::MarketEvent, simulated_exchange::load_from_clickhouse::queries_operations::ClickHouseClient};
+use crate::{common_skeleton::datafeed::event::MarketEvent, simulated_exchange::clickhouse_api::queries_operations::ClickHouseClient};
 
 pub struct HistoricalFeed<Event>
 {

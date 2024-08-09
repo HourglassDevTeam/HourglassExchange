@@ -7,12 +7,12 @@ use account::Account;
 use crate::{error::ExecutionError, simulated_exchange::simulated_client::SimulatedClientEvent};
 
 pub mod account;
-mod data_from_clickhouse;
 pub mod instrument_orders;
-pub mod load_from_clickhouse;
+pub mod clickhouse_api;
 pub mod simulated_client;
 pub mod utils;
 pub mod ws_trade;
+pub mod orderbook;
 
 #[derive(Debug)]
 pub struct SimulatedExchange<Event>

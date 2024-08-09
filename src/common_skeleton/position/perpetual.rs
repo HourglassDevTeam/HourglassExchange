@@ -71,12 +71,13 @@ impl PerpetualPositionBuilder
         self
     }
 
-    pub fn build(self) -> Result<PerpetualPosition, &'static str>
-    {
-        Ok(PerpetualPosition { meta: self.meta.ok_or("meta is required")?,
-                               pos_config: self.pos_config.ok_or("pos_config is required")?,
-                               liquidation_price: self.liquidation_price.ok_or("liquidation_price is required")?,
-                               margin: self.margin.ok_or("margin is required")?,
-                               funding_fee: self.funding_fee.ok_or("funding_fee is required")? })
+    pub fn build(self) -> Option<PerpetualPosition> {
+        Some(PerpetualPosition {
+            meta: self.meta?,
+            pos_config: self.pos_config?,
+            liquidation_price: self.liquidation_price?,
+            margin: self.margin?,
+            funding_fee: self.funding_fee?,
+        })
     }
 }

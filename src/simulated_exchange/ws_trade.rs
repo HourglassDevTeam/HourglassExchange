@@ -10,7 +10,7 @@ use crate::{
         },
         token::Token,
     },
-    simulated_exchange::load_from_clickhouse::queries_operations::ClickhouseTrade,
+    simulated_exchange::clickhouse_api::queries_operations::ClickhouseTrade,
     ExchangeVariant,
 };
 
