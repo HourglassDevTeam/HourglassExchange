@@ -71,7 +71,7 @@ impl AccountOrders
     {
         self.instrument_orders_map
             .get_mut(instrument)
-            .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange 没有为 Instrument: {instrument} 配置")))
+            .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange 没有为 Instrument: {instrument} 配置")))
     }
 
     /// 为每个 [`Instrument`] 获取出价和要价 [`Order<Open>`]。

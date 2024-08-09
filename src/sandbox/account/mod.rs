@@ -292,7 +292,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     //
     //     self.account_event_tx
     //         .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
-    //                              exchange: ExchangeVariant::Simulated,
+    //                              exchange: ExchangeVariant::SandBox,
     //                              kind: AccountEventKind::Trade(trade) })
     //         .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Trade");
     // }
@@ -389,7 +389,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
-                                 exchange: ExchangeVariant::Simulated,
+                                 exchange: ExchangeVariant::SandBox,
                                  kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
             .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败");
 
@@ -452,13 +452,13 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         // 发送 AccountEvents 给客户端
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp: exchange_timestamp.into(),
-                                 exchange: ExchangeVariant::Simulated,
+                                 exchange: ExchangeVariant::SandBox,
                                  kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp: exchange_timestamp.into(),
-                                 exchange: ExchangeVariant::Simulated,
+                                 exchange: ExchangeVariant::SandBox,
                                  kind: AccountEventKind::Balance(balance_event) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
 
@@ -480,7 +480,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                                                                               side: order.side,
                                                                                               kind: order.kind,
                                                                                               cid: order.cid.clone(),
-                                                                                              exchange: ExchangeVariant::Simulated,
+                                                                                              exchange: ExchangeVariant::SandBox,
                                                                                               client_ts: 0 })
                                                                          .collect();
 
@@ -511,6 +511,6 @@ pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
 {
     tokio::spawn(async move {
         response_tx.send(response)
-                   .expect("[UniLink_Execution] : SimulatedExchange failed to send oneshot response to execution request")
+                   .expect("[UniLink_Execution] : SandBoxExchange failed to send oneshot response to execution request")
     });
 }

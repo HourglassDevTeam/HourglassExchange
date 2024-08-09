@@ -51,7 +51,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     {
         self.balances
             .get(token)
-            .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
+            .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {token}")))
     }
 
     /// 返回指定[`Token`]的[`Balance`]的可变引用。
@@ -59,7 +59,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     {
         self.balances
             .get_mut(token)
-            .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for Token: {token}")))
+            .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {token}")))
     }
 
     /// Sets the account reference. 设置 Account 实例的引用 FIXME to be moved to a AccountStateInitiator (TBD).
@@ -76,10 +76,10 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                         .fees_book
                         .get(instrument_kind)
                         .cloned()
-                        .ok_or_else(|| ExecutionError::Simulated(format!("SimulatedExchange is not configured for InstrumentKind: {:?}", instrument_kind)))
+                        .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))
         }
         else {
-            Err(ExecutionError::Simulated("Account reference is not set".to_string()))
+            Err(ExecutionError::SandBox("Account reference is not set".to_string()))
         }
     }
 
@@ -91,7 +91,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             Ok(account_read.exchange_timestamp.load(Ordering::SeqCst))
         }
         else {
-            Err(ExecutionError::Simulated("Account reference is not set".to_string()))
+            Err(ExecutionError::SandBox("Account reference is not set".to_string()))
         }
     }
 
@@ -122,7 +122,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             Ok(account_read.config.position_mode.clone())
         }
         else {
-            Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
+            Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
 
@@ -135,7 +135,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             Ok(account_read.config.margin_mode.clone())
         }
         else {
-            Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
+            Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
 
@@ -236,7 +236,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             Ok(false)
         }
         else {
-            Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
+            Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
 
@@ -343,7 +343,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 }
                 // 其他情况下，继续处理，当前返回错误
                 | (_, _) => {
-                    return Err(ExecutionError::Simulated(format!(
+                    return Err(ExecutionError::SandBox(format!(
                         "[UniLink_Execution] : Unsupported InstrumentKind or PositionMarginMode for open order: {:?}",
                         open.instrument.kind
                     )));
@@ -356,11 +356,11 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             };
 
             Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp").into(),
-                              exchange: ExchangeVariant::Simulated,
+                              exchange: ExchangeVariant::SandBox,
                               kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)) })
         }
         else {
-            Err(ExecutionError::Simulated("[UniLink_Execution] : Account reference is not set".to_string()))
+            Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
 
@@ -426,7 +426,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 let quote_balance = self.update(quote, quote_delta);
 
                 Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp").into(),
-                                  exchange: ExchangeVariant::Simulated,
+                                  exchange: ExchangeVariant::SandBox,
                                   kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance)]) })
             }
         }

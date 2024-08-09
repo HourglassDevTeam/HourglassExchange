@@ -13,16 +13,16 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct SimulatedClient
+pub struct SandBoxClient
 {
     pub local_timestamp: i64,
-    pub request_tx: UnboundedSender<SimulatedClientEvent>, // NOTE 这是向模拟交易所端发送信号的发射器。注意指令格式是SimulatedClientEvent
-    pub strategy_signal_rx: UnboundedReceiver<SimulatedClientEvent>, // NOTE 这是从策略收取信号的接收器。注意指令格式是SimulatedClientEvent
+    pub request_tx: UnboundedSender<SandBoxClientEvent>, // NOTE 这是向模拟交易所端发送信号的发射器。注意指令格式是SandBoxClientEvent
+    pub strategy_signal_rx: UnboundedReceiver<SandBoxClientEvent>, // NOTE 这是从策略收取信号的接收器。注意指令格式是SandBoxClientEvent
 }
 
 // NOTE 模拟交易所客户端可向模拟交易所发送的命令
 #[derive(Debug)]
-pub enum SimulatedClientEvent
+pub enum SandBoxClientEvent
 {
     FetchMarketEvent(MarketEvent<ClickhouseTrade>),
     FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>),
@@ -33,20 +33,20 @@ pub enum SimulatedClientEvent
 }
 
 #[async_trait]
-impl ClientExecution for SimulatedClient
+impl ClientExecution for SandBoxClient
 {
     // in our case the 'optional' config parameter in the sandbox exchange is an UnboundedSender
-    type Config = (UnboundedSender<SimulatedClientEvent>, UnboundedReceiver<SimulatedClientEvent>);
+    type Config = (UnboundedSender<SandBoxClientEvent>, UnboundedReceiver<SandBoxClientEvent>);
 
     // very naturally, the client's kind is determined by and aligned the exchange.
-    const CLIENT_KIND: ExchangeVariant = ExchangeVariant::Simulated;
+    const CLIENT_KIND: ExchangeVariant = ExchangeVariant::SandBox;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>, local_timestamp: i64) -> Self
     {
         // 从 config 元组中解构出 request_tx 和 request_rx
         let (request_tx, request_rx) = config;
 
-        // 使用 request_tx 和 request_rx 初始化 SimulatedClient
+        // 使用 request_tx 和 request_rx 初始化 SandBoxClient
         Self { request_tx,
                strategy_signal_rx: request_rx,
                local_timestamp }
@@ -57,7 +57,7 @@ impl ClientExecution for SimulatedClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送获取开放订单的请求。
         self.request_tx
-            .send(SimulatedClientEvent::FetchOrdersOpen(response_tx))
+            .send(SandBoxClientEvent::FetchOrdersOpen(response_tx))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送获取开放订单FetchOrdersOpen请求失败");
         // 从模拟交易所接收开放订单的响应。
         response_rx.await
@@ -69,7 +69,7 @@ impl ClientExecution for SimulatedClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送获取账户余额的请求。
         self.request_tx
-            .send(SimulatedClientEvent::FetchBalances(response_tx))
+            .send(SandBoxClientEvent::FetchBalances(response_tx))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送获取账户余额 FetchBalances 请求失败");
         // 从模拟交易所接收账户余额的响应。
         response_rx.await
@@ -81,7 +81,7 @@ impl ClientExecution for SimulatedClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送开启订单的请求。
         self.request_tx
-            .send(SimulatedClientEvent::OpenOrders((open_requests, response_tx)))
+            .send(SandBoxClientEvent::OpenOrders((open_requests, response_tx)))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送 OpenOrders 请求失败");
         // 从模拟交易所接收开启订单的响应。
         response_rx.await.expect("[UniLinkExecution] : 模拟交易所目前离线 - 接收 OpenOrders 响应失败")
@@ -92,7 +92,7 @@ impl ClientExecution for SimulatedClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送取消订单的请求。
         self.request_tx
-            .send(SimulatedClientEvent::CancelOrders((cancel_requests, response_tx)))
+            .send(SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送 CancelOrders 请求失败");
         // 从模拟交易所接收取消订单的响应。
         response_rx.await.expect("[UniLinkExecution] : 模拟交易所目前离线 - 接收 CancelOrders 响应失败")
@@ -104,7 +104,7 @@ impl ClientExecution for SimulatedClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送取消所有订单的请求。
         self.request_tx
-            .send(SimulatedClientEvent::CancelOrdersAll(response_tx))
+            .send(SandBoxClientEvent::CancelOrdersAll(response_tx))
             .expect("[UniLinkExecution] : 模拟交易所目前离线 - 发送 CancelOrdersAll 请求失败");
         // 从模拟交易所接收取消所有订单的响应。
         response_rx.await.expect("[UniLinkExecution] : 模拟交易所目前离线 - 接收 CancelOrdersAll 响应失败")

@@ -57,7 +57,7 @@ impl Display for ExchangeID
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub enum ExchangeVariant
 {
-    Simulated,
+    SandBox,
     Binance,
     Okex,
 }
@@ -83,7 +83,7 @@ impl ExchangeVariant
     pub fn as_str(&self) -> &'static str
     {
         match self {
-            | ExchangeVariant::Simulated => "sandbox",
+            | ExchangeVariant::SandBox => "sandbox",
             | ExchangeVariant::Okex => "ftx",
             | ExchangeVariant::Binance => "binance",
         }

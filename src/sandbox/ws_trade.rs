@@ -43,7 +43,7 @@ impl MarketEvent<WsTrade>
 
         MarketEvent { exchange_time,
                       received_time,
-                      exchange: ExchangeVariant::Simulated,
+                      exchange: ExchangeVariant::SandBox,
 
                       instrument,
                       kind: ws_trade }
@@ -64,7 +64,7 @@ impl MarketEvent<ClickhouseTrade>
 
         MarketEvent { exchange_time,
                       received_time,
-                      exchange: ExchangeVariant::Simulated,
+                      exchange: ExchangeVariant::SandBox,
                       instrument,
                       kind: trade }
     }
