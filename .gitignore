@@ -1,4 +1,5 @@
 .idea/
 /target
+/builds
 Cargo.lock
 /exportToHTML/

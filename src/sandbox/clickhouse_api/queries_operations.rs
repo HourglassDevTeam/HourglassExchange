@@ -23,6 +23,7 @@ use crate::{
         ws_trade::{parse_base_and_quote, WsTrade},
     },
 };
+use crate::error::ExecutionError;
 
 pub struct ClickHouseClient
 {
@@ -235,11 +236,17 @@ impl ClickHouseClient
                                                              start_date: &str,
                                                              end_date: &str,
                                                              batch_size: usize)
-                                                             -> Result<UnboundedReceiver<MarketEvent<ClickhouseTrade>>, String>
+                                                             -> Result<UnboundedReceiver<MarketEvent<ClickhouseTrade>>, ExecutionError>
     {
         let (tx, rx) = unbounded_channel();
-        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d").map_err(|e| format!("Invalid start date format: {}", e))?;
-        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d").map_err(|e| format!("Invalid end date format: {}", e))?;
+        // 处理 start_date 解析，并映射到 ExecutionError
+        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d")
+            .map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid start date format: {}", e)))?;
+
+        // 处理 end_date 解析，并映射到 ExecutionError
+        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d")
+            .map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid end date format: {}", e)))?;
+
         let mut current_date = start_date;
 
         let client = Arc::clone(&self.client);
