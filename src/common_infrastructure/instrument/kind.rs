@@ -10,8 +10,10 @@ pub enum InstrumentKind
     #[serde(alias = "Swap", alias = "SWAP", alias = "PERPETUAL")]
     Perpetual,
     Future,
-    Option,
-    Margin,
+    CryptoOption,
+    CryptoLeveragedToken,
+    CommodityOption,
+    CommodityFuture,
 }
 
 impl Default for InstrumentKind
@@ -32,10 +34,10 @@ impl Display for InstrumentKind
                 write!(f, "future")
             }
             | InstrumentKind::Perpetual => write!(f, "perpetual"),
-            | InstrumentKind::Option => {
+            | InstrumentKind::CryptoOption => {
                 write!(f, "option")
             }
-            | InstrumentKind::Margin => {
+            | InstrumentKind::CryptoLeveragedToken => {
                 write!(f, "margin")
             }
         }
@@ -49,8 +51,8 @@ impl From<String> for InstrumentKind
             | "Spot" => InstrumentKind::Spot,
             | "Perpetual" => InstrumentKind::Perpetual,
             | "Future" => InstrumentKind::Future,
-            | "Option" => InstrumentKind::Option,
-            | "Margin" => InstrumentKind::Margin,
+            | "Option" => InstrumentKind::CryptoOption,
+            | "Margin" => InstrumentKind::CryptoLeveragedToken,
             | _ => panic!("Unknown instrument kind: {}", s),
         }
     }

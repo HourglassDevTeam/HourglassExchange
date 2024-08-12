@@ -337,13 +337,19 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.leverage_book.get(&order.instrument).unwrap()),
                 | Side::Sell => (&order.instrument.base, order.state.size * self.config.leverage_book.get(&order.instrument).unwrap()),
             },
-            | InstrumentKind::Option => {
+            | InstrumentKind::CryptoOption => {
                 todo!()
             }
-            | InstrumentKind::Margin => {
+            | InstrumentKind::CryptoLeveragedToken => {
                 todo!()
             }
+            | InstrumentKind::CommodityOption =>
+                {todo!()
         }
+            | InstrumentKind::CommodityFuture =>
+                {todo!()
+                }
+
     }
 
     pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>

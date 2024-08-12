@@ -160,14 +160,14 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                     }
                 }
             }
-            | InstrumentKind::Option => {
+            | InstrumentKind::CryptoOption => {
                 if let Some(option_positions) = &positions.option_pos {
                     if let Some(position) = option_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(PositionKind::Option(position.clone())));
                     }
                 }
             }
-            | InstrumentKind::Margin => {
+            | InstrumentKind::CryptoLeveragedToken => {
                 if let Some(margin_positions) = &positions.margin_pos {
                     if let Some(position) = margin_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(PositionKind::LeveragedToken(position.clone())));
@@ -270,7 +270,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                             }
                         }
                     }
-                    | InstrumentKind::Option => {
+                    | InstrumentKind::CryptoOption => {
                         if let Some(option_positions) = &positions.option_pos {
                             for pos in option_positions {
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
@@ -279,7 +279,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                             }
                         }
                     }
-                    | InstrumentKind::Margin => {
+                    | InstrumentKind::CryptoLeveragedToken => {
                         if let Some(margin_positions) = &positions.margin_pos {
                             for pos in margin_positions {
                                 if pos.meta.instrument == *instrument && pos.meta.side != side {
@@ -307,10 +307,10 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 | InstrumentKind::Spot => {
                     todo!("[UniLink_Execution] : Spot handling is not implemented yet");
                 }
-                | InstrumentKind::Option => {
+                | InstrumentKind::CryptoOption => {
                     todo!("[UniLink_Execution] : Option handling is not implemented yet");
                 }
-                | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::Margin => {
+                | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                     if position_mode == PositionDirectionMode::NetMode {
                         self.check_position_direction_conflict(&open.instrument, open.side).await?;
                     }
@@ -319,12 +319,12 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
 
             // 更新余额，根据不同的 PositionMarginMode 处理
             match (open.instrument.kind.clone(), position_margin_mode) {
-                | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::Margin, PositionMarginMode::Cross) => {
+                | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Cross) => {
                     // FIXME: NOTE this is DEMONSTRATIVE AND PROBLEMATIC and the common pool is yet to be built.
                     // Cross margin: apply the required balance to a common pool
                     todo!()
                 }
-                | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::Margin, PositionMarginMode::Isolated) => {
+                | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Isolated) => {
                     // Isolated margin: apply changes to the specific position's margin
                     match open.side {
                         | Side::Buy => {
@@ -397,10 +397,10 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             | InstrumentKind::Spot => {
                 todo!("Spot handling is not implemented yet");
             }
-            | InstrumentKind::Option => {
+            | InstrumentKind::CryptoOption => {
                 todo!("Option handling is not implemented yet");
             }
-            | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::Margin => {
+            | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let (base_delta, quote_delta) = match side {
                     | Side::Buy => {
                         let base_increase = market_event.kind.amount - fee;

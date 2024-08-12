@@ -36,10 +36,10 @@ impl AccountPositions
             | InstrumentKind::Future => self.futures_pos
                                             .as_ref()
                                             .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
-            | InstrumentKind::Option => self.option_pos
+            | InstrumentKind::CryptoOption => self.option_pos
                                             .as_ref()
                                             .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
-            | InstrumentKind::Margin => self.margin_pos
+            | InstrumentKind::CryptoLeveragedToken => self.margin_pos
                                             .as_ref()
                                             .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
         }
