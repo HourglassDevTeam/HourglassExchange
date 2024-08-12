@@ -378,7 +378,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             let open = orders_guard.build_order_open(order, order_role).await;
 
             // 添加订单到 Instrument Orders
-            orders_guard.orders_mut(&open.instrument)?.add_order_open(open.clone());
+            orders_guard.ins_orders_mut(&open.instrument)?.add_order_open(open.clone());
 
             open
         };
@@ -422,7 +422,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     {
         // 获取写锁并查找到对应的Instrument Orders，以便修改订单
         let mut orders_guard = self.orders.write().await;
-        let orders = orders_guard.orders_mut(&request.instrument)?;
+        let orders = orders_guard.ins_orders_mut(&request.instrument)?;
 
         // 找到并移除与 Order<RequestCancel> 关联的 Order<Open>
         let removed = match request.side {
