@@ -165,6 +165,26 @@ impl ClickHouseClient
     }
 
 
+    pub async fn create_unioned_tables_for_date(&self, database: &str,new_table_name: &str, table_names: &Vec<String>) -> Result<(), Error> {
+        // 构建UNION ALL查询
+        let mut queries = Vec::new();
+        for table_name in table_names {
+            let query = format!("SELECT symbol, side, price, timestamp,amount FROM {}.{}", database, table_name);
+            queries.push(query);
+        }
+        let union_all_query = queries.join(" UNION ALL ");
+
+        // 假设你要创建的表使用MergeTree引擎并按timestamp排序
+        let final_query = format!(
+            "CREATE TABLE {}.{} ENGINE = MergeTree() ORDER BY timestamp AS {}",
+            database, new_table_name, union_all_query
+        );
+        println!("[AlgoBacktest] : Constructed query: {}", final_query);
+
+        // 执行创建新表的查询
+        self.client.read().await.query(&final_query).execute().await?;
+        Ok(())
+    }
 
     pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<WsTrade, Error>
     {
