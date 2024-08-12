@@ -63,7 +63,6 @@ pub enum ExecutionError
     #[error("[UniLinkExecution] : 无效的日期: {0}")]
     InvalidDates(String),
 
-
     /// API 限制，达到调用限制。
     #[error("[UniLinkExecution] : API 限制，达到调用限制")]
     ApiLimitReached,
@@ -95,6 +94,4 @@ pub enum ExecutionError
     /// 无效的金融工具。
     #[error("[UniLinkExecution] : 内部错误: {0}")]
     InvalidInstrument(String),
-
-
 }

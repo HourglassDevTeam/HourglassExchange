@@ -7,12 +7,12 @@ use account::Account;
 use crate::{error::ExecutionError, sandbox::sandbox_client::SandBoxClientEvent};
 
 pub mod account;
-pub mod instrument_orders;
 pub mod clickhouse_api;
+pub mod instrument_orders;
 pub mod sandbox_client;
+pub mod sandbox_orderbook;
 pub mod utils;
 pub mod ws_trade;
-pub mod sandbox_orderbook;
 
 #[derive(Debug)]
 pub struct SandBoxExchange<Event>
@@ -83,8 +83,7 @@ impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 
 
     pub fn initiate(self) -> Result<SandBoxExchange<Event>, ExecutionError>
     {
-        Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx
-                                                       .ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
-                               account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
+        Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
+                             account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
     }
 }

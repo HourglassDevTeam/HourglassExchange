@@ -2,7 +2,8 @@ use chrono::{Duration, NaiveDate};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     let client = ClickHouseClient::new();
     // fields for binance
     let exchange = "binance";
@@ -23,11 +24,12 @@ async fn main() {
 
         if !tables.is_empty() {
             let new_table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date_str);
-            match client.create_unioned_tables_for_date(&database,  &new_table_name,&tables).await {
-                Ok(_) => println!("Successfully created table: {}.{}", database, new_table_name),
-                Err(e) => eprintln!("Error creating table: {}", e),
+            match client.create_unioned_tables_for_date(&database, &new_table_name, &tables).await {
+                | Ok(_) => println!("Successfully created table: {}.{}", database, new_table_name),
+                | Err(e) => eprintln!("Error creating table: {}", e),
             }
-        } else {
+        }
+        else {
             println!("No data for date: {}", date_str);
         }
         // iterating to the next day

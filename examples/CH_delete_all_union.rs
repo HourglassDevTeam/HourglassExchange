@@ -1,7 +1,8 @@
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     let client = ClickHouseClient::new();
     // fields for binance
     let exchange = "binance";
@@ -17,10 +18,7 @@ async fn main() {
     println!("All tables: {:?}", all_tables); // 打印所有表名的调试信息
 
     // 筛选出包含 union 字样的表名
-    let union_tables: Vec<String> = all_tables
-        .into_iter()
-        .filter(|table_name| table_name.contains("union"))
-        .collect();
+    let union_tables: Vec<String> = all_tables.into_iter().filter(|table_name| table_name.contains("union")).collect();
     println!("Union tables: {:?}", union_tables); // 打印 union 表名的调试信息
 
     // 删除 union 表
@@ -29,8 +27,8 @@ async fn main() {
         println!("[AlgoBacktest] : Executing query: {}", drop_query);
 
         match client.client.read().await.query(&drop_query).execute().await {
-            Ok(_) => println!("Successfully dropped table: {}.{}", database, table),
-            Err(e) => eprintln!("Error dropping table: {}", e),
+            | Ok(_) => println!("Successfully dropped table: {}.{}", database, table),
+            | Err(e) => eprintln!("Error dropping table: {}", e),
         }
     }
 }

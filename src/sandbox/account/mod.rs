@@ -343,13 +343,13 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             | InstrumentKind::CryptoLeveragedToken => {
                 todo!()
             }
-            | InstrumentKind::CommodityOption =>
-                {todo!()
+            | InstrumentKind::CommodityOption => {
+                todo!()
+            }
+            | InstrumentKind::CommodityFuture => {
+                todo!()
+            }
         }
-            | InstrumentKind::CommodityFuture =>
-                {todo!()
-                }
-
     }
 
     pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>

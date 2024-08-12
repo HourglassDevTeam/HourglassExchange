@@ -30,6 +30,8 @@ impl AccountPositions
         match instrument.kind {
             // NOTE : For Spot， check balance rather than position
             | InstrumentKind::Spot => todo!(),
+            | InstrumentKind::CommodityOption => todo!(),
+            | InstrumentKind::CommodityFuture => todo!(),
             | InstrumentKind::Perpetual => self.perpetual_pos
                                                .as_ref()
                                                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
@@ -37,11 +39,11 @@ impl AccountPositions
                                             .as_ref()
                                             .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
             | InstrumentKind::CryptoOption => self.option_pos
-                                            .as_ref()
-                                            .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                                                  .as_ref()
+                                                  .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
             | InstrumentKind::CryptoLeveragedToken => self.margin_pos
-                                            .as_ref()
-                                            .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                                                          .as_ref()
+                                                          .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
         }
     }
 }

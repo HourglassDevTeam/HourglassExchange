@@ -18,12 +18,12 @@ use tokio::sync::{
 
 use crate::{
     common_infrastructure::{datafeed::event::MarketEvent, Side},
+    error::ExecutionError,
     sandbox::{
         utils::chrono_operations::extract_date,
         ws_trade::{parse_base_and_quote, WsTrade},
     },
 };
-use crate::error::ExecutionError;
 
 pub struct ClickHouseClient
 {
@@ -164,8 +164,8 @@ impl ClickHouseClient
         Ok(ws_trades)
     }
 
-
-    pub async fn create_unioned_tables_for_date(&self, database: &str,new_table_name: &str, table_names: &Vec<String>) -> Result<(), Error> {
+    pub async fn create_unioned_tables_for_date(&self, database: &str, new_table_name: &str, table_names: &Vec<String>) -> Result<(), Error>
+    {
         // 构建UNION ALL查询
         let mut queries = Vec::new();
         for table_name in table_names {
@@ -175,10 +175,8 @@ impl ClickHouseClient
         let union_all_query = queries.join(" UNION ALL ");
 
         // 假设你要创建的表使用MergeTree引擎并按timestamp排序
-        let final_query = format!(
-            "CREATE TABLE {}.{} ENGINE = MergeTree() ORDER BY timestamp AS {}",
-            database, new_table_name, union_all_query
-        );
+        let final_query = format!("CREATE TABLE {}.{} ENGINE = MergeTree() ORDER BY timestamp AS {}",
+                                  database, new_table_name, union_all_query);
         println!("[AlgoBacktest] : Constructed query: {}", final_query);
 
         // 执行创建新表的查询
@@ -262,12 +260,10 @@ impl ClickHouseClient
     {
         let (tx, rx) = unbounded_channel();
         // 处理 start_date 解析，并映射到 ExecutionError
-        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d")
-            .map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid start date format: {}", e)))?;
+        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d").map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid start date format: {}", e)))?;
 
         // 处理 end_date 解析，并映射到 ExecutionError
-        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d")
-            .map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid end date format: {}", e)))?;
+        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d").map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid end date format: {}", e)))?;
 
         let mut current_date = start_date;
 

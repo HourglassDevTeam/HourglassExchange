@@ -40,6 +40,12 @@ impl Display for InstrumentKind
             | InstrumentKind::CryptoLeveragedToken => {
                 write!(f, "margin")
             }
+            | InstrumentKind::CommodityFuture => {
+                write!(f, "commodity_future")
+            }
+            | InstrumentKind::CommodityOption => {
+                write!(f, "commodity_option")
+            }
         }
     }
 }

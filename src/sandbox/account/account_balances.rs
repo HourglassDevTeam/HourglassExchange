@@ -174,6 +174,12 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                     }
                 }
             }
+            | InstrumentKind::CommodityOption => {
+                todo!() // not quite needed either
+            }
+            | InstrumentKind::CommodityFuture => {
+                todo!() // not quite needed either
+            }
         }
 
         Ok(None) // 没有找到对应的仓位
@@ -252,6 +258,12 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                     | InstrumentKind::Spot => {
                         todo!() // not quite needed either
                     }
+                    | InstrumentKind::CommodityOption => {
+                        todo!() // not quite needed either
+                    }
+                    | InstrumentKind::CommodityFuture => {
+                        todo!() // not quite needed either
+                    }
                     | InstrumentKind::Perpetual => {
                         if let Some(perpetual_positions) = &positions.perpetual_pos {
                             for pos in perpetual_positions {
@@ -309,6 +321,12 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 }
                 | InstrumentKind::CryptoOption => {
                     todo!("[UniLink_Execution] : Option handling is not implemented yet");
+                }
+                | InstrumentKind::CommodityFuture => {
+                    todo!("[UniLink_Execution] : Commodity future handling is not implemented yet");
+                }
+                | InstrumentKind::CommodityOption => {
+                    todo!("[UniLink_Execution] : Crypto option handling is not implemented yet");
                 }
                 | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                     if position_mode == PositionDirectionMode::NetMode {
@@ -399,6 +417,12 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             }
             | InstrumentKind::CryptoOption => {
                 todo!("Option handling is not implemented yet");
+            }
+            | InstrumentKind::CommodityOption => {
+                todo!("CommodityOption handling is not implemented yet") // not quite needed either
+            }
+            | InstrumentKind::CommodityFuture => {
+                todo!("CommodityFuture handling is not implemented yet") // not quite needed either
             }
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let (base_delta, quote_delta) = match side {

@@ -71,13 +71,12 @@ impl PerpetualPositionBuilder
         self
     }
 
-    pub fn build(self) -> Option<PerpetualPosition> {
-        Some(PerpetualPosition {
-            meta: self.meta?,
-            pos_config: self.pos_config?,
-            liquidation_price: self.liquidation_price?,
-            margin: self.margin?,
-            funding_fee: self.funding_fee?,
-        })
+    pub fn build(self) -> Option<PerpetualPosition>
+    {
+        Some(PerpetualPosition { meta: self.meta?,
+                                 pos_config: self.pos_config?,
+                                 liquidation_price: self.liquidation_price?,
+                                 margin: self.margin?,
+                                 funding_fee: self.funding_fee? })
     }
 }
