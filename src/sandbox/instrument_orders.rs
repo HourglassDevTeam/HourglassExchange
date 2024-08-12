@@ -87,8 +87,8 @@ impl InstrumentOrders
             // 检查最佳买单和卖单的 Order<Open> 是否匹配
             | (Some(best_bid), Some(best_ask)) => {
                 // 注意:
-                // 在极少数情况下: best_bid.price == best_ask.price == trade.price
-                // 优先选择剩余数量较大的 Order<Open> 进行匹配
+                //      在极少数情况下: best_bid.price == best_ask.price == trade.price
+                //      优先选择剩余数量较大的 Order<Open> 进行匹配
                 if best_bid.state.price == market_event.kind.price && best_ask.state.price == market_event.kind.price {
                     let best_bid_quantity = best_bid.state.remaining_quantity();
                     let best_ask_quantity = best_ask.state.remaining_quantity();
