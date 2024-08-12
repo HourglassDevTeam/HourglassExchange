@@ -26,9 +26,10 @@ use crate::{
         Side,
     },
     error::ExecutionError,
-    sandbox::{account::account_market_feed::AccountDataStreams, clickhouse_api::queries_operations::ClickhouseTrade},
+    sandbox::{account::account_market_feed::AccountDataStreams},
     ExchangeVariant,
 };
+use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade;
 
 pub mod account_balances;
 pub mod account_config;

@@ -10,7 +10,6 @@ pub use clickhouse::{
     Client, Row,
 };
 use futures_core::Stream;
-use serde::{Deserialize, Serialize};
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver},
     RwLock,
@@ -24,6 +23,7 @@ use crate::{
         ws_trade::{parse_base_and_quote, WsTrade},
     },
 };
+use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade;
 
 pub struct ClickHouseClient
 {
@@ -41,16 +41,6 @@ impl ClickHouseClient
     }
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize, Row)]
-pub struct ClickhouseTrade
-{
-    pub basequote: String,
-    pub side: String,
-    pub price: f64,
-    pub timestamp: i64,
-    pub amount: f64,
-}
 
 impl ClickhouseTrade
 {
