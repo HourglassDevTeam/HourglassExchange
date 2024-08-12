@@ -35,7 +35,7 @@ pub struct AccountOrders
 
 impl AccountOrders
 {
-    /// 从提供的 [`Instrument`] 选择构造一个新的 [`AccountOrders`]。
+    /// 从给定的 [`Instrument`] 列表选择构造一个新的 [`AccountOrders`]。
     pub async fn new(instruments: Vec<Instrument>, account_latency: AccountLatency) -> Self
     {
         let latency_generator = Arc::new(RwLock::new(account_latency));

@@ -19,7 +19,7 @@ use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseT
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct InstrumentOrders
 {
-    pub batch_id: i64,
+    pub batch_id: i64, // NOTE might be redundant
     pub bids: Vec<Order<Open>>,
     pub asks: Vec<Order<Open>>,
 }
@@ -126,51 +126,90 @@ impl InstrumentOrders
         // 跟踪剩余的可用流动性，以便匹配
         let mut remaining_liquidity = market_event.kind.amount;
 
-        // 收集由匹配未成交的客户端买单 [`Order<Open>`] 列表
-        let mut trades = vec![];
+        // 收集由匹配未成交的客户端买单生成的交易
+        let mut trades = Vec::new();
 
-        let remaining_best_bid = loop {
-            // 弹出最优买单 [`Order<Open>`]
-            let mut best_bid = match self.bids.pop() {
-                Some(best_bid) => best_bid,
-                None => break None,
-            };
-
-            // 如果不匹配或流动性耗尽，带着剩余的最优买单退出循环
+        while let Some(mut best_bid) = self.bids.pop() {
+            // 如果最优买单价格低于市场事件价格或流动性耗尽，退出循环
             if best_bid.state.price < market_event.kind.price || remaining_liquidity <= 0.0 {
-                break Some(best_bid);
+                self.bids.push(best_bid);
+                break;
             }
 
-            // 剩余的流动性要么是完全成交，要么是部分成交
+            // 增加批次ID
             self.batch_id += 1;
 
+            // 获取订单的剩余数量
             let remaining_quantity = best_bid.state.remaining_quantity();
-            if remaining_quantity <= remaining_liquidity {
-                // 全量成交 [`Order<Open>`]
-                remaining_liquidity -= remaining_quantity;
 
-                // 生成由全量成交 [`Order<Open>`] 生成的执行交易
+            // 判断是全量成交还是部分成交
+            if remaining_quantity <= remaining_liquidity {
+                // 全量成交
+                remaining_liquidity -= remaining_quantity;
                 trades.push(self.generate_trade(best_bid, remaining_quantity, fees_percent));
 
-                // 如果精确全量成交且剩余流动性为零（可能性极低），则退出循环
+                // 如果流动性刚好耗尽，退出循环
                 if remaining_liquidity == 0.0 {
-                    break None;
+                    break;
                 }
             } else {
-                // 零剩余流动性的部分成交 [`Order<Open>`]
+                // 部分成交
                 let trade_quantity = remaining_liquidity;
-
-                // 更新订单状态为部分成交
                 best_bid.state.filled_quantity += trade_quantity;
                 trades.push(self.generate_trade(best_bid.clone(), trade_quantity, fees_percent));
-
-                break Some(best_bid);
+                self.bids.push(best_bid); // 将部分成交后的订单重新放回队列
+                break;
             }
-        };
+        }
 
-        // 如果剩余的最优买单是部分成交或未匹配，将其放回作为最优买单
-        if let Some(remaining_best_bid) = remaining_best_bid {
-            self.bids.push(remaining_best_bid);
+        trades
+    }
+
+
+
+    /// 使用 `batch_id` 值为此 [`Instrument`] 市场生成唯一的 [`TradeId`]。
+    pub fn trade_id(&self) -> TradeId {
+        TradeId(self.batch_id.into())
+    }
+
+    pub fn match_asks(&mut self, market_event: &MarketEvent<ClickhouseTrade>, fees_percent: f64) -> Vec<ClickhouseTrade> {
+        // 跟踪剩余的可用流动性，以便匹配
+        let mut remaining_liquidity = market_event.kind.amount;
+
+        // 收集由匹配未成交的客户端卖单生成的交易
+        let mut trades = Vec::new();
+
+        while let Some(mut best_ask) = self.asks.pop() {
+            // 如果最优卖单价格高于市场事件价格或流动性耗尽，退出循环
+            if best_ask.state.price > market_event.kind.price || remaining_liquidity <= 0.0 {
+                self.asks.push(best_ask);
+                break;
+            }
+
+            // 增加批次ID
+            self.batch_id += 1;
+
+            // 获取订单的剩余数量
+            let remaining_quantity = best_ask.state.remaining_quantity();
+
+            // 判断是全量成交还是部分成交
+            if remaining_quantity <= remaining_liquidity {
+                // 全量成交
+                remaining_liquidity -= remaining_quantity;
+                trades.push(self.generate_trade(best_ask, remaining_quantity, fees_percent));
+
+                // 如果流动性刚好耗尽，退出循环
+                if remaining_liquidity == 0.0 {
+                    break;
+                }
+            } else {
+                // 部分成交
+                let trade_quantity = remaining_liquidity;
+                best_ask.state.filled_quantity += trade_quantity;
+                trades.push(self.generate_trade(best_ask.clone(), trade_quantity, fees_percent));
+                self.asks.push(best_ask); // 将部分成交后的订单重新放回队列
+                break;
+            }
         }
 
         trades
@@ -192,63 +231,7 @@ impl InstrumentOrders
         }
     }
 
-    /// 使用 `batch_id` 值为此 [`Instrument`] 市场生成唯一的 [`TradeId`]。
-    pub fn trade_id(&self) -> TradeId {
-        TradeId(self.batch_id.into())
-    }
-    pub fn match_asks(&mut self, market_event: &MarketEvent<ClickhouseTrade>, fees_percent: f64) -> Vec<ClickhouseTrade> {
-        // 跟踪剩余的可用流动性，以便匹配
-        let mut remaining_liquidity = market_event.kind.amount;
 
-        // 收集由匹配未成交的客户端卖单 [`Order<Open>`] 生成的成交交易
-        let mut trades = vec![];
-
-        let remaining_best_ask = loop {
-            // 弹出最优卖单 [`Order<Open>`]
-            let mut best_ask = match self.asks.pop() {
-                Some(best_ask) => best_ask,
-                None => break None,
-            };
-
-            // 如果不匹配或流动性耗尽，带着剩余的最优卖单退出循环
-            if best_ask.state.price > market_event.kind.price || remaining_liquidity <= 0.0 {
-                break Some(best_ask);
-            }
-
-            // 剩余的流动性要么是完全成交，要么是部分成交
-            self.batch_id += 1;
-
-            let remaining_quantity = best_ask.state.remaining_quantity();
-            if remaining_quantity <= remaining_liquidity {
-                // 全量成交 [`Order<Open>`]
-                remaining_liquidity -= remaining_quantity;
-
-                // 生成由全量成交 [`Order<Open>`] 生成的执行交易
-                trades.push(self.generate_trade(best_ask, remaining_quantity, fees_percent));
-
-                // 如果精确全量成交且剩余流动性为零（可能性极低），则退出循环
-                if remaining_liquidity == 0.0 {
-                    break None;
-                }
-            } else {
-                // 零剩余流动性的部分成交 [`Order<Open>`]
-                let trade_quantity = remaining_liquidity;
-
-                // 更新订单状态为部分成交
-                best_ask.state.filled_quantity += trade_quantity;
-                trades.push(self.generate_trade(best_ask.clone(), trade_quantity, fees_percent));
-
-                break Some(best_ask);
-            }
-        };
-
-        // 如果剩余的最优卖单是部分成交或未匹配，将其放回作为最优卖单
-        if let Some(remaining_best_ask) = remaining_best_ask {
-            self.asks.push(remaining_best_ask);
-        }
-
-        trades
-    }
     /// 计算所有未成交买单和卖单的总数。
     pub fn num_orders(&self) -> usize {
         self.bids.len() + self.asks.len()
