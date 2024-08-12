@@ -224,8 +224,7 @@ impl AccountOrders
                               size: request.state.size,
                               filled_quantity: 0.0,
                               received_ts: request.state.predicted_ts,
-                              order_role: role,
-                } }
+                              order_role: role } }
     }
 
     pub fn increment_request_counter(&self)
