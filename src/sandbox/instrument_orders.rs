@@ -11,8 +11,7 @@ use crate::common_infrastructure::{
 use crate::common_infrastructure::datafeed::event::MarketEvent;
 use crate::common_infrastructure::friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees};
 use crate::common_infrastructure::instrument::kind::InstrumentKind;
-use crate::common_infrastructure::order::FullyFill;
-use crate::common_infrastructure::trade::{Trade, TradeId};
+use crate::common_infrastructure::trade::{TradeId};
 use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade;
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
@@ -219,7 +218,7 @@ impl InstrumentOrders
     /// 使用唯一的 [`TradeId`] 为此 [`Instrument`] 市场生成一个客户端 [`Trade`]。
     pub fn generate_trade(&self, order: Order<Open>, trade_quantity: f64, fees_percent: f64) -> ClickhouseTrade {
         // 计算交易费用（取决于订单的方向，费用用基货币或报价货币表示）
-        let fees = calculate_fees(&order, trade_quantity, fees_percent);
+        let _fees = calculate_fees(&order, trade_quantity, fees_percent); // CONSIDER : Where do we store it?
 
         // 生成由匹配订单 [`Order<Open>`] 生成的执行交易
         ClickhouseTrade {
