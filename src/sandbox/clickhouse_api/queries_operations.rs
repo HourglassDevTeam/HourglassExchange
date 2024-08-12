@@ -152,7 +152,7 @@ impl ClickHouseClient
         tables_for_date
     }
 
-    pub async fn retrieve_all_trades(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<Vec<WsTrade>, Error>
+    pub async fn query_all_trades_on_date(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<Vec<WsTrade>, Error>
     {
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
@@ -163,6 +163,8 @@ impl ClickHouseClient
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
+
+
 
     pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<WsTrade, Error>
     {
