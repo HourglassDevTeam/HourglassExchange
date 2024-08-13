@@ -23,7 +23,7 @@ use crate::{
         ws_trade::{parse_base_and_quote, WsTrade},
     },
 };
-use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade;
+use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
 
 pub struct ClickHouseClient
 {
@@ -42,7 +42,7 @@ impl ClickHouseClient
 }
 
 
-impl ClickhouseTrade
+impl ClickhousePublicTrade
 {
     /// 将 `side` 字符串解析为 `Side` 枚举
     pub fn parse_side(&self) -> Side
@@ -55,7 +55,7 @@ impl ClickhouseTrade
     }
 }
 // 手动实现 Eq 和 PartialEq 特性
-impl PartialEq for ClickhouseTrade
+impl PartialEq for ClickhousePublicTrade
 {
     fn eq(&self, other: &Self) -> bool
     {
@@ -63,10 +63,10 @@ impl PartialEq for ClickhouseTrade
     }
 }
 
-impl Eq for ClickhouseTrade {}
+impl Eq for ClickhousePublicTrade {}
 
 // 手动实现 PartialOrd 和 Ord 特性
-impl PartialOrd for ClickhouseTrade
+impl PartialOrd for ClickhousePublicTrade
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering>
     {
@@ -74,7 +74,7 @@ impl PartialOrd for ClickhouseTrade
     }
 }
 
-impl Ord for ClickhouseTrade
+impl Ord for ClickhousePublicTrade
 {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering
     {
@@ -149,7 +149,7 @@ impl ClickHouseClient
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT * FROM {} ORDER BY timestamp", full_table_path);
         println!("[UniLinkExecution] : 查询SQL语句 {}", query);
-        let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await?;
+        let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
@@ -181,7 +181,7 @@ impl ClickHouseClient
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT * FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
         println!("[UniLinkExecution] : 查询SQL语句 {}", query);
-        let trade_data = self.client.read().await.query(&query).fetch_one::<ClickhouseTrade>().await?;
+        let trade_data = self.client.read().await.query(&query).fetch_one::<ClickhousePublicTrade>().await?;
         Ok(WsTrade::from(trade_data))
     }
 
@@ -191,7 +191,7 @@ impl ClickHouseClient
         let database = format!("{}_{}_{}", exchange, instrument, channel);
         let query = format!("SELECT * FROM {}.{} ORDER BY timestamp", database, table_name);
         println!("[UniLinkExecution] : 正在执行 query: {}", query);
-        let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await?;
+        let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
@@ -202,7 +202,7 @@ impl ClickHouseClient
                                                  channel: &'a str,
                                                  date: &'a str,
                                                  batch_size: usize)
-                                                 -> impl Stream<Item = MarketEvent<ClickhouseTrade>> + 'a
+                                                 -> impl Stream<Item = MarketEvent<ClickhousePublicTrade>> + 'a
     {
         stream! {
             let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
@@ -246,7 +246,7 @@ impl ClickHouseClient
                                                              start_date: &str,
                                                              end_date: &str,
                                                              batch_size: usize)
-                                                             -> Result<UnboundedReceiver<MarketEvent<ClickhouseTrade>>, ExecutionError>
+                                                             -> Result<UnboundedReceiver<MarketEvent<ClickhousePublicTrade>>, ExecutionError>
     {
         let (tx, rx) = unbounded_channel();
         // 处理 start_date 解析，并映射到 ExecutionError
@@ -274,7 +274,7 @@ impl ClickHouseClient
                     println!("[UniLinkExecution] : 正在执行 query: {}", query);
 
                     let client = client.read().await;
-                    match client.query(&query).fetch_all::<ClickhouseTrade>().await {
+                    match client.query(&query).fetch_all::<ClickhousePublicTrade>().await {
                         | Ok(trade_datas) => {
                             for trade_data in &trade_datas {
                                 let (base, quote) = parse_base_and_quote(&trade_data.basequote);

@@ -7,7 +7,7 @@ use unilink_execution::{
     common_infrastructure::datafeed::event::MarketEvent,
     sandbox::{account::account_market_feed::*, clickhouse_api::queries_operations::*},
 };
-use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade;
+use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
 
 lazy_static! {
     pub static ref CLIENT: Arc<ClickHouseClient> = Arc::new(ClickHouseClient::new());
@@ -27,13 +27,13 @@ async fn main()
     let batch_size = 1000000;
 
     // 创建 AccountMarketStreams 实例
-    let mut account_streams: AccountDataStreams<MarketEvent<ClickhouseTrade>> = AccountDataStreams::new();
+    let mut account_streams: AccountDataStreams<MarketEvent<ClickhousePublicTrade>> = AccountDataStreams::new();
 
     // 创建一个唯一的 stream_id
     let stream_id = format!("{}_{}_{}", exchange, instrument, channel);
 
     // 创建 unbounded_channel
-    let (tx, rx) = unbounded_channel::<MarketEvent<ClickhouseTrade>>();
+    let (tx, rx) = unbounded_channel::<MarketEvent<ClickhousePublicTrade>>();
 
     // 将接收者添加到 AccountMarketStreams 中
     account_streams.add_stream(stream_id.clone(), rx);

@@ -21,7 +21,7 @@ use crate::{
     ExchangeVariant,
     sandbox::account::{Account, account_config::MarginMode},
 };
-use crate::common_infrastructure::trade::TradeEvent;
+use crate::common_infrastructure::trade::ClientTrade;
 
 #[derive(Clone, Debug)]
 pub struct AccountState<Event>
@@ -392,7 +392,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 
     /// 从交易中更新余额并返回 [`AccountEvent`]
-    pub async fn update_from_trade(&mut self, trade_event: &TradeEvent) -> Result<AccountEvent, ExecutionError> {
+    pub async fn update_from_trade(&mut self, trade_event: &ClientTrade) -> Result<AccountEvent, ExecutionError> {
         let Instrument { base, quote, kind, .. } = &trade_event.instrument;
         let fee = trade_event.fees; // 直接从 TradeEvent 中获取费用
         let side = trade_event.side; // 直接使用 TradeEvent 中的 side

@@ -8,7 +8,7 @@ use crate::{
         datafeed::event::MarketEvent,
         order::{Cancelled, Open, Order, Pending},
     },
-    sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade,
+    sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade,
     AccountEvent, ClientExecution, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen,
 };
 
@@ -24,7 +24,7 @@ pub struct SandBoxClient
 #[derive(Debug)]
 pub enum SandBoxClientEvent
 {
-    FetchMarketEvent(MarketEvent<ClickhouseTrade>),
+    FetchMarketEvent(MarketEvent<ClickhousePublicTrade>),
     FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>),
     FetchBalances(oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>),
     OpenOrders((Vec<Order<RequestOpen>>, oneshot::Sender<Vec<Result<Order<Pending>, ExecutionError>>>)),

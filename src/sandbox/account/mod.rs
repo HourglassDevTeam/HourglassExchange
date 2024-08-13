@@ -1,4 +1,4 @@
-use crate::common_infrastructure::trade::TradeEvent;
+use crate::common_infrastructure::trade::ClientTrade;
 use std::{
     fmt::Debug,
     sync::{
@@ -32,7 +32,7 @@ use crate::{
     sandbox::account::account_market_feed::AccountDataStreams,
 };
 use crate::common_infrastructure::instrument::Instrument;
-use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade;
+use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
 use crate::sandbox::instrument_orders::InstrumentOrders;
 
 pub mod account_states;
@@ -294,7 +294,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {
+    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhousePublicTrade>) {
         let side = market_event.kind.parse_side();
 
         // 确定费用百分比
@@ -317,7 +317,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         self.process_trades(trades).await;
     }
 
-    fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &MarketEvent<ClickhouseTrade>, fees_percent: f64, side: &Side) -> Vec<TradeEvent> {
+    fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade> {
         match side {
             Side::Buy => orders.match_bids(market_event, fees_percent),
             Side::Sell => orders.match_asks(market_event, fees_percent),
@@ -354,7 +354,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             }
         }
     }
-    async fn process_trades(&self, trades: Vec<TradeEvent>) {
+    async fn process_trades(&self, trades: Vec<ClientTrade>) {
         if !trades.is_empty() {
             let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
