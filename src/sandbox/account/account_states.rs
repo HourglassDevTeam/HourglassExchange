@@ -230,43 +230,22 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
         }
     }
 
-    /// Check if there is already some position of this instrument in the AccountPositions
-    /// need to determine InstrumentKind from the open order first as position types vary
+    /// 检查在 AccountPositions 中是否已经存在该 instrument 的某个仓位
+    /// 需要首先从 open 订单中确定 InstrumentKind，因为仓位类型各不相同
     pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError> {
-        if let Some(account) = self.account_ref.upgrade() {
-            let account_read = account.read().await;
-            let positions_lock = self.positions.lock().await; // 获取锁
+        let positions_lock = self.positions.lock().await; // 获取锁
 
-            // Check in each position type collection
-            if let Some(perpetual_positions) = &positions_lock.perpetual_pos {
-                if perpetual_positions.iter().any(|pos| pos.meta.instrument == open.instrument) {
-                    return Ok(true);
-                }
-            }
-            if let Some(futures_positions) = &positions_lock.futures_pos {
-                if futures_positions.iter().any(|pos| pos.meta.instrument == open.instrument) {
-                    return Ok(true);
-                }
-            }
-            if let Some(option_positions) = &positions_lock.option_pos {
-                if option_positions.iter().any(|pos| pos.meta.instrument == open.instrument) {
-                    return Ok(true);
-                }
-            }
-            if let Some(margin_positions) = &positions_lock.margin_pos {
-                if margin_positions.iter().any(|pos| pos.meta.instrument == open.instrument) {
-                    return Ok(true);
-                }
-            }
-
-            Ok(false)
-        } else {
-            Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
+        // 直接调用 AccountPositions 中的 has_position 方法
+        if positions_lock.has_position(&open.instrument) {
+            return Ok(true);
         }
+
+        Ok(false)
     }
 
+
     async fn check_position_direction_conflict(&self, instrument: &Instrument, side: Side) -> Result<(), ExecutionError> {
-        if let positions_lock = self.positions.lock().await {
+        let positions_lock = self.positions.lock().await;
 
             match instrument.kind {
                 InstrumentKind::Spot => {
@@ -314,7 +293,6 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                         }
                     }
                 }
-            }
         }
         Ok(())
     }
