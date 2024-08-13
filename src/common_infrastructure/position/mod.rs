@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::common_infrastructure::{
-    instrument::{kind::InstrumentKind, Instrument},
+    instrument::{Instrument, kind::InstrumentKind},
     position::{future::FuturesPosition, leveraged_token::LeveragedTokenPosition, option::OptionPosition, perpetual::PerpetualPosition},
 };
 
@@ -33,17 +33,17 @@ impl AccountPositions
             | InstrumentKind::CommodityOption => todo!(),
             | InstrumentKind::CommodityFuture => todo!(),
             | InstrumentKind::Perpetual => self.perpetual_pos
-                                               .as_ref()
-                                               .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                .as_ref()
+                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
             | InstrumentKind::Future => self.futures_pos
-                                            .as_ref()
-                                            .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                .as_ref()
+                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
             | InstrumentKind::CryptoOption => self.option_pos
-                                                  .as_ref()
-                                                  .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                .as_ref()
+                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
             | InstrumentKind::CryptoLeveragedToken => self.margin_pos
-                                                          .as_ref()
-                                                          .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                .as_ref()
+                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
         }
     }
 }

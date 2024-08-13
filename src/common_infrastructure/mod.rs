@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 
 pub mod balance; // 通用balance模块
@@ -32,7 +33,6 @@ impl Display for Side
         })
     }
 }
-
 
 
 impl FromStr for Side {

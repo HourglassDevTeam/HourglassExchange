@@ -80,7 +80,9 @@ pub struct RequestCancel
 }
 
 // 从Id直接生成RequestCancel
-impl<Id> From<Id> for RequestCancel where Id: Into<OrderId>
+impl<Id> From<Id> for RequestCancel
+where
+    Id: Into<OrderId>,
 {
     fn from(id: Id) -> Self
     {
@@ -97,8 +99,9 @@ pub struct Open
     pub size: f64,
     pub filled_quantity: f64,
     pub order_role: OrderRole,
-    pub received_ts: i64, /* 交易所下单时间 NOTE this might be only applicable in a sandbox exchange. 流动性充足的情况下received到trade状态的时间差不超过2ms，并且是交易所端不可避免的。‘ */
-     // pub expired_ts:i64, /* 交易所订单过期时间 NOTE this might be only applicable in a sandbox exchange.*/
+    pub received_ts: i64,
+    /* 交易所下单时间 NOTE this might be only applicable in a sandbox exchange. 流动性充足的情况下received到trade状态的时间差不超过2ms，并且是交易所端不可避免的。‘ */
+    // pub expired_ts:i64, /* 交易所订单过期时间 NOTE this might be only applicable in a sandbox exchange.*/
 }
 
 impl Open
@@ -173,7 +176,9 @@ pub struct Cancelled
     pub id: OrderId,
 }
 
-impl<Id> From<Id> for Cancelled where Id: Into<OrderId>
+impl<Id> From<Id> for Cancelled
+where
+    Id: Into<OrderId>,
 {
     fn from(id: Id) -> Self
     {
@@ -185,7 +190,9 @@ impl<Id> From<Id> for Cancelled where Id: Into<OrderId>
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct OrderId(pub String);
 
-impl<Id> From<Id> for OrderId where Id: Display
+impl<Id> From<Id> for OrderId
+where
+    Id: Display,
 {
     fn from(id: Id) -> Self
     {
@@ -197,12 +204,14 @@ impl From<Order<Open>> for Order<Cancelled>
 {
     fn from(order: Order<Open>) -> Self
     {
-        Self { kind: order.kind,
-               exchange: order.exchange.clone(),
-               instrument: order.instrument.clone(),
-               cid: order.cid,
-               client_ts: order.client_ts,
-               side: order.side,
-               state: Cancelled { id: order.state.id } }
+        Self {
+            kind: order.kind,
+            exchange: order.exchange.clone(),
+            instrument: order.instrument.clone(),
+            cid: order.cid,
+            client_ts: order.client_ts,
+            side: order.side,
+            state: Cancelled { id: order.state.id },
+        }
     }
 }
