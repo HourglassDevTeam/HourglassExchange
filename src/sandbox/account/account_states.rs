@@ -2,9 +2,9 @@ use std::{
     collections::HashMap,
     fmt::Debug,
     ops::{Deref, DerefMut},
-    sync::{atomic::Ordering, Arc, Weak},
+    sync::{Arc, atomic::Ordering, Weak},
 };
-use std::sync::mpsc::Sender;
+
 use tokio::sync::{Mutex, RwLock};
 
 use crate::{
@@ -12,20 +12,19 @@ use crate::{
         balance::{Balance, BalanceDelta, TokenBalance},
         datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
-        instrument::{kind::InstrumentKind, Instrument},
+        instrument::{Instrument, kind::InstrumentKind},
         order::{Open, Order},
         position::{AccountPositions, PositionDirectionMode, PositionKind, PositionMarginMode},
-        token::Token,
         Side,
+        token::Token,
     },
     error::ExecutionError,
+    ExchangeVariant,
     sandbox::{
-        account::{account_config::MarginMode, Account},
+        account::{Account, account_config::MarginMode},
         clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade,
     },
-    ExchangeVariant,
 };
-use crate::sandbox::account::respond;
 
 #[derive(Clone, Debug)]
 pub struct AccountState<Event>
@@ -267,19 +266,17 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 
     async fn check_position_direction_conflict(&self, instrument: &Instrument, side: Side) -> Result<(), ExecutionError> {
-        if let Some(account) = self.account_ref.upgrade() {
-            let account_read = account.read().await;
-            let positions_lock = self.positions.lock().await; // 获取锁
+        if let positions_lock = self.positions.lock().await {
 
             match instrument.kind {
                 InstrumentKind::Spot => {
-                    todo!() // not quite needed either
+                    todo!()
                 }
                 InstrumentKind::CommodityOption => {
-                    todo!() // not quite needed either
+                    todo!()
                 }
                 InstrumentKind::CommodityFuture => {
-                    todo!() // not quite needed either
+                    todo!()
                 }
                 InstrumentKind::Perpetual => {
                     if let Some(perpetual_positions) = &positions_lock.perpetual_pos {
@@ -436,10 +433,10 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 todo!("Option handling is not implemented yet");
             }
             | InstrumentKind::CommodityOption => {
-                todo!("CommodityOption handling is not implemented yet") // not quite needed either
+                todo!("CommodityOption handling is not implemented yet")
             }
             | InstrumentKind::CommodityFuture => {
-                todo!("CommodityFuture handling is not implemented yet") // not quite needed either
+                todo!("CommodityFuture handling is not implemented yet")
             }
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let (base_delta, quote_delta) = match side {
