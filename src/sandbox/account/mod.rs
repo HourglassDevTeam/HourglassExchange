@@ -384,7 +384,10 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     }
 
 
-    /// NOTE 下面是和取消订单相关的方法。
+    /// [PART4]
+    /// `cancel_orders` 处理一组订单取消请求，异步执行取消操作，并将结果发送回调用者。
+    /// `try_cancel_order_atomic` 尝试以原子操作方式取消一个订单，确保在取消订单后更新账户余额，并发送取消事件。
+    /// `cancel_orders_all` 取消所有打开的订单，发送取消结果给调用者，并处理可能的错误情况。
     pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
@@ -495,7 +498,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 }
 
 
-// 响应处理
+/// [PART5]
+/// `respond` 函数:响应处理。
 pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
     where Response: Debug + Send + 'static
 {
