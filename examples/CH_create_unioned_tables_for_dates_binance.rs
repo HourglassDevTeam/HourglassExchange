@@ -31,7 +31,7 @@ async fn main() {
         // 更新进度
         processed_days += 1;
         let progress = (processed_days as f64 / total_days as f64) * 100.0;
-        println!("正在处理日期: {} ({:.2}%)", date_str, progress); // 打印当前处理的日期和进度
+        println!("Processing tables on date : {} ({:.2}%)", date_str, progress); // 打印当前处理的日期和进度
 
         // 筛选出与当前日期匹配的表名
         let tables: Vec<String> = table_names
@@ -50,16 +50,16 @@ async fn main() {
         if !tables.is_empty() {
             let new_table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date_str);
             match client.create_unioned_tables_for_date(&database, &new_table_name, &tables, true).await {
-                Ok(_) => println!("成功创建联合表: {}.{}", database, new_table_name),
-                Err(e) => eprintln!("创建联合表时出错: {}", e),
+                Ok(_) => println!("Successfully created table: {}.{}", database, new_table_name),
+                Err(e) => eprintln!("Error creating table: {}", e),
             }
         } else {
-            println!("日期 {} 没有数据", date_str); // 如果没有找到表，则输出提示信息
+            println!("No data for date: {}", date_str);
         }
 
         // 迭代到下一天
         current_date += Duration::days(1);
     }
 
-    println!("处理完成。总天数: {}", total_days); // 最终进度汇报
+    println!("Union tables' creation is done for : {} days ", total_days); // 最终进度汇报
 }

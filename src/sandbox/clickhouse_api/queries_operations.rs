@@ -2,13 +2,13 @@
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_stream::stream;
-use std::time::Duration;
-use chrono::{NaiveDate};
+use chrono::NaiveDate;
 pub use clickhouse::{
-    error::{Error, Result},
-    Client, Row,
+    Client,
+    error::{Error, Result}, Row,
 };
 use futures_core::Stream;
 use tokio::sync::{
@@ -16,6 +16,7 @@ use tokio::sync::{
     RwLock,
 };
 use tokio::time::sleep;
+
 use crate::{
     common_infrastructure::{datafeed::event::MarketEvent, Side},
     error::ExecutionError,
@@ -36,7 +37,7 @@ impl ClickHouseClient
     {
         let client = Client::default().with_url("http://localhost:8123").with_user("default").with_password("");
 
-        println!("[UniLinkExecution] : 连接到 ClickHouse 服务器成功。");
+        println!("[UniLinkExecution] : Successfully connected to the ClickHouse server.");
 
         Self { client: Arc::new(RwLock::new(client)) }
     }
@@ -146,7 +147,7 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT * FROM {} ORDER BY timestamp", full_table_path);
-        println!("[UniLinkExecution] : 查询SQL语句 {}", query);
+        println!("[UniLinkExecution] : Constructed query :  {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
@@ -172,7 +173,7 @@ impl ClickHouseClient
             // 如果启用进度汇报，每处理完一个表就汇报一次进度
             if report_progress {
                 let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
-                println!("进度: 已处理 {} / {} 个表 ({:.2}%)", i + 1, total_tables, progress);
+                println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
 
                 // 模拟延迟以模拟长时间运行任务的进度汇报
                 sleep(Duration::from_millis(500)).await;
@@ -186,14 +187,14 @@ impl ClickHouseClient
                                   database, new_table_name, union_all_query);
 
         if report_progress {
-            println!("[UniLinkExecution] : 成功构建超级查询语句");
+            println!("[UniLinkExecution] : Successfully constructed the final query.");
         }
 
         // 执行创建新表的查询
         self.client.read().await.query(&final_query).execute().await?;
 
         if report_progress {
-            println!("[UniLinkExecution] : 表 {}.{} 创建成功", database, new_table_name);
+            println!("[UniLinkExecution] : Table {}.{} created successfully.", database, new_table_name);
         }
 
         Ok(())
@@ -205,7 +206,7 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT * FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
-        println!("[UniLinkExecution] : 查询SQL语句 {}", query);
+        println!("[UniLinkExecution] : Constructed query :  {}", query);
         let trade_data = self.client.read().await.query(&query).fetch_one::<ClickhousePublicTrade>().await?;
         Ok(WsTrade::from(trade_data))
     }
@@ -215,7 +216,7 @@ impl ClickHouseClient
         let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
         let database = format!("{}_{}_{}", exchange, instrument, channel);
         let query = format!("SELECT * FROM {}.{} ORDER BY timestamp", database, table_name);
-        println!("[UniLinkExecution] : 正在执行 query: {}", query);
+        println!("[UniLinkExecution] : Executing query: {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
@@ -239,7 +240,7 @@ impl ClickHouseClient
                     "SELECT * FROM {}.{} LIMIT {} OFFSET {} ORDER BY timestamp",
                     database, table_name, batch_size, offset
                 );
-                println!("[UniLinkExecution] : 正在执行 query: {}", query);
+                println!("[UniLinkExecution] : Executing query: {}", query);
 
                 match self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await {
                     Ok(trade_datas) => {
@@ -296,7 +297,7 @@ impl ClickHouseClient
 
                 loop {
                     let query = format!("SELECT * FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}", database, table_name, batch_size, offset);
-                    println!("[UniLinkExecution] : 正在执行 query: {}", query);
+                    println!("[UniLinkExecution] : Executing query: {}", query);
 
                     let client = client.read().await;
                     match client.query(&query).fetch_all::<ClickhousePublicTrade>().await {
