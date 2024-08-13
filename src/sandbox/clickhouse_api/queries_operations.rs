@@ -10,7 +10,6 @@ pub use clickhouse::{
     Client, Row,
 };
 use futures_core::Stream;
-use serde::{Deserialize, Serialize};
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver},
     RwLock,
@@ -18,12 +17,13 @@ use tokio::sync::{
 
 use crate::{
     common_infrastructure::{datafeed::event::MarketEvent, Side},
+    error::ExecutionError,
     sandbox::{
         utils::chrono_operations::extract_date,
         ws_trade::{parse_base_and_quote, WsTrade},
     },
 };
-use crate::error::ExecutionError;
+use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade;
 
 pub struct ClickHouseClient
 {
@@ -41,16 +41,6 @@ impl ClickHouseClient
     }
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize, Row)]
-pub struct ClickhouseTrade
-{
-    pub basequote: String,
-    pub side: String,
-    pub price: f64,
-    pub timestamp: i64,
-    pub amount: f64,
-}
 
 impl ClickhouseTrade
 {
@@ -152,7 +142,7 @@ impl ClickHouseClient
         tables_for_date
     }
 
-    pub async fn retrieve_all_trades(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<Vec<WsTrade>, Error>
+    pub async fn query_all_trades_on_date(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<Vec<WsTrade>, Error>
     {
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
@@ -162,6 +152,26 @@ impl ClickHouseClient
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
+    }
+
+    pub async fn create_unioned_tables_for_date(&self, database: &str, new_table_name: &str, table_names: &Vec<String>) -> Result<(), Error>
+    {
+        // 构建UNION ALL查询
+        let mut queries = Vec::new();
+        for table_name in table_names {
+            let query = format!("SELECT symbol, side, price, timestamp,amount FROM {}.{}", database, table_name);
+            queries.push(query);
+        }
+        let union_all_query = queries.join(" UNION ALL ");
+
+        // 假设你要创建的表使用MergeTree引擎并按timestamp排序
+        let final_query = format!("CREATE TABLE {}.{} ENGINE = MergeTree() ORDER BY timestamp AS {}",
+                                  database, new_table_name, union_all_query);
+        println!("[AlgoBacktest] : Constructed query: {}", final_query);
+
+        // 执行创建新表的查询
+        self.client.read().await.query(&final_query).execute().await?;
+        Ok(())
     }
 
     pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<WsTrade, Error>
@@ -240,12 +250,10 @@ impl ClickHouseClient
     {
         let (tx, rx) = unbounded_channel();
         // 处理 start_date 解析，并映射到 ExecutionError
-        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d")
-            .map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid start date format: {}", e)))?;
+        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d").map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid start date format: {}", e)))?;
 
         // 处理 end_date 解析，并映射到 ExecutionError
-        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d")
-            .map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid end date format: {}", e)))?;
+        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d").map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid end date format: {}", e)))?;
 
         let mut current_date = start_date;
 

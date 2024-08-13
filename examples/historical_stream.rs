@@ -7,6 +7,7 @@ use unilink_execution::{
     common_infrastructure::datafeed::event::MarketEvent,
     sandbox::{account::account_market_feed::*, clickhouse_api::queries_operations::*},
 };
+use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade;
 
 lazy_static! {
     pub static ref CLIENT: Arc<ClickHouseClient> = Arc::new(ClickHouseClient::new());

@@ -9,7 +9,7 @@ use crate::{
         trade::Trade,
         Side,
     },
-    sandbox::{clickhouse_api::queries_operations::ClickhouseTrade, ws_trade::WsTrade},
+    sandbox::{clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade, ws_trade::WsTrade},
     ExchangeVariant,
 };
 

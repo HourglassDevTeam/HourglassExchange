@@ -10,8 +10,8 @@ use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use tokio::sync::{mpsc, oneshot, RwLock};
-
-use account_balances::AccountState;
+use tracing::warn;
+use account_states::AccountState;
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
 
@@ -26,11 +26,12 @@ use crate::{
         Side,
     },
     error::ExecutionError,
-    sandbox::{account::account_market_feed::AccountDataStreams, clickhouse_api::queries_operations::ClickhouseTrade},
+    sandbox::{account::account_market_feed::AccountDataStreams},
     ExchangeVariant,
 };
+use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade;
 
-pub mod account_balances;
+pub mod account_states;
 pub mod account_config;
 pub mod account_latency;
 pub mod account_market_feed;
@@ -170,15 +171,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    // TODO TO BE MOVED TO [AccountBalances]
-    // pub async fn fetch_positions(&self, response_tx: Sender<Result<Vec<AccountPositions>, ExecutionError>>)
-    // {
-    //     let positions = self.positions.read().await.clone();
-    //     respond(response_tx, Ok(positions));
-    // }
-
-    // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到对应的订单 // TO BE CONFIRMED
-    pub async fn find_orders_for_an_trade_event(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>
+    // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到所有候选的Open订单 // TO BE CONFIRMED
+    pub async fn candidate_orders_for_trade_event(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>
     {
         // 读取 market_event 中的 instrument 和 side
         let instrument_kind = market_event.instrument;
@@ -211,11 +205,53 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             vec![]
         }
     }
+    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>)  {todo!()}
+    // pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<ClickhouseTrade> {
+    //     let instrument_kind = market_event.instrument.kind;
+    //     let side = market_event.kind.side;
+    //
+    //     // 获取当前的佣金费率
+    //     let commission_rates = &self.config.read().await.current_commission_rate;
+    //
+    //     // 根据 InstrumentKind 和 Side 应用不同的费用
+    //     let fees_percent = match instrument_kind {
+    //         InstrumentKind::Spot => {
+    //             match side {
+    //                 Side::Buy => commission_rates.spot_maker,
+    //                 Side::Sell => commission_rates.spot_taker,
+    //             }
+    //         },
+    //         InstrumentKind::Perpetual => {
+    //             match side {
+    //                 Side::Buy => commission_rates.perpetual_open,
+    //                 Side::Sell => commission_rates.perpetual_close,
+    //             }
+    //         },
+    //         _ => {
+    //             warn!("不支持的 InstrumentKind: {:?}", instrument_kind);
+    //             return Vec::new(); // 返回空 Vec，因为没有匹配的订单
+    //         }
+    //     };
+    //
+    //     // 访问适用于当前 Instrument 的订单
+    //     let mut orders = match self.orders.write().await.ins_orders_mut(&market_event.instrument) {
+    //         Ok(orders) => orders,
+    //         Err(error) => {
+    //             warn!(?error, %market_event.instrument, ?market_event.kind, "无法匹配未识别的Instrument的订单");
+    //             return Vec::new();  // 返回空 Vec，因为没有匹配的订单
+    //         }
+    //     };
+    //
+    //     // 根据市场事件类型确定匹配的订单并生成交易
+    //     let trades = match side {
+    //         Side::Buy => orders.match_bids(&market_event, fees_percent),
+    //         Side::Sell => orders.match_asks(&market_event, fees_percent),
+    //     };
+    //
+    //     // 返回生成的交易集合
+    //     trades
+    // }
 
-    pub async fn match_orders(&mut self, _market_event: MarketEvent<ClickhouseTrade>)
-    {
-        // todo()!
-    }
 
     // pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {
     //     // NOTE 根据 InstrumentKind 和 Side 来确定 applicable fees
@@ -337,10 +373,16 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.leverage_book.get(&order.instrument).unwrap()),
                 | Side::Sell => (&order.instrument.base, order.state.size * self.config.leverage_book.get(&order.instrument).unwrap()),
             },
-            | InstrumentKind::Option => {
+            | InstrumentKind::CryptoOption => {
                 todo!()
             }
-            | InstrumentKind::Margin => {
+            | InstrumentKind::CryptoLeveragedToken => {
+                todo!()
+            }
+            | InstrumentKind::CommodityOption => {
+                todo!()
+            }
+            | InstrumentKind::CommodityFuture => {
                 todo!()
             }
         }
@@ -371,7 +413,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             let open = orders_guard.build_order_open(order, order_role).await;
 
             // 添加订单到 Instrument Orders
-            orders_guard.orders_mut(&open.instrument)?.add_order_open(open.clone());
+            orders_guard.ins_orders_mut(&open.instrument)?.add_order_open(open.clone());
 
             open
         };
@@ -415,7 +457,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     {
         // 获取写锁并查找到对应的Instrument Orders，以便修改订单
         let mut orders_guard = self.orders.write().await;
-        let orders = orders_guard.orders_mut(&request.instrument)?;
+        let orders = orders_guard.ins_orders_mut(&request.instrument)?;
 
         // 找到并移除与 Order<RequestCancel> 关联的 Order<Open>
         let removed = match request.side {
