@@ -23,12 +23,6 @@ async-stream = "0.3" # 提供异步流的宏和工具
 # Error Handling 错误处理
 thiserror = "1.0.32" # 用于定义自定义错误类型的简单易用的库
 
-# Lazy Static 懒静态
-lazy_static = "1.4.0" # 用于定义在首次使用时初始化的静态变量
-
-# Once Cell 一次性初始化
-once_cell = "1.7.2" # 提供线程安全的一次性初始化的工具
-
 # Serialization/Deserialization 序列化/反序列化
 serde = { version = "1.0.143", features = ["derive"] } # 强大的序列化和反序列化框架，支持多种数据格式
 
@@ -45,7 +39,7 @@ url = "2.5.2"
 toml = "0.8.19" # 用于处理Pin的实用工具库
 
 
-# Unused
+# Unused for now
 #serde_json = "1.0.120"
 #tokio-tungstenite = "0.21.0"
 #reqwest = "0.12.4"
