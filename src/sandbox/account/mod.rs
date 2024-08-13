@@ -1,8 +1,8 @@
 use std::{
     fmt::Debug,
     sync::{
-        atomic::{AtomicI64, Ordering},
         Arc,
+        atomic::{AtomicI64, Ordering},
     },
 };
 use std::str::FromStr;
@@ -12,9 +12,10 @@ use mpsc::UnboundedSender;
 use oneshot::Sender;
 use tokio::sync::{mpsc, oneshot, RwLock};
 use tracing::warn;
-use account_states::AccountState;
+
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
+use account_states::AccountState;
 
 use crate::{
     common_infrastructure::{
@@ -23,12 +24,12 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::kind::InstrumentKind,
         order::{Cancelled, Open, Order, OrderKind, Pending, RequestCancel, RequestOpen},
-        token::Token,
         Side,
+        token::Token,
     },
     error::ExecutionError,
-    sandbox::{account::account_market_feed::AccountDataStreams},
     ExchangeVariant,
+    sandbox::account::account_market_feed::AccountDataStreams,
 };
 use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade;
 
@@ -206,164 +207,85 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             vec![]
         }
     }
-    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {todo!()}
-    // pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {
-    //     let instrument_kind = market_event.instrument.kind;
-    //
-    //     // 将字符串转换为 `Side` 枚举
-    //     let side = match Side::from_str(&market_event.kind.side) {
-    //         Ok(side) => side,
-    //         Err(_) => {
-    //             warn!("无效的 Side: {}", market_event.kind.side);
-    //             return; // 如果 `side` 无效，退出函数
-    //         }
-    //     };
-    //
-    //     // 获取当前的佣金费率
-    //     let commission_rates = &self.config.current_commission_rate;
-    //
-    //     // 根据 InstrumentKind 和 Side 应用不同的费用
-    //     let fees_percent = match instrument_kind {
-    //         InstrumentKind::Spot => {
-    //             match side {
-    //                 Side::Buy => commission_rates.spot_maker,
-    //                 Side::Sell => commission_rates.spot_taker,
-    //             }
-    //         },
-    //         InstrumentKind::Perpetual => {
-    //             match side {
-    //                 Side::Buy => commission_rates.perpetual_open,
-    //                 Side::Sell => commission_rates.perpetual_close,
-    //             }
-    //         },
-    //         _ => {
-    //             warn!("不支持的 InstrumentKind: {:?}", instrument_kind);
-    //             return; // 不支持的 InstrumentKind，退出函数
-    //         }
-    //     };
-    //
-    //     // 访问适用于当前 Instrument 的订单
-    //     let mut orders = match self.orders.write().await.ins_orders_mut(&market_event.instrument) {
-    //         Ok(orders) => orders,
-    //         Err(error) => {
-    //             warn!(?error, %market_event.instrument, ?market_event.kind, "无法匹配未识别的 Instrument 的订单");
-    //             return; // 未找到对应的 InstrumentOrders，退出函数
-    //         }
-    //     };
-    //
-    //     // 根据市场事件类型确定匹配的订单并生成交易
-    //     let trades = match side {
-    //         Side::Buy => orders.match_bids(&market_event, fees_percent),
-    //         Side::Sell => orders.match_asks(&market_event, fees_percent),
-    //     };
-    //
-    //     // 处理生成的交易记录
-    //     if !trades.is_empty() {
-    //         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
-    //
-    //         for trade in trades {
-    //             // 更新余额和其他相关信息
-    //             let balance_event = self.states.write().await.update_from_trade(&trade);
-    //
-    //             // 发送交易事件给客户端
-    //             self.account_event_tx
-    //                 .send(AccountEvent {
-    //                     exchange_timestamp,
-    //                     exchange: ExchangeVariant::SandBox,
-    //                     kind: AccountEventKind::Trade(trade),
-    //                 })
-    //                 .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败");
-    //
-    //             // 发送余额更新事件
-    //             self.account_event_tx
-    //                 .send(balance_event)
-    //                 .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败");
-    //         }
-    //     }
-    // }
+    // pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {todo!()}
+    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {
+        let instrument_kind = market_event.instrument.kind;
 
+        // 将字符串转换为 `Side` 枚举
+        let side = match Side::from_str(&market_event.kind.side.to_string()) {
+            Ok(side) => side,
+            Err(_) => {
+                warn!("无效的 Side: {}", market_event.kind.side);
+                return; // 如果 `side` 无效，退出函数
+            }
+        };
 
-    // pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {
-    //     // NOTE 根据 InstrumentKind 和 Side 来确定 applicable fees
-    //     match market_event.kind {
-    //         Spot => {
-    //             let side = market_event.kind.side;
-    //             match side.as_str() {
-    //                 "Buy" => {
-    //                     let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
-    //                     self.orders.read().await.match_bids(&market_event.kind, fees_percent);
-    //                 }
-    //                 "Sell" => {
-    //                     let fees_percent = self.config.read().await.current_commission_rate.spot_taker;
-    //                     self.orders.read().await.match_asks(&market_event.kind, fees_percent);
-    //                 }
-    //                 _ => {
-    //                     // Handle unexpected side value
-    //                     println!("Unexpected side: {}", side);
-    //                 }
-    //             }
-    //         }
-    //         Perpetual => {
-    //             let side = market_event.kind.side;
-    //             match side.as_str() {
-    //                 "Buy" => {
-    //                     let fees_percent = self.config.read().await.current_commission_rate.perpetual_open;
-    //                     self.orders.read().await.match_bids(&market_event.kind, fees_percent);
-    //                 }
-    //                 "Sell" => {
-    //                     let fees_percent = self.config.read().await.current_commission_rate.perpetual_close;
-    //                     self.orders.read().await.match_asks(&market_event.kind, fees_percent);
-    //                 }
-    //                 _ => {
-    //                     // Handle unexpected side value
-    //                     println!("Unexpected side: {}", side);
-    //                 }
-    //             }
-    //
-    //         }
-    //         _ => {
-    //             // Handle unexpected InstrumentKind
-    //             println!("Unexpected InstrumentKind: {:?}", market_event.kind);
-    //         }
-    //     }
-    // }
-    // let fees_percent = self.config.read().await.current_commission_rate.spot_maker;
-    //
-    // // Access the ClientOrders relating to the Instrument of the PublicTrade
-    // let orders = match self.orders.read().await.orders_mut(&market_event.instrument) {
-    //     | Ok(orders) => orders,
-    //     | Err(error) => {
-    //         warn!(
-    //             ?error, %market_event.instrument, ?market_event.kind, "cannot match orders with unrecognised Instrument"
-    //         );
-    //         return;
-    //     }
-    // };
-    //
-    // // Match client Order<Open>s to incoming PublicTrade if the liquidity intersects
-    // let trades = match orders.has_matching_order(&market_event.kind) {
-    //     | Some(Side::Buy) => orders.match_bids(&market_event.kind, fees_percent),
-    //     | Some(Side::Sell) => orders.match_asks(&market_event.kind, fees_percent),
-    //     | None => return,
-    // };
-    //
-    // // Apply Balance updates for each client Trade and send AccountEvents to client
-    // for trade in trades {
-    //     // Update Balances
-    //     let balances_event = self.balances.update_from_trade(&trade);
-    //
-    //     self.account_event_tx
-    //         .send(balances_event)
-    //         .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Balances");
-    //
-    //     self.account_event_tx
-    //         .send(AccountEvent { exchange_timestamp: self.exchange_timestamp,
-    //                              exchange: ExchangeVariant::SandBox,
-    //                              kind: AccountEventKind::Trade(trade) })
-    //         .expect("[UniLink_Execution] : Client is offline - failed to send AccountEvent::Trade");
-    // }
+        // 获取当前的佣金费率
+        let commission_rates = &self.config.current_commission_rate;
 
-    // NOTE a method that generates trade from matched order is missing for the time being.
+        // 根据 InstrumentKind 和 Side 应用不同的费用
+        let fees_percent = match instrument_kind {
+            InstrumentKind::Spot => match side {
+                Side::Buy => commission_rates.spot_maker,
+                Side::Sell => commission_rates.spot_taker,
+            },
+            InstrumentKind::Perpetual => match side {
+                Side::Buy => commission_rates.perpetual_open,
+                Side::Sell => commission_rates.perpetual_close,
+            },
+            _ => {
+                warn!("不支持的 InstrumentKind: {:?}", instrument_kind);
+                return; // 不支持的 InstrumentKind，退出函数
+            }
+        };
+
+        // 访问适用于当前 Instrument 的订单
+        let mut orders_lock = self.orders.write().await; // 将锁绑定到一个变量上
+        let orders = match orders_lock.ins_orders_mut(&market_event.instrument) {
+            Ok(orders) => orders,
+            Err(error) => {
+                warn!(?error, %market_event.instrument, ?market_event.kind, "无法匹配未识别的 Instrument 的订单");
+                return; // 未找到对应的 InstrumentOrders，退出函数
+            }
+        };
+
+        // 根据市场事件类型确定匹配的订单并生成交易
+        let trades = match side {
+            Side::Buy => orders.match_bids(&market_event, fees_percent),
+            Side::Sell => orders.match_asks(&market_event, fees_percent),
+        };
+
+        // 处理生成的交易记录
+        if !trades.is_empty() {
+            let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
+
+            for trade in trades {
+                // 更新余额和其他相关信息
+                let balance_event = match self.states.write().await.update_from_trade(&trade).await {
+                    Ok(event) => event,
+                    Err(err) => {
+                        warn!("更新余额失败: {:?}", err);
+                        continue; // 如果更新失败，跳过这个交易
+                    }
+                };
+
+                // 发送交易事件给客户端
+                if let Err(err) = self.account_event_tx.send(AccountEvent {
+                    exchange_timestamp,
+                    exchange: ExchangeVariant::SandBox,
+                    kind: AccountEventKind::Trade(trade),
+                }) {
+                    warn!("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败: {:?}", err);
+                }
+
+                // 发送余额更新事件
+                if let Err(err) = self.account_event_tx.send(balance_event) {
+                    warn!("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败: {:?}", err);
+                }
+            }
+        }
+    }
+
 
     pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
     {

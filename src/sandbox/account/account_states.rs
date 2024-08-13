@@ -10,7 +10,6 @@ use tokio::sync::{Mutex, RwLock};
 use crate::{
     common_infrastructure::{
         balance::{Balance, BalanceDelta, TokenBalance},
-        datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
         instrument::{Instrument, kind::InstrumentKind},
         order::{Open, Order},
@@ -20,10 +19,7 @@ use crate::{
     },
     error::ExecutionError,
     ExchangeVariant,
-    sandbox::{
-        account::{Account, account_config::MarginMode},
-        clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade,
-    },
+    sandbox::account::{Account, account_config::MarginMode},
 };
 use crate::common_infrastructure::trade::TradeEvent;
 
