@@ -1,4 +1,3 @@
-use crate::common_infrastructure::trade::ClientTrade;
 use std::{
     fmt::Debug,
     sync::{
@@ -32,6 +31,7 @@ use crate::{
     sandbox::account::account_market_feed::AccountDataStreams,
 };
 use crate::common_infrastructure::instrument::Instrument;
+use crate::common_infrastructure::trade::ClientTrade;
 use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
 use crate::sandbox::instrument_orders::InstrumentOrders;
 
@@ -244,14 +244,13 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         // 发送账户事件给客户端
         self.account_event_tx
             .send(balance_event)
-            .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败");
+            .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Balance");
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
                 exchange: ExchangeVariant::SandBox,
                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
-            .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败");
-
+            .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
         // 返回已打开的订单
         Ok(open_order)
     }
@@ -337,7 +336,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 Side::Sell => Some(commission_rates.perpetual_close),
             },
             _ => {
-                warn!("不支持的 InstrumentKind: {:?}", kind);
+                warn!("Unsupported InstrumentKind: {:?}", kind);
                 None
             }
         }
@@ -371,12 +370,13 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                     exchange_timestamp,
                     exchange: ExchangeVariant::SandBox,
                     kind: AccountEventKind::Trade(trade),
-                }) {
-                    warn!("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败: {:?}", err);
+                }) { // 如果发送交易事件失败，记录警告日志
+                    warn!("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade: {:?}",err);
                 }
 
                 if let Err(err) = self.account_event_tx.send(balance_event) {
-                    warn!("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败: {:?}", err);
+                    // 如果发送余额事件失败，记录警告日志
+                    warn!("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Balance: {:?}",err);
                 }
             }
         }
