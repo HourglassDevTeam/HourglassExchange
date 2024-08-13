@@ -212,6 +212,7 @@ impl InstrumentOrders
         trades
     }
 
+    // FIXME count和tradeid 还有orderid的关系是错误的。
     // 辅助函数：生成 TradeEvent
     fn generate_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> ClientTrade {
         let fee = trade_quantity * order.state.price * fees_percent;
@@ -221,7 +222,7 @@ impl InstrumentOrders
             Ok(id) => TradeId(id),
             Err(_) => {
                 // 处理转换失败的情况，例如返回一个默认值或引发错误
-                // 这里选择返回一个默认的 TradeId，或者你可以选择更合适的错误处理方式
+                // FIXME 这里选择返回一个默认的 TradeId，或者你可以选择更合适的错误处理方式
                 TradeId(0)
             }
         };
