@@ -122,22 +122,19 @@ impl ClickHouseClient
         result
     }
 
-    pub async fn get_tables_for_date(&self, database: &str, date: &str) -> Vec<String>
-    {
-        // 获取所有表名
-        let table_names = self.get_table_names(database).await;
-
+    pub async fn get_tables_for_date(&self, table_names: &[String], date: &str) -> Vec<String> {
         // 筛选出指定日期的表名
-        let tables_for_date: Vec<String> = table_names.into_iter()
-                                                      .filter(|table_name| {
-                                                          if let Some(table_date) = extract_date(table_name) {
-                                                              table_date == date
-                                                          }
-                                                          else {
-                                                              false
-                                                          }
-                                                      })
-                                                      .collect();
+        let tables_for_date: Vec<String> = table_names
+            .iter()
+            .filter(|table_name| {
+                if let Some(table_date) = extract_date(table_name) {
+                    table_date == date
+                } else {
+                    false
+                }
+            })
+            .cloned()
+            .collect();
 
         tables_for_date
     }
@@ -167,7 +164,8 @@ impl ClickHouseClient
         // 假设你要创建的表使用MergeTree引擎并按timestamp排序
         let final_query = format!("CREATE TABLE {}.{} ENGINE = MergeTree() ORDER BY timestamp AS {}",
                                   database, new_table_name, union_all_query);
-        println!("[AlgoBacktest] : Constructed query: {}", final_query);
+        // println!("[UniLinkExecution] : Constructed query: {}", final_query);
+        println!("[UniLinkExecution] : 成功构建超级查询语句");
 
         // 执行创建新表的查询
         self.client.read().await.query(&final_query).execute().await?;

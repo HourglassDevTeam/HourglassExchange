@@ -24,7 +24,7 @@ async fn main()
     // 删除 union 表
     for table in union_tables {
         let drop_query = format!("DROP TABLE {}.{}", database, table);
-        println!("[AlgoBacktest] : Executing query: {}", drop_query);
+        println!("[UniLinkExecution] : Executing query: {}", drop_query);
 
         match client.client.read().await.query(&drop_query).execute().await {
             | Ok(_) => println!("Successfully dropped table: {}.{}", database, table),
