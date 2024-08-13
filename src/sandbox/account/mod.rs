@@ -194,7 +194,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 }
                 | _ => {
                     // 处理意外的 side 值
-                    println!("本系统没听说过这种Side: {}", side);
+                    println!("本系统没听说过这种意外的Side: {}", side);
                     vec![]
                 }
             }
@@ -205,6 +205,9 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             vec![]
         }
     }
+
+    /// 判断传入的 [`MarketEvent<ClickhouseTrade>`] 流动性是否与 [`InstrumentOrders`] 中的任何与该 [`Instrument`] 相关的订单匹配。
+    /// 如果存在匹配项，将通过被执行的客户端订单来模拟交易。
     pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>)  {todo!()}
     // pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<ClickhouseTrade> {
     //     let instrument_kind = market_event.instrument.kind;
