@@ -171,9 +171,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-
     // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到所有候选的Open订单 // TO BE CONFIRMED
-    pub async fn find_orders_for_an_trade_event(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>
+    pub async fn candidate_orders_for_trade_event(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>
     {
         // 读取 market_event 中的 instrument 和 side
         let instrument_kind = market_event.instrument;
