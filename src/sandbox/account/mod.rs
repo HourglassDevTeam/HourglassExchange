@@ -140,7 +140,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
     }
 }
 
-// NOTE 未完成
 #[allow(dead_code)]
 impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
