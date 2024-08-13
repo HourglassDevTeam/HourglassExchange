@@ -11,7 +11,9 @@ pub struct HistoricalFeed<Event>
     pub receiver: UnboundedReceiver<MarketEvent<Event>>,
 }
 
-impl<Event> HistoricalFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
+impl<Event> HistoricalFeed<Event>
+where
+    Event: Clone + Send + Sync + Debug + 'static,
 {
     pub async fn recv_next(&mut self) -> Option<MarketEvent<Event>>
     {

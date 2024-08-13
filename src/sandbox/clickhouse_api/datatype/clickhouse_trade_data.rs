@@ -3,7 +3,7 @@ use crate::sandbox::clickhouse_api::queries_operations::Row;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
-pub struct ClickhouseTrade
+pub struct ClickhousePublicTrade
 {
     pub basequote: String,
     pub side: String,

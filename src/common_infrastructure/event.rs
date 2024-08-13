@@ -8,10 +8,10 @@ use crate::{
         balance::TokenBalance,
         order::{Cancelled, FullyFill, Open, Order, PartialFill},
         position::AccountPositions,
-        trade::Trade,
+        trade::ClientTrade,
     },
-    sandbox::account::account_config::AccountConfig,
     ExchangeVariant,
+    sandbox::account::account_config::AccountConfig,
 };
 
 /// NOTE: 如果需要记录交易所的时间戳，可以再添加一个专门的字段来表示交易所的时间，例如：    pub exchange_ts: DateTime<Utc> or i64
@@ -34,7 +34,7 @@ pub enum AccountEventKind
     OrdersFilled(Vec<Order<FullyFill>>),
     OrdersPartiallyFilled(Vec<Order<PartialFill>>),
     Balance(TokenBalance),
-    Trade(Trade),
+    Trade(ClientTrade),
     // OrderBookUpdate(OrderBookUpdate),
     // MarketStatus(MarketStatus),
     Balances(Vec<TokenBalance>),

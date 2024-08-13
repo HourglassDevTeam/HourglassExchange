@@ -37,15 +37,18 @@ uuid = { version = "1.8.0", features = ["v4", "serde"] } # 用于生成和解析
 chrono = { version = "0.4.22", features = ["serde"] } # 日期和时间库，支持序列化和反序列化
 num-traits = "0.2.15" # 提供数值类型的各种实用工具和特性
 rand = "0.8.5" # 随机数生成库
-rust_decimal = "1.35.0" # 提供精确的十进制数处理
 regex = { version = "1.10.0", features = ["unicode-perl"] } # 正则表达式库，支持Unicode和Perl风格的正则表达式
 futures-core = "0.3.30" # 核心异步编程工具库，提供Future和Stream的基础定义
 pin-utils = "0.1.0"
 futures-util = "0.3.30"
-serde_json = "1.0.120"
-tokio-tungstenite = "0.21.0"
-reqwest = "0.12.4"
 url = "2.5.2"
-tokio-stream = "0.1.15"
-tracing-subscriber = "0.3.18"
 toml = "0.8.19" # 用于处理Pin的实用工具库
+
+
+# Unused
+#serde_json = "1.0.120"
+#tokio-tungstenite = "0.21.0"
+#reqwest = "0.12.4"
+#rust_decimal = "1.35.0" # 提供精确的十进制数处理
+#tokio-stream = "0.1.15"
+#tracing-subscriber = "0.3.18"
