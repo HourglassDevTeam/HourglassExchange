@@ -6,7 +6,7 @@ use crate::{
     common_infrastructure::{
         instrument::Instrument,
         order::{FullyFill, Order, PartialFill},
-        trade::Trade,
+        trade::TradeEvent,
         Side,
     },
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade, ws_trade::WsTrade},
@@ -29,7 +29,7 @@ pub struct MarketEvent<Data>
 pub enum DataKind
 {
     WsTrade(WsTrade), // WebSocket 交易数据
-    Trade(Trade),
+    Trade(TradeEvent),
     ClickhouseTrade(ClickhouseTrade),
     // OrderBook25(OrderBook25), // 订单簿数据
     // Candle(Candle),           // 蜡烛图数据
@@ -37,9 +37,9 @@ pub enum DataKind
 }
 
 // 为 MarketEvent<Trade> 实现转换为 MarketEvent<DataKind> 的方法
-impl From<MarketEvent<Trade>> for MarketEvent<DataKind>
+impl From<MarketEvent<TradeEvent>> for MarketEvent<DataKind>
 {
-    fn from(event: MarketEvent<Trade>) -> Self
+    fn from(event: MarketEvent<TradeEvent>) -> Self
     {
         // 将 Trade 类型的 MarketEvent 转换为 DataKind::Trade 类型的 MarketEvent
         Self { exchange_time: event.exchange_time,

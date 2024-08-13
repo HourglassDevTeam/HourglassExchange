@@ -1,5 +1,5 @@
 use std::fmt::{Display, Formatter};
-
+use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 pub mod balance; // 通用balance模块
@@ -30,6 +30,20 @@ impl Display for Side
             | Side::Buy => "buy",
             | Side::Sell => "sell",
         })
+    }
+}
+
+
+
+impl FromStr for Side {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "buy" | "b" => Ok(Side::Buy),
+            "sell" | "s" => Ok(Side::Sell),
+            _ => Err(format!("'{}' is not a valid Side", s)),
+        }
     }
 }
 

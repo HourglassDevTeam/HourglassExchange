@@ -11,7 +11,7 @@ use crate::common_infrastructure::{
 use crate::common_infrastructure::datafeed::event::MarketEvent;
 use crate::common_infrastructure::friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees};
 use crate::common_infrastructure::instrument::kind::InstrumentKind;
-use crate::common_infrastructure::trade::{TradeId};
+use crate::common_infrastructure::trade::{TradeEvent, TradeId};
 use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade;
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
@@ -81,7 +81,7 @@ impl InstrumentOrders
     // NOTE:
     //  - 如果Client在同一价格同时开了买单和卖单 [`Order<Open>`]，优先选择剩余数量较大的
     //    Order<Open> 进行匹配。
-    pub fn has_matching_order(&self, market_event: &MarketEvent<ClickhouseTrade>) -> Option<Side> {
+    pub fn determine_matching_side(&self, market_event: &MarketEvent<ClickhouseTrade>) -> Option<Side> {
         match (self.bids.last(), self.asks.last()) {
             // 检查最佳买单和卖单的 Order<Open> 是否匹配
             | (Some(best_bid), Some(best_ask)) => {
@@ -120,8 +120,7 @@ impl InstrumentOrders
             | _ => None,
         }
     }
-
-    pub fn match_bids(&mut self, market_event: &MarketEvent<ClickhouseTrade>, fees_percent: f64) -> Vec<ClickhouseTrade> {
+    pub fn match_bids(&mut self, market_event: &MarketEvent<ClickhouseTrade>, fees_percent: f64) -> Vec<TradeEvent> {
         // 跟踪剩余的可用流动性，以便匹配
         let mut remaining_liquidity = market_event.kind.amount;
 
@@ -145,7 +144,7 @@ impl InstrumentOrders
             if remaining_quantity <= remaining_liquidity {
                 // 全量成交
                 remaining_liquidity -= remaining_quantity;
-                trades.push(self.generate_trade(best_bid, remaining_quantity, fees_percent));
+                trades.push(self.generate_trade_event(&best_bid, remaining_quantity, fees_percent));
 
                 // 如果流动性刚好耗尽，退出循环
                 if remaining_liquidity == 0.0 {
@@ -155,7 +154,7 @@ impl InstrumentOrders
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_bid.state.filled_quantity += trade_quantity;
-                trades.push(self.generate_trade(best_bid.clone(), trade_quantity, fees_percent));
+                trades.push(self.generate_trade_event(&best_bid, trade_quantity, fees_percent));
                 self.bids.push(best_bid); // 将部分成交后的订单重新放回队列
                 break;
             }
@@ -170,8 +169,7 @@ impl InstrumentOrders
     pub fn trade_id(&self) -> TradeId {
         TradeId(self.batch_id.into())
     }
-
-    pub fn match_asks(&mut self, market_event: &MarketEvent<ClickhouseTrade>, fees_percent: f64) -> Vec<ClickhouseTrade> {
+    pub fn match_asks(&mut self, market_event: &MarketEvent<ClickhouseTrade>, fees_percent: f64) -> Vec<TradeEvent> {
         // 跟踪剩余的可用流动性，以便匹配
         let mut remaining_liquidity = market_event.kind.amount;
 
@@ -195,7 +193,7 @@ impl InstrumentOrders
             if remaining_quantity <= remaining_liquidity {
                 // 全量成交
                 remaining_liquidity -= remaining_quantity;
-                trades.push(self.generate_trade(best_ask, remaining_quantity, fees_percent));
+                trades.push(self.generate_trade_event(&best_ask, remaining_quantity, fees_percent));
 
                 // 如果流动性刚好耗尽，退出循环
                 if remaining_liquidity == 0.0 {
@@ -205,7 +203,7 @@ impl InstrumentOrders
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_ask.state.filled_quantity += trade_quantity;
-                trades.push(self.generate_trade(best_ask.clone(), trade_quantity, fees_percent));
+                trades.push(self.generate_trade_event(&best_ask.clone(), trade_quantity, fees_percent));
                 self.asks.push(best_ask); // 将部分成交后的订单重新放回队列
                 break;
             }
@@ -214,19 +212,28 @@ impl InstrumentOrders
         trades
     }
 
+    // 辅助函数：生成 TradeEvent
+    fn generate_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> TradeEvent {
+        let fee = trade_quantity * order.state.price * fees_percent;
 
-    /// 使用唯一的 [`TradeId`] 为此 [`Instrument`] 市场生成一个客户端 [`Trade`]。
-    pub fn generate_trade(&self, order: Order<Open>, trade_quantity: f64, fees_percent: f64) -> ClickhouseTrade {
-        // 计算交易费用（取决于订单的方向，费用用基货币或报价货币表示）
-        let _fees = calculate_fees(&order, trade_quantity, fees_percent); // CONSIDER : Where do we store it?
+        // 尝试将 OrderId 转换为 TradeId
+        let trade_id = match order.state.id.0.parse::<i64>() {
+            Ok(id) => TradeId(id),
+            Err(_) => {
+                // 处理转换失败的情况，例如返回一个默认值或引发错误
+                // 这里选择返回一个默认的 TradeId，或者你可以选择更合适的错误处理方式
+                TradeId(0)
+            }
+        };
 
-        // 生成由匹配订单 [`Order<Open>`] 生成的执行交易
-        ClickhouseTrade {
-            basequote: "".to_string(),
-            side: order.side.to_string(),
+        TradeEvent {
+            id: trade_id,
+            instrument: order.instrument.clone(),
+            side: order.side,
             price: order.state.price,
-            timestamp: 0,
-            amount: 0.0,
+            size: trade_quantity,
+            count: 1, // NOTE 假设每笔交易计数为1，可以根据实际情况调整
+            fees: fee,
         }
     }
 

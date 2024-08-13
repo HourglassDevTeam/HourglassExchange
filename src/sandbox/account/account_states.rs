@@ -25,6 +25,7 @@ use crate::{
         clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade,
     },
 };
+use crate::common_infrastructure::trade::TradeEvent;
 
 #[derive(Clone, Debug)]
 pub struct AccountState<Event>
@@ -395,45 +396,50 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 
     /// 从交易中更新余额并返回 [`AccountEvent`]
-    /// NOTE 注意[ClickhouseTrade]行情数据和此处所需Trade是否兼容。
-    /// NOTE this is currently buggy!
-    pub async fn update_from_trade(&mut self, market_event: &MarketEvent<ClickhouseTrade>) -> Result<AccountEvent, ExecutionError>
-    {
-        let Instrument { base, quote, kind, .. } = &market_event.instrument;
-        let fee = self.get_fee(kind).await.unwrap_or(0.0);
-        let side = market_event.kind.parse_side();
+    pub async fn update_from_trade(&mut self, trade_event: &TradeEvent) -> Result<AccountEvent, ExecutionError> {
+        let Instrument { base, quote, kind, .. } = &trade_event.instrument;
+        let fee = trade_event.fees; // 直接从 TradeEvent 中获取费用
+        let side = trade_event.side; // 直接使用 TradeEvent 中的 side
 
         match kind {
-            | InstrumentKind::Spot => {
+            InstrumentKind::Spot => {
                 todo!("Spot handling is not implemented yet");
             }
-            | InstrumentKind::CryptoOption => {
+            InstrumentKind::CryptoOption => {
                 todo!("Option handling is not implemented yet");
             }
-            | InstrumentKind::CommodityOption => {
+            InstrumentKind::CommodityOption => {
                 todo!("CommodityOption handling is not implemented yet")
             }
-            | InstrumentKind::CommodityFuture => {
+            InstrumentKind::CommodityFuture => {
                 todo!("CommodityFuture handling is not implemented yet")
             }
-            | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
+            InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let (base_delta, quote_delta) = match side {
-                    | Side::Buy => {
-                        let base_increase = market_event.kind.amount - fee;
+                    Side::Buy => {
+                        let base_increase = trade_event.size - fee;
                         // Note: available was already decreased by the opening of the Side::Buy order
-                        let base_delta = BalanceDelta { total: base_increase,
-                                                        available: base_increase };
-                        let quote_delta = BalanceDelta { total: -market_event.kind.amount * market_event.kind.price,
-                                                         available: 0.0 };
+                        let base_delta = BalanceDelta {
+                            total: base_increase,
+                            available: base_increase,
+                        };
+                        let quote_delta = BalanceDelta {
+                            total: -trade_event.size * trade_event.price,
+                            available: 0.0,
+                        };
                         (base_delta, quote_delta)
                     }
-                    | Side::Sell => {
+                    Side::Sell => {
                         // Note: available was already decreased by the opening of the Side::Sell order
-                        let base_delta = BalanceDelta { total: -market_event.kind.amount,
-                                                        available: 0.0 };
-                        let quote_increase = (market_event.kind.amount * market_event.kind.price) - fee;
-                        let quote_delta = BalanceDelta { total: quote_increase,
-                                                         available: quote_increase };
+                        let base_delta = BalanceDelta {
+                            total: -trade_event.size,
+                            available: 0.0,
+                        };
+                        let quote_increase = (trade_event.size * trade_event.price) - fee;
+                        let quote_delta = BalanceDelta {
+                            total: quote_increase,
+                            available: quote_increase,
+                        };
                         (base_delta, quote_delta)
                     }
                 };
@@ -441,9 +447,14 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 let base_balance = self.update(base, base_delta);
                 let quote_balance = self.update(quote, quote_delta);
 
-                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp").into(),
-                                  exchange: ExchangeVariant::SandBox,
-                                  kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance)]) })
+                Ok(AccountEvent {
+                    exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp").into(),
+                    exchange: ExchangeVariant::SandBox,
+                    kind: AccountEventKind::Balances(vec![
+                        TokenBalance::new(base.clone(), base_balance),
+                        TokenBalance::new(quote.clone(), quote_balance),
+                    ]),
+                })
             }
         }
     }

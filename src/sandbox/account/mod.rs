@@ -5,6 +5,7 @@ use std::{
         Arc,
     },
 };
+use std::str::FromStr;
 
 use futures::future::join_all;
 use mpsc::UnboundedSender;
@@ -46,7 +47,7 @@ pub struct Account<Event>
     pub account_event_tx: UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub config: Arc<AccountConfig>,                           // 帐户配置
-    pub balances: Arc<RwLock<AccountState<Event>>>,           // 帐户余额
+    pub states: Arc<RwLock<AccountState<Event>>>,           // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
 }
 
@@ -60,7 +61,7 @@ impl<Event> Clone for Account<Event> where Event: Clone + Send + Sync + Debug + 
                   account_event_tx: self.account_event_tx.clone(),
                   market_event_tx: self.market_event_tx.clone(),
                   config: Arc::clone(&self.config),
-                  balances: Arc::clone(&self.balances),
+                  states: Arc::clone(&self.states),
                   orders: Arc::clone(&self.orders) }
     }
 }
@@ -131,7 +132,7 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
                      market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
                      config: self.config.ok_or("config is required")?,                               // 检查并获取config
-                     balances: self.balances.ok_or("balances is required")?,                         // 检查并获取balances
+                     states: self.balances.ok_or("balances is required")?,                         // 检查并获取balances
                      orders: self.orders.ok_or("orders are required")? })
     }
 }
@@ -159,7 +160,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     pub async fn fetch_balances(&self, response_tx: Sender<Result<Vec<TokenBalance>, ExecutionError>>)
     {
-        let balances = self.balances.read().await.fetch_all();
+        let balances = self.states.read().await.fetch_all();
         respond(response_tx, Ok(balances));
     }
 
@@ -205,16 +206,21 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             vec![]
         }
     }
-
-    /// 判断传入的 [`MarketEvent<ClickhouseTrade>`] 流动性是否与 [`InstrumentOrders`] 中的任何与该 [`Instrument`] 相关的订单匹配。
-    /// 如果存在匹配项，将通过被执行的客户端订单来模拟交易。
-    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>)  {todo!()}
-    // pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<ClickhouseTrade> {
+    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {todo!()}
+    // pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {
     //     let instrument_kind = market_event.instrument.kind;
-    //     let side = market_event.kind.side;
+    //
+    //     // 将字符串转换为 `Side` 枚举
+    //     let side = match Side::from_str(&market_event.kind.side) {
+    //         Ok(side) => side,
+    //         Err(_) => {
+    //             warn!("无效的 Side: {}", market_event.kind.side);
+    //             return; // 如果 `side` 无效，退出函数
+    //         }
+    //     };
     //
     //     // 获取当前的佣金费率
-    //     let commission_rates = &self.config.read().await.current_commission_rate;
+    //     let commission_rates = &self.config.current_commission_rate;
     //
     //     // 根据 InstrumentKind 和 Side 应用不同的费用
     //     let fees_percent = match instrument_kind {
@@ -232,7 +238,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     //         },
     //         _ => {
     //             warn!("不支持的 InstrumentKind: {:?}", instrument_kind);
-    //             return Vec::new(); // 返回空 Vec，因为没有匹配的订单
+    //             return; // 不支持的 InstrumentKind，退出函数
     //         }
     //     };
     //
@@ -240,8 +246,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     //     let mut orders = match self.orders.write().await.ins_orders_mut(&market_event.instrument) {
     //         Ok(orders) => orders,
     //         Err(error) => {
-    //             warn!(?error, %market_event.instrument, ?market_event.kind, "无法匹配未识别的Instrument的订单");
-    //             return Vec::new();  // 返回空 Vec，因为没有匹配的订单
+    //             warn!(?error, %market_event.instrument, ?market_event.kind, "无法匹配未识别的 Instrument 的订单");
+    //             return; // 未找到对应的 InstrumentOrders，退出函数
     //         }
     //     };
     //
@@ -251,8 +257,29 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     //         Side::Sell => orders.match_asks(&market_event, fees_percent),
     //     };
     //
-    //     // 返回生成的交易集合
-    //     trades
+    //     // 处理生成的交易记录
+    //     if !trades.is_empty() {
+    //         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
+    //
+    //         for trade in trades {
+    //             // 更新余额和其他相关信息
+    //             let balance_event = self.states.write().await.update_from_trade(&trade);
+    //
+    //             // 发送交易事件给客户端
+    //             self.account_event_tx
+    //                 .send(AccountEvent {
+    //                     exchange_timestamp,
+    //                     exchange: ExchangeVariant::SandBox,
+    //                     kind: AccountEventKind::Trade(trade),
+    //                 })
+    //                 .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Trade 失败");
+    //
+    //             // 发送余额更新事件
+    //             self.account_event_tx
+    //                 .send(balance_event)
+    //                 .expect("[UniLink_Execution] : 客户端离线 - 发送 AccountEvent::Balance 失败");
+    //         }
+    //     }
     // }
 
 
@@ -406,7 +433,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         let (token, required_balance) = self.calculate_required_available_balance(&order, current_price).await;
 
         // 检查可用余额是否充足
-        self.balances.read().await.has_sufficient_available_balance(token, required_balance)?;
+        self.states.read().await.has_sufficient_available_balance(token, required_balance)?;
 
         // 构建 Open<Order> 并获取写锁
         let open_order = {
@@ -422,7 +449,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         };
 
         // 更新客户余额
-        let balance_event = self.balances.write().await.update_from_open(&open_order, required_balance).await.unwrap();
+        let balance_event = self.states.write().await.update_from_open(&open_order, required_balance).await.unwrap();
 
         // 获取当前的 exchange_timestamp
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
@@ -484,7 +511,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
         // 在可失败操作成功后，更新客户端余额
         let balance_event = {
-            let mut balances_guard = self.balances.write().await;
+            let mut balances_guard = self.states.write().await;
             balances_guard.update_from_cancel(&removed)
         };
 
