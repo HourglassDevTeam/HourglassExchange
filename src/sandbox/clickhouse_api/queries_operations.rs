@@ -4,7 +4,8 @@
 use std::sync::Arc;
 
 use async_stream::stream;
-use chrono::{Duration, NaiveDate};
+use std::time::Duration;
+use chrono::{Duration as ChronoDuration, NaiveDate};
 pub use clickhouse::{
     error::{Error, Result},
     Client, Row,
@@ -14,7 +15,7 @@ use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver},
     RwLock,
 };
-
+use tokio::time::sleep;
 use crate::{
     common_infrastructure::{datafeed::event::MarketEvent, Side},
     error::ExecutionError,
@@ -151,24 +152,50 @@ impl ClickHouseClient
         Ok(ws_trades)
     }
 
-    pub async fn create_unioned_tables_for_date(&self, database: &str, new_table_name: &str, table_names: &Vec<String>) -> Result<(), Error>
-    {
+
+
+    pub async fn create_unioned_tables_for_date(
+        &self,
+        database: &str,
+        new_table_name: &str,
+        table_names: &Vec<String>,
+        report_progress: bool // 新增参数，用于控制是否启用进度汇报
+    ) -> Result<(), Error> {
         // 构建UNION ALL查询
         let mut queries = Vec::new();
-        for table_name in table_names {
+        let total_tables = table_names.len();
+
+        for (i, table_name) in table_names.iter().enumerate() {
             let query = format!("SELECT symbol, side, price, timestamp,amount FROM {}.{}", database, table_name);
             queries.push(query);
+
+            // 如果启用进度汇报，每处理完一个表就汇报一次进度
+            if report_progress {
+                let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
+                println!("进度: 已处理 {} / {} 个表 ({:.2}%)", i + 1, total_tables, progress);
+
+                // 模拟延迟以模拟长时间运行任务的进度汇报
+                sleep(Duration::from_millis(500)).await;
+            }
         }
+
         let union_all_query = queries.join(" UNION ALL ");
 
         // 假设你要创建的表使用MergeTree引擎并按timestamp排序
         let final_query = format!("CREATE TABLE {}.{} ENGINE = MergeTree() ORDER BY timestamp AS {}",
                                   database, new_table_name, union_all_query);
-        // println!("[UniLinkExecution] : Constructed query: {}", final_query);
-        println!("[UniLinkExecution] : 成功构建超级查询语句");
+
+        if report_progress {
+            println!("[UniLinkExecution] : 成功构建超级查询语句");
+        }
 
         // 执行创建新表的查询
         self.client.read().await.query(&final_query).execute().await?;
+
+        if report_progress {
+            println!("[UniLinkExecution] : 表 {}.{} 创建成功", database, new_table_name);
+        }
+
         Ok(())
     }
 
@@ -297,7 +324,7 @@ impl ClickHouseClient
                     }
                 }
 
-                current_date += Duration::days(1);
+                current_date += ChronoDuration::days(1);
             }
         });
 

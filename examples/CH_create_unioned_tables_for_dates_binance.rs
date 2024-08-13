@@ -49,7 +49,7 @@ async fn main() {
         // 如果找到对应的表，则创建联合表
         if !tables.is_empty() {
             let new_table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date_str);
-            match client.create_unioned_tables_for_date(&database, &new_table_name, &tables).await {
+            match client.create_unioned_tables_for_date(&database, &new_table_name, &tables, true).await {
                 Ok(_) => println!("成功创建联合表: {}.{}", database, new_table_name),
                 Err(e) => eprintln!("创建联合表时出错: {}", e),
             }
