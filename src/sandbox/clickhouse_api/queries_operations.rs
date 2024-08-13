@@ -216,7 +216,7 @@ impl ClickHouseClient
                 );
                 println!("[UniLinkExecution] : 正在执行 query: {}", query);
 
-                match self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await {
+                match self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await {
                     Ok(trade_datas) => {
                         for trade_data in &trade_datas {
                             let (base, quote) = parse_base_and_quote(&trade_data.basequote);

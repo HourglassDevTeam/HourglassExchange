@@ -76,7 +76,7 @@ impl InstrumentOrders
             }
         }
     }
-    // 检查输入的 [`ClickhouseTrade`] 是否匹配买单或卖单的客户 [`Order<Open>`]
+    // 检查输入的 [`ClickhousePublicTrade`] 是否匹配买单或卖单的客户 [`Order<Open>`]
     //
     // NOTE:
     //  - 如果Client在同一价格同时开了买单和卖单 [`Order<Open>`]，优先选择剩余数量较大的
@@ -110,10 +110,10 @@ impl InstrumentOrders
                 }
             }
 
-            // 最佳买单 Order<Open> 匹配输入的 ClickhouseTrade
+            // 最佳买单 Order<Open> 匹配输入的 ClickhousePublicTrade
             | (Some(best_bid), None) if best_bid.state.price >= market_event.kind.price => Some(Side::Buy),
 
-            // 最佳卖单 Order<Open> 匹配输入的 ClickhouseTrade
+            // 最佳卖单 Order<Open> 匹配输入的 ClickhousePublicTrade
             | (None, Some(best_ask)) if best_ask.state.price <= market_event.kind.price => Some(Side::Sell),
 
             // 要么没有买单或卖单 Order<Open>，要么没有匹配

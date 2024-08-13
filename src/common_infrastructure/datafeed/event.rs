@@ -30,7 +30,7 @@ pub enum DataKind
 {
     WsTrade(WsTrade), // WebSocket 交易数据
     Trade(ClientTrade),
-    ClickhouseTrade(ClickhousePublicTrade),
+    ClickhousePublicTrade(ClickhousePublicTrade),
     // OrderBook25(OrderBook25), // 订单簿数据
     // Candle(Candle),           // 蜡烛图数据
     // Liquidation(Liquidation), // 清算数据
