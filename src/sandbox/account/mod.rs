@@ -11,7 +11,7 @@ use mpsc::UnboundedSender;
 use oneshot::Sender;
 use tokio::sync::{mpsc, oneshot, RwLock};
 
-use account_balances::AccountState;
+use account_states::AccountState;
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
 
@@ -31,7 +31,7 @@ use crate::{
 };
 use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhouseTrade;
 
-pub mod account_balances;
+pub mod account_states;
 pub mod account_config;
 pub mod account_latency;
 pub mod account_market_feed;
@@ -171,12 +171,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    // TODO TO BE MOVED TO [AccountBalances]
-    // pub async fn fetch_positions(&self, response_tx: Sender<Result<Vec<AccountPositions>, ExecutionError>>)
-    // {
-    //     let positions = self.positions.read().await.clone();
-    //     respond(response_tx, Ok(positions));
-    // }
+
 
     // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到对应的订单 // TO BE CONFIRMED
     pub async fn find_orders_for_an_trade_event(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>

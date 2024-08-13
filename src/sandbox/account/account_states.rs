@@ -2,10 +2,10 @@ use std::{
     collections::HashMap,
     fmt::Debug,
     ops::{Deref, DerefMut},
-    sync::{atomic::Ordering, Arc, Mutex, Weak},
+    sync::{atomic::Ordering, Arc, Weak},
 };
-
-use tokio::sync::RwLock;
+use std::sync::mpsc::Sender;
+use tokio::sync::{Mutex, RwLock};
 
 use crate::{
     common_infrastructure::{
@@ -25,6 +25,7 @@ use crate::{
     },
     ExchangeVariant,
 };
+use crate::sandbox::account::respond;
 
 #[derive(Clone, Debug)]
 pub struct AccountState<Event>
@@ -83,7 +84,12 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
         }
     }
 
-    // 异步方法来获取 Exchange 的 timestamp.
+    // pub async fn fetch_positions(&self, response_tx: Sender<Result<Vec<AccountPositions>, ExecutionError>>)
+    // {
+    //     let positions = self.positions.lock().await.clone();
+    //     respond(response_tx, Ok(positions));
+    // }
+
     pub async fn get_exchange_ts(&self) -> Result<i64, ExecutionError>
     {
         if let Some(account) = self.account_ref.upgrade() {
@@ -139,10 +145,10 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
         }
     }
 
-    /// 获取指定 `Instrument` 的仓位
+    /// 获取指定 `Instrument` 的仓位/
     pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<PositionKind>, ExecutionError>
     {
-        let positions = self.positions.lock().unwrap(); // 获取锁
+        let positions = self.positions.lock().await; // 获取锁
 
         match instrument.kind {
             | InstrumentKind::Spot => return Err(ExecutionError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument))),
@@ -188,7 +194,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     /// 更新指定 `Instrument` 的仓位
     pub async fn update_position(&mut self, position: PositionKind) -> Result<(), ExecutionError>
     {
-        let mut positions = self.positions.lock().unwrap(); // 获取锁
+        let mut positions = self.positions.lock().await; // 获取锁
 
         match position {
             | PositionKind::Perpetual(pos) => {
@@ -227,76 +233,86 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
 
     /// Check if there is already some position of this instrument in the AccountPositions
     /// need to determine InstrumentKind from the open order first as position types vary
-    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError>
-    {
+    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
-            let balances_read = account_read.balances.read().await; // 创建一个中间变量
-            let positions_lock = balances_read.positions.lock(); // 获取锁
+            let positions_lock = self.positions.lock().await; // 获取锁
 
-            for positions in positions_lock.iter() {
-                if positions.has_position(&open.instrument) {
+            // Check in each position type collection
+            if let Some(perpetual_positions) = &positions_lock.perpetual_pos {
+                if perpetual_positions.iter().any(|pos| pos.meta.instrument == open.instrument) {
                     return Ok(true);
                 }
             }
+            if let Some(futures_positions) = &positions_lock.futures_pos {
+                if futures_positions.iter().any(|pos| pos.meta.instrument == open.instrument) {
+                    return Ok(true);
+                }
+            }
+            if let Some(option_positions) = &positions_lock.option_pos {
+                if option_positions.iter().any(|pos| pos.meta.instrument == open.instrument) {
+                    return Ok(true);
+                }
+            }
+            if let Some(margin_positions) = &positions_lock.margin_pos {
+                if margin_positions.iter().any(|pos| pos.meta.instrument == open.instrument) {
+                    return Ok(true);
+                }
+            }
+
             Ok(false)
-        }
-        else {
+        } else {
             Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
 
-    async fn check_position_direction_conflict(&self, instrument: &Instrument, side: Side) -> Result<(), ExecutionError>
-    {
+    async fn check_position_direction_conflict(&self, instrument: &Instrument, side: Side) -> Result<(), ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account.read().await;
-            let balances_read = account_read.balances.read().await; // 创建一个中间变量
-            let positions_lock = balances_read.positions.lock(); // 获取锁
+            let positions_lock = self.positions.lock().await; // 获取锁
 
-            for positions in positions_lock.iter() {
-                match instrument.kind {
-                    | InstrumentKind::Spot => {
-                        todo!() // not quite needed either
-                    }
-                    | InstrumentKind::CommodityOption => {
-                        todo!() // not quite needed either
-                    }
-                    | InstrumentKind::CommodityFuture => {
-                        todo!() // not quite needed either
-                    }
-                    | InstrumentKind::Perpetual => {
-                        if let Some(perpetual_positions) = &positions.perpetual_pos {
-                            for pos in perpetual_positions {
-                                if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                    return Err(ExecutionError::InvalidDirection);
-                                }
+            match instrument.kind {
+                InstrumentKind::Spot => {
+                    todo!() // not quite needed either
+                }
+                InstrumentKind::CommodityOption => {
+                    todo!() // not quite needed either
+                }
+                InstrumentKind::CommodityFuture => {
+                    todo!() // not quite needed either
+                }
+                InstrumentKind::Perpetual => {
+                    if let Some(perpetual_positions) = &positions_lock.perpetual_pos {
+                        for pos in perpetual_positions {
+                            if pos.meta.instrument == *instrument && pos.meta.side != side {
+                                return Err(ExecutionError::InvalidDirection);
                             }
                         }
                     }
-                    | InstrumentKind::Future => {
-                        if let Some(futures_positions) = &positions.futures_pos {
-                            for pos in futures_positions {
-                                if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                    return Err(ExecutionError::InvalidDirection);
-                                }
+                }
+                InstrumentKind::Future => {
+                    if let Some(futures_positions) = &positions_lock.futures_pos {
+                        for pos in futures_positions {
+                            if pos.meta.instrument == *instrument && pos.meta.side != side {
+                                return Err(ExecutionError::InvalidDirection);
                             }
                         }
                     }
-                    | InstrumentKind::CryptoOption => {
-                        if let Some(option_positions) = &positions.option_pos {
-                            for pos in option_positions {
-                                if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                    return Err(ExecutionError::InvalidDirection);
-                                }
+                }
+                InstrumentKind::CryptoOption => {
+                    if let Some(option_positions) = &positions_lock.option_pos {
+                        for pos in option_positions {
+                            if pos.meta.instrument == *instrument && pos.meta.side != side {
+                                return Err(ExecutionError::InvalidDirection);
                             }
                         }
                     }
-                    | InstrumentKind::CryptoLeveragedToken => {
-                        if let Some(margin_positions) = &positions.margin_pos {
-                            for pos in margin_positions {
-                                if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                    return Err(ExecutionError::InvalidDirection);
-                                }
+                }
+                InstrumentKind::CryptoLeveragedToken => {
+                    if let Some(margin_positions) = &positions_lock.margin_pos {
+                        for pos in margin_positions {
+                            if pos.meta.instrument == *instrument && pos.meta.side != side {
+                                return Err(ExecutionError::InvalidDirection);
                             }
                         }
                     }
@@ -305,6 +321,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
         }
         Ok(())
     }
+
 
     /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。

@@ -166,7 +166,7 @@ impl InstrumentOrders
 
 
 
-    /// 使用 `batch_id` 值为此 [`Instrument`] 市场生成唯一的 [`TradeId`]。
+    /// NOTE 目前暂时的做法是使用 `batch_id` 值为此 [`Instrument`] 市场生成唯一的 [`TradeId`]。
     pub fn trade_id(&self) -> TradeId {
         TradeId(self.batch_id.into())
     }
