@@ -173,41 +173,43 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到所有候选的Open订单 // TO BE CONFIRMED
-    pub async fn candidate_orders_for_trade_event(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>
-    {
-        // 读取 market_event 中的 instrument 和 side
-        let instrument_kind = market_event.instrument;
-        let side = market_event.kind.side;
+    //
+    // // NOTE 为给定的 MarketEvent<ClickhouseTrade> 找到所有候选的Open订单 // TO BE CONFIRMED
+    // pub async fn candidate_orders_for_trade_event(&self, market_event: MarketEvent<ClickhouseTrade>) -> Vec<Order<Open>>
+    // {
+    //     // 读取 market_event 中的 instrument 和 side
+    //     let instrument_kind = market_event.instrument;
+    //     let side = market_event.kind.side;
+    //
+    //     // 获取读锁以读取订单数据
+    //     let orders = self.orders.read().await;
+    //
+    //     // 从 instrument_orders_map 中查找对应的 InstrumentOrders
+    //     if let Some(instrument_orders) = orders.instrument_orders_map.get(&instrument_kind) {
+    //         match side.as_str() {
+    //             | "Buy" => {
+    //                 // 返回所有买单
+    //                 instrument_orders.bids.clone()
+    //             }
+    //             | "Sell" => {
+    //                 // 返回所有卖单
+    //                 instrument_orders.asks.clone()
+    //             }
+    //             | _ => {
+    //                 // 处理意外的 side 值
+    //                 println!("本系统没听说过这种意外的Side: {}", side);
+    //                 vec![]
+    //             }
+    //         }
+    //     }
+    //     else {
+    //         // 没有找到对应的 InstrumentOrders
+    //         println!("未找到本则行情数据对应的未成交订单: {:?}", instrument_kind);
+    //         vec![]
+    //     }
+    // }
 
-        // 获取读锁以读取订单数据
-        let orders = self.orders.read().await;
 
-        // 从 instrument_orders_map 中查找对应的 InstrumentOrders
-        if let Some(instrument_orders) = orders.instrument_orders_map.get(&instrument_kind) {
-            match side.as_str() {
-                | "Buy" => {
-                    // 返回所有买单
-                    instrument_orders.bids.clone()
-                }
-                | "Sell" => {
-                    // 返回所有卖单
-                    instrument_orders.asks.clone()
-                }
-                | _ => {
-                    // 处理意外的 side 值
-                    println!("本系统没听说过这种意外的Side: {}", side);
-                    vec![]
-                }
-            }
-        }
-        else {
-            // 没有找到对应的 InstrumentOrders
-            println!("未找到本则行情数据对应的未成交订单: {:?}", instrument_kind);
-            vec![]
-        }
-    }
-    // pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {todo!()}
     pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhouseTrade>) {
         let instrument_kind = market_event.instrument.kind;
 
