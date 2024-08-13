@@ -348,7 +348,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         match orders_lock.ins_orders_mut(instrument) {
             Ok(orders) => Some(orders.to_owned()),
             Err(error) => {
-                warn!(?error, %instrument, "无法匹配未识别的 Instrument 的订单");
+                warn!(?error, %instrument, "Failed to match orders for unrecognized Instrument");
                 None
             }
         }
@@ -361,7 +361,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 let balance_event = match self.states.write().await.update_from_trade(&trade).await {
                     Ok(event) => event,
                     Err(err) => {
-                        warn!("更新余额失败: {:?}", err);
+                        warn!("Failed to update balance: {:?}", err);
                         continue;
                     }
                 };
