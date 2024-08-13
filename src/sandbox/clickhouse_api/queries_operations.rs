@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use async_stream::stream;
 use std::time::Duration;
-use chrono::{Duration as ChronoDuration, NaiveDate};
+use chrono::{NaiveDate};
 pub use clickhouse::{
     error::{Error, Result},
     Client, Row,
@@ -324,7 +324,7 @@ impl ClickHouseClient
                     }
                 }
 
-                current_date += ChronoDuration::days(1);
+                current_date += chrono::Duration::days(1);
             }
         });
 
