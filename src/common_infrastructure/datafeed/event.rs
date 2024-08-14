@@ -74,7 +74,7 @@ impl From<Order<FullyFill>> for MarketEvent<ClickhousePublicTrade>
     fn from(order: Order<FullyFill>) -> Self
     {
         let clickhouse_trade = ClickhousePublicTrade {
-            basequote: format!("{}/{}", order.instrument.base, order.instrument.quote),
+            symbol: format!("{}/{}", order.instrument.base, order.instrument.quote),
             side: match order.side {
                 | Side::Buy => "buy".to_string(),
                 | Side::Sell => "sell".to_string(),
@@ -100,7 +100,7 @@ impl From<Order<PartialFill>> for MarketEvent<ClickhousePublicTrade>
     fn from(order: Order<PartialFill>) -> Self
     {
         let clickhouse_trade = ClickhousePublicTrade {
-            basequote: format!("{}/{}", order.instrument.base, order.instrument.quote),
+            symbol: format!("{}/{}", order.instrument.base, order.instrument.quote),
             side: match order.side {
                 | Side::Buy => "buy".to_string(),
                 | Side::Sell => "sell".to_string(),

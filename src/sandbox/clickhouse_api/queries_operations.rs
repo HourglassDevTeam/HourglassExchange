@@ -205,34 +205,32 @@ impl ClickHouseClient
         // let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
-        let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp", full_table_path);
+        let query = format!("SELECT symbol, side, price, timestamp, amount FROM {} ORDER BY timestamp", full_table_path);
         println!("[UniLinkExecution] : Constructed query {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
 
-    pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<WsTrade, Error>
-    {
+    pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<ClickhousePublicTrade, Error> {
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
-        let query = format!("SELECT * FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
+        let query = format!("SELECT symbol, side, price, timestamp, amount FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
         println!("[UniLinkExecution] : Constructed query :  {}", query);
         let trade_data = self.client.read().await.query(&query).fetch_one::<ClickhousePublicTrade>().await?;
-        Ok(WsTrade::from(trade_data))
+        Ok(trade_data)
     }
 
-    pub async fn query_unioned_trade_table(&self, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<WsTrade>, Error>
-    {
+    pub async fn query_unioned_trade_table(&self, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<ClickhousePublicTrade>, Error> {
         let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
         let database = format!("{}_{}_{}", exchange, instrument, channel);
         let query = format!("SELECT * FROM {}.{} ORDER BY timestamp", database, table_name);
         println!("[UniLinkExecution] : Executing query: {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
-        let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
-        Ok(ws_trades)
+        Ok(trade_datas)
     }
+
 
     pub fn query_unioned_trade_table_batched<'a>(&'a self,
                                                  exchange: &'a str,
@@ -257,7 +255,7 @@ impl ClickHouseClient
                 match self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await {
                     Ok(trade_datas) => {
                         for trade_data in &trade_datas {
-                            let (base, quote) = parse_base_and_quote(&trade_data.basequote);
+                            let (base, quote) = parse_base_and_quote(&trade_data.symbol);
                             let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(),base,quote);
                             yield market_event;
                         }
@@ -315,7 +313,7 @@ impl ClickHouseClient
                     match client.query(&query).fetch_all::<ClickhousePublicTrade>().await {
                         | Ok(trade_datas) => {
                             for trade_data in &trade_datas {
-                                let (base, quote) = parse_base_and_quote(&trade_data.basequote);
+                                let (base, quote) = parse_base_and_quote(&trade_data.symbol);
                                 let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
                                 if tx.send(market_event).is_err() {
                                     eprintln!("Failed to send market event");

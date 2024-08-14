@@ -75,7 +75,7 @@ impl From<ClickhousePublicTrade> for WsTrade
 {
     fn from(trade: ClickhousePublicTrade) -> Self
     {
-        WsTrade { instId: trade.basequote,
+        WsTrade { instId: trade.symbol,
                   side: trade.side,
                   px: trade.price.to_string(),
                   ts: trade.timestamp.to_string(),
@@ -83,16 +83,16 @@ impl From<ClickhousePublicTrade> for WsTrade
     }
 }
 
-pub fn parse_base_and_quote(basequote: &str) -> (String, String)
+pub fn parse_base_and_quote(symbol: &str) -> (String, String)
 {
     let quote_assets = ["USDT", "USTC", "USDC", "USD", "UST", "DAI", "FDUSD", "BTC", "ETH", "EURT"];
     for &quote in &quote_assets {
-        if basequote.ends_with(quote) {
-            let base = &basequote[..basequote.len() - quote.len()];
+        if symbol.ends_with(quote) {
+            let base = &symbol[..symbol.len() - quote.len()];
             return (base.to_string(), quote.to_string());
         }
     }
-    (basequote.to_string(), String::new()) // 如果无法解析，返回原始值
+    (symbol.to_string(), String::new()) // 如果无法解析，返回原始值
 }
 
 #[allow(dead_code)]
@@ -101,7 +101,7 @@ impl WsTrade
     pub(crate) fn from_ref(trade: &ClickhousePublicTrade) -> Self
     {
         WsTrade { // 这里假设 WsTrade 结构体字段和 TradeDataFromClickhouse 结构体字段对应
-                  instId: trade.basequote.clone(),
+                  instId: trade.symbol.clone(),
                   side: trade.side.clone(),
                   px: trade.price.to_string(),
                   ts: trade.timestamp.to_string(),
