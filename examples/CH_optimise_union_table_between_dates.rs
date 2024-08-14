@@ -1,6 +1,5 @@
 use chrono::{Duration, NaiveDate};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
-use unilink_execution::sandbox::utils::chrono_operations::extract_date;
 
 #[tokio::main]
 async fn main() {
