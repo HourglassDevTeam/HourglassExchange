@@ -275,14 +275,14 @@ impl ClickHouseClient
         }
     }
 
-    pub async fn query_unioned_trade_table_batched_for_dates(self: Arc<Self>,
-                                                             exchange: &str,
-                                                             instrument: &str,
-                                                             channel: &str,
-                                                             start_date: &str,
-                                                             end_date: &str,
-                                                             batch_size: usize)
-                                                             -> Result<UnboundedReceiver<MarketEvent<ClickhousePublicTrade>>, ExecutionError>
+    pub async fn query_unioned_trade_table_batched_between_dates(self: Arc<Self>,
+                                                                 exchange: &str,
+                                                                 instrument: &str,
+                                                                 channel: &str,
+                                                                 start_date: &str,
+                                                                 end_date: &str,
+                                                                 batch_size: usize)
+                                                                 -> Result<UnboundedReceiver<MarketEvent<ClickhousePublicTrade>>, ExecutionError>
     {
         let (tx, rx) = unbounded_channel();
         // 处理 start_date 解析，并映射到 ExecutionError
