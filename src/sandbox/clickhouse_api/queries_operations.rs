@@ -141,21 +141,7 @@ impl ClickHouseClient
         tables_for_date
     }
 
-    pub async fn query_all_trades_on_date(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<Vec<WsTrade>, Error>
-    {
-        let database_name = self.construct_database_name(exchange, instrument, "trades");
-        let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
-        let full_table_path = format!("{}.{}", database_name, table_name);
-        let query = format!("SELECT * FROM {} ORDER BY timestamp", full_table_path);
-        println!("[UniLinkExecution] : Constructed query :  {}", query);
-        let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
-        let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
-        Ok(ws_trades)
-    }
-
-
-
-    pub async fn create_unioned_tables_for_date(
+    pub async fn create_unioned_table_for_date(
         &self,
         database: &str,
         new_table_name: &str,
