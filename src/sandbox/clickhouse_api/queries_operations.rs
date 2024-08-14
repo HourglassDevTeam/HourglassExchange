@@ -124,6 +124,10 @@ impl ClickHouseClient
         result
     }
 
+    fn build_query_with_offset(&self, database: &str, table_name: &str, batch_size: usize, offset: usize) -> String {
+        format!("SELECT * FROM {}.{} LIMIT {} OFFSET {} ORDER BY timestamp", database, table_name, batch_size, offset)
+    }
+
     pub async fn get_tables_for_date(&self, table_names: &[String], date: &str) -> Vec<String> {
         // 筛选出指定日期的表名
         let tables_for_date: Vec<String> = table_names
@@ -218,47 +222,44 @@ impl ClickHouseClient
     }
 
 
-    pub fn query_unioned_trade_table_batched<'a>(&'a self,
-                                                 exchange: &'a str,
-                                                 instrument: &'a str,
-                                                 channel: &'a str,
-                                                 date: &'a str,
-                                                 batch_size: usize)
-                                                 -> impl Stream<Item = MarketEvent<ClickhousePublicTrade>> + 'a
-    {
+    pub async fn query_unioned_trade_table_batched<'a>(
+        &'a self,
+        exchange: &'a str,
+        instrument: &'a str,
+        channel: &'a str,
+        date: &'a str,
+        batch_size: usize
+    ) -> impl Stream<Item = MarketEvent<ClickhousePublicTrade>> + 'a {
         stream! {
-            let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
-            let database = format!("{}_{}_{}", exchange, instrument, channel);
-            let mut offset = 0;
+        let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
+        let database = format!("{}_{}_{}", exchange, instrument, channel);
+        let mut offset = 0;
 
-            loop {
-                let query = format!(
-                    "SELECT * FROM {}.{} LIMIT {} OFFSET {} ORDER BY timestamp",
-                    database, table_name, batch_size, offset
-                );
-                println!("[UniLinkExecution] : Executing query: {}", query);
+        loop {
+            let query = self.build_query_with_offset(&database, &table_name, batch_size, offset);
+            println!("[UniLinkExecution] : Executing query: {}", query);
 
-                match self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await {
-                    Ok(trade_datas) => {
-                        for trade_data in &trade_datas {
-                            let (base, quote) = parse_base_and_quote(&trade_data.symbol);
-                            let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(),base,quote);
-                            yield market_event;
-                        }
+            match self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await {
+                Ok(trade_datas) => {
+                    for trade_data in &trade_datas {
+                        let (base, quote) = parse_base_and_quote(&trade_data.symbol);
+                        let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
+                        yield market_event;
+                    }
 
-                        if trade_datas.len() < batch_size {
-                            break;
-                        }
-
-                        offset += batch_size;
-                    },
-                    Err(e) => {
-                        eprintln!("Failed query: {}", e);
+                    if trade_datas.len() < batch_size {
                         break;
                     }
+
+                    offset += batch_size;
+                },
+                Err(e) => {
+                    eprintln!("Failed query: {}", e);
+                    break;
                 }
             }
         }
+    }
     }
 
     pub async fn query_unioned_trade_table_batched_between_dates(self: Arc<Self>,
@@ -314,6 +315,76 @@ impl ClickHouseClient
                             offset += batch_size;
                         }
                         | Err(e) => {
+                            eprintln!("Failed query: {}", e);
+                            eprintln!("Query: {}", query);
+                            return;
+                        }
+                    }
+                }
+
+                current_date += chrono::Duration::days(1);
+            }
+        });
+
+        Ok(rx)
+    }
+
+    pub async fn query_unioned_trade_table_batched_between_dates_with_token_pair(
+        self: Arc<Self>,
+        exchange: &str,
+        instrument: &str,
+        channel: &str,
+        start_date: &str,
+        end_date: &str,
+        batch_size: usize,
+        token_pair_name: &str,
+    ) -> Result<UnboundedReceiver<MarketEvent<ClickhousePublicTrade>>, ExecutionError> {
+        let (tx, rx) = unbounded_channel();
+        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d")
+            .map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid start date format: {}", e)))?;
+        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d")
+            .map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid end date format: {}", e)))?;
+
+        let mut current_date = start_date;
+        let client = Arc::clone(&self.client);
+        let exchange = exchange.to_owned();
+        let instrument = instrument.to_owned();
+        let channel = channel.to_owned();
+        let token_pair_name = token_pair_name.to_owned();
+
+        tokio::spawn(async move {
+            while current_date <= end_date {
+                let date = current_date.format("%Y_%m_%d").to_string();
+                let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
+                let database = format!("{}_{}_{}", exchange, instrument, channel);
+                let mut offset = 0;
+
+                loop {
+                    let query = format!(
+                        "SELECT * FROM {}.{} WHERE symbol LIKE '%{}%' ORDER BY timestamp LIMIT {} OFFSET {}",
+                        database, table_name, token_pair_name, batch_size, offset
+                    );
+                    println!("[UniLinkExecution] : Executing query: {}", query);
+
+                    let client = client.read().await;
+                    match client.query(&query).fetch_all::<ClickhousePublicTrade>().await {
+                        Ok(trade_datas) => {
+                            for trade_data in &trade_datas {
+                                let (base, quote) = parse_base_and_quote(&trade_data.symbol);
+                                let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
+                                if tx.send(market_event).is_err() {
+                                    eprintln!("Failed to send market event");
+                                    return;
+                                }
+                            }
+
+                            if trade_datas.len() < batch_size {
+                                break;
+                            }
+
+                            offset += batch_size;
+                        }
+                        Err(e) => {
                             eprintln!("Failed query: {}", e);
                             eprintln!("Query: {}", query);
                             return;
