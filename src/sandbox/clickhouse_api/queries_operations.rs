@@ -329,7 +329,7 @@ impl ClickHouseClient
         Ok(rx)
     }
 
-    pub async fn query_unioned_trade_table_batched_between_dates_with_token_pair(
+    pub async fn query_unioned_trade_table_batched_between_dates_with_token_pairs(
         self: Arc<Self>,
         exchange: &str,
         instrument: &str,
@@ -337,7 +337,7 @@ impl ClickHouseClient
         start_date: &str,
         end_date: &str,
         batch_size: usize,
-        token_pair_name: &str,
+        token_pair_names: Vec<String>,
     ) -> Result<UnboundedReceiver<MarketEvent<ClickhousePublicTrade>>, ExecutionError> {
         let (tx, rx) = unbounded_channel();
         let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d")
@@ -350,7 +350,13 @@ impl ClickHouseClient
         let exchange = exchange.to_owned();
         let instrument = instrument.to_owned();
         let channel = channel.to_owned();
-        let token_pair_name = token_pair_name.to_owned();
+
+        // Prepare `IN` clause
+        let tokens_list = token_pair_names
+            .iter()
+            .map(|name| format!("'{}'", name))
+            .collect::<Vec<String>>()
+            .join(", ");
 
         tokio::spawn(async move {
             while current_date <= end_date {
@@ -361,8 +367,8 @@ impl ClickHouseClient
 
                 loop {
                     let query = format!(
-                        "SELECT * FROM {}.{} WHERE symbol LIKE '%{}%' ORDER BY timestamp LIMIT {} OFFSET {}",
-                        database, table_name, token_pair_name, batch_size, offset
+                        "SELECT * FROM {}.{} WHERE symbol IN ({}) ORDER BY timestamp LIMIT {} OFFSET {}",
+                        database, table_name, tokens_list, batch_size, offset
                     );
                     println!("[UniLinkExecution] : Executing query: {}", query);
 
@@ -405,6 +411,96 @@ impl ClickHouseClient
         // 执行优化查询
         self.client.read().await.query(&optimize_query).execute().await?;
         println!("[UniLinkExecution] : Table {} has been optimized.", table_path);
+        Ok(())
+    }
+
+    pub async fn optimize_tables_in_date_range(
+        &self,
+        exchange: &str,
+        instrument: &str,
+        channel: &str,
+        mut start_date: NaiveDate,
+        end_date: NaiveDate,
+    ) -> Result<(), Error> {
+        let database = format!("{}_{}_{}", exchange, instrument, channel);
+
+        let total_days = (end_date - start_date).num_days() + 1;
+        let mut processed_days = 0;
+
+        while start_date <= end_date {
+            let date_str = start_date.format("%Y_%m_%d").to_string();
+            processed_days += 1;
+
+            let table_names = self.get_table_names(&database).await;
+            let mut processed_tables = 0;
+
+            for table_name in &table_names {
+                if table_name.contains("union") {
+                    let table_path = format!("{}.{}", database, table_name);
+                    println!("Optimizing table: {}", table_path);
+
+                    if let Err(e) = self.optimize_table(&table_path).await {
+                        eprintln!("Error optimizing table {}: {}", table_path, e);
+                    }
+
+                    processed_tables += 1;
+                }
+            }
+
+            let progress = (processed_days as f64 / total_days as f64) * 100.0;
+            println!("Date: {} - Tables processed: {}/{}, Total progress: {:.2}%",
+                     date_str, processed_tables, table_names.len(), progress);
+
+            start_date += chrono::Duration::days(1);
+        }
+
+        println!("Optimization is complete for {} days.", total_days);
+        Ok(())
+    }
+
+    // Method to optimize only "union" tables within a date range
+    pub async fn optimize_union_tables_in_date_range(
+        &self,
+        exchange: &str,
+        instrument: &str,
+        channel: &str,
+        mut start_date: NaiveDate,
+        end_date: NaiveDate,
+    ) -> Result<(), Error> {
+        let database = format!("{}_{}_{}", exchange, instrument, channel);
+
+        let total_days = (end_date - start_date).num_days() + 1;
+        let mut processed_days = 0;
+
+        while start_date <= end_date {
+            let date_str = start_date.format("%Y_%m_%d").to_string();
+            processed_days += 1;
+
+            let table_names = self.get_table_names(&database).await;
+            let mut processed_tables = 0;
+
+            // Iterate over table names and filter for "union" tables
+            for table_name in &table_names {
+                if table_name.contains("union") {
+                    let table_path = format!("{}.{}", database, table_name);
+                    println!("Optimizing table: {}", table_path);
+
+                    if let Err(e) = self.optimize_table(&table_path).await {
+                        eprintln!("Error optimizing table {}: {}", table_path, e);
+                    }
+
+                    processed_tables += 1;
+                }
+            }
+
+            let progress = (processed_days as f64 / total_days as f64) * 100.0;
+            println!("Date: {} - Union tables processed: {}/{}, Total progress: {:.2}%",
+                     date_str, processed_tables, table_names.len(), progress);
+
+            start_date += chrono::Duration::days(1);
+        }
+
+        println!("Union table optimization is complete for {} days.", total_days);
         Ok(())
     }
 }
