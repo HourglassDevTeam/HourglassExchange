@@ -2,7 +2,6 @@ use crate::{error::ExecutionError, sandbox::account::account_config::AccountConf
 use std::{fs, path::Path};
 
 // 读取配置文件
-// 读取配置文件
 pub fn read_config_file() -> Result<AccountConfig, ExecutionError>
 {
     let config_path = Path::new("config.toml");

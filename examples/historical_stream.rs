@@ -43,21 +43,20 @@ async fn main() {
         match client.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, start_date, end_date, batch_size).await {
             Ok(mut rx) => {
                 while let Some(event) = rx.recv().await {
-                    println!("{:?}", event); // NOTE 调试开关
-                    if tx.send(event).is_err() {
-                        eprintln!("发送市场事件失败");
+                    if let Err(e) = tx.send(event) {
+                        eprintln!("Failed to send market event: {:?}", e);
                         break;
                     }
                 }
             }
             Err(e) => {
-                eprintln!("查询事件失败: {}", e);
+                eprintln!("Failed to query events: {:?}", e);
             }
         }
     });
 
     // 等待异步任务完成
     if let Err(e) = handle.await {
-        eprintln!("任务失败: {:?}", e);
+        eprintln!("Task failed: {:?}", e);
     }
 }

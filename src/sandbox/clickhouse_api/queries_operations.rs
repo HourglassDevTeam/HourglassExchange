@@ -2,18 +2,20 @@
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_stream::stream;
-use chrono::{Duration, NaiveDate};
+use chrono::NaiveDate;
 pub use clickhouse::{
-    error::{Error, Result},
-    Client, Row,
+    Client,
+    error::{Error, Result}, Row,
 };
 use futures_core::Stream;
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver},
     RwLock,
 };
+use tokio::time::sleep;
 
 use crate::{
     common_infrastructure::{datafeed::event::MarketEvent, Side},
@@ -35,7 +37,7 @@ impl ClickHouseClient
     {
         let client = Client::default().with_url("http://localhost:8123").with_user("default").with_password("");
 
-        println!("[UniLinkExecution] : 连接到 ClickHouse 服务器成功。");
+        println!("[UniLinkExecution] : Successfully connected to the ClickHouse server.");
 
         Self { client: Arc::new(RwLock::new(client)) }
     }
@@ -122,22 +124,19 @@ impl ClickHouseClient
         result
     }
 
-    pub async fn get_tables_for_date(&self, database: &str, date: &str) -> Vec<String>
-    {
-        // 获取所有表名
-        let table_names = self.get_table_names(database).await;
-
+    pub async fn get_tables_for_date(&self, table_names: &[String], date: &str) -> Vec<String> {
         // 筛选出指定日期的表名
-        let tables_for_date: Vec<String> = table_names.into_iter()
-                                                      .filter(|table_name| {
-                                                          if let Some(table_date) = extract_date(table_name) {
-                                                              table_date == date
-                                                          }
-                                                          else {
-                                                              false
-                                                          }
-                                                      })
-                                                      .collect();
+        let tables_for_date: Vec<String> = table_names
+            .iter()
+            .filter(|table_name| {
+                if let Some(table_date) = extract_date(table_name) {
+                    table_date == date
+                } else {
+                    false
+                }
+            })
+            .cloned()
+            .collect();
 
         tables_for_date
     }
@@ -148,30 +147,69 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT * FROM {} ORDER BY timestamp", full_table_path);
-        println!("[UniLinkExecution] : 查询SQL语句 {}", query);
+        println!("[UniLinkExecution] : Constructed query :  {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
     }
 
-    pub async fn create_unioned_tables_for_date(&self, database: &str, new_table_name: &str, table_names: &Vec<String>) -> Result<(), Error>
-    {
+
+
+    pub async fn create_unioned_tables_for_date(
+        &self,
+        database: &str,
+        new_table_name: &str,
+        table_names: &Vec<String>,
+        report_progress: bool // 新增参数，用于控制是否启用进度汇报
+    ) -> Result<(), Error> {
         // 构建UNION ALL查询
         let mut queries = Vec::new();
-        for table_name in table_names {
+        let total_tables = table_names.len();
+
+        for (i, table_name) in table_names.iter().enumerate() {
             let query = format!("SELECT symbol, side, price, timestamp,amount FROM {}.{}", database, table_name);
             queries.push(query);
+
+            // 如果启用进度汇报，每处理完一个表就汇报一次进度
+            if report_progress {
+                let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
+                println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
+
+                // 模拟延迟以模拟长时间运行任务的进度汇报
+                sleep(Duration::from_millis(500)).await;
+            }
         }
+
         let union_all_query = queries.join(" UNION ALL ");
 
         // 假设你要创建的表使用MergeTree引擎并按timestamp排序
         let final_query = format!("CREATE TABLE {}.{} ENGINE = MergeTree() ORDER BY timestamp AS {}",
                                   database, new_table_name, union_all_query);
-        println!("[AlgoBacktest] : Constructed query: {}", final_query);
+
+        if report_progress {
+            println!("[UniLinkExecution] : Successfully constructed the final query.");
+        }
 
         // 执行创建新表的查询
         self.client.read().await.query(&final_query).execute().await?;
+
+        if report_progress {
+            println!("[UniLinkExecution] : Table {}.{} created successfully.", database, new_table_name);
+        }
+
         Ok(())
+    }
+
+    pub async fn retrieve_all_trades(&self, exchange: &str, instrument: &str,date: &str, base: &str, quote: &str) -> Result<Vec<WsTrade>, Error> {
+        let database_name = self.construct_database_name(exchange, instrument, "trades");
+        // let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
+        let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
+        let full_table_path = format!("{}.{}", database_name, table_name);
+        let query = format!("SELECT symbol, side, price, timestamp FROM {} ORDER BY timestamp", full_table_path);
+        println!("[UniLinkExecution] : Constructed query {}", query);
+        let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
+        let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
+        Ok(ws_trades)
     }
 
     pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<WsTrade, Error>
@@ -180,7 +218,7 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
         let query = format!("SELECT * FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
-        println!("[UniLinkExecution] : 查询SQL语句 {}", query);
+        println!("[UniLinkExecution] : Constructed query :  {}", query);
         let trade_data = self.client.read().await.query(&query).fetch_one::<ClickhousePublicTrade>().await?;
         Ok(WsTrade::from(trade_data))
     }
@@ -190,7 +228,7 @@ impl ClickHouseClient
         let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
         let database = format!("{}_{}_{}", exchange, instrument, channel);
         let query = format!("SELECT * FROM {}.{} ORDER BY timestamp", database, table_name);
-        println!("[UniLinkExecution] : 正在执行 query: {}", query);
+        println!("[UniLinkExecution] : Executing query: {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
         Ok(ws_trades)
@@ -214,7 +252,7 @@ impl ClickHouseClient
                     "SELECT * FROM {}.{} LIMIT {} OFFSET {} ORDER BY timestamp",
                     database, table_name, batch_size, offset
                 );
-                println!("[UniLinkExecution] : 正在执行 query: {}", query);
+                println!("[UniLinkExecution] : Executing query: {}", query);
 
                 match self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await {
                     Ok(trade_datas) => {
@@ -271,7 +309,7 @@ impl ClickHouseClient
 
                 loop {
                     let query = format!("SELECT * FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}", database, table_name, batch_size, offset);
-                    println!("[UniLinkExecution] : 正在执行 query: {}", query);
+                    println!("[UniLinkExecution] : Executing query: {}", query);
 
                     let client = client.read().await;
                     match client.query(&query).fetch_all::<ClickhousePublicTrade>().await {
@@ -299,7 +337,7 @@ impl ClickHouseClient
                     }
                 }
 
-                current_date += Duration::days(1);
+                current_date += chrono::Duration::days(1);
             }
         });
 
