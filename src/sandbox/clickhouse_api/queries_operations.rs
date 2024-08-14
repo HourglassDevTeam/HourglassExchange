@@ -414,50 +414,6 @@ impl ClickHouseClient
         Ok(())
     }
 
-    pub async fn optimize_tables_in_date_range(
-        &self,
-        exchange: &str,
-        instrument: &str,
-        channel: &str,
-        mut start_date: NaiveDate,
-        end_date: NaiveDate,
-    ) -> Result<(), Error> {
-        let database = format!("{}_{}_{}", exchange, instrument, channel);
-
-        let total_days = (end_date - start_date).num_days() + 1;
-        let mut processed_days = 0;
-
-        while start_date <= end_date {
-            let date_str = start_date.format("%Y_%m_%d").to_string();
-            processed_days += 1;
-
-            let table_names = self.get_table_names(&database).await;
-            let mut processed_tables = 0;
-
-            for table_name in &table_names {
-                if table_name.contains("union") {
-                    let table_path = format!("{}.{}", database, table_name);
-                    println!("Optimizing table: {}", table_path);
-
-                    if let Err(e) = self.optimize_table(&table_path).await {
-                        eprintln!("Error optimizing table {}: {}", table_path, e);
-                    }
-
-                    processed_tables += 1;
-                }
-            }
-
-            let progress = (processed_days as f64 / total_days as f64) * 100.0;
-            println!("Date: {} - Tables processed: {}/{}, Total progress: {:.2}%",
-                     date_str, processed_tables, table_names.len(), progress);
-
-            start_date += chrono::Duration::days(1);
-        }
-
-        println!("Optimization is complete for {} days.", total_days);
-        Ok(())
-    }
-
     // Method to optimize only "union" tables within a date range
     pub async fn optimize_union_tables_in_date_range(
         &self,
