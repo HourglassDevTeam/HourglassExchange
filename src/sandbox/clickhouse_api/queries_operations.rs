@@ -341,4 +341,13 @@ impl ClickHouseClient
 
         Ok(rx)
     }
+
+    pub async fn optimize_table(&self, table_path: &str) -> Result<(), Error> {
+        let optimize_query = format!("OPTIMIZE TABLE {}", table_path);
+        println!("[UniLinkExecution] : Sending optimize query for table: {}", table_path);
+        // 执行优化查询
+        self.client.read().await.query(&optimize_query).execute().await?;
+        println!("[UniLinkExecution] : Table {} has been optimized.", table_path);
+        Ok(())
+    }
 }
