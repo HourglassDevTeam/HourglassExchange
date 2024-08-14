@@ -9,8 +9,8 @@ edition = "2021"
 tracing = "0.1.36" # 高性能事件记录库，用于结构化日志和分布式跟踪
 
 # Data Source 数据源
-clickhouse = "0.12.0" # 用于连接和操作ClickHouse数据库的客户端库
-#clickhouse ={path = "../clickhouse-rs"}
+#clickhouse = "0.12.0" # 用于连接和操作ClickHouse数据库的客户端库
+clickhouse ={path = "../clickhouse-rs"}
 # Random 随机数
 rand_distr = "0.4.3" # 随机分布生成库，用于生成各种概率分布的随机数
 
