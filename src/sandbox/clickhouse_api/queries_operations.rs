@@ -261,7 +261,7 @@ impl ClickHouseClient
     ) -> impl Stream<Item = MarketEvent<ClickhousePublicTrade>> + 'a {
         stream! {
         let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
-        let database =  self.construct_database_name(exchange, instrument, channel);
+        let database = self.construct_database_name(exchange, instrument, "trades");
         let mut offset = 0;
 
         loop {
@@ -324,7 +324,7 @@ impl ClickHouseClient
             while current_date <= end_date {
                 let date = current_date.format("%Y_%m_%d").to_string();
                 let table_name = self.construct_union_table_name(&exchange, &instrument, &channel, &date);
-                let database = format!("{}_{}_{}", exchange, instrument, channel);
+                let database = self.construct_database_name( &exchange, &instrument, &channel);
                 let mut offset = 0;
 
                 loop {
