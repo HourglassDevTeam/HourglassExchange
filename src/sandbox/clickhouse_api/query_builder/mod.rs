@@ -4,6 +4,7 @@ pub struct ClickHouseQueryBuilder {
     from_clause: String,
     where_clause: Option<String>,
     order_by_clause: Option<String>,
+    order_direction: Option<String>,      // 存储排序方向（ASC 或 DESC）
     limit_clause: Option<String>,
     offset_clause: Option<String>, // Add this line
 }
@@ -17,6 +18,7 @@ impl ClickHouseQueryBuilder {
             from_clause: String::new(),
             where_clause: None,
             order_by_clause: None,
+            order_direction: None,
             limit_clause: None,
             offset_clause: None,
         }
@@ -57,11 +59,22 @@ impl ClickHouseQueryBuilder {
         self
     }
     // 添加ORDER BY子句
-    pub fn order_by(mut self, fields: &str) -> Self {
-        self.order_by_clause = Some(format!("ORDER BY {}", fields));
+    pub fn order(mut self, field: &str, direction: Option<&str>) -> Self {
+        match direction {
+            Some("ASC") | Some("DESC") => {
+                self.order_by_clause = Some(field.to_owned());
+                // 存储排序方向，不需要解引用
+                self.order_direction = direction.map(|d| d.to_owned());
+            }
+            None => {
+                // 如果不需要排序，则设置为 None
+                self.order_by_clause = None;
+                self.order_direction = None;
+            }
+            _ => {println!("Direction must be 'ASC', 'DESC', or None")}
+        }
         self
     }
-
     // 添加LIMIT子句
     pub fn limit(mut self, limit: usize) -> Self {
         self.limit_clause = Some(format!("LIMIT {}", limit));

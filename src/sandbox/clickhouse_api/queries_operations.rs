@@ -161,8 +161,12 @@ impl ClickHouseClient
         let total_tables = table_names.len();
 
         for (i, table_name) in table_names.iter().enumerate() {
-            let query = format!("SELECT symbol, side, price, timestamp,amount FROM {}.{}", database, table_name);
-            queries.push(query);
+            let select_query = ClickHouseQueryBuilder::new()
+                .select("symbol, side, price, timestamp, amount") // Select required fields
+                .from(&format!("{}.{}", database, table_name)) // Format the table name with database
+                .build(); // Build the individual query
+
+            queries.push(select_query);
 
             // 如果启用进度汇报，每处理完一个表就汇报一次进度
             if report_progress {
@@ -201,7 +205,7 @@ impl ClickHouseClient
         let query = ClickHouseQueryBuilder::new()
             .select("*")
             .from(&format!("{}.{}", database_name, table_name))
-            .order_by("timestamp")
+            .order("timestamp",Some("DESC"))
             .build();
 
         println!("[UniLinkExecution] : Constructed query {}", query);
@@ -249,7 +253,7 @@ impl ClickHouseClient
                     .from(&format!("{}.{}", database, table_name))
                     .limit(batch_size)
                     .offset(offset)
-                    .order_by("timestamp")
+            .order("timestamp",Some("DESC"))
                     .build();
             println!("[UniLinkExecution] : Executing query: {}", query);
 
