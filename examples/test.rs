@@ -1,3 +1,4 @@
+use std::time::Instant;
 use chrono::{Duration, NaiveDate};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 use unilink_execution::sandbox::utils::chrono_operations::extract_date;
@@ -50,7 +51,7 @@ async fn main() {
             .cloned() // 克隆以避免引用问题
             .collect();
         let duration = start_time.elapsed();
-        println!("TABLES FILTERED in: {:?}", duration);
+        println!("TABLES for {} FILTERED in: {:?}",date_str, duration);
         // 迭代到下一天
         current_date += Duration::days(1);
     }
