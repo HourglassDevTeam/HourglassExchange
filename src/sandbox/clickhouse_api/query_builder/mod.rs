@@ -59,20 +59,9 @@ impl ClickHouseQueryBuilder {
         self
     }
     // 添加ORDER BY子句
+    // Add ORDER BY clause
     pub fn order(mut self, field: &str, direction: Option<&str>) -> Self {
-        match direction {
-            Some("ASC") | Some("DESC") => {
-                self.order_by_clause = Some(field.to_owned());
-                // 存储排序方向，不需要解引用
-                self.order_direction = direction.map(|d| d.to_owned());
-            }
-            None => {
-                // 如果不需要排序，则设置为 None
-                self.order_by_clause = None;
-                self.order_direction = None;
-            }
-            _ => {println!("Direction must be 'ASC', 'DESC', or None")}
-        }
+        self.order_by_clause = direction.map(|d| format!("ORDER BY {} {}", field, d));
         self
     }
     // 添加LIMIT子句
