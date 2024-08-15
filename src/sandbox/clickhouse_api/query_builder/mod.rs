@@ -153,6 +153,4 @@ mod tests {
             .build();
         assert_eq!(query, "SELECT * FROM users WHERE id = 1 AND username LIKE '%user%' AND password NOT LIKE '%weak%'");
     }
-
-    // 可以添加更多的测试用例来覆盖不同的查询构建场景
 }
