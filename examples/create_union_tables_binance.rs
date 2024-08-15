@@ -9,7 +9,7 @@ async fn main() {
     let instrument = "futures";
     let channel = "trades";
     let start_date = NaiveDate::from_ymd_opt(2024, 3, 3).expect("Invalid start date");
-    let end_date = NaiveDate::from_ymd_opt(2024, 7, 3).expect("Invalid end date");
+    let end_date = NaiveDate::from_ymd_opt(2024, 3, 5).expect("Invalid end date");
     let mut current_date = start_date;
 
     while current_date <= end_date {
