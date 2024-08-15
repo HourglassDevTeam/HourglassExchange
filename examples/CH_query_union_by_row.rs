@@ -7,12 +7,10 @@ async fn main() {
     let exchange = "binance";
     let instrument = "futures";
     let date = "2024_05_05";
-    let base = "1000RATS";
-    let quote = "USDT";
 
     // EXAMPLE 1 MANUALLY BUILD THE QUERY
     // let database_name = client.construct_database_name(exchange, instrument, "trades");
-    // let table_name = client.construct_table_name(exchange, instrument, "trades", date, base, quote);
+    // let table_name = client.construct_union_table_name(exchange, instrument, "trades", date);
     // let query = ClickHouseQueryBuilder::new()
     //     .select("symbol, side, price, timestamp, amount")
     //     .from( &database_name, &table_name)
