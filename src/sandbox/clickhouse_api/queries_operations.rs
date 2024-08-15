@@ -242,8 +242,8 @@ impl ClickHouseClient
     }
 
     pub async fn query_unioned_trade_table(&self, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<ClickhousePublicTrade>, Error> {
-        let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
-        let database = format!("{}_{}_{}", exchange, instrument, channel);
+        let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
+        let database = self.construct_database_name(exchange, instrument, "trades");
         let query = format!("SELECT * FROM {}.{} ORDER BY timestamp", database, table_name);
         println!("[UniLinkExecution] : Executing query: {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
@@ -260,9 +260,7 @@ impl ClickHouseClient
         batch_size: usize
     ) -> impl Stream<Item = MarketEvent<ClickhousePublicTrade>> + 'a {
         stream! {
-        // let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
         let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
-        // let database = format!("{}_{}_{}", exchange, instrument, channel);
         let database =  self.construct_database_name(exchange, instrument, channel);
         let mut offset = 0;
 
@@ -325,7 +323,7 @@ impl ClickHouseClient
         tokio::spawn(async move {
             while current_date <= end_date {
                 let date = current_date.format("%Y_%m_%d").to_string();
-                let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
+                let table_name = self.construct_union_table_name(&exchange, &instrument, &channel, &date);
                 let database = format!("{}_{}_{}", exchange, instrument, channel);
                 let mut offset = 0;
 
