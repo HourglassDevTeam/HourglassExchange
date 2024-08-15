@@ -11,8 +11,8 @@ async fn main() {
     let exchange = "binance";
     let instrument = "futures";
     let channel = "trades";
-    let start_date = NaiveDate::from_ymd_opt(2024, 3, 4).expect("Invalid start date"); // 设置开始日期
-    let end_date = NaiveDate::from_ymd_opt(2024, 7, 3).expect("Invalid end date"); // 设置结束日期
+    let start_date = NaiveDate::from_ymd_opt(2019, 11, 20).expect("Invalid start date"); // 设置开始日期
+    let end_date = NaiveDate::from_ymd_opt(2024, 3, 3).expect("Invalid end date"); // 设置结束日期
     let mut current_date = start_date;
 
     // 计算总天数，用于进度汇报
