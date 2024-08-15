@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-struct ClickHouseQueryBuilder {
+pub struct ClickHouseQueryBuilder {
     select_clause: String,
     from_clause: String,
     where_clause: Option<String>,

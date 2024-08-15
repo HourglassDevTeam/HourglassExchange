@@ -26,6 +26,7 @@ use crate::{
     },
 };
 use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
+use crate::sandbox::clickhouse_api::query_builder::ClickHouseQueryBuilder;
 
 pub struct ClickHouseClient
 {
@@ -114,8 +115,11 @@ impl ClickHouseClient
 
     pub async fn get_table_names(&self, database: &str) -> Vec<String>
     {
-        let table_names_query = format!("SHOW TABLES FROM {database}",);
-        println!("{:?}", table_names_query);
+        let table_names_query = ClickHouseQueryBuilder::new()
+            .select("name")
+            .from(&format!("{}.tables", database)[..])  // 使用字符串切片
+            .build();
+        // println!("{:?}", table_names_query);
         let result = self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
                                                                                                        eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
                                                                                                        vec![]
