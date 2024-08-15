@@ -22,7 +22,7 @@ use crate::{
     error::ExecutionError,
     sandbox::{
         utils::chrono_operations::extract_date,
-        ws_trade::{parse_base_and_quote, WsTrade},
+        ws_trade::{parse_base_and_quote},
     },
 };
 use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
@@ -195,7 +195,7 @@ impl ClickHouseClient
         Ok(())
     }
 
-    pub async fn retrieve_all_trades(&self, exchange: &str, instrument: &str,date: &str, base: &str, quote: &str) -> Result<Vec<WsTrade>, Error> {
+    pub async fn retrieve_all_trades(&self, exchange: &str, instrument: &str,date: &str, base: &str, quote: &str) -> Result<Vec<ClickhousePublicTrade>, Error> {
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         // let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
@@ -207,8 +207,7 @@ impl ClickHouseClient
 
         println!("[UniLinkExecution] : Constructed query {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
-        let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
-        Ok(ws_trades)
+        Ok(trade_datas)
     }
 
     pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<ClickhousePublicTrade, Error> {
