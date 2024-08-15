@@ -10,7 +10,6 @@ pub use clickhouse::{
     error::{Error, Result}, Row,
 };
 use clickhouse::query::RowCursor;
-use futures::stream;
 use futures_core::Stream;
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver},
@@ -372,14 +371,14 @@ impl ClickHouseClient
     }
 
 
-    pub async fn fetch_public_trades(
-        &self,
-        exchange: &str,
-        instrument: &str,
-        date: &str,
-        base: &str,
-        quote: &str,
-    ) -> Result<impl Stream<Item = Result<ClickhousePublicTrade, Error>>> {
+    pub async fn cursor_public_trades<'a>(
+        &'a self,
+        exchange: &'a str,
+        instrument: &'a str,
+        date: &'a str,
+        base: &'a str,
+        quote: &'a str,
+    ) -> Result<RowCursor<ClickhousePublicTrade>> {
         // 构造数据库名称和表名称
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
@@ -397,26 +396,15 @@ impl ClickHouseClient
         let client_ref = self.client.read().await;
 
         // 执行查询并获取游标
-        let cursor: RowCursor<ClickhousePublicTrade> = client_ref.query(&query).fetch()?;
-
-        // 将 RowCursor 转换为 Stream
-        let stream = stream::unfold(cursor, |mut cursor| async {
-            match cursor.next().await {
-                Ok(Some(row)) => Some((Ok(row), cursor)),
-                Ok(None) => None,
-                Err(e) => Some((Err(e), cursor)),
-            }
-        });
-
-        Ok(stream)
+        client_ref.query(&query).fetch::<ClickhousePublicTrade>()
     }
 
-    pub async fn fetch_unioned_public_trades(
+    pub async fn cursor_unioned_public_trades(
         &self,
         exchange: &str,
         instrument: &str,
         date: &str,
-    ) -> Result<impl Stream<Item = Result<ClickhousePublicTrade, Error>>> {
+    ) -> Result<RowCursor<ClickhousePublicTrade>> {
         // 构造数据库名称和表名称
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         let table_name = self.construct_union_table_name(exchange, instrument, "trades", date);
@@ -434,18 +422,7 @@ impl ClickHouseClient
         let client_ref = self.client.read().await;
 
         // 执行查询并获取游标
-        let cursor: RowCursor<ClickhousePublicTrade> = client_ref.query(&query).fetch()?;
-
-        // 将 RowCursor 转换为 Stream
-        let stream = stream::unfold(cursor, |mut cursor| async {
-            match cursor.next().await {
-                Ok(Some(row)) => Some((Ok(row), cursor)),
-                Ok(None) => None,
-                Err(e) => Some((Err(e), cursor)),
-            }
-        });
-
-        Ok(stream)
+        client_ref.query(&query).fetch::<ClickhousePublicTrade>()
     }
 
 
