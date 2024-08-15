@@ -1,10 +1,9 @@
 use crate::{error::ExecutionError, sandbox::account::account_config::AccountConfig};
-use std::fs;
-use std::path::Path;
+use std::{fs, path::Path};
 
 // 读取配置文件
-// 读取配置文件
-pub fn read_config_file() -> Result<AccountConfig, ExecutionError> {
+pub fn read_config_file() -> Result<AccountConfig, ExecutionError>
+{
     let config_path = Path::new("config.toml");
     if !config_path.exists() {
         return Err(ExecutionError::ConfigMissing("config.toml not found in the project root directory".to_string()));
@@ -14,7 +13,6 @@ pub fn read_config_file() -> Result<AccountConfig, ExecutionError> {
     let config: AccountConfig = toml::from_str(&config_content).map_err(ExecutionError::from)?;
     Ok(config)
 }
-
 
 impl From<std::io::Error> for ExecutionError
 {

@@ -35,7 +35,7 @@ pub struct AccountOrders
 
 impl AccountOrders
 {
-    /// 从提供的 [`Instrument`] 选择构造一个新的 [`AccountOrders`]。
+    /// 从给定的 [`Instrument`] 列表选择构造一个新的 [`AccountOrders`]。
     pub async fn new(instruments: Vec<Instrument>, account_latency: AccountLatency) -> Self
     {
         let latency_generator = Arc::new(RwLock::new(account_latency));
@@ -67,11 +67,11 @@ impl AccountOrders
     }
 
     /// 返回指定 [`Instrument`] 的客户端 [`InstrumentOrders`] 的可变引用。
-    pub fn orders_mut(&mut self, instrument: &Instrument) -> Result<&mut InstrumentOrders, ExecutionError>
+    pub fn ins_orders_mut(&mut self, instrument: &Instrument) -> Result<&mut InstrumentOrders, ExecutionError>
     {
         self.instrument_orders_map
             .get_mut(instrument)
-            .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange 没有为 Instrument: {instrument} 配置")))
+            .ok_or_else(|| ExecutionError::SandBox(format!("Sandbox exchange is not configured for Instrument: {instrument}")))
     }
 
     /// 为每个 [`Instrument`] 获取出价和要价 [`Order<Open>`]。

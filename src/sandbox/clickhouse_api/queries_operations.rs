@@ -2,28 +2,31 @@
 //      upon completion the following code should be deleted and external identical code should be used instead.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_stream::stream;
-use chrono::{Duration, NaiveDate};
+use chrono::NaiveDate;
 pub use clickhouse::{
-    error::{Error, Result},
-    Client, Row,
+    Client,
+    error::{Error, Result}, Row,
 };
 use futures_core::Stream;
-use serde::{Deserialize, Serialize};
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver},
     RwLock,
 };
+use tokio::time::sleep;
 
 use crate::{
     common_infrastructure::{datafeed::event::MarketEvent, Side},
+    error::ExecutionError,
     sandbox::{
         utils::chrono_operations::extract_date,
-        ws_trade::{parse_base_and_quote, WsTrade},
+        ws_trade::{parse_base_and_quote},
     },
 };
-use crate::error::ExecutionError;
+use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
+use crate::sandbox::clickhouse_api::query_builder::ClickHouseQueryBuilder;
 
 pub struct ClickHouseClient
 {
@@ -35,24 +38,14 @@ impl ClickHouseClient
     {
         let client = Client::default().with_url("http://localhost:8123").with_user("default").with_password("");
 
-        println!("[UniLinkExecution] : 连接到 ClickHouse 服务器成功。");
+        println!("[UniLinkExecution] : Successfully connected to the ClickHouse server.");
 
         Self { client: Arc::new(RwLock::new(client)) }
     }
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize, Row)]
-pub struct ClickhouseTrade
-{
-    pub basequote: String,
-    pub side: String,
-    pub price: f64,
-    pub timestamp: i64,
-    pub amount: f64,
-}
 
-impl ClickhouseTrade
+impl ClickhousePublicTrade
 {
     /// 将 `side` 字符串解析为 `Side` 枚举
     pub fn parse_side(&self) -> Side
@@ -65,7 +58,7 @@ impl ClickhouseTrade
     }
 }
 // 手动实现 Eq 和 PartialEq 特性
-impl PartialEq for ClickhouseTrade
+impl PartialEq for ClickhousePublicTrade
 {
     fn eq(&self, other: &Self) -> bool
     {
@@ -73,10 +66,10 @@ impl PartialEq for ClickhouseTrade
     }
 }
 
-impl Eq for ClickhouseTrade {}
+impl Eq for ClickhousePublicTrade {}
 
 // 手动实现 PartialOrd 和 Ord 特性
-impl PartialOrd for ClickhouseTrade
+impl PartialOrd for ClickhousePublicTrade
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering>
     {
@@ -84,7 +77,7 @@ impl PartialOrd for ClickhouseTrade
     }
 }
 
-impl Ord for ClickhouseTrade
+impl Ord for ClickhousePublicTrade
 {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering
     {
@@ -94,7 +87,7 @@ impl Ord for ClickhouseTrade
 
 impl ClickHouseClient
 {
-    fn construct_table_name(&self, exchange: &str, instrument: &str, channel: &str, date: &str, base: &str, quote: &str) -> String
+    pub fn construct_table_name(&self, exchange: &str, instrument: &str, channel: &str, date: &str, base: &str, quote: &str) -> String
     {
         match exchange {
             | "binance" => format!("{}_{}_{}_{}_{}",
@@ -115,7 +108,23 @@ impl ClickHouseClient
         }
     }
 
-    fn construct_database_name(&self, exchange: &str, instrument: &str, channel: &str) -> String
+    pub fn construct_union_table_name(
+        &self,
+        exchange: &str,
+        instrument: &str,
+        channel: &str,
+        date: &str
+    ) -> String {
+        format!(
+            "{}_{}_{}_union_{}",
+            exchange,
+            instrument,
+            channel,
+            date.replace("-", "_") // Replace dashes with underscores for valid table names
+        )
+    }
+
+    pub fn construct_database_name(&self, exchange: &str, instrument: &str, channel: &str) -> String
     {
         format!("{}_{}_{}", exchange, instrument, channel)
     }
@@ -132,120 +141,177 @@ impl ClickHouseClient
         result
     }
 
-    pub async fn get_tables_for_date(&self, database: &str, date: &str) -> Vec<String>
-    {
-        // 获取所有表名
-        let table_names = self.get_table_names(database).await;
+    // fn build_query_with_offset(&self, database: &str, table_name: &str, batch_size: usize, offset: usize) -> String {
+    //     format!("SELECT * FROM {}.{} LIMIT {} OFFSET {} ORDER BY timestamp", database, table_name, batch_size, offset)
+    // }
 
+    pub async fn get_tables_for_date(&self, table_names: &[String], date: &str) -> Vec<String> {
         // 筛选出指定日期的表名
-        let tables_for_date: Vec<String> = table_names.into_iter()
-                                                      .filter(|table_name| {
-                                                          if let Some(table_date) = extract_date(table_name) {
-                                                              table_date == date
-                                                          }
-                                                          else {
-                                                              false
-                                                          }
-                                                      })
-                                                      .collect();
+        let tables_for_date: Vec<String> = table_names
+            .iter()
+            .filter(|table_name| {
+                if let Some(table_date) = extract_date(table_name) {
+                    table_date == date
+                } else {
+                    false
+                }
+            })
+            .cloned()
+            .collect();
 
         tables_for_date
     }
 
-    pub async fn retrieve_all_trades(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<Vec<WsTrade>, Error>
-    {
-        let database_name = self.construct_database_name(exchange, instrument, "trades");
-        let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
-        let full_table_path = format!("{}.{}", database_name, table_name);
-        let query = format!("SELECT * FROM {} ORDER BY timestamp", full_table_path);
-        println!("[UniLinkExecution] : 查询SQL语句 {}", query);
-        let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await?;
-        let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
-        Ok(ws_trades)
+    pub async fn create_unioned_table_for_date(
+        &self,
+        database: &str,
+        new_table_name: &str,
+        table_names: &Vec<String>,
+        report_progress: bool // 新增参数，用于控制是否启用进度汇报
+    ) -> Result<(), Error> {
+        // 构建UNION ALL查询
+        let mut queries = Vec::new();
+        let total_tables = table_names.len();
+
+        for (i, table_name) in table_names.iter().enumerate() {
+            let select_query = ClickHouseQueryBuilder::new()
+                .select("symbol, side, price, timestamp, amount") // Select required fields
+                .from(&database, table_name) // Format the table name with database
+                .build(); // Build the individual query
+
+            queries.push(select_query);
+
+            // 如果启用进度汇报，每处理完一个表就汇报一次进度
+            if report_progress {
+                let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
+                println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
+
+                // 模拟延迟以模拟长时间运行任务的进度汇报
+                sleep(Duration::from_millis(500)).await;
+            }
+        }
+
+        let union_all_query = queries.join(" UNION ALL ");
+
+        // 假设你要创建的表使用MergeTree引擎并按timestamp排序
+        let final_query = format!("CREATE TABLE {}.{} ENGINE = MergeTree() ORDER BY timestamp AS {}",
+                                  database, new_table_name, union_all_query);
+
+        if report_progress {
+            println!("[UniLinkExecution] : Successfully constructed the final query.");
+        }
+
+        // 执行创建新表的查询
+        self.client.read().await.query(&final_query).execute().await?;
+
+        if report_progress {
+            println!("[UniLinkExecution] : Table {}.{} created successfully.", database, new_table_name);
+        }
+
+        Ok(())
     }
 
-    pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<WsTrade, Error>
-    {
+    pub async fn retrieve_all_trades(&self, exchange: &str, instrument: &str,date: &str, base: &str, quote: &str) -> Result<Vec<ClickhousePublicTrade>, Error> {
         let database_name = self.construct_database_name(exchange, instrument, "trades");
+        // let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
-        let full_table_path = format!("{}.{}", database_name, table_name);
-        let query = format!("SELECT * FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
-        println!("[UniLinkExecution] : 查询SQL语句 {}", query);
-        let trade_data = self.client.read().await.query(&query).fetch_one::<ClickhouseTrade>().await?;
-        Ok(WsTrade::from(trade_data))
+        let query = ClickHouseQueryBuilder::new()
+            .select("symbol, side, price, timestamp, amount")
+            .from(&database_name, &table_name)
+            .order("timestamp",Some("DESC"))
+            .build();
+
+        println!("[UniLinkExecution] : Constructed query {}", query);
+        let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
+        Ok(trade_datas)
     }
 
-    pub async fn query_unioned_trade_table(&self, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<WsTrade>, Error>
-    {
-        let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
-        let database = format!("{}_{}_{}", exchange, instrument, channel);
+    pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<ClickhousePublicTrade, Error> {
+        let database_name = self.construct_database_name(exchange, instrument, "trades");
+        let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
+        // let full_table_path = format!("{}.{}", database_name, table_name);
+        let query = ClickHouseQueryBuilder::new()
+            .select("symbol, side, price, timestamp, amount")
+            .from(&database_name,&table_name)
+            .order("timestamp", Some("DESC"))
+            .limit(1)
+            .build();
+        println!("[UniLinkExecution] : Constructed query :  {}", query);
+        let trade_data = self.client.read().await.query(&query).fetch_one::<ClickhousePublicTrade>().await?;
+        Ok(trade_data)
+    }
+
+    pub async fn query_unioned_trade_table(&self, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<ClickhousePublicTrade>, Error> {
+        let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
+        let database = self.construct_database_name(exchange, instrument, "trades");
         let query = format!("SELECT * FROM {}.{} ORDER BY timestamp", database, table_name);
-        println!("[UniLinkExecution] : 正在执行 query: {}", query);
-        let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await?;
-        let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
-        Ok(ws_trades)
+        println!("[UniLinkExecution] : Executing query: {}", query);
+        let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
+        Ok(trade_datas)
     }
 
-    pub fn query_unioned_trade_table_batched<'a>(&'a self,
-                                                 exchange: &'a str,
-                                                 instrument: &'a str,
-                                                 channel: &'a str,
-                                                 date: &'a str,
-                                                 batch_size: usize)
-                                                 -> impl Stream<Item = MarketEvent<ClickhouseTrade>> + 'a
-    {
+
+    pub async fn query_unioned_trade_table_batched<'a>(
+        &'a self,
+        exchange: &'a str,
+        instrument: &'a str,
+        channel: &'a str,
+        date: &'a str,
+        batch_size: usize
+    ) -> impl Stream<Item = MarketEvent<ClickhousePublicTrade>> + 'a {
         stream! {
-            let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
-            let database = format!("{}_{}_{}", exchange, instrument, channel);
-            let mut offset = 0;
+        let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
+        let database = self.construct_database_name(exchange, instrument, "trades");
+        let mut offset = 0;
 
-            loop {
-                let query = format!(
-                    "SELECT * FROM {}.{} LIMIT {} OFFSET {} ORDER BY timestamp",
-                    database, table_name, batch_size, offset
-                );
-                println!("[UniLinkExecution] : 正在执行 query: {}", query);
+        loop {
+             let query = ClickHouseQueryBuilder::new()
+                    .select("*")
+                    .from(&database, &table_name)
+                    .limit(batch_size)
+                    .offset(offset)
+            .order("timestamp",Some("DESC"))
+                    .build();
+            println!("[UniLinkExecution] : Executing query: {}", query);
 
-                match self.client.read().await.query(&query).fetch_all::<ClickhouseTrade>().await {
-                    Ok(trade_datas) => {
-                        for trade_data in &trade_datas {
-                            let (base, quote) = parse_base_and_quote(&trade_data.basequote);
-                            let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(),base,quote);
-                            yield market_event;
-                        }
+            match self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await {
+                Ok(trade_datas) => {
+                    for trade_data in &trade_datas {
+                        let (base, quote) = parse_base_and_quote(&trade_data.symbol);
+                        let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
+                        yield market_event;
+                    }
 
-                        if trade_datas.len() < batch_size {
-                            break;
-                        }
-
-                        offset += batch_size;
-                    },
-                    Err(e) => {
-                        eprintln!("Failed query: {}", e);
+                    if trade_datas.len() < batch_size {
                         break;
                     }
+
+                    offset += batch_size;
+                },
+                Err(e) => {
+                    eprintln!("Failed query: {}", e);
+                    break;
                 }
             }
         }
     }
+    }
 
-    pub async fn query_unioned_trade_table_batched_for_dates(self: Arc<Self>,
-                                                             exchange: &str,
-                                                             instrument: &str,
-                                                             channel: &str,
-                                                             start_date: &str,
-                                                             end_date: &str,
-                                                             batch_size: usize)
-                                                             -> Result<UnboundedReceiver<MarketEvent<ClickhouseTrade>>, ExecutionError>
+    pub async fn query_unioned_trade_table_batched_between_dates(self: Arc<Self>,
+                                                                 exchange: &str,
+                                                                 instrument: &str,
+                                                                 channel: &str,
+                                                                 start_date: &str,
+                                                                 end_date: &str,
+                                                                 batch_size: usize)
+                                                                 -> Result<UnboundedReceiver<MarketEvent<ClickhousePublicTrade>>, ExecutionError>
     {
         let (tx, rx) = unbounded_channel();
         // 处理 start_date 解析，并映射到 ExecutionError
-        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d")
-            .map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid start date format: {}", e)))?;
+        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d").map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid start date format: {}", e)))?;
 
         // 处理 end_date 解析，并映射到 ExecutionError
-        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d")
-            .map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid end date format: {}", e)))?;
+        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d").map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid end date format: {}", e)))?;
 
         let mut current_date = start_date;
 
@@ -257,19 +323,25 @@ impl ClickHouseClient
         tokio::spawn(async move {
             while current_date <= end_date {
                 let date = current_date.format("%Y_%m_%d").to_string();
-                let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
-                let database = format!("{}_{}_{}", exchange, instrument, channel);
+                let table_name = self.construct_union_table_name(&exchange, &instrument, &channel, &date);
+                let database = self.construct_database_name( &exchange, &instrument, &channel);
                 let mut offset = 0;
 
                 loop {
-                    let query = format!("SELECT * FROM {}.{} ORDER BY timestamp LIMIT {} OFFSET {}", database, table_name, batch_size, offset);
-                    println!("[UniLinkExecution] : 正在执行 query: {}", query);
+                    let query = ClickHouseQueryBuilder::new()
+                        .select("*")
+                        .from(&database, &table_name)
+                        .order("timestamp", Some("ASC"))
+                        .limit(batch_size)
+                        .offset(offset)
+                        .build();
+                    println!("[UniLinkExecution] : Executing query: {}", query);
 
                     let client = client.read().await;
-                    match client.query(&query).fetch_all::<ClickhouseTrade>().await {
+                    match client.query(&query).fetch_all::<ClickhousePublicTrade>().await {
                         | Ok(trade_datas) => {
                             for trade_data in &trade_datas {
-                                let (base, quote) = parse_base_and_quote(&trade_data.basequote);
+                                let (base, quote) = parse_base_and_quote(&trade_data.symbol);
                                 let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
                                 if tx.send(market_event).is_err() {
                                     eprintln!("Failed to send market event");
@@ -291,10 +363,66 @@ impl ClickHouseClient
                     }
                 }
 
-                current_date += Duration::days(1);
+                current_date += chrono::Duration::days(1);
             }
         });
 
         Ok(rx)
     }
+
+    pub async fn optimize_table(&self, table_path: &str) -> Result<(), Error> {
+        let optimize_query = format!("OPTIMIZE TABLE {}", table_path);
+        println!("[UniLinkExecution] : Sending optimize query for table: {}", table_path);
+        // 执行优化查询
+        self.client.read().await.query(&optimize_query).execute().await?;
+        println!("[UniLinkExecution] : Table {} has been optimized.", table_path);
+        Ok(())
+    }
+
+    // Method to optimize only "union" tables within a date range
+    pub async fn optimize_union_tables_in_date_range(
+        &self,
+        exchange: &str,
+        instrument: &str,
+        channel: &str,
+        mut start_date: NaiveDate,
+        end_date: NaiveDate,
+    ) -> Result<(), Error> {
+        let database = format!("{}_{}_{}", exchange, instrument, channel);
+
+        let total_days = (end_date - start_date).num_days() + 1;
+        let mut processed_days = 0;
+
+        while start_date <= end_date {
+            let date_str = start_date.format("%Y_%m_%d").to_string();
+            processed_days += 1;
+
+            let table_names = self.get_table_names(&database).await;
+            let mut processed_tables = 0;
+
+            // Iterate over table names and filter for "union" tables
+            for table_name in &table_names {
+                if table_name.contains("union") {
+                    let table_path = format!("{}.{}", database, table_name);
+                    println!("Optimizing table: {}", table_path);
+
+                    if let Err(e) = self.optimize_table(&table_path).await {
+                        eprintln!("Error optimizing table {}: {}", table_path, e);
+                    }
+
+                    processed_tables += 1;
+                }
+            }
+
+            let progress = (processed_days as f64 / total_days as f64) * 100.0;
+            println!("Date: {} - Union tables processed: {}/{}, Total progress: {:.2}%",
+                     date_str, processed_tables, table_names.len(), progress);
+
+            start_date += chrono::Duration::days(1);
+        }
+
+        println!("Union table optimization is complete for {} days.", total_days);
+        Ok(())
+    }
+
 }

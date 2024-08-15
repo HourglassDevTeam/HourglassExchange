@@ -5,96 +5,92 @@ use crate::common_infrastructure::{event::ClientOrderId, order::OrderKind, token
 
 /// 执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, Eq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
-pub enum ExecutionError
-{
+pub enum ExecutionError {
     /// 缺少属性，无法构建组件。
-    #[error("[UniLinkExecution] : 由于缺少属性，无法构建组件: {0}")]
+    #[error("[UniLinkExecution] : Unable to construct component due to missing property: {0}")]
     InitiatorIncomplete(String),
 
     /// 模拟交易所出错。
-    #[error("[UniLinkExecution] : 模拟交易所错误: {0}")]
+    #[error("[UniLinkExecution] : Sandbox error: {0}")]
     SandBox(String),
 
     /// 余额不足，无法开单。
-    #[error("[UniLinkExecution] : 符号{0}的余额不足，无法开单")]
+    #[error("[UniLinkExecution] : Insufficient balance for symbol {0}, unable to place order")]
     InsufficientBalance(Token),
 
     /// 找不到特定客户端订单ID的订单。
-    #[error("[UniLinkExecution] : 未能找到具有客户端订单ID的订单: {0}")]
+    #[error("[UniLinkExecution] : Order with ClientOrderId not found: {0}")]
     OrderNotFound(ClientOrderId),
 
     /// 由于不支持的订单类型，无法开设订单。
-    #[error("[UniLinkExecution] : 由于不支持的订单类型，无法开设订单: {0}")]
+    #[error("[UniLinkExecution] : Unsupported order type, unable to place order: {0}")]
     UnsupportedOrderKind(OrderKind),
 
     /// 网络错误，无法连接到交易所。
-    #[error("[UniLinkExecution] : 网络错误，无法连接到交易所: {0}")]
+    #[error("[UniLinkExecution] : Network error, unable to connect to exchange: {0}")]
     NetworkError(String),
 
     /// 超时错误，操作超时。
-    #[error("[UniLinkExecution] : 操作超时: {0}")]
+    #[error("[UniLinkExecution] : Operation timed out: {0}")]
     Timeout(String),
 
     /// 订单已存在。
-    #[error("[UniLinkExecution] : 订单已存在: {0}")]
+    #[error("[UniLinkExecution] : Order already exists: {0}")]
     OrderAlreadyExists(ClientOrderId),
 
     /// 订单被拒绝。
-    #[error("[UniLinkExecution] : 订单被拒绝: {0}")]
+    #[error("[UniLinkExecution] : Order rejected: {0}")]
     OrderRejected(String),
 
-    /// 交易所维护中。
-    #[error("[UniLinkExecution] : 交易所维护中，无法执行操作")]
+    /// 交易所维护中，无法执行操作。
+    #[error("[UniLinkExecution] : Exchange under maintenance, unable to perform operation")]
     ExchangeMaintenance,
 
-    /// 交易所维护中。
-    #[error("[UniLinkExecution] : 无效的开单方向")]
+    /// 无效的开单方向。
+    #[error("[UniLinkExecution] : Invalid order direction")]
     InvalidDirection,
 
     /// 未知的交易所错误。
-    #[error("[UniLinkExecution] : 未知的交易所错误: {0}")]
+    #[error("[UniLinkExecution] : Unknown exchange error: {0}")]
     UnknownExchangeError(String),
 
     /// 无效的交易对。
-    #[error("[UniLinkExecution] : 无效的交易对: {0}")]
+    #[error("[UniLinkExecution] : Invalid trading pair: {0}")]
     InvalidTradingPair(String),
 
-    /// 无效的dates。
-    #[error("[UniLinkExecution] : 无效的日期: {0}")]
+    /// 无效的日期。
+    #[error("[UniLinkExecution] : Invalid dates: {0}")]
     InvalidDates(String),
 
-
     /// API 限制，达到调用限制。
-    #[error("[UniLinkExecution] : API 限制，达到调用限制")]
+    #[error("[UniLinkExecution] : API limit reached, unable to proceed")]
     ApiLimitReached,
 
-    /// 权限不足。
-    #[error("[UniLinkExecution] : 权限不足，无法执行操作")]
+    /// 权限不足，无法执行操作。
+    #[error("[UniLinkExecution] : Insufficient permissions to perform operation")]
     InsufficientPermissions,
 
     /// 无效的签名。
-    #[error("[UniLinkExecution] : 无效的签名")]
+    #[error("[UniLinkExecution] : Invalid signature provided")]
     InvalidSignature,
 
-    /// 解析config.toml失败。
-    #[error("[UniLinkExecution] : 解析配置失败: {0}")]
+    /// 解析配置失败。
+    #[error("[UniLinkExecution] : Failed to parse configuration: {0}")]
     ConfigParseError(String),
 
-    /// ConfigMissing失败。
-    #[error("[UniLinkExecution] : 配置缺少: {0}")]
+    /// 配置缺少。
+    #[error("[UniLinkExecution] : Missing configuration: {0}")]
     ConfigMissing(String),
 
     /// 解析响应失败。
-    #[error("[UniLinkExecution] : 解析响应失败: {0}")]
+    #[error("[UniLinkExecution] : Failed to parse response: {0}")]
     ResponseParseError(String),
 
     /// 内部错误。
-    #[error("[UniLinkExecution] : 内部错误: {0}")]
+    #[error("[UniLinkExecution] : Internal error: {0}")]
     InternalError(String),
 
     /// 无效的金融工具。
-    #[error("[UniLinkExecution] : 内部错误: {0}")]
+    #[error("[UniLinkExecution] : Invalid instrument: {0}")]
     InvalidInstrument(String),
-
-
 }

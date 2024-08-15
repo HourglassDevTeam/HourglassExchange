@@ -34,11 +34,13 @@ impl PerpetualPositionBuilder
 {
     pub fn new() -> Self
     {
-        Self { meta: None,
-               pos_config: None,
-               liquidation_price: None,
-               margin: None,
-               funding_fee: None }
+        Self {
+            meta: None,
+            pos_config: None,
+            liquidation_price: None,
+            margin: None,
+            funding_fee: None,
+        }
     }
 
     pub fn meta(mut self, meta: PositionMeta) -> Self
@@ -71,7 +73,8 @@ impl PerpetualPositionBuilder
         self
     }
 
-    pub fn build(self) -> Option<PerpetualPosition> {
+    pub fn build(self) -> Option<PerpetualPosition>
+    {
         Some(PerpetualPosition {
             meta: self.meta?,
             pos_config: self.pos_config?,
