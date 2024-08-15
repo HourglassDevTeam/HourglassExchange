@@ -215,7 +215,12 @@ impl ClickHouseClient
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let full_table_path = format!("{}.{}", database_name, table_name);
-        let query = format!("SELECT symbol, side, price, timestamp, amount FROM {} ORDER BY timestamp DESC LIMIT 1", full_table_path);
+        let query = ClickHouseQueryBuilder::new()
+            .select("symbol, side, price, timestamp, amount")
+            .from(&full_table_path)
+            .order("timestamp", Some("DESC"))
+            .limit(1)
+            .build();
         println!("[UniLinkExecution] : Constructed query :  {}", query);
         let trade_data = self.client.read().await.query(&query).fetch_one::<ClickhousePublicTrade>().await?;
         Ok(trade_data)
