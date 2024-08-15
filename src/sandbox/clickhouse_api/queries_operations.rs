@@ -87,7 +87,7 @@ impl Ord for ClickhousePublicTrade
 
 impl ClickHouseClient
 {
-    fn construct_table_name(&self, exchange: &str, instrument: &str, channel: &str, date: &str, base: &str, quote: &str) -> String
+    pub fn construct_table_name(&self, exchange: &str, instrument: &str, channel: &str, date: &str, base: &str, quote: &str) -> String
     {
         match exchange {
             | "binance" => format!("{}_{}_{}_{}_{}",
@@ -108,7 +108,7 @@ impl ClickHouseClient
         }
     }
 
-    fn construct_database_name(&self, exchange: &str, instrument: &str, channel: &str) -> String
+    pub fn construct_database_name(&self, exchange: &str, instrument: &str, channel: &str) -> String
     {
         format!("{}_{}_{}", exchange, instrument, channel)
     }
@@ -409,4 +409,5 @@ impl ClickHouseClient
         println!("Union table optimization is complete for {} days.", total_days);
         Ok(())
     }
+
 }
