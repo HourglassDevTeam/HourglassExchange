@@ -1,5 +1,4 @@
-// NOTE this module is previously built and imported into the main project as a dependency.
-//      upon completion the following code should be deleted and external identical code should be used instead.
+/// NOTE 目前表名的构建方式都以`Tardis API`的`Binance`数据为基础。可能并不适用于其他交易所。日后**必须**扩展。
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -10,6 +9,8 @@ pub use clickhouse::{
     Client,
     error::{Error, Result}, Row,
 };
+use clickhouse::query::RowCursor;
+use futures::stream;
 use futures_core::Stream;
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver},
@@ -369,6 +370,85 @@ impl ClickHouseClient
 
         Ok(rx)
     }
+
+
+    pub async fn fetch_public_trades(
+        &self,
+        exchange: &str,
+        instrument: &str,
+        date: &str,
+        base: &str,
+        quote: &str,
+    ) -> Result<impl Stream<Item = Result<ClickhousePublicTrade, Error>>> {
+        // 构造数据库名称和表名称
+        let database_name = self.construct_database_name(exchange, instrument, "trades");
+        let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
+
+        // 使用 ClickHouseQueryBuilder 构造查询语句
+        let query = ClickHouseQueryBuilder::new()
+            .select("symbol, side, price, timestamp, amount")
+            .from(&database_name, &table_name)
+            .order("timestamp", Some("DESC"))
+            .build();
+
+        println!("[UniLinkExecution] : Constructed query {}", query);
+
+        // 获取 ClickHouse 客户端的只读引用
+        let client_ref = self.client.read().await;
+
+        // 执行查询并获取游标
+        let cursor: RowCursor<ClickhousePublicTrade> = client_ref.query(&query).fetch()?;
+
+        // 将 RowCursor 转换为 Stream
+        let stream = stream::unfold(cursor, |mut cursor| async {
+            match cursor.next().await {
+                Ok(Some(row)) => Some((Ok(row), cursor)),
+                Ok(None) => None,
+                Err(e) => Some((Err(e), cursor)),
+            }
+        });
+
+        Ok(stream)
+    }
+
+    pub async fn fetch_unioned_public_trades(
+        &self,
+        exchange: &str,
+        instrument: &str,
+        date: &str,
+    ) -> Result<impl Stream<Item = Result<ClickhousePublicTrade, Error>>> {
+        // 构造数据库名称和表名称
+        let database_name = self.construct_database_name(exchange, instrument, "trades");
+        let table_name = self.construct_union_table_name(exchange, instrument, "trades", date);
+
+        // 使用 ClickHouseQueryBuilder 构造查询语句
+        let query = ClickHouseQueryBuilder::new()
+            .select("symbol, side, price, timestamp, amount")
+            .from(&database_name, &table_name)
+            .order("timestamp", Some("DESC"))
+            .build();
+
+        println!("[UniLinkExecution] : Constructed query {}", query);
+
+        // 获取 ClickHouse 客户端的只读引用
+        let client_ref = self.client.read().await;
+
+        // 执行查询并获取游标
+        let cursor: RowCursor<ClickhousePublicTrade> = client_ref.query(&query).fetch()?;
+
+        // 将 RowCursor 转换为 Stream
+        let stream = stream::unfold(cursor, |mut cursor| async {
+            match cursor.next().await {
+                Ok(Some(row)) => Some((Ok(row), cursor)),
+                Ok(None) => None,
+                Err(e) => Some((Err(e), cursor)),
+            }
+        });
+
+        Ok(stream)
+    }
+
+
 
     pub async fn optimize_table(&self, table_path: &str) -> Result<(), Error> {
         let optimize_query = format!("OPTIMIZE TABLE {}", table_path);
