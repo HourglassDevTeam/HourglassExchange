@@ -11,8 +11,8 @@ async fn main() {
     let exchange = "binance";
     let instrument = "futures";
     let channel = "trades";
-    let start_date = NaiveDate::from_ymd_opt(2024, 5, 5).expect("Invalid start date"); // 设置开始日期
-    let end_date = NaiveDate::from_ymd_opt(2024, 5, 5).expect("Invalid end date"); // 设置结束日期
+    let start_date = NaiveDate::from_ymd_opt(2019, 12, 9).expect("Invalid start date"); // 设置开始日期
+    let end_date = NaiveDate::from_ymd_opt(2024, 3, 3).expect("Invalid end date"); // 设置结束日期
     let mut current_date = start_date;
 
     // 计算总天数，用于进度汇报
@@ -45,7 +45,7 @@ async fn main() {
             })
             .cloned() // 克隆以避免引用问题
             .collect();
-
+        println!("Successfully filtered tables for {}",date_str);
         // 如果找到对应的表，则创建联合表
         if !tables.is_empty() {
             let new_table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date_str);
