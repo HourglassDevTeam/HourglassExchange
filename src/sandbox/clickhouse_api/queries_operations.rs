@@ -128,9 +128,9 @@ impl ClickHouseClient
         result
     }
 
-    fn build_query_with_offset(&self, database: &str, table_name: &str, batch_size: usize, offset: usize) -> String {
-        format!("SELECT * FROM {}.{} LIMIT {} OFFSET {} ORDER BY timestamp", database, table_name, batch_size, offset)
-    }
+    // fn build_query_with_offset(&self, database: &str, table_name: &str, batch_size: usize, offset: usize) -> String {
+    //     format!("SELECT * FROM {}.{} LIMIT {} OFFSET {} ORDER BY timestamp", database, table_name, batch_size, offset)
+    // }
 
     pub async fn get_tables_for_date(&self, table_names: &[String], date: &str) -> Vec<String> {
         // 筛选出指定日期的表名
@@ -198,8 +198,12 @@ impl ClickHouseClient
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         // let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
-        let full_table_path = format!("{}.{}", database_name, table_name);
-        let query = format!("SELECT symbol, side, price, timestamp, amount FROM {} ORDER BY timestamp", full_table_path);
+        let query = ClickHouseQueryBuilder::new()
+            .select("*")
+            .from(&format!("{}.{}", database_name, table_name))
+            .order_by("timestamp")
+            .build();
+
         println!("[UniLinkExecution] : Constructed query {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
         let ws_trades: Vec<WsTrade> = trade_datas.into_iter().map(WsTrade::from).collect();
@@ -240,7 +244,13 @@ impl ClickHouseClient
         let mut offset = 0;
 
         loop {
-            let query = self.build_query_with_offset(&database, &table_name, batch_size, offset);
+             let query = ClickHouseQueryBuilder::new()
+                    .select("*")
+                    .from(&format!("{}.{}", database, table_name))
+                    .limit(batch_size)
+                    .offset(offset)
+                    .order_by("timestamp")
+                    .build();
             println!("[UniLinkExecution] : Executing query: {}", query);
 
             match self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await {

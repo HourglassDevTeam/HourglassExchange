@@ -5,6 +5,7 @@ pub struct ClickHouseQueryBuilder {
     where_clause: Option<String>,
     order_by_clause: Option<String>,
     limit_clause: Option<String>,
+    offset_clause: Option<String>, // Add this line
 }
 
 #[allow(dead_code)]
@@ -17,6 +18,7 @@ impl ClickHouseQueryBuilder {
             where_clause: None,
             order_by_clause: None,
             limit_clause: None,
+            offset_clause: None,
         }
     }
 
@@ -63,6 +65,10 @@ impl ClickHouseQueryBuilder {
     // 添加LIMIT子句
     pub fn limit(mut self, limit: usize) -> Self {
         self.limit_clause = Some(format!("LIMIT {}", limit));
+        self
+    }
+    pub fn offset(mut self, offset: usize) -> Self {
+        self.offset_clause = Some(format!("OFFSET {}", offset));
         self
     }
 
