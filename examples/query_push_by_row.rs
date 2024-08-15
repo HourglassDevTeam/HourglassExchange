@@ -1,8 +1,6 @@
 use std::time::Instant;
 use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
-use unilink_execution::sandbox::ws_trade::WsTrade;
-use clickhouse::Row;
 
 #[tokio::main]
 async fn main() {
@@ -29,6 +27,4 @@ async fn main() {
     }
     let duration = start_time.elapsed();
     println!("ClickhousePublicTrade data fetched in: {:?}", duration);
-
-
 }
