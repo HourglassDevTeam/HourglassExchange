@@ -176,7 +176,7 @@ impl ClickHouseClient
         for (i, table_name) in table_names.iter().enumerate() {
             let select_query = ClickHouseQueryBuilder::new()
                 .select("symbol, side, price, timestamp, amount") // Select required fields
-                .from(&format!("{}.{}", database, table_name)) // Format the table name with database
+                .from(&database, table_name) // Format the table name with database
                 .build(); // Build the individual query
 
             queries.push(select_query);
@@ -217,7 +217,7 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let query = ClickHouseQueryBuilder::new()
             .select("symbol, side, price, timestamp, amount")
-            .from(&format!("{}.{}", database_name, table_name))
+            .from(&database_name, &table_name)
             .order("timestamp",Some("DESC"))
             .build();
 
@@ -229,10 +229,10 @@ impl ClickHouseClient
     pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<ClickhousePublicTrade, Error> {
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
-        let full_table_path = format!("{}.{}", database_name, table_name);
+        // let full_table_path = format!("{}.{}", database_name, table_name);
         let query = ClickHouseQueryBuilder::new()
             .select("symbol, side, price, timestamp, amount")
-            .from(&full_table_path)
+            .from(&database_name,&table_name)
             .order("timestamp", Some("DESC"))
             .limit(1)
             .build();
@@ -269,7 +269,7 @@ impl ClickHouseClient
         loop {
              let query = ClickHouseQueryBuilder::new()
                     .select("*")
-                    .from(&format!("{}.{}", database, table_name))
+                    .from(&database, &table_name)
                     .limit(batch_size)
                     .offset(offset)
             .order("timestamp",Some("DESC"))
@@ -332,7 +332,7 @@ impl ClickHouseClient
                 loop {
                     let query = ClickHouseQueryBuilder::new()
                         .select("*")
-                        .from(&format!("{}.{}", database, table_name))
+                        .from(&database, &table_name)
                         .order("timestamp", Some("ASC"))
                         .limit(batch_size)
                         .offset(offset)

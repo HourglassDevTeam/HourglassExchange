@@ -31,8 +31,8 @@ impl ClickHouseQueryBuilder {
     }
 
     // 设置FROM子句
-    pub fn from(mut self, table: &str) -> Self {
-        self.from_clause = format!("FROM {}", table);
+    pub fn from(mut self, database_name: &str, table_name: &str) -> Self {
+        self.from_clause = format!("FROM {}.{}", database_name, table_name);
         self
     }
 

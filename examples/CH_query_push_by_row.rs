@@ -16,7 +16,7 @@ async fn main() {
     let table_name = client.construct_table_name(exchange, instrument, "trades", date, base, quote);
     let query = ClickHouseQueryBuilder::new()
         .select("symbol, side, price, timestamp, amount")
-        .from(&format!("{}.{}", &database_name, table_name))
+        .from( &database_name, &table_name)
         .order("timestamp", Some("DESC"))
         .build();
     println!("[UniLinkExecution] : Constructed query {}", query);
