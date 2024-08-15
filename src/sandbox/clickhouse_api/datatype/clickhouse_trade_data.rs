@@ -5,7 +5,7 @@ use crate::sandbox::clickhouse_api::queries_operations::Row;
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
 pub struct ClickhousePublicTrade
 {
-    pub basequote: String,
+    pub symbol: String, //NOTE : symbol = basequote
     pub side: String,
     pub price: f64,
     pub timestamp: i64,

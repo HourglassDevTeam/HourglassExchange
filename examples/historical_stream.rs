@@ -40,7 +40,7 @@ async fn main() {
 
     // 创建异步任务并将句柄存储到 handle 中
     let handle = task::spawn(async move {
-        match client.query_unioned_trade_table_batched_for_dates(exchange, instrument, channel, start_date, end_date, batch_size).await {
+        match client.query_unioned_trade_table_batched_between_dates(exchange, instrument, channel, start_date, end_date, batch_size).await {
             Ok(mut rx) => {
                 while let Some(event) = rx.recv().await {
                     if let Err(e) = tx.send(event) {
