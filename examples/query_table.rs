@@ -15,8 +15,8 @@ async fn main() {
     let start_time = Instant::now();
     match client.retrieve_all_trades(exchange, instrument,date, base, quote).await {
         | Ok(trades) => {
-            let duration = start_time.elapsed();
             println!("{:?}", trades);
+            let duration = start_time.elapsed();
             println!("ClickhousePublicTrade data fetched in: {:?}", duration);
         }
         | Err(err) => {
