@@ -1,7 +1,5 @@
 use std::time::Instant;
-use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
-use unilink_execution::sandbox::clickhouse_api::query_builder::ClickHouseQueryBuilder;
 
 #[tokio::main]
 async fn main() {
@@ -12,8 +10,9 @@ async fn main() {
     let base = "1000RATS";
     let quote = "USDT";
 
-    let database_name = client.construct_database_name(exchange, instrument, "trades");
-    let table_name = client.construct_table_name(exchange, instrument, "trades", date, base, quote);
+    // EXAMPLE 1 MANUALLY BUILD THE QUERY
+    // let database_name = client.construct_database_name(exchange, instrument, "trades");
+    // let table_name = client.construct_table_name(exchange, instrument, "trades", date, base, quote);
     // let query = ClickHouseQueryBuilder::new()
     //     .select("symbol, side, price, timestamp, amount")
     //     .from( &database_name, &table_name)
@@ -23,6 +22,9 @@ async fn main() {
     //
     // let client_ref = client.client.read().await;
     // let mut cursor = client_ref.query(&query).fetch::<ClickhousePublicTrade>().unwrap();
+
+
+    // EXAMPLE 2 USE PREDEFINED METHOD
     let mut cursor = client.cursor_public_trades(exchange,instrument,date,base,quote).await.unwrap();
     let start_time = Instant::now();
     while let Ok(Some(row)) = cursor.next().await {
