@@ -158,7 +158,7 @@ impl ClickHouseClient {
                 println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
 
                 // 模拟延迟以模拟长时间运行任务的进度汇报
-                sleep(Duration::from_millis(500)).await;
+                // sleep(Duration::from_millis(500)).await;
             }
         }
 
