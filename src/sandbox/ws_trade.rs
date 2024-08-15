@@ -83,16 +83,21 @@ impl From<ClickhousePublicTrade> for WsTrade
     }
 }
 
-pub fn parse_base_and_quote(symbol: &str) -> (String, String)
-{
+pub fn parse_base_and_quote(symbol: &str) -> (String, String) {
+    // 定义一个包含常见报价货币的数组
     let quote_assets = ["USDT", "USTC", "USDC", "USD", "UST", "DAI", "FDUSD", "BTC", "ETH", "EURT"];
+    // 遍历所有已知的报价货币
     for &quote in &quote_assets {
+        // 检查符号是否以当前报价货币结尾
         if symbol.ends_with(quote) {
+            // 如果匹配，提取基础货币
             let base = &symbol[..symbol.len() - quote.len()];
+            // 返回基础货币和报价货币
             return (base.to_string(), quote.to_string());
         }
     }
-    (symbol.to_string(), String::new()) // 如果无法解析，返回原始值
+    // 如果没有匹配的报价货币，返回原始符号作为基础货币，报价货币为空字符串
+    (symbol.to_string(), String::new())
 }
 
 #[allow(dead_code)]
