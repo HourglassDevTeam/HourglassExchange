@@ -1,6 +1,7 @@
 use std::time::Instant;
 use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
+use unilink_execution::sandbox::clickhouse_api::query_builder::ClickHouseQueryBuilder;
 
 #[tokio::main]
 async fn main() {
@@ -13,10 +14,11 @@ async fn main() {
 
     let database_name = client.construct_database_name(exchange, instrument, "trades");
     let table_name = client.construct_table_name(exchange, instrument, "trades", date, base, quote);
-    let query = format!(
-        "SELECT symbol, side, price, timestamp, amount FROM {}.{} ORDER BY timestamp DESC",
-        database_name, table_name
-    );
+    let query = ClickHouseQueryBuilder::new()
+        .select("symbol, side, price, timestamp, amount")
+        .from(&format!("{}.{}", &database_name, table_name))
+        .order("timestamp", Some("DESC"))
+        .build();
     println!("[UniLinkExecution] : Constructed query {}", query);
 
     let client_ref = client.client.read().await;

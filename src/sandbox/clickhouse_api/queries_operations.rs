@@ -108,6 +108,22 @@ impl ClickHouseClient
         }
     }
 
+    pub fn construct_union_table_name(
+        &self,
+        exchange: &str,
+        instrument: &str,
+        channel: &str,
+        date: &str
+    ) -> String {
+        format!(
+            "{}_{}_{}_union_{}",
+            exchange,
+            instrument,
+            channel,
+            date.replace("-", "_") // Replace dashes with underscores for valid table names
+        )
+    }
+
     pub fn construct_database_name(&self, exchange: &str, instrument: &str, channel: &str) -> String
     {
         format!("{}_{}_{}", exchange, instrument, channel)
@@ -244,8 +260,10 @@ impl ClickHouseClient
         batch_size: usize
     ) -> impl Stream<Item = MarketEvent<ClickhousePublicTrade>> + 'a {
         stream! {
-        let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
-        let database = format!("{}_{}_{}", exchange, instrument, channel);
+        // let table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date);
+        let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
+        // let database = format!("{}_{}_{}", exchange, instrument, channel);
+        let database =  self.construct_database_name(exchange, instrument, channel);
         let mut offset = 0;
 
         loop {
