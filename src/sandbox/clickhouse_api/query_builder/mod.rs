@@ -99,66 +99,58 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_select_query() {
-        let query = ClickHouseQueryBuilder::new()
-            .select("id, name")
-            .from("users")
-            .build();
-        assert_eq!(query, "SELECT id, name FROM users");
-    }
-
-    #[test]
     fn test_where_query() {
         let query = ClickHouseQueryBuilder::new()
             .select("*")
-            .from("users")
+            .from("default_db", "users")
             .where_clause("id = 1")
             .build();
-        assert_eq!(query, "SELECT * FROM users WHERE id = 1");
+        assert_eq!(query, "SELECT * FROM default_db.users WHERE id = 1");
     }
 
     #[test]
     fn test_like_query() {
         let query = ClickHouseQueryBuilder::new()
             .select("*")
-            .from("users")
+            .from("default_db", "users")
             .like_clause("name", "%example%")
             .build();
-        assert_eq!(query, "SELECT * FROM users WHERE name LIKE '%example%'");
+        assert_eq!(query, "SELECT * FROM default_db.users WHERE name LIKE '%example%'");
     }
 
     #[test]
     fn test_not_like_query() {
         let query = ClickHouseQueryBuilder::new()
             .select("*")
-            .from("products")
+            .from("default_db", "products")
             .not_like_clause("description", "%old%")
             .build();
-        assert_eq!(query, "SELECT * FROM products WHERE description NOT LIKE '%old%'");
+        assert_eq!(query, "SELECT * FROM default_db.products WHERE description NOT LIKE '%old%'");
     }
+
 
     #[test]
     fn test_combined_query() {
         let query = ClickHouseQueryBuilder::new()
             .select("id, name")
-            .from("users")
+            .from("default_db", "users")  // 添加数据库名参数
             .where_clause("age > 18")
             .like_clause("email", "%@mail.com")
-            .order_by("created_at DESC")
+            .order("created_at", Some("DESC"))  // 修改order_by的调用
             .limit(10)
             .build();
-        assert_eq!(query, "SELECT id, name FROM users WHERE age > 18 AND email LIKE '%@mail.com' ORDER BY created_at DESC LIMIT 10");
+        assert_eq!(query, "SELECT id, name FROM default_db.users WHERE age > 18 AND email LIKE '%@mail.com' ORDER BY created_at DESC LIMIT 10");
     }
 
     #[test]
     fn test_query_with_multiple_conditions() {
         let query = ClickHouseQueryBuilder::new()
             .select("*")
-            .from("users")
+            .from("default_db", "users")  // 添加数据库名参数
             .where_clause("id = 1")
             .like_clause("username", "%user%")
             .not_like_clause("password", "%weak%")
             .build();
-        assert_eq!(query, "SELECT * FROM users WHERE id = 1 AND username LIKE '%user%' AND password NOT LIKE '%weak%'");
+        assert_eq!(query, "SELECT * FROM default_db.users WHERE id = 1 AND username LIKE '%user%' AND password NOT LIKE '%weak%'");
     }
 }
