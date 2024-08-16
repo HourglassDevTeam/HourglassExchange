@@ -84,7 +84,7 @@ impl ExchangeVariant
     {
         match self {
             | ExchangeVariant::SandBox => "sandbox",
-            | ExchangeVariant::Okex => "ftx",
+            | ExchangeVariant::Okex => "okex",
             | ExchangeVariant::Binance => "binance",
         }
     }
