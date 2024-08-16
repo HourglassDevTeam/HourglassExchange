@@ -21,6 +21,17 @@ pub struct AccountDataStreams<Event>
 //     pub kind: Kind,
 // }
 
+impl<Event> Default for AccountDataStreams<Event>
+where Event: Debug + Clone + Send + Sync + 'static + Ord
+{
+    fn default() -> Self {
+        Self::new()
+    }
+
+}
+
+
+
 // 为 AccountDataStreams 实现创建和增减数据流的方法，用于管理数据流。
 impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static + Ord
 {

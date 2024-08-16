@@ -30,9 +30,8 @@ pub fn local_datetime_from_unix(unix_time: i64) -> DateTime<Local>
     let utc_datetime = Utc.timestamp_millis_opt(unix_time).unwrap();
 
     // 将UTC时间转换为东八区时间
-    let east_eight_datetime = Local.from_utc_datetime(&utc_datetime.naive_utc());
+    Local.from_utc_datetime(&utc_datetime.naive_utc())
 
-    east_eight_datetime
 }
 #[allow(dead_code)]
 // 定义一个函数，接受short UNIX时间戳并返回东八区精确时间
@@ -42,9 +41,8 @@ pub fn local_datetime_from_short_unix(unix_time: i64) -> DateTime<Local>
     let utc_datetime = DateTime::<Utc>::from_timestamp(unix_time, 0).unwrap();
 
     // 将UTC时间转换为东八区时间
-    let east_eight_datetime = Local.from_utc_datetime(&utc_datetime.naive_utc());
+    Local.from_utc_datetime(&utc_datetime.naive_utc())
 
-    east_eight_datetime
 }
 #[allow(dead_code)]
 // 定义一个函数，接受UNIX时间戳并返回东八区小时数

@@ -80,6 +80,15 @@ pub struct AccountInitiator<Event>
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
+impl<Event> Default for AccountInitiator<Event>
+where Event: Clone + Send + Sync + Debug + 'static + Ord
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+
 impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     pub fn new() -> Self
@@ -441,13 +450,13 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
         // 发送 AccountEvents 给客户端
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp: exchange_timestamp.into(),
+            .send(AccountEvent { exchange_timestamp,
                                  exchange: ExchangeVariant::SandBox,
                                  kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp: exchange_timestamp.into(),
+            .send(AccountEvent { exchange_timestamp,
                                  exchange: ExchangeVariant::SandBox,
                                  kind: AccountEventKind::Balance(balance_event) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
@@ -469,7 +478,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                                                                               instrument: order.instrument,
                                                                                               side: order.side,
                                                                                               kind: order.kind,
-                                                                                              cid: order.cid.clone(),
+                                                                                              cid: order.cid,
                                                                                               exchange: ExchangeVariant::SandBox,
                                                                                               client_ts: 0 })
                                                                          .collect();

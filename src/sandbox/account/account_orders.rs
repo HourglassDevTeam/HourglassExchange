@@ -241,6 +241,6 @@ impl AccountOrders
     pub async fn update_latency(&mut self, current_time: i64)
     {
         let mut latency = self.latency_generator.write().await;
-        fluctuate_latency(&mut *latency, current_time);
+        fluctuate_latency(&mut latency, current_time);
     }
 }

@@ -1,6 +1,7 @@
 /// NOTE 目前表名的构建方式都以`Tardis API`的`Binance`数据为基础。可能并不适用于其他交易所。日后**必须**扩展。
 use std::sync::Arc;
 
+
 use async_stream::stream;
 use chrono::NaiveDate;
 use clickhouse::query::RowCursor;
@@ -25,6 +26,14 @@ use crate::{
 pub struct ClickHouseClient {
     pub client: Arc<RwLock<Client>>,
 }
+
+impl Default for ClickHouseClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+
 impl ClickHouseClient {
     pub fn new() -> Self {
         let client = Client::default().with_url("http://localhost:8123").with_user("default").with_password("");
@@ -111,12 +120,11 @@ impl ClickHouseClient {
     pub async fn get_table_names(&self, database: &str) -> Vec<String> {
         let table_names_query = format!("SHOW TABLES FROM {database}",);
         println!("{:?}", table_names_query);
-        let result = self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
+        self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
             eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
-            vec![]
-        });
 
-        result
+            vec![]
+        })
     }
 
 
@@ -127,7 +135,6 @@ impl ClickHouseClient {
             .filter(|table_name| if let Some(table_date) = extract_date(table_name) { table_date == date } else { false })
             .cloned()
             .collect();
-
         tables_for_date
     }
 
@@ -135,7 +142,7 @@ impl ClickHouseClient {
         &self,
         database: &str,
         new_table_name: &str,
-        table_names: &Vec<String>,
+        table_names: &[String],
         report_progress: bool, // 新增参数，用于控制是否启用进度汇报
     ) -> Result<(), Error> {
         // 构建UNION ALL查询
@@ -145,7 +152,7 @@ impl ClickHouseClient {
         for (i, table_name) in table_names.iter().enumerate() {
             let select_query = ClickHouseQueryBuilder::new()
                 .select("symbol, side, price, timestamp, amount") // Select required fields
-                .from(&database, table_name) // Format the table name with database
+                .from(database, table_name) // Format the table name with database
                 .build(); // Build the individual query
 
             queries.push(select_query);

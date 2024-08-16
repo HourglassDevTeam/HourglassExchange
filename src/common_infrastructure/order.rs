@@ -148,24 +148,11 @@ impl Ord for Order<Open>
     }
 }
 
-impl PartialOrd for Order<Open>
-{
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering>
-    {
-        match (self.side, other.side) {
-            | (Side::Buy, Side::Buy) => match self.state.price.partial_cmp(&other.state.price)? {
-                | Ordering::Equal => self.state.remaining_quantity().partial_cmp(&other.state.remaining_quantity()),
-                | non_equal => Some(non_equal),
-            },
-            | (Side::Sell, Side::Sell) => match other.state.price.partial_cmp(&self.state.price)? {
-                | Ordering::Equal => other.state.remaining_quantity().partial_cmp(&self.state.remaining_quantity()),
-                | non_equal => Some(non_equal),
-            },
-            | _ => None,
-        }
+impl PartialOrd for Order<Open> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
-
 // 为Order<Open>实现Eq
 impl Eq for Order<Open> {}
 
@@ -206,7 +193,7 @@ impl From<Order<Open>> for Order<Cancelled>
     {
         Self {
             kind: order.kind,
-            exchange: order.exchange.clone(),
+            exchange: order.exchange,
             instrument: order.instrument.clone(),
             cid: order.cid,
             client_ts: order.client_ts,

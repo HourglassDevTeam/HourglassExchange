@@ -9,6 +9,15 @@ pub struct ClickHouseQueryBuilder {
     offset_clause: Option<String>, // Add this line
 }
 
+impl Default for ClickHouseQueryBuilder {
+    fn default() -> Self {
+            Self::new()
+     }
+}
+
+
+
+
 #[allow(dead_code)]
 impl ClickHouseQueryBuilder {
     // 初始化构造器

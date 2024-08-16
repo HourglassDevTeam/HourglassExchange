@@ -325,7 +325,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             }
 
             // 更新余额，根据不同的 PositionMarginMode 处理
-            match (open.instrument.kind.clone(), position_margin_mode) {
+            match (open.instrument.kind, position_margin_mode) {
                 | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Cross) => {
                     // FIXME: NOTE this is DEMONSTRATIVE AND PROBLEMATIC and the common pool is yet to be built.
                     // Cross margin: apply the required balance to a common pool
@@ -358,11 +358,11 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             };
 
             let updated_balance = match open.side {
-                | Side::Buy => self.balance(&open.instrument.quote)?.clone(),
-                | Side::Sell => self.balance(&open.instrument.base)?.clone(),
+                | Side::Buy => *self.balance(&open.instrument.quote)?,
+                | Side::Sell => *self.balance(&open.instrument.base)?,
             };
 
-            Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp").into(),
+            Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
                               exchange: ExchangeVariant::SandBox,
                               kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)) })
         }
@@ -444,7 +444,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 let quote_balance = self.update(quote, quote_delta);
 
                 Ok(AccountEvent {
-                    exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp").into(),
+                    exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
                     exchange: ExchangeVariant::SandBox,
                     kind: AccountEventKind::Balances(vec![
                         TokenBalance::new(base.clone(), base_balance),

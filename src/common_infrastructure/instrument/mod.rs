@@ -64,9 +64,16 @@ pub struct InstrumentInitiator
     kind: Option<InstrumentKind>,
 }
 
+impl Default for InstrumentInitiator {
+    fn default() -> Self {
+        Self::new()
+    }}
+
+
+
 impl InstrumentInitiator
 {
-    // 初始化构建器，所有字段均为None。
+        // 初始化构建器，所有字段均为None。
     pub fn new() -> Self
     {
         InstrumentInitiator {

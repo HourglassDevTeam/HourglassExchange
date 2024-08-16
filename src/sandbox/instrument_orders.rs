@@ -32,7 +32,7 @@ pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f6
                 maker_fee_rate: fees_percent * trade_quantity, // 制造流动性的费率计算
                 taker_fee_rate: fees_percent * trade_quantity, // 消耗流动性的费率计算
             };
-            InstrumentFees::new(order.instrument.kind.clone(), Fees::Spot(spot_fees))
+            InstrumentFees::new(order.instrument.kind, Fees::Spot(spot_fees))
         }
 
         // 针对永续合约的费用计算
@@ -42,7 +42,7 @@ pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f6
                 close_fee_rate: fees_percent * trade_quantity, // 平仓费率计算
                 funding_rate: fees_percent * trade_quantity,   // 资金费率计算
             };
-            InstrumentFees::new(order.instrument.kind.clone(), Fees::Perpetual(perpetual_fees))
+            InstrumentFees::new(order.instrument.kind, Fees::Perpetual(perpetual_fees))
         }
 
         // 针对期权交易的费用计算
@@ -50,7 +50,7 @@ pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f6
             let option_fees = OptionFees {
                 trade_fee_rate: fees_percent * trade_quantity, // 交易费率计算
             };
-            InstrumentFees::new(order.instrument.kind.clone(), Fees::Option(option_fees))
+            InstrumentFees::new(order.instrument.kind, Fees::Option(option_fees))
         }
 
         // 处理未知的交易类型
@@ -167,7 +167,7 @@ impl InstrumentOrders
 
     /// NOTE 目前暂时的做法是使用 `batch_id` 值为此 [`Instrument`] 市场生成唯一的 [`TradeId`]。
     pub fn trade_id(&self) -> TradeId {
-        TradeId(self.batch_id.into())
+        TradeId(self.batch_id)
     }
     pub fn match_asks(&mut self, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64) -> Vec<ClientTrade> {
         // 跟踪剩余的可用流动性，以便匹配

@@ -52,6 +52,13 @@ impl CommissionRates
     }
 }
 
+impl Default for CommissionRatesInitiator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+
 impl CommissionRatesInitiator
 {
     pub fn new() -> Self

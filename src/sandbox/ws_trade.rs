@@ -88,10 +88,8 @@ pub fn parse_base_and_quote(symbol: &str) -> (String, String) {
     let quote_assets = ["USDT", "USTC", "USDC", "USD", "UST", "DAI", "FDUSD", "BTC", "ETH", "EURT"];
     // 遍历所有已知的报价货币
     for &quote in &quote_assets {
-        // 检查符号是否以当前报价货币结尾
-        if symbol.ends_with(quote) {
-            // 如果匹配，提取基础货币
-            let base = &symbol[..symbol.len() - quote.len()];
+        // 尝试去除报价货币的后缀
+        if let Some(base) = symbol.strip_suffix(quote) {
             // 返回基础货币和报价货币
             return (base.to_string(), quote.to_string());
         }
