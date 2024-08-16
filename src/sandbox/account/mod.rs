@@ -405,9 +405,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
         // 等待所有的取消操作完成
         let cancel_results = join_all(cancel_futures).await;
-        response_tx.send(cancel_results).unwrap_or_else(|_| {
-                                            // 如果发送失败，处理错误
-                                        });
+        response_tx.send(cancel_results).unwrap_or(());
     }
 
     pub async fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError>
