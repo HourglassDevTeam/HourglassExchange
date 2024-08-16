@@ -6,7 +6,7 @@ use unilink_execution::sandbox::utils::chrono_operations::extract_date;
 
 #[tokio::main]
 async fn main() {
-    // 创建 ClickHouse 客户端实例
+    // 创 ClickHouse 客户端实例
     let client = ClickHouseClient::new();
 
     // 定义参数
@@ -21,7 +21,7 @@ async fn main() {
     let total_days = (end_date - start_date).num_days() + 1;
     let mut processed_days = 0;
 
-    // 在循环外部获取所有的表名
+    // 在循环外部获取所有表名
     let database = format!("{}_{}_{}", exchange, instrument, channel);
     let table_names = client.get_table_names(&database).await;
 
