@@ -1,6 +1,5 @@
 /// NOTE 目前表名的构建方式都以`Tardis API`的`Binance`数据为基础。可能并不适用于其他交易所。日后**必须**扩展。
 use std::sync::Arc;
-use std::time::Duration;
 
 use async_stream::stream;
 use chrono::NaiveDate;
@@ -14,7 +13,6 @@ use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver},
     RwLock,
 };
-use tokio::time::sleep;
 
 use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
 use crate::sandbox::clickhouse_api::query_builder::ClickHouseQueryBuilder;

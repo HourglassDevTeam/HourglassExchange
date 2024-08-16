@@ -31,14 +31,14 @@ pub enum FluctuationMode
 
 pub fn fluctuate_latency(latency: &mut AccountLatency, current_time: i64)
 {
+    let range = (latency.maximum - latency.minimum) as f64;
+    let half_range = range / 2.0;
     match latency.fluctuation_mode {
-        | FluctuationMode::Sine => {
-            // 使用正弦函数波动
-            latency.current_value = ((latency.maximum - latency.minimum) as f64 * ((current_time as f64).sin() + 1.0) / 2.0) as i64 + latency.minimum;
+        FluctuationMode::Sine => {
+            latency.current_value = (half_range * ((current_time as f64).sin() + 1.0)) as i64 + latency.minimum;
         }
-        | FluctuationMode::Cosine => {
-            // 使用余弦函数波动
-            latency.current_value = ((latency.maximum - latency.minimum) as f64 * ((current_time as f64).cos() + 1.0) / 2.0) as i64 + latency.minimum;
+        FluctuationMode::Cosine => {
+            latency.current_value = (half_range * ((current_time as f64).cos() + 1.0)) as i64 + latency.minimum;
         }
         | FluctuationMode::NormalDistribution => {
             // 使用正态分布波动
@@ -52,7 +52,7 @@ pub fn fluctuate_latency(latency: &mut AccountLatency, current_time: i64)
         }
         | FluctuationMode::Exponential => {
             // 使用指数函数波动
-            let exp_value = (((current_time as f64).exp() % (latency.maximum - latency.minimum) as f64) + latency.minimum as f64) as i64;
+            let exp_value = (((current_time as f64).exp() % range) + latency.minimum as f64) as i64;
             latency.current_value = exp_value.clamp(latency.minimum, latency.maximum);
         }
         | FluctuationMode::Logarithmic => {
