@@ -36,6 +36,7 @@ futures-core = "0.3.30" # 核心异步编程工具库，提供Future和Stream的
 
 url = "2.5.2"
 toml = "0.8.19"
+rayon = "1.10.0"
 
 # Unused for now
 #num-traits = "0.2.15" # 提供数值类型的各种实用工具和特性

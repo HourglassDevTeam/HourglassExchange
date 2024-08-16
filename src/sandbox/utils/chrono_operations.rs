@@ -1,21 +1,21 @@
+use std::sync::LazyLock;
 use chrono::{DateTime, Datelike, Local, TimeZone, Timelike, Utc};
 use regex::Regex;
 
-#[allow(dead_code)]
-pub fn extract_date(table_name: &str) -> Option<String>
-{
-    // 定义正则表达式模式
-    let binance_pattern = Regex::new(r"(?i)binance_.+_(\d{4}_\d{2}_\d{2})").unwrap();
-    let okex_pattern = Regex::new(r"(?i)okex_.+_(\d{4}_\d{2}_\d{2})").unwrap();
 
+// 预编译正则表达式并存储在静态变量中
+static BINANCE_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)binance_.+_(\d{4}_\d{2}_\d{2})").unwrap());
+static OKEX_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)okex_.+_(\d{4}_\d{2}_\d{2})").unwrap());
+
+#[allow(dead_code)]
+pub fn extract_date(table_name: &str) -> Option<String> {
     // 根据不同的交易所模式匹配并提取日期
     if table_name.starts_with("binance") {
-        if let Some(caps) = binance_pattern.captures(table_name) {
+        if let Some(caps) = BINANCE_PATTERN.captures(table_name) {
             return Some(caps[1].to_string());
         }
-    }
-    else if table_name.starts_with("okex") {
-        if let Some(caps) = okex_pattern.captures(table_name) {
+    } else if table_name.starts_with("okex") {
+        if let Some(caps) = OKEX_PATTERN.captures(table_name) {
             return Some(caps[1].to_string());
         }
     }
