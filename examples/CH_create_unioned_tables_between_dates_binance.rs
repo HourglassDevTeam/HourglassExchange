@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use rayon::prelude::*;
 use chrono::{Duration, NaiveDate};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
@@ -21,10 +21,10 @@ async fn main() {
     let database = format!("{}_{}_{}", exchange, instrument, channel);
     let table_names = client.get_table_names(&database).await;
 
-    // 创建一个表名与日期的字典，并将其转换为 Arc 以供并行使用
-    let table_date_map: Arc<HashMap<String, NaiveDate>> = Arc::new(
+    // 创建一个表名与日期的字典，并将其转换为 Arc<Mutex<_>> 以供并行使用
+    let table_date_map: Arc<Mutex<HashMap<String, NaiveDate>>> = Arc::new(Mutex::new(
         table_names
-            .iter()
+            .par_iter()
             .filter_map(|table_name| {
                 if let Some(table_date_str) = extract_date(table_name) {
                     if let Ok(table_date) = NaiveDate::parse_from_str(&table_date_str, "%Y_%m_%d") {
@@ -34,10 +34,10 @@ async fn main() {
                 None
             })
             .collect()
-    );
+    ));
 
     // 计算总的表数量，用于进度汇报
-    let total_tables = table_date_map
+    let total_tables = table_date_map.lock().unwrap()
         .values()
         .filter(|&&table_date| table_date >= start_date && table_date <= end_date)
         .count();
@@ -49,21 +49,34 @@ async fn main() {
         let date_str = current_date.format("%Y_%m_%d").to_string();
 
         // 筛选出与当前日期匹配的表名
-        let tables: Vec<String> = table_date_map
-            .par_iter()
-            .filter(|&(_, &table_date)| table_date == current_date)
-            .map(|(table_name, _)| table_name.clone())
-            .collect();
+        let tables: Vec<String> = {
+            let table_date_map = table_date_map.clone();
+            let map = table_date_map.lock().unwrap();
+            map.iter()
+                .filter(|&(_, &table_date)| table_date == current_date)
+                .map(|(table_name, _)| table_name.clone())
+                .collect()
+        };
 
         // 并行创建联合表
         if !tables.is_empty() {
             let new_table_name = format!("{}_{}_{}_union_{}", exchange, instrument, channel, date_str);
-            let client = Arc::clone(&client);  // 克隆 Arc 以便在异步任务中使用
+            let client = Arc::clone(&client);
             let database = database.clone();
-            let tables_for_task = tables.clone();  // 克隆 tables 以用于异步任务
+            let tables_for_task = tables.clone();
+            let table_date_map = Arc::clone(&table_date_map);
+
             tokio::spawn(async move {
                 match client.create_unioned_table_for_date(&database, &new_table_name, &tables_for_task, true).await {
-                    Ok(_) => println!("[UniLinkExecution] : Successfully created table: {}.{}", database, new_table_name),
+                    Ok(_) => {
+                        println!("[UniLinkExecution] : Successfully created table: {}.{}", database, new_table_name);
+
+                        // 删除处理掉的表名
+                        let mut map = table_date_map.lock().unwrap();
+                        for table in &tables_for_task {
+                            map.remove(table);
+                        }
+                    }
                     Err(e) => eprintln!("[UniLinkExecution] : Error creating table: {}", e),
                 }
             }).await.unwrap();
