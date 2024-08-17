@@ -13,7 +13,7 @@ async fn main() {
     let instrument = "futures";
     let channel = "trades";
     let start_date = NaiveDate::from_ymd_opt(2024, 3, 4).expect("Invalid start date"); // 设置开始日期
-    let end_date = NaiveDate::from_ymd_opt(2024, 8, 12).expect("Invalid end date"); // 设置结束日期
+    let end_date = NaiveDate::from_ymd_opt(2024, 8, 9).expect("Invalid end date"); // 设置结束日期
     let mut current_date = start_date;
 
     // 将上述变量拼接成数据库名

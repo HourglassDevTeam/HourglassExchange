@@ -13,8 +13,8 @@ async fn main() {
     let exchange = "binance";
     let instrument = "futures";
     let channel = "trades";
-    let start_date = NaiveDate::from_ymd_opt(2019, 12, 7).expect("Invalid start date"); // 设置开始日期
-    let end_date = NaiveDate::from_ymd_opt(2024, 3, 3).expect("Invalid end date"); // 设置结束日期
+    let start_date = NaiveDate::from_ymd_opt(2024, 3, 4).expect("Invalid start date"); // 设置开始日期
+    let end_date = NaiveDate::from_ymd_opt(2024, 8, 9).expect("Invalid end date"); // 设置结束日期
 
     // 在循环外部获取所有表名
     let database = format!("{}_{}_{}", exchange, instrument, channel);
