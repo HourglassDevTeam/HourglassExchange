@@ -25,7 +25,7 @@ async fn main() {
     let mut start_date = NaiveDate::from_ymd_opt(2019, 11, 20).expect("Invalid start date"); // 设置开始日期
     let end_date = NaiveDate::from_ymd_opt(2024, 3, 3).expect("Invalid end date"); // 设置结束日期
     let database = format!("{}_{}_{}", exchange, instrument, channel);
-    let mut table_names: HashSet<_> = client.get_table_names(&database).await.into_par_iter().collect(); // 将表名存入 HashSet 以便快速查找和移除
+    let mut table_names: HashSet<_> = client.get_union_table_names(&database).await.into_par_iter().collect(); // 将表名存入 HashSet 以便快速查找和移除
     // 加载 .env 文件
     dotenv().expect(".env file not found");
     let hook_url = &(env::var("HOOK_URL").unwrap());
@@ -55,7 +55,7 @@ async fn main() {
         let date_str = current_date.format("%Y_%m_%d").to_string();
         total_tables += table_names
             .par_iter()
-            .filter(|table_name| table_name.contains(&date_str) && table_name.contains("union"))
+            .filter(|table_name| table_name.contains(&date_str))
             .count();
         current_date += Duration::days(1);
     }

@@ -119,6 +119,8 @@ impl ClickHouseClient {
         format!("{}_{}_{}", exchange, instrument, channel)
     }
 
+
+
     pub async fn get_table_names(&self, database: &str) -> Vec<String> {
         let table_names_query = format!("SHOW TABLES FROM {database}",);
         println!("[UniLinkExecution] : Trying to retrieve table names within the database : {:?}", table_names_query);
@@ -129,6 +131,15 @@ impl ClickHouseClient {
         })
     }
 
+    pub async fn get_union_table_names(&self, database: &str) -> Vec<String> {
+        let table_names_query = format!("SHOW TABLES FROM {database} LIKE '%union%'",);
+        println!("[UniLinkExecution] : Trying to retrieve table names within the database that contain 'union': {:?}", table_names_query);
+        self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
+            eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
+
+            vec![]
+        })
+    }
 
     pub async fn get_tables_for_date(&self, table_names: &[String], date: &str) -> Vec<String> {
         // 筛选出指定日期的表名
