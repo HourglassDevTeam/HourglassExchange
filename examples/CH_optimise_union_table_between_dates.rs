@@ -35,18 +35,6 @@ async fn main() {
 
     // 计算总天数
     let total_days = (end_date - start_date).num_days() + 1;
-    // 如果有表需要优化，汇报开始优化
-    if !table_names.is_empty() {
-        // 发送文本消息，汇报优化开始
-        let message = MessageText::new(
-            format!(
-                "[UniLinkExecution] : Starting optimization for {} tables.",
-                table_names.len(),
-            )
-                .as_str(),
-        );
-        bot.send_message(message).await.unwrap();
-    }
 
     // 计算实际要优化的表格数量
     let mut total_tables = 0;
@@ -58,6 +46,19 @@ async fn main() {
             .filter(|table_name| table_name.contains(&date_str))
             .count();
         current_date += Duration::days(1);
+    }
+
+    // 如果有表需要优化，汇报开始优化
+    if !table_names.is_empty() {
+        // 发送文本消息，汇报优化开始
+        let message = MessageText::new(
+            format!(
+                "[UniLinkExecution] : Starting optimization for {} tables.",
+                table_names.len(),
+            )
+                .as_str(),
+        );
+        bot.send_message(message).await.unwrap();
     }
 
     // 初始化已处理的表数
