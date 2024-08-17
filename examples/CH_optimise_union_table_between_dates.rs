@@ -32,9 +32,6 @@ async fn main() {
         current_date += Duration::days(1);
     }
 
-    // 重置日期，开始处理
-    start_date = NaiveDate::from_ymd_opt(2024, 3, 4).expect("Invalid start date");
-
     // 初始化已处理的表数
     let mut processed_tables = 0;
 
