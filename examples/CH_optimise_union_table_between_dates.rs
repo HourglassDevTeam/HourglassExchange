@@ -1,6 +1,6 @@
 use chrono::{Duration, NaiveDate};
 use std::collections::HashSet;
-use rayon::prelude::IntoParallelRefIterator;
+use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 use rayon::iter::ParallelIterator;
 #[tokio::main]
@@ -15,7 +15,7 @@ async fn main() {
     let mut start_date = NaiveDate::from_ymd_opt(2024, 3, 4).expect("Invalid start date"); // 设置开始日期
     let end_date = NaiveDate::from_ymd_opt(2024, 7, 3).expect("Invalid end date"); // 设置结束日期
     let database = format!("{}_{}_{}", exchange, instrument, channel);
-    let mut table_names: HashSet<_> = client.get_table_names(&database).await.into_iter().collect(); // 将表名存入 HashSet 以便快速查找和移除
+    let mut table_names: HashSet<_> = client.get_table_names(&database).await.into_par_iter().collect(); // 将表名存入 HashSet 以便快速查找和移除
 
     // 计算总天数
     let total_days = (end_date - start_date).num_days() + 1;
@@ -45,7 +45,7 @@ async fn main() {
 
         // 筛选出包含 "union" 和当前日期字样的表名
         let tables_to_remove: Vec<_> = table_names
-            .iter()
+            .par_iter()
             .filter(|table_name| table_name.contains("union") && table_name.contains(&date_str))
             .cloned()
             .collect();

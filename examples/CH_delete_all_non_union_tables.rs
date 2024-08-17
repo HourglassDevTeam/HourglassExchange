@@ -18,7 +18,7 @@ async fn main() {
     let mut all_tables = client.get_table_names(&database).await;
 
     // 获取总non-union表的数量，用于进度汇报
-    let total_tables = all_tables.iter()
+    let total_tables = all_tables.par_iter()
         .filter(|table_name| !table_name.contains("union"))
         .count();
 
