@@ -58,7 +58,6 @@ async fn main() {
         // 如果找到对应的表，则删除表
         for table in tables_to_delete {
             let drop_query = format!("DROP TABLE {}.{}", database, table);
-            println!("[ClickHouse] : Executing query: {}", drop_query);
             println!("[UniLinkExecution] : Executing query: {}", drop_query);
 
             match client.client.read().await.query(&drop_query).execute().await {
