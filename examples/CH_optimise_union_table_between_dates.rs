@@ -48,7 +48,7 @@ async fn main() {
         bot.send_message(message).await.unwrap();
     }
 
-    // 获取所有表名总数，用于进度汇报
+    // 计算实际要优化的表格数量
     let mut total_tables = 0;
     let mut current_date = start_date;
     while current_date <= end_date {
