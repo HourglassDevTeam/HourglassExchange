@@ -119,7 +119,7 @@ impl ClickHouseClient {
 
     pub async fn get_table_names(&self, database: &str) -> Vec<String> {
         let table_names_query = format!("SHOW TABLES FROM {database}",);
-        println!("{:?}", table_names_query);
+        println!("[UniLinkExecution] : Trying to retrieve table names within the database : {:?}", table_names_query);
         self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
             eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
 
