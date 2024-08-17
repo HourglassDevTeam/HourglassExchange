@@ -1,6 +1,7 @@
-use rayon::prelude::IntoParallelRefIterator;
+use rayon::iter::IntoParallelRefIterator;
+use rayon::prelude::ParallelIterator;
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
-use rayon::iter::ParallelIterator;
+
 #[tokio::main]
 async fn main() {
     let client = ClickHouseClient::new();
@@ -17,19 +18,19 @@ async fn main() {
     let mut all_tables = client.get_table_names(&database).await;
 
     // 获取总non-union表的数量，用于进度汇报
-    let total_tables = all_tables.par_iter()
+    let total_tables = all_tables.iter()
         .filter(|table_name| !table_name.contains("union"))
         .count();
 
     if total_tables == 0 {
-        println!("[UniLinkExecution] : No non-union tables found to delete.");
+        println!("No non-union tables found to delete.");
         return;
     }
 
     let mut processed_tables = 0;
 
     // 遍历所有表，删除不包含 "union" 字样的表，并汇报进度
-    while let Some(table_name) = all_tables.iter().find(|table_name| !table_name.contains("union")).cloned() {
+    while let Some(table_name) = all_tables.par_iter().find_any(|table_name| !table_name.contains("union")).cloned() {
         let drop_query = format!("DROP TABLE {}.{}", database, table_name);
         println!("[ClickHouse] : Executing query: {}", drop_query);
         println!("[UniLinkExecution] : Executing query: {}", drop_query);
