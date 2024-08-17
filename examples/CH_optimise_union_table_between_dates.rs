@@ -12,8 +12,8 @@ async fn main() {
     let exchange = "binance";
     let instrument = "futures";
     let channel = "trades";
-    let mut start_date = NaiveDate::from_ymd_opt(2024, 3, 4).expect("Invalid start date"); // 设置开始日期
-    let end_date = NaiveDate::from_ymd_opt(2024, 7, 3).expect("Invalid end date"); // 设置结束日期
+    let mut start_date = NaiveDate::from_ymd_opt(2019, 11, 20).expect("Invalid start date"); // 设置开始日期
+    let end_date = NaiveDate::from_ymd_opt(2024, 8, 09).expect("Invalid end date"); // 设置结束日期
     let database = format!("{}_{}_{}", exchange, instrument, channel);
     let mut table_names: HashSet<_> = client.get_table_names(&database).await.into_par_iter().collect(); // 将表名存入 HashSet 以便快速查找和移除
 
