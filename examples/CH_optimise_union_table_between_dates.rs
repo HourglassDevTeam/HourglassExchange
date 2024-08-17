@@ -45,7 +45,7 @@ async fn main() {
             )
                 .as_str(),
         );
-        bot.send_message(message).await.unwrap();
+        // bot.send_message(message).await.unwrap();
     }
 
     // 获取所有表名总数，用于进度汇报
@@ -72,7 +72,7 @@ async fn main() {
         // 筛选出包含 "union" 和当前日期字样的表名
         let tables_to_remove: Vec<_> = table_names
             .par_iter()
-            .filter(|table_name| table_name.contains("union") && table_name.contains(&date_str))
+            .filter(|table_name| table_name.contains(&date_str))
             .cloned()
             .collect();
 
@@ -107,7 +107,7 @@ async fn main() {
         "[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
         total_tables, total_days
     ).as_str());
-    bot.send_message(message).await.unwrap();
+    // bot.send_message(message).await.unwrap();
     println!(
         "[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
         total_tables, total_days
