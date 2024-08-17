@@ -45,7 +45,7 @@ async fn main() {
             )
                 .as_str(),
         );
-        // bot.send_message(message).await.unwrap();
+        bot.send_message(message).await.unwrap();
     }
 
     // 获取所有表名总数，用于进度汇报
@@ -107,7 +107,7 @@ async fn main() {
         "[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
         total_tables, total_days
     ).as_str());
-    // bot.send_message(message).await.unwrap();
+    bot.send_message(message).await.unwrap();
     println!(
         "[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
         total_tables, total_days
