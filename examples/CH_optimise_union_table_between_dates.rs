@@ -64,7 +64,7 @@ async fn main() {
             "[UniLinkExecution] : Starting optimization for {} tables.",
             total_tables
         );
-        // bot.send_message(message).await.unwrap();
+        bot.send_message(message).await.unwrap();
     }
 
     // 初始化已处理的表数
@@ -110,7 +110,7 @@ async fn main() {
         "[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
         total_tables, total_days
     ).as_str());
-    // bot.send_message(message).await.unwrap();
+    bot.send_message(message).await.unwrap();
     println!(
         "[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
         total_tables, total_days
