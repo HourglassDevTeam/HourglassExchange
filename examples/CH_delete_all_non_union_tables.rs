@@ -13,13 +13,7 @@ async fn main() {
     let database = client.construct_database_name(exchange, instrument, channel);
 
     // 获取所有表名
-    let all_tables = match client.get_table_names(&database).await {
-        Ok(tables) => tables,
-        Err(e) => {
-            eprintln!("Error fetching table names: {}", e);
-            return;
-        }
-    };
+    let all_tables =  client.get_table_names(&database).await;
 
     // 筛选出不包含 "union" 字样的表名
     let non_union_tables: Vec<String> = all_tables
