@@ -5,12 +5,11 @@ use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 use rayon::iter::ParallelIterator;
 use dotenvy::dotenv;
-use serde_json::json;
 
 use open_lark::{
     custom_bot::CustomBot,
     service::im::v1::message::{
-        ANode, AtNode, MessageCardTemplate, MessagePost, MessagePostNode, MessageText, TextNode,
+        MessageText,
     },
 };
 
@@ -27,9 +26,27 @@ async fn main() {
     let end_date = NaiveDate::from_ymd_opt(2024, 3, 3).expect("Invalid end date"); // 设置结束日期
     let database = format!("{}_{}_{}", exchange, instrument, channel);
     let mut table_names: HashSet<_> = client.get_table_names(&database).await.into_par_iter().collect(); // 将表名存入 HashSet 以便快速查找和移除
+    // 加载 .env 文件
+    dotenv().expect(".env file not found");
+    let hook_url = &(env::var("HOOK_URL").unwrap());
+    let secret = env::var("HOOK_SECRET").ok();
+    // 创建 CustomBot 实例
+    let bot = CustomBot::new(hook_url, secret.as_deref());
 
     // 计算总天数
     let total_days = (end_date - start_date).num_days() + 1;
+    // 如果有表需要优化，汇报开始优化
+    if !table_names.is_empty() {
+        // 发送文本消息，汇报优化开始
+        let message = MessageText::new(
+            format!(
+                "[UniLinkExecution] : Starting optimization for {} tables.",
+                table_names.len(),
+            )
+                .as_str(),
+        );
+        bot.send_message(message).await.unwrap();
+    }
 
     // 获取所有表名总数，用于进度汇报
     let mut total_tables = 0;
@@ -46,12 +63,6 @@ async fn main() {
     // 初始化已处理的表数
     let mut processed_tables = 0;
 
-    // 加载 .env 文件
-    dotenv().expect(".env file not found");
-    let hook_url = &(env::var("HOOK_URL").unwrap());
-    let secret = env::var("HOOK_SECRET").ok();
-    // 创建 CustomBot 实例
-    let bot = CustomBot::new(hook_url, secret.as_deref());
 
     // 遍历日期范围
     while start_date <= end_date {
@@ -64,20 +75,6 @@ async fn main() {
             .filter(|table_name| table_name.contains("union") && table_name.contains(&date_str))
             .cloned()
             .collect();
-
-        // 如果有表需要优化，汇报开始优化
-        if !tables_to_remove.is_empty() {
-            // 发送文本消息，汇报优化开始
-            let message = MessageText::new(
-                format!(
-                    "[UniLinkExecution] : Starting optimization for {} tables on date {}.",
-                    tables_to_remove.len(),
-                    date_str
-                )
-                    .as_str(),
-            );
-            bot.send_message(message).await.unwrap();
-        }
 
         for table_name in &tables_to_remove {
             let table_path = format!("{}.{}", database, table_name);
