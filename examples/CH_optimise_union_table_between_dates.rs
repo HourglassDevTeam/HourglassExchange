@@ -1,8 +1,19 @@
 use chrono::{Duration, NaiveDate};
 use std::collections::HashSet;
+use std::env;
 use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 use rayon::iter::ParallelIterator;
+use dotenvy::dotenv;
+use serde_json::json;
+
+use open_lark::{
+    custom_bot::CustomBot,
+    service::im::v1::message::{
+        ANode, AtNode, MessageCardTemplate, MessagePost, MessagePostNode, MessageText, TextNode,
+    },
+};
+
 #[tokio::main]
 async fn main() {
     // 创建 ClickHouse 客户端实例
@@ -12,8 +23,8 @@ async fn main() {
     let exchange = "binance";
     let instrument = "futures";
     let channel = "trades";
-    let mut start_date = NaiveDate::from_ymd_opt(2024, 3, 15).expect("Invalid start date"); // 设置开始日期
-    let end_date = NaiveDate::from_ymd_opt(2024, 8, 1).expect("Invalid end date"); // 设置结束日期
+    let mut start_date = NaiveDate::from_ymd_opt(2019, 11, 20).expect("Invalid start date"); // 设置开始日期
+    let end_date = NaiveDate::from_ymd_opt(2024, 3, 3).expect("Invalid end date"); // 设置结束日期
     let database = format!("{}_{}_{}", exchange, instrument, channel);
     let mut table_names: HashSet<_> = client.get_table_names(&database).await.into_par_iter().collect(); // 将表名存入 HashSet 以便快速查找和移除
 
@@ -35,6 +46,13 @@ async fn main() {
     // 初始化已处理的表数
     let mut processed_tables = 0;
 
+    // 加载 .env 文件
+    dotenv().expect(".env file not found");
+    let hook_url = &(env::var("HOOK_URL").unwrap());
+    let secret = env::var("HOOK_SECRET").ok();
+    // 创建 CustomBot 实例
+    let bot = CustomBot::new(hook_url, secret.as_deref());
+
     // 遍历日期范围
     while start_date <= end_date {
         // 将当前日期格式化为字符串
@@ -46,6 +64,20 @@ async fn main() {
             .filter(|table_name| table_name.contains("union") && table_name.contains(&date_str))
             .cloned()
             .collect();
+
+        // 如果有表需要优化，汇报开始优化
+        if !tables_to_remove.is_empty() {
+            // 发送文本消息，汇报优化开始
+            let message = MessageText::new(
+                format!(
+                    "[UniLinkExecution] : Starting optimization for {} tables on date {}.",
+                    tables_to_remove.len(),
+                    date_str
+                )
+                    .as_str(),
+            );
+            bot.send_message(message).await.unwrap();
+        }
 
         for table_name in &tables_to_remove {
             let table_path = format!("{}.{}", database, table_name);
@@ -73,8 +105,14 @@ async fn main() {
         start_date += Duration::days(1);
     }
 
+    // 发送文本消息，汇报最终结果
+    let message = MessageText::new( format!(
+        "[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
+        total_tables, total_days
+    ).as_str());
+    bot.send_message(message).await.unwrap();
     println!(
-        "[UniLinkExecution] : Optimization is complete for {} tables across {} days.",
+        "[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
         total_tables, total_days
     );
 }

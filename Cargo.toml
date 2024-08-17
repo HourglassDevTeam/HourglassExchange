@@ -10,8 +10,7 @@ tracing = "0.1.36" # 高性能事件记录库，用于结构化日志和分布�
 
 # Data Source 数据源
 clickhouse = "0.12.0" # 用于连接和操作ClickHouse数据库的客户端库
-#clickhouse ={path = "../clickhouse-rs"}
-
+open-lark = { path="../open-lark" }
 # Random 随机数
 rand_distr = "0.4.3" # 随机分布生成库，用于生成各种概率分布的随机数
 
@@ -27,6 +26,10 @@ thiserror = "1.0.32" # 用于定义自定义错误类型的简单易用的库
 # Serialization/Deserialization 序列化/反序列化
 serde = { version = "1.0.143", features = ["derive"] } # 强大的序列化和反序列化框架，支持多种数据格式
 
+# environment
+dotenvy = "0.15.7"
+
+
 # Miscellaneous 杂项
 uuid = { version = "1.8.0", features = ["v4", "serde"] } # 用于生成和解析UUID，支持序列化和反序列化
 chrono = { version = "0.4.22", features = ["serde"] } # 日期和时间库，支持序列化和反序列化
@@ -37,6 +40,7 @@ futures-core = "0.3.30" # 核心异步编程工具库，提供Future和Stream的
 url = "2.5.2"
 toml = "0.8.19"
 rayon = "1.10.0"
+serde_json = "1.0.125"
 
 # Unused for now
 #num-traits = "0.2.15" # 提供数值类型的各种实用工具和特性
