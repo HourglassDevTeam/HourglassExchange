@@ -52,7 +52,7 @@ async fn main() {
 
         for table_name in &tables_to_remove {
             let table_path = format!("{}.{}", database, table_name);
-            println!("Optimizing table: {}", table_path);
+            println!("[UniLinkExecution] : Optimizing table: {}", table_path);
 
             // 执行优化操作
             if let Err(e) = client.optimize_table(&table_path).await {
@@ -68,7 +68,7 @@ async fn main() {
             // 打印当前总进度
             let progress = (processed_tables as f64 / total_tables as f64) * 100.0;
             println!(
-                "Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)",
+                "[UniLinkExecution] : Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)",
                 date_str, processed_tables, total_tables, progress
             );
         }
@@ -78,7 +78,7 @@ async fn main() {
     }
 
     println!(
-        "Optimization is complete for {} tables across {} days.",
+        "[UniLinkExecution] : Optimization is complete for {} tables across {} days.",
         total_tables, total_days
     );
 }

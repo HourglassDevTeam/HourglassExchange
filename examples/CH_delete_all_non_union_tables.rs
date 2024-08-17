@@ -23,7 +23,7 @@ async fn main() {
         .count();
 
     if total_tables == 0 {
-        println!("No non-union tables found to delete.");
+        println!("[UniLinkExecution] : No non-union tables found to delete.");
         return;
     }
 
@@ -32,22 +32,22 @@ async fn main() {
     // 遍历所有表，删除不包含 "union" 字样的表，并汇报进度
     while let Some(table_name) = all_tables.par_iter().find_any(|table_name| !table_name.contains("union")).cloned() {
         let drop_query = format!("DROP TABLE {}.{}", database, table_name);
-        println!("[ClickHouse] : Executing query: {}", drop_query);
+        println!("[UniLinkExecution] : Executing query: {}", drop_query);
         println!("[UniLinkExecution] : Executing query: {}", drop_query);
 
         match client.client.read().await.query(&drop_query).execute().await {
             Ok(_) => {
-                println!("Successfully dropped table: {}.{}", database, table_name);
+                println!("[UniLinkExecution] : Successfully dropped table: {}.{}", database, table_name);
                 all_tables.retain(|name| name != &table_name);  // 删除已经处理的表名
                 processed_tables += 1;
             }
-            Err(e) => eprintln!("Error dropping table: {}.{}", table_name, e),
+            Err(e) => eprintln!("[UniLinkExecution] : Error dropping table: {}.{}", table_name, e),
         }
 
         // 计算并打印进度
         let progress = (processed_tables as f64 / total_tables as f64) * 100.0;
-        println!("Progress: {:.2}% ({} of {})", progress, processed_tables, total_tables);
+        println!("[UniLinkExecution] : Progress: {:.2}% ({} of {})", progress, processed_tables, total_tables);
     }
 
-    println!("Deletion of non-union tables is complete.");
+    println!("[UniLinkExecution] : Deletion of non-union tables is complete.");
 }
