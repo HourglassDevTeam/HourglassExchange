@@ -1,5 +1,6 @@
 /// NOTE 目前表名的构建方式都以`Tardis API`的`Binance`数据为基础。可能并不适用于其他交易所。日后**必须**扩展。
 use std::sync::Arc;
+use rayon::iter::ParallelIterator;
 
 
 use async_stream::stream;
@@ -10,6 +11,7 @@ pub use clickhouse::{
     Client, Row,
 };
 use futures_core::Stream;
+use rayon::iter::IntoParallelRefIterator;
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver},
     RwLock,
@@ -131,7 +133,7 @@ impl ClickHouseClient {
     pub async fn get_tables_for_date(&self, table_names: &[String], date: &str) -> Vec<String> {
         // 筛选出指定日期的表名
         let tables_for_date: Vec<String> = table_names
-            .iter()
+            .par_iter()
             .filter(|table_name| if let Some(table_date) = extract_date(table_name) { table_date == date } else { false })
             .cloned()
             .collect();

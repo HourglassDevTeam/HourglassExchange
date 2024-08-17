@@ -26,9 +26,11 @@ async fn main() {
         table_names
             .par_iter()
             .filter_map(|table_name| {
-                if let Some(table_date_str) = extract_date(table_name) {
-                    if let Ok(table_date) = NaiveDate::parse_from_str(&table_date_str, "%Y_%m_%d") {
-                        return Some((table_name.clone(), table_date));
+                if !table_name.contains("union") {
+                    if let Some(table_date_str) = extract_date(table_name) {
+                        if let Ok(table_date) = NaiveDate::parse_from_str(&table_date_str, "%Y_%m_%d") {
+                            return Some((table_name.clone(), table_date));
+                        }
                     }
                 }
                 None
@@ -48,11 +50,11 @@ async fn main() {
     while current_date <= end_date {
         let date_str = current_date.format("%Y_%m_%d").to_string();
 
-        // 筛选出与当前日期匹配的表名
+        // 筛选出与当前日期匹配且不含 "union" 字样的表名
         let tables: Vec<String> = {
             let table_date_map = table_date_map.clone();
             let map = table_date_map.lock().unwrap();
-            map.iter()
+            map.par_iter()
                 .filter(|&(_, &table_date)| table_date == current_date)
                 .map(|(table_name, _)| table_name.clone())
                 .collect()
@@ -69,13 +71,12 @@ async fn main() {
             tokio::spawn(async move {
                 match client.create_unioned_table_for_date(&database, &new_table_name, &tables_for_task, true).await {
                     Ok(_) => {
-                        println!("[UniLinkExecution] : Successfully created table: {}.{}", database, new_table_name);
-
                         // 删除处理掉的表名
                         let mut map = table_date_map.lock().unwrap();
                         for table in &tables_for_task {
                             map.remove(table);
                         }
+                        println!("[UniLinkExecution] : Successfully created table: {}.{}", database, new_table_name);
                     }
                     Err(e) => eprintln!("[UniLinkExecution] : Error creating table: {}", e),
                 }
