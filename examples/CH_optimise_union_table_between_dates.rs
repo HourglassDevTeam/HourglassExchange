@@ -52,11 +52,10 @@ async fn main() {
 
         for table_name in &tables_to_remove {
             let table_path = format!("{}.{}", database, table_name);
-            println!("[UniLinkExecution] : Optimizing table: {}", table_path);
 
             // 执行优化操作
             if let Err(e) = client.optimize_table(&table_path).await {
-                eprintln!("Error optimizing table {}: {}", table_path, e);
+                eprintln!("[UniLinkExecution] : Error optimizing table {}: {}", table_path, e);
             }
 
             // 更新已处理的表数
