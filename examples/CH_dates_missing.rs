@@ -18,8 +18,8 @@ async fn main() {
     let exchange = "binance";
     let instrument = "futures";
     let channel = "trades";
-    let mut start_date = NaiveDate::from_ymd_opt(2021, 04, 10).expect("Invalid start date"); // 设置开始日期
-    let end_date = NaiveDate::from_ymd_opt(2024, 3, 3).expect("Invalid end date"); // 设置结束日期
+    let mut start_date = NaiveDate::from_ymd_opt(2019, 11, 20).expect("Invalid start date"); // 设置开始日期
+    let end_date = NaiveDate::from_ymd_opt(2024, 8, 9).expect("Invalid end date"); // 设置结束日期
     let database = format!("{}_{}_{}", exchange, instrument, channel);
     let all_table_names: HashSet<_> = client.get_union_table_names(&database).await.into_par_iter().collect();
 
