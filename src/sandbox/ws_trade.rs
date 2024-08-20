@@ -83,7 +83,8 @@ impl From<ClickhousePublicTrade> for WsTrade
     }
 }
 
-pub fn parse_base_and_quote(symbol: &str) -> (String, String) {
+pub fn parse_base_and_quote(symbol: &str) -> (String, String)
+{
     // 定义一个包含常见报价货币的数组
     let quote_assets = ["USDT", "USTC", "USDC", "USD", "UST", "DAI", "FDUSD", "BTC", "ETH", "EURT"];
     // 遍历所有已知的报价货币

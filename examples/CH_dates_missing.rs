@@ -1,13 +1,14 @@
-
-use chrono::Duration;
+use chrono::{Duration, NaiveDate};
+use rayon::{
+    iter::ParallelIterator,
+    prelude::{IntoParallelIterator, IntoParallelRefIterator},
+};
 use std::collections::HashSet;
-use chrono::NaiveDate;
-use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
-use rayon::iter::ParallelIterator;
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     // 创建 ClickHouse 客户端实例
     let client = ClickHouseClient::new();
 
@@ -36,11 +37,7 @@ async fn main() {
     // 筛选符合日期范围的表名
     let mut valid_table_names = HashSet::new();
     for date in &all_dates {
-        let matching_tables: Vec<_> = all_table_names
-            .par_iter()
-            .filter(|table_name| table_name.contains(date))
-            .cloned()
-            .collect();
+        let matching_tables: Vec<_> = all_table_names.par_iter().filter(|table_name| table_name.contains(date)).cloned().collect();
         if matching_tables.is_empty() {
             dates_without_tables.insert(date.clone());
         }

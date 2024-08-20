@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use rayon::prelude::*;
 use chrono::{Duration, NaiveDate};
-use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
-use unilink_execution::sandbox::utils::chrono_operations::extract_date;
+use rayon::prelude::*;
+use std::collections::HashMap;
+use unilink_execution::sandbox::{clickhouse_api::queries_operations::ClickHouseClient, utils::chrono_operations::extract_date};
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     let client = ClickHouseClient::new();
 
     // 设置参数
@@ -23,16 +23,16 @@ async fn main() {
     let all_tables = client.get_table_names(&database).await;
 
     // 创建一个表名与日期的字典
-    let table_date_map: HashMap<String, String> = all_tables
-        .iter()
-        .filter_map(|table_name| {
-            if let Some(table_date) = extract_date(table_name) {
-                Some((table_name.clone(), table_date))
-            } else {
-                None
-            }
-        })
-        .collect();
+    let table_date_map: HashMap<String, String> = all_tables.iter()
+                                                            .filter_map(|table_name| {
+                                                                if let Some(table_date) = extract_date(table_name) {
+                                                                    Some((table_name.clone(), table_date))
+                                                                }
+                                                                else {
+                                                                    None
+                                                                }
+                                                            })
+                                                            .collect();
 
     // 计算总天数，用于进度汇报
     let total_days = (end_date - start_date).num_days() + 1;
@@ -49,11 +49,10 @@ async fn main() {
         println!("Processing tables on date: {} ({:.2}%)", date_str, progress); // 打印当前处理的日期和进度
 
         // 筛选出与当前日期匹配的 union 表名
-        let tables_to_delete: Vec<String> = table_date_map
-            .par_iter()
-            .filter(|&(table_name, table_date)| table_name.contains("union") && table_date == &date_str)
-            .map(|(table_name, _)| table_name.clone())
-            .collect();
+        let tables_to_delete: Vec<String> = table_date_map.par_iter()
+                                                          .filter(|&(table_name, table_date)| table_name.contains("union") && table_date == &date_str)
+                                                          .map(|(table_name, _)| table_name.clone())
+                                                          .collect();
 
         // 如果找到对应的表，则删除表
         for table in tables_to_delete {
@@ -61,8 +60,8 @@ async fn main() {
             println!("[UniLinkExecution] : Executing query: {}", drop_query);
 
             match client.client.read().await.query(&drop_query).execute().await {
-                Ok(_) => println!("Successfully dropped table: {}.{}", database, table),
-                Err(e) => eprintln!("Error dropping table: {}", e),
+                | Ok(_) => println!("Successfully dropped table: {}.{}", database, table),
+                | Err(e) => eprintln!("Error dropping table: {}", e),
             }
         }
 

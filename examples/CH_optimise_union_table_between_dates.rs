@@ -1,16 +1,16 @@
-use open_lark::service::im::v1::message::MessageText;
-use open_lark::custom_bot::CustomBot;
-use std::env;
+use chrono::{Duration, NaiveDate};
 use dotenvy::dotenv;
-use chrono::Duration;
-use std::collections::HashSet;
-use chrono::NaiveDate;
-use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator};
+use open_lark::{custom_bot::CustomBot, service::im::v1::message::MessageText};
+use rayon::{
+    iter::ParallelIterator,
+    prelude::{IntoParallelIterator, IntoParallelRefIterator},
+};
+use std::{collections::HashSet, env};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
-use rayon::iter::ParallelIterator;
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     // 创建 ClickHouse 客户端实例
     let client = ClickHouseClient::new();
 
@@ -32,11 +32,7 @@ async fn main() {
 
     while current_date <= end_date {
         let date_str = current_date.format("%Y_%m_%d").to_string();
-        let matching_tables: Vec<_> = all_table_names
-            .par_iter()
-            .filter(|table_name| table_name.contains(&date_str))
-            .cloned()
-            .collect(); // 将结果收集到 Vec 中
+        let matching_tables: Vec<_> = all_table_names.par_iter().filter(|table_name| table_name.contains(&date_str)).cloned().collect(); // 将结果收集到 Vec 中
         valid_table_names.extend(matching_tables); // 扩展到 HashSet 中
         current_date += Duration::days(1);
     }
@@ -53,17 +49,8 @@ async fn main() {
 
     // 如果有表需要优化，汇报开始优化
     if total_tables > 0 {
-        let message = MessageText::new(
-            format!(
-                "[UniLinkExecution] : Starting optimization for {} tables.",
-                total_tables,
-            )
-                .as_str(),
-        );
-        println!(
-            "[UniLinkExecution] : Starting optimization for {} tables.",
-            total_tables
-        );
+        let message = MessageText::new(format!("[UniLinkExecution] : Starting optimization for {} tables.", total_tables,).as_str());
+        println!("[UniLinkExecution] : Starting optimization for {} tables.", total_tables);
         bot.send_message(message).await.unwrap();
     }
 
@@ -73,11 +60,7 @@ async fn main() {
     // 开始优化表格
     while start_date <= end_date {
         let date_str = start_date.format("%Y_%m_%d").to_string();
-        let tables_to_remove: Vec<_> = valid_table_names
-            .par_iter()
-            .filter(|table_name| table_name.contains(&date_str))
-            .cloned()
-            .collect();
+        let tables_to_remove: Vec<_> = valid_table_names.par_iter().filter(|table_name| table_name.contains(&date_str)).cloned().collect();
 
         for table_name in &tables_to_remove {
             let table_path = format!("{}.{}", database, table_name);
@@ -95,10 +78,8 @@ async fn main() {
 
             // 打印当前总进度
             let progress = (processed_tables as f64 / total_tables as f64) * 100.0;
-            println!(
-                "[UniLinkExecution] : Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)",
-                date_str, processed_tables, total_tables, progress
-            );
+            println!("[UniLinkExecution] : Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)",
+                     date_str, processed_tables, total_tables, progress);
         }
 
         // 迭代到下一天
@@ -106,13 +87,9 @@ async fn main() {
     }
 
     // 发送文本消息，汇报最终结果
-    let message = MessageText::new(format!(
-        "[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
-        total_tables, total_days
-    ).as_str());
+    let message = MessageText::new(format!("[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
+                                           total_tables, total_days).as_str());
     bot.send_message(message).await.unwrap();
-    println!(
-        "[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
-        total_tables, total_days
-    );
+    println!("[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
+             total_tables, total_days);
 }

@@ -1,5 +1,7 @@
-use std::fmt::{Display, Formatter};
-use std::str::FromStr;
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -34,15 +36,16 @@ impl Display for Side
     }
 }
 
-
-impl FromStr for Side {
+impl FromStr for Side
+{
     type Err = String;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err>
+    {
         match s.to_lowercase().as_str() {
-            "buy" | "b" => Ok(Side::Buy),
-            "sell" | "s" => Ok(Side::Sell),
-            _ => Err(format!("'{}' is not a valid Side", s)),
+            | "buy" | "b" => Ok(Side::Buy),
+            | "sell" | "s" => Ok(Side::Sell),
+            | _ => Err(format!("'{}' is not a valid Side", s)),
         }
     }
 }

@@ -4,15 +4,17 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common_infrastructure::{
-    order::{Open, Order},
-    Side,
+use crate::{
+    common_infrastructure::{
+        datafeed::event::MarketEvent,
+        friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees},
+        instrument::kind::InstrumentKind,
+        order::{Open, Order},
+        trade::{ClientTrade, TradeId},
+        Side,
+    },
+    sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade,
 };
-use crate::common_infrastructure::datafeed::event::MarketEvent;
-use crate::common_infrastructure::friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees};
-use crate::common_infrastructure::instrument::kind::InstrumentKind;
-use crate::common_infrastructure::trade::{ClientTrade, TradeId};
-use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
@@ -24,37 +26,32 @@ pub struct InstrumentOrders
 }
 
 /// 计算 [`Order<Open>`] 对应的 [`Fees`]
-pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> InstrumentFees {
+pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> InstrumentFees
+{
     match order.instrument.kind {
         // 针对现货交易的费用计算
-        InstrumentKind::Spot => {
-            let spot_fees = SpotFees {
-                maker_fee_rate: fees_percent * trade_quantity, // 制造流动性的费率计算
-                taker_fee_rate: fees_percent * trade_quantity, // 消耗流动性的费率计算
-            };
+        | InstrumentKind::Spot => {
+            let spot_fees = SpotFees { maker_fee_rate: fees_percent * trade_quantity, // 制造流动性的费率计算
+                                       taker_fee_rate: fees_percent * trade_quantity  /* 消耗流动性的费率计算 */ };
             InstrumentFees::new(order.instrument.kind, Fees::Spot(spot_fees))
         }
 
         // 针对永续合约的费用计算
-        InstrumentKind::Perpetual => {
-            let perpetual_fees = PerpetualFees {
-                open_fee_rate: fees_percent * trade_quantity,  // 开仓费率计算
-                close_fee_rate: fees_percent * trade_quantity, // 平仓费率计算
-                funding_rate: fees_percent * trade_quantity,   // 资金费率计算
-            };
+        | InstrumentKind::Perpetual => {
+            let perpetual_fees = PerpetualFees { open_fee_rate: fees_percent * trade_quantity,  // 开仓费率计算
+                                                 close_fee_rate: fees_percent * trade_quantity, // 平仓费率计算
+                                                 funding_rate: fees_percent * trade_quantity    /* 资金费率计算 */ };
             InstrumentFees::new(order.instrument.kind, Fees::Perpetual(perpetual_fees))
         }
 
         // 针对期权交易的费用计算
-        InstrumentKind::CryptoOption => {
-            let option_fees = OptionFees {
-                trade_fee_rate: fees_percent * trade_quantity, // 交易费率计算
-            };
+        | InstrumentKind::CryptoOption => {
+            let option_fees = OptionFees { trade_fee_rate: fees_percent * trade_quantity /* 交易费率计算 */ };
             InstrumentFees::new(order.instrument.kind, Fees::Option(option_fees))
         }
 
         // 处理未知的交易类型
-        _ => panic!("Unsupported instrument kind!"),
+        | _ => panic!("Unsupported instrument kind!"),
     }
 }
 
@@ -76,12 +73,14 @@ impl InstrumentOrders
             }
         }
     }
+
     // 检查输入的 [`ClickhousePublicTrade`] 是否匹配买单或卖单的客户 [`Order<Open>`]
     //
     // NOTE:
     //  - 如果Client在同一价格同时开了买单和卖单 [`Order<Open>`]，优先选择剩余数量较大的
     //    Order<Open> 进行匹配。
-    pub fn determine_matching_side(&self, market_event: &MarketEvent<ClickhousePublicTrade>) -> Option<Side> {
+    pub fn determine_matching_side(&self, market_event: &MarketEvent<ClickhousePublicTrade>) -> Option<Side>
+    {
         match (self.bids.last(), self.asks.last()) {
             // 检查最佳买单和卖单的 Order<Open> 是否匹配
             | (Some(best_bid), Some(best_ask)) => {
@@ -120,7 +119,9 @@ impl InstrumentOrders
             | _ => None,
         }
     }
-    pub fn match_bids(&mut self, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64) -> Vec<ClientTrade> {
+
+    pub fn match_bids(&mut self, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64) -> Vec<ClientTrade>
+    {
         // 跟踪剩余的可用流动性，以便匹配
         let mut remaining_liquidity = market_event.kind.amount;
 
@@ -150,7 +151,8 @@ impl InstrumentOrders
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            } else {
+            }
+            else {
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_bid.state.filled_quantity += trade_quantity;
@@ -163,13 +165,14 @@ impl InstrumentOrders
         trades
     }
 
-
-
     /// NOTE 目前暂时的做法是使用 `batch_id` 值为此 [`Instrument`] 市场生成唯一的 [`TradeId`]。
-    pub fn trade_id(&self) -> TradeId {
+    pub fn trade_id(&self) -> TradeId
+    {
         TradeId(self.batch_id)
     }
-    pub fn match_asks(&mut self, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64) -> Vec<ClientTrade> {
+
+    pub fn match_asks(&mut self, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64) -> Vec<ClientTrade>
+    {
         // 跟踪剩余的可用流动性，以便匹配
         let mut remaining_liquidity = market_event.kind.amount;
 
@@ -199,7 +202,8 @@ impl InstrumentOrders
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            } else {
+            }
+            else {
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_ask.state.filled_quantity += trade_quantity;
@@ -214,34 +218,32 @@ impl InstrumentOrders
 
     // FIXME count和tradeid 还有orderid的关系是错误的。
     // 辅助函数：生成 TradeEvent
-    fn generate_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> ClientTrade {
+    fn generate_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> ClientTrade
+    {
         let fee = trade_quantity * order.state.price * fees_percent;
 
         // 尝试将 OrderId 转换为 TradeId
         let trade_id = match order.state.id.0.parse::<i64>() {
-            Ok(id) => TradeId(id),
-            Err(_) => {
+            | Ok(id) => TradeId(id),
+            | Err(_) => {
                 // 处理转换失败的情况，例如返回一个默认值或引发错误
                 // FIXME 这里选择返回一个默认的 TradeId，或者你可以选择更合适的错误处理方式
                 TradeId(0)
             }
         };
 
-        ClientTrade {
-            id: trade_id,
-            instrument: order.instrument.clone(),
-            side: order.side,
-            price: order.state.price,
-            size: trade_quantity,
-            count: 1, // NOTE 假设每笔交易计数为1，可以根据实际情况调整
-            fees: fee,
-        }
+        ClientTrade { id: trade_id,
+                      instrument: order.instrument.clone(),
+                      side: order.side,
+                      price: order.state.price,
+                      size: trade_quantity,
+                      count: 1, // NOTE 假设每笔交易计数为1，可以根据实际情况调整
+                      fees: fee }
     }
 
-
     /// 计算所有未成交买单和卖单的总数。
-    pub fn num_orders(&self) -> usize {
+    pub fn num_orders(&self) -> usize
+    {
         self.bids.len() + self.asks.len()
     }
 }
-

@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Row)]
-pub struct OrderBook25 {
+pub struct OrderBook25
+{
     pub exchange: String,
     pub symbol: String,
     pub timestamp: i64,

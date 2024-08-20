@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     fmt::Debug,
     ops::{Deref, DerefMut},
-    sync::{Arc, atomic::Ordering, Weak},
+    sync::{atomic::Ordering, Arc, Weak},
 };
 use tokio::sync::{Mutex, RwLock};
 
@@ -10,18 +10,17 @@ use crate::{
     common_infrastructure::{
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
-        instrument::{Instrument, kind::InstrumentKind},
+        instrument::{kind::InstrumentKind, Instrument},
         order::{Open, Order},
         position::{AccountPositions, PositionDirectionMode, PositionKind, PositionMarginMode},
-        Side,
         token::Token,
+        trade::ClientTrade,
+        Side,
     },
     error::ExecutionError,
+    sandbox::account::{account_config::MarginMode, Account},
     ExchangeVariant,
-    sandbox::account::{Account, account_config::MarginMode},
 };
-use crate::common_infrastructure::trade::ClientTrade;
-use crate::sandbox::account::respond;
 
 #[derive(Clone, Debug)]
 pub struct AccountState<Event>
@@ -224,7 +223,8 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
 
     /// 检查在 AccountPositions 中是否已经存在该 instrument 的某个仓位
     /// 需要首先从 open 订单中确定 InstrumentKind，因为仓位类型各不相同
-    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError> {
+    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError>
+    {
         let positions_lock = self.positions.lock().await; // 获取锁
 
         // 直接调用 AccountPositions 中的 has_position 方法
@@ -235,60 +235,59 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
         Ok(false)
     }
 
-
-    async fn check_position_direction_conflict(&self, instrument: &Instrument, side: Side) -> Result<(), ExecutionError> {
+    async fn check_position_direction_conflict(&self, instrument: &Instrument, side: Side) -> Result<(), ExecutionError>
+    {
         let positions_lock = self.positions.lock().await;
 
-            match instrument.kind {
-                InstrumentKind::Spot => {
-                    todo!()
-                }
-                InstrumentKind::CommodityOption => {
-                    todo!()
-                }
-                InstrumentKind::CommodityFuture => {
-                    todo!()
-                }
-                InstrumentKind::Perpetual => {
-                    if let Some(perpetual_positions) = &positions_lock.perpetual_pos {
-                        for pos in perpetual_positions {
-                            if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                return Err(ExecutionError::InvalidDirection);
-                            }
+        match instrument.kind {
+            | InstrumentKind::Spot => {
+                todo!()
+            }
+            | InstrumentKind::CommodityOption => {
+                todo!()
+            }
+            | InstrumentKind::CommodityFuture => {
+                todo!()
+            }
+            | InstrumentKind::Perpetual => {
+                if let Some(perpetual_positions) = &positions_lock.perpetual_pos {
+                    for pos in perpetual_positions {
+                        if pos.meta.instrument == *instrument && pos.meta.side != side {
+                            return Err(ExecutionError::InvalidDirection);
                         }
                     }
                 }
-                InstrumentKind::Future => {
-                    if let Some(futures_positions) = &positions_lock.futures_pos {
-                        for pos in futures_positions {
-                            if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                return Err(ExecutionError::InvalidDirection);
-                            }
+            }
+            | InstrumentKind::Future => {
+                if let Some(futures_positions) = &positions_lock.futures_pos {
+                    for pos in futures_positions {
+                        if pos.meta.instrument == *instrument && pos.meta.side != side {
+                            return Err(ExecutionError::InvalidDirection);
                         }
                     }
                 }
-                InstrumentKind::CryptoOption => {
-                    if let Some(option_positions) = &positions_lock.option_pos {
-                        for pos in option_positions {
-                            if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                return Err(ExecutionError::InvalidDirection);
-                            }
+            }
+            | InstrumentKind::CryptoOption => {
+                if let Some(option_positions) = &positions_lock.option_pos {
+                    for pos in option_positions {
+                        if pos.meta.instrument == *instrument && pos.meta.side != side {
+                            return Err(ExecutionError::InvalidDirection);
                         }
                     }
                 }
-                InstrumentKind::CryptoLeveragedToken => {
-                    if let Some(margin_positions) = &positions_lock.margin_pos {
-                        for pos in margin_positions {
-                            if pos.meta.instrument == *instrument && pos.meta.side != side {
-                                return Err(ExecutionError::InvalidDirection);
-                            }
+            }
+            | InstrumentKind::CryptoLeveragedToken => {
+                if let Some(margin_positions) = &positions_lock.margin_pos {
+                    for pos in margin_positions {
+                        if pos.meta.instrument == *instrument && pos.meta.side != side {
+                            return Err(ExecutionError::InvalidDirection);
                         }
                     }
                 }
+            }
         }
         Ok(())
     }
-
 
     /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
@@ -387,50 +386,43 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 
     /// 从交易中更新余额并返回 [`AccountEvent`]
-    pub async fn update_from_trade(&mut self, trade_event: &ClientTrade) -> Result<AccountEvent, ExecutionError> {
+    pub async fn update_from_trade(&mut self, trade_event: &ClientTrade) -> Result<AccountEvent, ExecutionError>
+    {
         let Instrument { base, quote, kind, .. } = &trade_event.instrument;
         let fee = trade_event.fees; // 直接从 TradeEvent 中获取费用
         let side = trade_event.side; // 直接使用 TradeEvent 中的 side
 
         match kind {
-            InstrumentKind::Spot => {
+            | InstrumentKind::Spot => {
                 todo!("Spot handling is not implemented yet");
             }
-            InstrumentKind::CryptoOption => {
+            | InstrumentKind::CryptoOption => {
                 todo!("Option handling is not implemented yet");
             }
-            InstrumentKind::CommodityOption => {
+            | InstrumentKind::CommodityOption => {
                 todo!("CommodityOption handling is not implemented yet")
             }
-            InstrumentKind::CommodityFuture => {
+            | InstrumentKind::CommodityFuture => {
                 todo!("CommodityFuture handling is not implemented yet")
             }
-            InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
+            | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let (base_delta, quote_delta) = match side {
-                    Side::Buy => {
+                    | Side::Buy => {
                         let base_increase = trade_event.size - fee;
                         // Note: available was already decreased by the opening of the Side::Buy order
-                        let base_delta = BalanceDelta {
-                            total: base_increase,
-                            available: base_increase,
-                        };
-                        let quote_delta = BalanceDelta {
-                            total: -trade_event.size * trade_event.price,
-                            available: 0.0,
-                        };
+                        let base_delta = BalanceDelta { total: base_increase,
+                                                        available: base_increase };
+                        let quote_delta = BalanceDelta { total: -trade_event.size * trade_event.price,
+                                                         available: 0.0 };
                         (base_delta, quote_delta)
                     }
-                    Side::Sell => {
+                    | Side::Sell => {
                         // Note: available was already decreased by the opening of the Side::Sell order
-                        let base_delta = BalanceDelta {
-                            total: -trade_event.size,
-                            available: 0.0,
-                        };
+                        let base_delta = BalanceDelta { total: -trade_event.size,
+                                                        available: 0.0 };
                         let quote_increase = (trade_event.size * trade_event.price) - fee;
-                        let quote_delta = BalanceDelta {
-                            total: quote_increase,
-                            available: quote_increase,
-                        };
+                        let quote_delta = BalanceDelta { total: quote_increase,
+                                                         available: quote_increase };
                         (base_delta, quote_delta)
                     }
                 };
@@ -438,14 +430,9 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 let base_balance = self.update(base, base_delta);
                 let quote_balance = self.update(quote, quote_delta);
 
-                Ok(AccountEvent {
-                    exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
-                    exchange: ExchangeVariant::SandBox,
-                    kind: AccountEventKind::Balances(vec![
-                        TokenBalance::new(base.clone(), base_balance),
-                        TokenBalance::new(quote.clone(), quote_balance),
-                    ]),
-                })
+                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
+                                  exchange: ExchangeVariant::SandBox,
+                                  kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) })
             }
         }
     }

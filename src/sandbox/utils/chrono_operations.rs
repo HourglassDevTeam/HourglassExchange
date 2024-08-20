@@ -1,20 +1,21 @@
-use std::sync::LazyLock;
 use chrono::{DateTime, Datelike, Local, TimeZone, Timelike, Utc};
 use regex::Regex;
-
+use std::sync::LazyLock;
 
 // 预编译正则表达式并存储在静态变量中
 static BINANCE_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)binance_.+_(\d{4}_\d{2}_\d{2})").unwrap());
 static OKEX_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)okex_.+_(\d{4}_\d{2}_\d{2})").unwrap());
 
 #[allow(dead_code)]
-pub fn extract_date(table_name: &str) -> Option<String> {
+pub fn extract_date(table_name: &str) -> Option<String>
+{
     // 根据不同的交易所模式匹配并提取日期
     if table_name.starts_with("binance") {
         if let Some(caps) = BINANCE_PATTERN.captures(table_name) {
             return Some(caps[1].to_string());
         }
-    } else if table_name.starts_with("okex") {
+    }
+    else if table_name.starts_with("okex") {
         if let Some(caps) = OKEX_PATTERN.captures(table_name) {
             return Some(caps[1].to_string());
         }
@@ -31,7 +32,6 @@ pub fn local_datetime_from_unix(unix_time: i64) -> DateTime<Local>
 
     // 将UTC时间转换为东八区时间
     Local.from_utc_datetime(&utc_datetime.naive_utc())
-
 }
 #[allow(dead_code)]
 // 定义一个函数，接受short UNIX时间戳并返回东八区精确时间
@@ -42,7 +42,6 @@ pub fn local_datetime_from_short_unix(unix_time: i64) -> DateTime<Local>
 
     // 将UTC时间转换为东八区时间
     Local.from_utc_datetime(&utc_datetime.naive_utc())
-
 }
 #[allow(dead_code)]
 // 定义一个函数，接受UNIX时间戳并返回东八区小时数

@@ -6,11 +6,11 @@ use crate::{
     common_infrastructure::{
         instrument::Instrument,
         order::{FullyFill, Order, PartialFill},
-        Side,
         trade::ClientTrade,
+        Side,
     },
-    ExchangeVariant,
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade, ws_trade::WsTrade},
+    ExchangeVariant,
 };
 
 // 定义一个泛型结构体 MarketEvent，包含各种交易市场事件信息
@@ -42,13 +42,11 @@ impl From<MarketEvent<ClientTrade>> for MarketEvent<DataKind>
     fn from(event: MarketEvent<ClientTrade>) -> Self
     {
         // 将 Trade 类型的 MarketEvent 转换为 DataKind::Trade 类型的 MarketEvent
-        Self {
-            exchange_time: event.exchange_time,
-            received_time: event.received_time,
-            exchange: event.exchange,
-            instrument: event.instrument,
-            kind: DataKind::Trade(event.kind),
-        }
+        Self { exchange_time: event.exchange_time,
+               received_time: event.received_time,
+               exchange: event.exchange,
+               instrument: event.instrument,
+               kind: DataKind::Trade(event.kind) }
     }
 }
 
@@ -58,13 +56,11 @@ impl From<MarketEvent<WsTrade>> for MarketEvent<DataKind>
     fn from(event: MarketEvent<WsTrade>) -> Self
     {
         // 将 WsTrade 类型的 MarketEvent 转换为 DataKind::WsTrade 类型的 MarketEvent
-        Self {
-            exchange_time: event.exchange_time,
-            received_time: event.received_time,
-            exchange: event.exchange,
-            instrument: event.instrument,
-            kind: DataKind::WsTrade(event.kind),
-        }
+        Self { exchange_time: event.exchange_time,
+               received_time: event.received_time,
+               exchange: event.exchange,
+               instrument: event.instrument,
+               kind: DataKind::WsTrade(event.kind) }
     }
 }
 
@@ -73,24 +69,20 @@ impl From<Order<FullyFill>> for MarketEvent<ClickhousePublicTrade>
 {
     fn from(order: Order<FullyFill>) -> Self
     {
-        let clickhouse_trade = ClickhousePublicTrade {
-            symbol: format!("{}/{}", order.instrument.base, order.instrument.quote),
-            side: match order.side {
-                | Side::Buy => "buy".to_string(),
-                | Side::Sell => "sell".to_string(),
-            },
-            price: order.state.price,
-            timestamp: order.state.id.0.parse().unwrap_or_default(),
-            amount: order.state.size,
-        };
+        let clickhouse_trade = ClickhousePublicTrade { symbol: format!("{}/{}", order.instrument.base, order.instrument.quote),
+                                                       side: match order.side {
+                                                           | Side::Buy => "buy".to_string(),
+                                                           | Side::Sell => "sell".to_string(),
+                                                       },
+                                                       price: order.state.price,
+                                                       timestamp: order.state.id.0.parse().unwrap_or_default(),
+                                                       amount: order.state.size };
 
-        MarketEvent {
-            exchange_time: order.state.id.0.parse().unwrap_or_default(),
-            received_time: order.client_ts,
-            exchange: order.exchange,
-            instrument: order.instrument,
-            kind: clickhouse_trade,
-        }
+        MarketEvent { exchange_time: order.state.id.0.parse().unwrap_or_default(),
+                      received_time: order.client_ts,
+                      exchange: order.exchange,
+                      instrument: order.instrument,
+                      kind: clickhouse_trade }
     }
 }
 
@@ -99,23 +91,19 @@ impl From<Order<PartialFill>> for MarketEvent<ClickhousePublicTrade>
 {
     fn from(order: Order<PartialFill>) -> Self
     {
-        let clickhouse_trade = ClickhousePublicTrade {
-            symbol: format!("{}/{}", order.instrument.base, order.instrument.quote),
-            side: match order.side {
-                | Side::Buy => "buy".to_string(),
-                | Side::Sell => "sell".to_string(),
-            },
-            price: order.state.price,
-            timestamp: order.state.id.0.parse().unwrap_or_default(),
-            amount: order.state.size,
-        };
+        let clickhouse_trade = ClickhousePublicTrade { symbol: format!("{}/{}", order.instrument.base, order.instrument.quote),
+                                                       side: match order.side {
+                                                           | Side::Buy => "buy".to_string(),
+                                                           | Side::Sell => "sell".to_string(),
+                                                       },
+                                                       price: order.state.price,
+                                                       timestamp: order.state.id.0.parse().unwrap_or_default(),
+                                                       amount: order.state.size };
 
-        MarketEvent {
-            exchange_time: order.state.id.0.parse().unwrap_or_default(),
-            received_time: order.client_ts,
-            exchange: order.exchange,
-            instrument: order.instrument,
-            kind: clickhouse_trade,
-        }
+        MarketEvent { exchange_time: order.state.id.0.parse().unwrap_or_default(),
+                      received_time: order.client_ts,
+                      exchange: order.exchange,
+                      instrument: order.instrument,
+                      kind: clickhouse_trade }
     }
 }

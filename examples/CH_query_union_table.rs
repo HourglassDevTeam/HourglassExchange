@@ -1,9 +1,9 @@
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 // use unilink_execution::sandbox::clickhouse_api::query_builder::ClickHouseQueryBuilder;
 
-
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     let client = ClickHouseClient::new();
     let exchange = "binance";
     let instrument = "futures";
@@ -19,7 +19,6 @@ async fn main() {
     // println!("{:?}",  trades)
 
     // EXAMPLE 2 USE PREDEFINED METHOD
-    let trades = client.query_unioned_trade_table(exchange,instrument,channel,date).await;
-    println!("{:?}",  trades)
-
+    let trades = client.query_unioned_trade_table(exchange, instrument, channel, date).await;
+    println!("{:?}", trades)
 }

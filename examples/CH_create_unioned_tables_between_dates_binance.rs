@@ -1,12 +1,14 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use rayon::prelude::*;
 use chrono::{Duration, NaiveDate};
-use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
-use unilink_execution::sandbox::utils::chrono_operations::extract_date;
+use rayon::prelude::*;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
+use unilink_execution::sandbox::{clickhouse_api::queries_operations::ClickHouseClient, utils::chrono_operations::extract_date};
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     // 创建 ClickHouse 客户端实例
     let client = Arc::new(ClickHouseClient::new());
 
@@ -22,27 +24,26 @@ async fn main() {
     let table_names = client.get_table_names(&database).await;
 
     // 创建一个表名与日期的字典，并将其转换为 Arc<Mutex<_>> 以供并行使用
-    let table_date_map: Arc<Mutex<HashMap<String, NaiveDate>>> = Arc::new(Mutex::new(
-        table_names
-            .par_iter()
-            .filter_map(|table_name| {
-                if !table_name.contains("union") {
-                    if let Some(table_date_str) = extract_date(table_name) {
-                        if let Ok(table_date) = NaiveDate::parse_from_str(&table_date_str, "%Y_%m_%d") {
-                            return Some((table_name.clone(), table_date));
-                        }
-                    }
-                }
-                None
-            })
-            .collect()
-    ));
+    let table_date_map: Arc<Mutex<HashMap<String, NaiveDate>>> =
+        Arc::new(Mutex::new(table_names.par_iter()
+                                       .filter_map(|table_name| {
+                                           if !table_name.contains("union") {
+                                               if let Some(table_date_str) = extract_date(table_name) {
+                                                   if let Ok(table_date) = NaiveDate::parse_from_str(&table_date_str, "%Y_%m_%d") {
+                                                       return Some((table_name.clone(), table_date));
+                                                   }
+                                               }
+                                           }
+                                           None
+                                       })
+                                       .collect()));
 
     // 计算总的表数量，用于进度汇报
-    let total_tables = table_date_map.lock().unwrap()
-        .values()
-        .filter(|&&table_date| table_date >= start_date && table_date <= end_date)
-        .count();
+    let total_tables = table_date_map.lock()
+                                     .unwrap()
+                                     .values()
+                                     .filter(|&&table_date| table_date >= start_date && table_date <= end_date)
+                                     .count();
     let mut processed_tables = 0;
 
     // 遍历日期范围
@@ -55,9 +56,9 @@ async fn main() {
             let table_date_map = table_date_map.clone();
             let map = table_date_map.lock().unwrap();
             map.par_iter()
-                .filter(|&(_, &table_date)| table_date == current_date)
-                .map(|(table_name, _)| table_name.clone())
-                .collect()
+               .filter(|&(_, &table_date)| table_date == current_date)
+               .map(|(table_name, _)| table_name.clone())
+               .collect()
         };
 
         // 并行创建联合表
@@ -70,7 +71,7 @@ async fn main() {
 
             tokio::spawn(async move {
                 match client.create_unioned_table_for_date(&database, &new_table_name, &tables_for_task, true).await {
-                    Ok(_) => {
+                    | Ok(_) => {
                         // 删除处理掉的表名
                         let mut map = table_date_map.lock().unwrap();
                         for table in &tables_for_task {
@@ -78,15 +79,18 @@ async fn main() {
                         }
                         println!("[UniLinkExecution] : Successfully created table: {}.{}", database, new_table_name);
                     }
-                    Err(e) => eprintln!("[UniLinkExecution] : Error creating table: {}", e),
+                    | Err(e) => eprintln!("[UniLinkExecution] : Error creating table: {}", e),
                 }
-            }).await.unwrap();
+            }).await
+              .unwrap();
 
             // 更新进度
             processed_tables += tables.len();
             let progress = (processed_tables as f64 / total_tables as f64) * 100.0;
-            println!("[UniLinkExecution] : Overall progress: Processed {} / {} tables ({:.2}%)", processed_tables, total_tables, progress);
-        } else {
+            println!("[UniLinkExecution] : Overall progress: Processed {} / {} tables ({:.2}%)",
+                     processed_tables, total_tables, progress);
+        }
+        else {
             println!("[UniLinkExecution] : No data for date: {}", date_str);
         }
 

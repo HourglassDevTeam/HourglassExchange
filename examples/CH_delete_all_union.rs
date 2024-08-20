@@ -29,5 +29,5 @@ async fn main()
     //         | Ok(_) => println!("Successfully dropped table: {}.{}", database, table),
     //         | Err(e) => eprintln!("Error dropping table: {}", e),
     //     }
-todo!()
+    todo!()
 }

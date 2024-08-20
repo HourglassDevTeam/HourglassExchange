@@ -5,33 +5,37 @@ use crate::{
     ExchangeVariant,
 };
 
-#[derive(Debug,PartialEq)]
-pub enum TransactionType {
-    Open,   // 开仓
-    Close,  // 平仓
+#[derive(Debug, PartialEq)]
+pub enum TransactionType
+{
+    Open,  // 开仓
+    Close, // 平仓
 }
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct PositionMeta {
-    pub position_id: String,                   // 静态数据
-    pub enter_ts: i64,                         // 静态数据
-    pub update_ts: i64,                        // 实时更新
-    pub exit_balance: TokenBalance,            // 静态更新（退出时更新）
-    pub account_exchange_ts: i64,              // 实时更新
-    pub exchange: ExchangeVariant,             // 静态数据
-    pub instrument: Instrument,                // 静态数据
-    pub side: Side,                            // 静态数据
-    pub current_size: f64,                     // 实时更新
-    pub current_fees_total: Fees,              // 实时更新
-    pub current_avg_price_gross: f64,          // 实时更新，即没有考虑费用或其他扣减项的情况下计算的平均持仓价格。
-    pub current_symbol_price: f64,             // 实时更新，当前交易标的（symbol，如股票、期货合约、加密货币等）的最新市场价格。
-    pub current_avg_price: f64,                // 实时更新
-    pub unrealised_pnl: f64,                   // 实时更新
-    pub realised_pnl: f64,                     // 静态更新（平仓时更新）
+pub struct PositionMeta
+{
+    pub position_id: String,          // 静态数据
+    pub enter_ts: i64,                // 静态数据
+    pub update_ts: i64,               // 实时更新
+    pub exit_balance: TokenBalance,   // 静态更新（退出时更新）
+    pub account_exchange_ts: i64,     // 实时更新
+    pub exchange: ExchangeVariant,    // 静态数据
+    pub instrument: Instrument,       // 静态数据
+    pub side: Side,                   // 静态数据
+    pub current_size: f64,            // 实时更新
+    pub current_fees_total: Fees,     // 实时更新
+    pub current_avg_price_gross: f64, // 实时更新，即没有考虑费用或其他扣减项的情况下计算的平均持仓价格。
+    pub current_symbol_price: f64,    // 实时更新，当前交易标的（symbol，如股票、期货合约、加密货币等）的最新市场价格。
+    pub current_avg_price: f64,       // 实时更新
+    pub unrealised_pnl: f64,          // 实时更新
+    pub realised_pnl: f64,            // 静态更新（平仓时更新）
 }
 
-impl PositionMeta {
+impl PositionMeta
+{
     // CONSIDER 是否应该吧close fees成本计算进去
-    fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64, include_fees: bool, transaction_type: TransactionType) {
+    fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64, include_fees: bool, transaction_type: TransactionType)
+    {
         let total_size = self.current_size + trade_size;
         if total_size > 0.0 {
             self.current_avg_price_gross = (self.current_avg_price_gross * self.current_size + trade_price * trade_size) / total_size;
@@ -40,49 +44,54 @@ impl PositionMeta {
 
         let total_fees = if include_fees && transaction_type == TransactionType::Open {
             match &self.current_fees_total {
-                Fees::Spot(fee) => fee.taker_fee_rate * self.current_size,
-                Fees::Perpetual(fee) => fee.open_fee_rate * self.current_size,
-                Fees::Option(fee) => fee.trade_fee_rate * self.current_size,
+                | Fees::Spot(fee) => fee.taker_fee_rate * self.current_size,
+                | Fees::Perpetual(fee) => fee.open_fee_rate * self.current_size,
+                | Fees::Option(fee) => fee.trade_fee_rate * self.current_size,
             }
-        } else {
+        }
+        else {
             0.0
         };
 
         if self.current_size > 0.0 {
             self.current_avg_price = (self.current_avg_price_gross * self.current_size + total_fees) / self.current_size;
-        } else {
+        }
+        else {
             self.current_avg_price = self.current_avg_price_gross;
         }
     }
 
-
-
     /// 更新 current_avg_price_gross
-    pub fn update_avg_price_gross(&mut self, trade_price: f64, trade_size: f64,transaction_type: TransactionType) {
-        self.calculate_avg_price(trade_price, trade_size, false,transaction_type);
+    pub fn update_avg_price_gross(&mut self, trade_price: f64, trade_size: f64, transaction_type: TransactionType)
+    {
+        self.calculate_avg_price(trade_price, trade_size, false, transaction_type);
     }
 
     /// 更新 current_avg_price，同时考虑费用
-    pub fn update_avg_price(&mut self, trade_price: f64, trade_size: f64, fees: Fees,transaction_type: TransactionType) {
+    pub fn update_avg_price(&mut self, trade_price: f64, trade_size: f64, fees: Fees, transaction_type: TransactionType)
+    {
         // 更新 current_fees_total，基于新交易的费用
         self.current_fees_total = fees;
 
         // 调用通用方法计算并更新平均价格
-        self.calculate_avg_price(trade_price, trade_size, true,transaction_type);
+        self.calculate_avg_price(trade_price, trade_size, true, transaction_type);
     }
 
     /// 更新 current_symbol_price
-    pub fn update_symbol_price(&mut self, new_symbol_price: f64) {
+    pub fn update_symbol_price(&mut self, new_symbol_price: f64)
+    {
         self.current_symbol_price = new_symbol_price;
     }
 
     /// FIXME ：检验逻辑 更新 unrealised_pnl
-    pub fn update_unrealised_pnl(&mut self) {
+    pub fn update_unrealised_pnl(&mut self)
+    {
         self.unrealised_pnl = (self.current_symbol_price - self.current_avg_price) * self.current_size;
     }
 
     /// FIXME ：检验逻辑 更新 realised_pnl
-    pub fn update_realised_pnl(&mut self, closing_price: f64) {
+    pub fn update_realised_pnl(&mut self, closing_price: f64)
+    {
         self.realised_pnl = (closing_price - self.current_avg_price) * self.current_size;
         // 清空当前持仓
         self.current_size = 0.0;
@@ -115,23 +124,21 @@ impl PositionMetaBuilder
 {
     pub fn new() -> Self
     {
-        Self {
-            position_id: None,
-            enter_ts: None,
-            update_ts: None,
-            exit_balance: None,
-            account_exchange_ts: None,
-            exchange: None,
-            instrument: None,
-            side: None,
-            current_size: None,
-            current_fees_total: None,
-            current_avg_price_gross: None,
-            current_symbol_price: None,
-            current_avg_price: None,
-            unrealised_pnl: None,
-            realised_pnl: None,
-        }
+        Self { position_id: None,
+               enter_ts: None,
+               update_ts: None,
+               exit_balance: None,
+               account_exchange_ts: None,
+               exchange: None,
+               instrument: None,
+               side: None,
+               current_size: None,
+               current_fees_total: None,
+               current_avg_price_gross: None,
+               current_symbol_price: None,
+               current_avg_price: None,
+               unrealised_pnl: None,
+               realised_pnl: None }
     }
 
     pub fn position_id(mut self, position_id: String) -> Self
@@ -226,22 +233,20 @@ impl PositionMetaBuilder
 
     pub fn build(self) -> Result<PositionMeta, &'static str>
     {
-        Ok(PositionMeta {
-            position_id: self.position_id.ok_or("position_id is required")?,
-            enter_ts: self.enter_ts.ok_or("enter_ts is required")?,
-            update_ts: self.update_ts.ok_or("update_ts is required")?,
-            exit_balance: self.exit_balance.ok_or("exit_balance is required")?,
-            account_exchange_ts: self.account_exchange_ts.ok_or("account_exchange_ts is required")?,
-            exchange: self.exchange.ok_or("exchange is required")?,
-            instrument: self.instrument.ok_or("instrument is required")?,
-            side: self.side.ok_or("side is required")?,
-            current_size: self.current_size.ok_or("current_size is required")?,
-            current_fees_total: self.current_fees_total.ok_or("current_fees_total is required")?,
-            current_avg_price_gross: self.current_avg_price_gross.ok_or("current_avg_price_gross is required")?,
-            current_symbol_price: self.current_symbol_price.ok_or("current_symbol_price is required")?,
-            current_avg_price: self.current_avg_price.ok_or("current_avg_price is required")?,
-            unrealised_pnl: self.unrealised_pnl.ok_or("unrealised_pnl is required")?,
-            realised_pnl: self.realised_pnl.ok_or("realised_pnl is required")?,
-        })
+        Ok(PositionMeta { position_id: self.position_id.ok_or("position_id is required")?,
+                          enter_ts: self.enter_ts.ok_or("enter_ts is required")?,
+                          update_ts: self.update_ts.ok_or("update_ts is required")?,
+                          exit_balance: self.exit_balance.ok_or("exit_balance is required")?,
+                          account_exchange_ts: self.account_exchange_ts.ok_or("account_exchange_ts is required")?,
+                          exchange: self.exchange.ok_or("exchange is required")?,
+                          instrument: self.instrument.ok_or("instrument is required")?,
+                          side: self.side.ok_or("side is required")?,
+                          current_size: self.current_size.ok_or("current_size is required")?,
+                          current_fees_total: self.current_fees_total.ok_or("current_fees_total is required")?,
+                          current_avg_price_gross: self.current_avg_price_gross.ok_or("current_avg_price_gross is required")?,
+                          current_symbol_price: self.current_symbol_price.ok_or("current_symbol_price is required")?,
+                          current_avg_price: self.current_avg_price.ok_or("current_avg_price is required")?,
+                          unrealised_pnl: self.unrealised_pnl.ok_or("unrealised_pnl is required")?,
+                          realised_pnl: self.realised_pnl.ok_or("realised_pnl is required")? })
     }
 }

@@ -2,7 +2,8 @@ use std::time::Instant;
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     let client = ClickHouseClient::new();
     let exchange = "binance";
     let instrument = "futures";
@@ -21,9 +22,8 @@ async fn main() {
     // let client_ref = client.client.read().await;
     // let mut cursor = client_ref.query(&query).fetch::<ClickhousePublicTrade>().unwrap();
 
-
     // EXAMPLE 2 USE PREDEFINED METHOD
-    let mut cursor = client.cursor_unioned_public_trades(exchange,instrument,date).await.unwrap();
+    let mut cursor = client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
     let start_time = Instant::now();
     while let Ok(Some(row)) = cursor.next().await {
         println!("{:?}", row)

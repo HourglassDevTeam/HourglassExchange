@@ -4,41 +4,47 @@ use crate::common_infrastructure::position::{position_meta::PositionMeta, Positi
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct PerpetualPosition {
-    pub meta: PositionMeta,                    // 复合类型，包含静态数据、实时更新数据和静态更新数据
-    pub pos_config: PerpetualPositionConfig,   // 静态数据
-    pub liquidation_price: f64,                // 实时更新 NOTE : To Be Checked
-    pub margin: f64,                           // 实时更新 NOTE : To Be Checked
-    pub funding_fee: f64,                      // 实时更新 NOTE : To Be Checked
+pub struct PerpetualPosition
+{
+    pub meta: PositionMeta,                  // 复合类型，包含静态数据、实时更新数据和静态更新数据
+    pub pos_config: PerpetualPositionConfig, // 静态数据
+    pub liquidation_price: f64,              // 实时更新 NOTE : To Be Checked
+    pub margin: f64,                         // 实时更新 NOTE : To Be Checked
+    pub funding_fee: f64,                    // 实时更新 NOTE : To Be Checked
 }
 
-impl PerpetualPosition {
+impl PerpetualPosition
+{
     /// 更新平仓价格
-    pub fn update_liquidation_price(&mut self, new_price: f64) {
+    pub fn update_liquidation_price(&mut self, new_price: f64)
+    {
         self.liquidation_price = new_price;
     }
 
     /// 更新保证金
-    pub fn update_margin(&mut self, new_margin: f64) {
+    pub fn update_margin(&mut self, new_margin: f64)
+    {
         self.margin = new_margin;
     }
 
     /// 更新资金费率
-    pub fn update_funding_fee(&mut self, new_fee: f64) {
+    pub fn update_funding_fee(&mut self, new_fee: f64)
+    {
         self.funding_fee = new_fee;
     }
 
     /// 更新静态数据部分
-    pub fn update_pos_config(&mut self, new_config: PerpetualPositionConfig) {
+    pub fn update_pos_config(&mut self, new_config: PerpetualPositionConfig)
+    {
         self.pos_config = new_config;
     }
 
     /// 更新PositionMeta
-    pub fn update_meta(&mut self, new_meta: PositionMeta) {
+    pub fn update_meta(&mut self, new_meta: PositionMeta)
+    {
         self.meta = new_meta;
     }
 }
-
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -62,13 +68,11 @@ impl PerpetualPositionBuilder
 {
     pub fn new() -> Self
     {
-        Self {
-            meta: None,
-            pos_config: None,
-            liquidation_price: None,
-            margin: None,
-            funding_fee: None,
-        }
+        Self { meta: None,
+               pos_config: None,
+               liquidation_price: None,
+               margin: None,
+               funding_fee: None }
     }
 
     pub fn meta(mut self, meta: PositionMeta) -> Self
@@ -103,12 +107,10 @@ impl PerpetualPositionBuilder
 
     pub fn build(self) -> Option<PerpetualPosition>
     {
-        Some(PerpetualPosition {
-            meta: self.meta?,
-            pos_config: self.pos_config?,
-            liquidation_price: self.liquidation_price?,
-            margin: self.margin?,
-            funding_fee: self.funding_fee?,
-        })
+        Some(PerpetualPosition { meta: self.meta?,
+                                 pos_config: self.pos_config?,
+                                 liquidation_price: self.liquidation_price?,
+                                 margin: self.margin?,
+                                 funding_fee: self.funding_fee? })
     }
 }

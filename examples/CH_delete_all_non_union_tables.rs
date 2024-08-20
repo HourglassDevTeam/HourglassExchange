@@ -1,9 +1,9 @@
-use rayon::iter::IntoParallelRefIterator;
-use rayon::prelude::ParallelIterator;
+use rayon::{iter::IntoParallelRefIterator, prelude::ParallelIterator};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     let client = ClickHouseClient::new();
 
     // 设置参数
@@ -18,9 +18,7 @@ async fn main() {
     let mut all_tables = client.get_table_names(&database).await;
 
     // 获取总non-union表的数量，用于进度汇报
-    let total_tables = all_tables.par_iter()
-        .filter(|table_name| !table_name.contains("union"))
-        .count();
+    let total_tables = all_tables.par_iter().filter(|table_name| !table_name.contains("union")).count();
 
     if total_tables == 0 {
         println!("[UniLinkExecution] : No non-union tables found to delete.");
@@ -36,12 +34,12 @@ async fn main() {
         println!("[UniLinkExecution] : Executing query: {}", drop_query);
 
         match client.client.read().await.query(&drop_query).execute().await {
-            Ok(_) => {
+            | Ok(_) => {
                 println!("[UniLinkExecution] : Successfully dropped table: {}.{}", database, table_name);
-                all_tables.retain(|name| name != &table_name);  // 删除已经处理的表名
+                all_tables.retain(|name| name != &table_name); // 删除已经处理的表名
                 processed_tables += 1;
             }
-            Err(e) => eprintln!("[UniLinkExecution] : Error dropping table: {}.{}", table_name, e),
+            | Err(e) => eprintln!("[UniLinkExecution] : Error dropping table: {}.{}", table_name, e),
         }
 
         // 计算并打印进度

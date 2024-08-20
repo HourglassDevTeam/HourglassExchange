@@ -2,7 +2,8 @@ use std::time::Instant;
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     let client = ClickHouseClient::new();
     let exchange = "binance";
     let instrument = "futures";
@@ -13,7 +14,7 @@ async fn main() {
     // Example 1: Fetch all trades
     println!("Fetching all trades...");
     let start_time = Instant::now();
-    match client.retrieve_all_trades(exchange, instrument,date, base, quote).await {
+    match client.retrieve_all_trades(exchange, instrument, date, base, quote).await {
         | Ok(trades) => {
             println!("{:?}", trades);
             let duration = start_time.elapsed();

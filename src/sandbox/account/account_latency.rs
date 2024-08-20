@@ -34,10 +34,10 @@ pub fn fluctuate_latency(latency: &mut AccountLatency, current_time: i64)
     let range = (latency.maximum - latency.minimum) as f64;
     let half_range = range / 2.0;
     match latency.fluctuation_mode {
-        FluctuationMode::Sine => {
+        | FluctuationMode::Sine => {
             latency.current_value = (half_range * ((current_time as f64).sin() + 1.0)) as i64 + latency.minimum;
         }
-        FluctuationMode::Cosine => {
+        | FluctuationMode::Cosine => {
             latency.current_value = (half_range * ((current_time as f64).cos() + 1.0)) as i64 + latency.minimum;
         }
         | FluctuationMode::NormalDistribution => {

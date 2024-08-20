@@ -1,10 +1,10 @@
-use std::time::Instant;
 use chrono::{Duration, NaiveDate};
-use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
-use unilink_execution::sandbox::utils::chrono_operations::extract_date;
+use std::time::Instant;
+use unilink_execution::sandbox::{clickhouse_api::queries_operations::ClickHouseClient, utils::chrono_operations::extract_date};
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     // 创建 ClickHouse 客户端实例
     let client = ClickHouseClient::new();
 
@@ -24,8 +24,6 @@ async fn main() {
     let database = format!("{}_{}_{}", exchange, instrument, channel);
     let table_names = client.get_table_names(&database).await;
 
-
-
     // 遍历日期范围
     while current_date <= end_date {
         // 将当前日期格式化为字符串
@@ -39,19 +37,19 @@ async fn main() {
         let start_time = Instant::now();
 
         // 筛选出与当前日期匹配的表名
-        let _tables: Vec<String> = table_names
-            .iter()
-            .filter(|table_name| {
-                if let Some(table_date) = extract_date(table_name) {
-                    table_date == date_str // 仅保留匹配当前日期的表
-                } else {
-                    false
-                }
-            })
-            .cloned() // 克隆以避免引用问题
-            .collect();
+        let _tables: Vec<String> = table_names.iter()
+                                              .filter(|table_name| {
+                                                  if let Some(table_date) = extract_date(table_name) {
+                                                      table_date == date_str // 仅保留匹配当前日期的表
+                                                  }
+                                                  else {
+                                                      false
+                                                  }
+                                              })
+                                              .cloned() // 克隆以避免引用问题
+                                              .collect();
         let duration = start_time.elapsed();
-        println!("TABLES for {} FILTERED in: {:?}",date_str, duration);
+        println!("TABLES for {} FILTERED in: {:?}", date_str, duration);
         // 迭代到下一天
         current_date += Duration::days(1);
     }

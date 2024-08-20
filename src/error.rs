@@ -5,7 +5,8 @@ use crate::common_infrastructure::{event::ClientOrderId, order::OrderKind, token
 
 /// 执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, Eq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
-pub enum ExecutionError {
+pub enum ExecutionError
+{
     /// 缺少属性，无法构建组件。
     #[error("[UniLinkExecution] : Unable to construct component due to missing property: {0}")]
     InitiatorIncomplete(String),
