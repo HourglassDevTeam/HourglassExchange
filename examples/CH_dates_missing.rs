@@ -1,7 +1,4 @@
-use open_lark::service::im::v1::message::MessageText;
-use open_lark::custom_bot::CustomBot;
-use std::env;
-use dotenvy::dotenv;
+
 use chrono::Duration;
 use std::collections::HashSet;
 use chrono::NaiveDate;
