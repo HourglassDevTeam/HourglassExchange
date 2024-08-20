@@ -5,7 +5,7 @@ use crate::{
     ExchangeVariant,
 };
 
-#[derive(Debug)]
+#[derive(Debug,PartialEq)]
 pub enum TransactionType {
     Open,   // 开仓
     Close,  // 平仓
@@ -30,36 +30,30 @@ pub struct PositionMeta {
 }
 
 impl PositionMeta {
-    /// 私有方法，用于计算和更新平均价格
     fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64, include_fees: bool, transaction_type: TransactionType) {
-        // 计算并更新 current_avg_price_gross
         let total_size = self.current_size + trade_size;
         if total_size > 0.0 {
             self.current_avg_price_gross = (self.current_avg_price_gross * self.current_size + trade_price * trade_size) / total_size;
             self.current_size = total_size;
         }
 
-        // 计算费用总和（如果 include_fees 为 true） FIXME close应该在这里计算吗。
-        let total_fees = if include_fees {
+        let total_fees = if include_fees && transaction_type == TransactionType::Open {
             match &self.current_fees_total {
                 Fees::Spot(fee) => fee.taker_fee_rate * self.current_size,
-                Fees::Perpetual(fee) => match transaction_type {
-                    TransactionType::Open => fee.open_fee_rate * self.current_size,
-                    TransactionType::Close => fee.close_fee_rate * self.current_size,
-                },
+                Fees::Perpetual(fee) => fee.open_fee_rate * self.current_size,
                 Fees::Option(fee) => fee.trade_fee_rate * self.current_size,
             }
         } else {
             0.0
         };
 
-        // 更新 current_avg_price，考虑费用
         if self.current_size > 0.0 {
             self.current_avg_price = (self.current_avg_price_gross * self.current_size + total_fees) / self.current_size;
         } else {
             self.current_avg_price = self.current_avg_price_gross;
         }
     }
+
 
 
     /// 更新 current_avg_price_gross
