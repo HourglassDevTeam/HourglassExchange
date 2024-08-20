@@ -18,10 +18,73 @@ pub struct PositionMeta {
     pub current_size: f64,                     // 实时更新
     pub current_fees_total: Fees,              // 实时更新
     pub current_avg_price_gross: f64,          // 实时更新，即没有考虑费用或其他扣减项的情况下计算的平均持仓价格。
-    pub current_symbol_price: f64,             // 实时更新
+    pub current_symbol_price: f64,             // 实时更新，当前交易标的（symbol，如股票、期货合约、加密货币等）的最新市场价格。
     pub current_avg_price: f64,                // 实时更新
     pub unrealised_pnl: f64,                   // 实时更新
     pub realised_pnl: f64,                     // 静态更新（平仓时更新）
+}
+
+impl PositionMeta {
+    /// 私有方法，用于计算和更新平均价格
+    fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64, include_fees: bool) {
+        // 计算并更新 current_avg_price_gross
+        let total_size = self.current_size + trade_size;
+        if total_size > 0.0 {
+            self.current_avg_price_gross = (self.current_avg_price_gross * self.current_size + trade_price * trade_size) / total_size;
+            self.current_size = total_size;
+        }
+
+        // 计算费用总和（如果 include_fees 为 true）
+        let total_fees = if include_fees {
+            match &self.current_fees_total {
+                Fees::Spot(fee) => fee.taker_fee_rate * self.current_size,
+                Fees::Perpetual(_fee) => todo!(),
+                Fees::Option(_fee) => todo!(),
+            }
+        } else {
+            0.0
+        };
+
+        // 更新 current_avg_price，考虑费用
+        if self.current_size > 0.0 {
+            self.current_avg_price = (self.current_avg_price_gross * self.current_size + total_fees) / self.current_size;
+        } else {
+            self.current_avg_price = self.current_avg_price_gross;
+        }
+    }
+
+    /// 更新 current_avg_price_gross
+    pub fn update_avg_price_gross(&mut self, trade_price: f64, trade_size: f64) {
+        self.calculate_avg_price(trade_price, trade_size, false);
+    }
+
+    /// 更新 current_avg_price，同时考虑费用
+    pub fn update_avg_price(&mut self, trade_price: f64, trade_size: f64, fees: Fees) {
+        // 更新 current_fees_total，基于新交易的费用
+        self.current_fees_total = fees;
+
+        // 调用通用方法计算并更新平均价格
+        self.calculate_avg_price(trade_price, trade_size, true);
+    }
+
+    /// 更新 current_symbol_price
+    pub fn update_symbol_price(&mut self, new_symbol_price: f64) {
+        self.current_symbol_price = new_symbol_price;
+    }
+
+    /// FIXME ：检验逻辑 更新 unrealised_pnl
+    pub fn update_unrealised_pnl(&mut self) {
+        self.unrealised_pnl = (self.current_symbol_price - self.current_avg_price) * self.current_size;
+    }
+
+    /// FIXME ：检验逻辑 更新 realised_pnl
+    pub fn update_realised_pnl(&mut self, closing_price: f64) {
+        self.realised_pnl = (closing_price - self.current_avg_price) * self.current_size;
+        // 清空当前持仓
+        self.current_size = 0.0;
+        self.current_avg_price = 0.0;
+        self.current_avg_price_gross = 0.0;
+    }
 }
 
 pub struct PositionMetaBuilder
