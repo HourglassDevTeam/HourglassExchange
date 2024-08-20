@@ -39,7 +39,7 @@ impl PositionMeta {
             self.current_size = total_size;
         }
 
-        // 计算费用总和（如果 include_fees 为 true）
+        // 计算费用总和（如果 include_fees 为 true） FIXME close应该在这里计算吗。
         let total_fees = if include_fees {
             match &self.current_fees_total {
                 Fees::Spot(fee) => fee.taker_fee_rate * self.current_size,
