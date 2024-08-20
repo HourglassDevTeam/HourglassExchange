@@ -6,23 +6,22 @@ use crate::{
 };
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct PositionMeta
-{
-    pub position_id: String,
-    pub enter_ts: i64,
-    pub update_ts: i64,
-    pub exit_balance: TokenBalance, // NOTE necessary but unsure currently
-    pub account_exchange_ts: i64,
-    pub exchange: ExchangeVariant,
-    pub instrument: Instrument,
-    pub side: Side, // NOTE 注意和DirectionMode之间的兼容性
-    pub current_size: f64,
-    pub current_fees_total: Fees,
-    pub current_avg_price_gross: f64,
-    pub current_symbol_price: f64,
-    pub current_avg_price: f64,
-    pub unrealised_pnl: f64,
-    pub realised_pnl: f64,
+pub struct PositionMeta {
+    pub position_id: String,                   // 静态数据
+    pub enter_ts: i64,                         // 静态数据
+    pub update_ts: i64,                        // 实时更新
+    pub exit_balance: TokenBalance,            // 静态更新（退出时更新）
+    pub account_exchange_ts: i64,              // 实时更新
+    pub exchange: ExchangeVariant,             // 静态数据
+    pub instrument: Instrument,                // 静态数据
+    pub side: Side,                            // 静态数据
+    pub current_size: f64,                     // 实时更新
+    pub current_fees_total: Fees,              // 实时更新
+    pub current_avg_price_gross: f64,          // 实时更新
+    pub current_symbol_price: f64,             // 实时更新
+    pub current_avg_price: f64,                // 实时更新
+    pub unrealised_pnl: f64,                   // 实时更新
+    pub realised_pnl: f64,                     // 静态更新（平仓时更新）
 }
 
 pub struct PositionMetaBuilder
