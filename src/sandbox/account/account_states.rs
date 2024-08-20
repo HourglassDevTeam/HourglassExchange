@@ -4,7 +4,6 @@ use std::{
     ops::{Deref, DerefMut},
     sync::{Arc, atomic::Ordering, Weak},
 };
-
 use tokio::sync::{Mutex, RwLock};
 
 use crate::{
@@ -22,6 +21,7 @@ use crate::{
     sandbox::account::{Account, account_config::MarginMode},
 };
 use crate::common_infrastructure::trade::ClientTrade;
+use crate::sandbox::account::respond;
 
 #[derive(Clone, Debug)]
 pub struct AccountState<Event>
@@ -58,11 +58,6 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             .get_mut(token)
             .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {token}")))
     }
-
-    /// Sets the account reference. 设置 Account 实例的引用 FIXME to be moved to a AccountStateInitiator (TBD).
-    // pub fn set_account(&mut self, account: Arc<RwLock<Account<Event>>>) {
-    //     self.account_ref = Arc::downgrade(&account);
-    // }
 
     /// 获取指定 [`InstrumentKind`] 的手续费。
     pub async fn get_fee(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
