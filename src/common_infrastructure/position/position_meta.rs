@@ -30,6 +30,7 @@ pub struct PositionMeta {
 }
 
 impl PositionMeta {
+    // CONSIDER 是否应该吧close fees成本计算进去
     fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64, include_fees: bool, transaction_type: TransactionType) {
         let total_size = self.current_size + trade_size;
         if total_size > 0.0 {
