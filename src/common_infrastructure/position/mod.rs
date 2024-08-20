@@ -38,18 +38,21 @@ impl AccountPositions {
                 .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
                     positions.iter().any(|pos| pos.meta.instrument == *instrument)
                 ),
+
             // 普通期货
             InstrumentKind::Future => self.futures_pos
                 .as_ref()
                 .map_or(false, |positions|
                     positions.iter().any(|pos| pos.meta.instrument == *instrument)
                 ),
+
             // 加密期权
             InstrumentKind::CryptoOption => self.option_pos
                 .as_ref()
                 .map_or(false, |positions|
                     positions.iter().any(|pos| pos.meta.instrument == *instrument)
                 ),
+
             // 加密杠杆代币
             InstrumentKind::CryptoLeveragedToken => self.margin_pos
                 .as_ref()
