@@ -12,8 +12,7 @@ mod leveraged_token;
 mod option;
 pub mod perpetual;
 pub(crate) mod position_meta;
-/// This struct is generic and thus placed here in the common_infrastructure.
-#[allow(dead_code)]
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountPositions
 {
@@ -23,30 +22,44 @@ pub struct AccountPositions
     pub option_pos: Option<Vec<OptionPosition>>,
 }
 
-impl AccountPositions
-{
-    pub(crate) fn has_position(&self, instrument: &Instrument) -> bool
-    {
+impl AccountPositions {
+    /// 检查账户中是否持有指定交易工具的仓位
+    pub(crate) fn has_position(&self, instrument: &Instrument) -> bool {
         match instrument.kind {
-            // NOTE : For Spot， check balance rather than position
-            | InstrumentKind::Spot => todo!(),
-            | InstrumentKind::CommodityOption => todo!(),
-            | InstrumentKind::CommodityFuture => todo!(),
-            | InstrumentKind::Perpetual => self.perpetual_pos
+            // 对于现货，检查余额而不是仓位
+            InstrumentKind::Spot => todo!(),
+            // 商品期权
+            InstrumentKind::CommodityOption => todo!(),
+            // 商品期货
+            InstrumentKind::CommodityFuture => todo!(),
+            // 永续合约
+            InstrumentKind::Perpetual => self.perpetual_pos
+                .as_ref() // 如果存在仓位列表
+                .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
+                    positions.iter().any(|pos| pos.meta.instrument == *instrument)
+                ),
+            // 普通期货
+            InstrumentKind::Future => self.futures_pos
                 .as_ref()
-                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
-            | InstrumentKind::Future => self.futures_pos
+                .map_or(false, |positions|
+                    positions.iter().any(|pos| pos.meta.instrument == *instrument)
+                ),
+            // 加密期权
+            InstrumentKind::CryptoOption => self.option_pos
                 .as_ref()
-                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
-            | InstrumentKind::CryptoOption => self.option_pos
+                .map_or(false, |positions|
+                    positions.iter().any(|pos| pos.meta.instrument == *instrument)
+                ),
+            // 加密杠杆代币
+            InstrumentKind::CryptoLeveragedToken => self.margin_pos
                 .as_ref()
-                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
-            | InstrumentKind::CryptoLeveragedToken => self.margin_pos
-                .as_ref()
-                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                .map_or(false, |positions|
+                    positions.iter().any(|pos| pos.meta.instrument == *instrument)
+                ),
         }
     }
 }
+
 
 /// NOTE : PositionMode 枚举定义了两种交易方向模式：
 ///  [NetMode] : 单向模式。在这种模式下，用户只能持有一个方向的仓位（多头或空头），而不能同时持有两个方向的仓位。
