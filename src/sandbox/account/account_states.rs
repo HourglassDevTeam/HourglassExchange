@@ -12,7 +12,7 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
         order::{Open, Order},
-        position::{AccountPositions, PositionDirectionMode, PositionKind, PositionMarginMode},
+        position::{AccountPositions, PositionDirectionMode, Position, PositionMarginMode},
         token::Token,
         trade::ClientTrade,
         Side,
@@ -136,7 +136,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 
     /// 获取指定 `Instrument` 的仓位/
-    pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<PositionKind>, ExecutionError>
+    pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<Position>, ExecutionError>
     {
         let positions = self.positions.lock().await; // 获取锁
 
@@ -145,28 +145,28 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             | InstrumentKind::Perpetual => {
                 if let Some(perpetual_positions) = &positions.perpetual_pos {
                     if let Some(position) = perpetual_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
-                        return Ok(Some(PositionKind::Perpetual(position.clone())));
+                        return Ok(Some(Position::Perpetual(position.clone())));
                     }
                 }
             }
             | InstrumentKind::Future => {
                 if let Some(futures_positions) = &positions.futures_pos {
                     if let Some(position) = futures_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
-                        return Ok(Some(PositionKind::Future(position.clone())));
+                        return Ok(Some(Position::Future(position.clone())));
                     }
                 }
             }
             | InstrumentKind::CryptoOption => {
                 if let Some(option_positions) = &positions.option_pos {
                     if let Some(position) = option_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
-                        return Ok(Some(PositionKind::Option(position.clone())));
+                        return Ok(Some(Position::Option(position.clone())));
                     }
                 }
             }
             | InstrumentKind::CryptoLeveragedToken => {
                 if let Some(margin_positions) = &positions.margin_pos {
                     if let Some(position) = margin_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
-                        return Ok(Some(PositionKind::LeveragedToken(position.clone())));
+                        return Ok(Some(Position::LeveragedToken(position.clone())));
                     }
                 }
             }
@@ -182,12 +182,12 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 
     /// 更新指定 `Instrument` 的仓位
-    pub async fn update_position(&mut self, position: PositionKind) -> Result<(), ExecutionError>
+    pub async fn update_position(&mut self, position: Position) -> Result<(), ExecutionError>
     {
         let mut positions = self.positions.lock().await; // 获取锁
 
         match position {
-            | PositionKind::Perpetual(pos) => {
+            | Position::Perpetual(pos) => {
                 // 检查是否存在当前账户的 `perpetual_pos`，即是否有任何永续合约仓位
                 if let Some(perpetual_positions) = &mut positions.perpetual_pos {
                     // 尝试在现有的永续合约仓位中找到与传入的 `pos` 相同的 `instrument`（金融工具）
@@ -206,15 +206,15 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 }
                 Ok(())
             }
-            | PositionKind::Future(_) => {
+            | Position::Future(_) => {
                 // TODO: Implement the update logic for Future positions
                 todo!("[UniLink_Execution] : Updating Future positions is not yet implemented")
             }
-            | PositionKind::Option(_) => {
+            | Position::Option(_) => {
                 // TODO: Implement the update logic for Option positions
                 todo!("[UniLink_Execution] : Updating Option positions is not yet implemented")
             }
-            | PositionKind::LeveragedToken(_) => {
+            | Position::LeveragedToken(_) => {
                 // TODO: Implement the update logic for Margin positions
                 todo!("[UniLink_Execution] : Updating Margin positions is not yet implemented")
             }

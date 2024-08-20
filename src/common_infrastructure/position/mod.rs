@@ -81,7 +81,7 @@ pub enum PositionMarginMode
 /// NOTE: 可能需要多种头寸类型共存
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum PositionKind
+pub enum Position
 {
     Perpetual(PerpetualPosition),
     LeveragedToken(LeveragedTokenPosition),
