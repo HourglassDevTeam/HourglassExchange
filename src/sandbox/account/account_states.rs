@@ -5,7 +5,10 @@ use std::{
     sync::{atomic::Ordering, Arc, Weak},
 };
 use tokio::sync::{Mutex, RwLock};
-
+use future::FuturesPosition;
+use leveraged_token::LeveragedTokenPosition;
+use option::OptionPosition;
+use position::future;
 use crate::{
     common_infrastructure::{
         balance::{Balance, BalanceDelta, TokenBalance},
@@ -21,6 +24,9 @@ use crate::{
     sandbox::account::{account_config::MarginMode, Account},
     ExchangeVariant,
 };
+use crate::common_infrastructure::position;
+use crate::common_infrastructure::position::{leveraged_token, option};
+use crate::common_infrastructure::position::perpetual::PerpetualPosition;
 
 #[derive(Clone, Debug)]
 pub struct AccountState<Event>
@@ -182,43 +188,70 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 
     /// 更新指定 `Instrument` 的仓位
-    pub async fn update_position(&mut self, position: Position) -> Result<(), ExecutionError>
-    {
-        let mut positions = self.positions.lock().await; // 获取锁
-
+    pub async fn set_position(&mut self, position: Position) -> Result<(), ExecutionError> {
         match position {
-            | Position::Perpetual(pos) => {
-                // 检查是否存在当前账户的 `perpetual_pos`，即是否有任何永续合约仓位
-                if let Some(perpetual_positions) = &mut positions.perpetual_pos {
-                    // 尝试在现有的永续合约仓位中找到与传入的 `pos` 相同的 `instrument`（金融工具）
-                    if let Some(existing_pos) = perpetual_positions.iter_mut().find(|p| p.meta.instrument == pos.meta.instrument) {
-                        // 如果找到了相同的 `instrument`，则更新现有仓位为传入的 `pos`
-                        *existing_pos = pos;
-                    }
-                    else {
-                        // 如果没有找到相同的 `instrument`，则将新的仓位 `pos` 添加到永续合约仓位列表中
-                        perpetual_positions.push(pos);
-                    }
-                }
-                else {
-                    // 如果 `perpetual_pos` 为空，则初始化一个新的包含 `pos` 的永续合约仓位列表
-                    positions.perpetual_pos = Some(vec![pos]);
-                }
-                Ok(())
+            Position::Perpetual(pos) => {
+                self.set_perpetual_position(pos).await
             }
-            | Position::Future(_) => {
-                // TODO: Implement the update logic for Future positions
-                todo!("[UniLink_Execution] : Updating Future positions is not yet implemented")
+            Position::Future(pos) => {
+                self.set_future_position(pos).await
             }
-            | Position::Option(_) => {
-                // TODO: Implement the update logic for Option positions
-                todo!("[UniLink_Execution] : Updating Option positions is not yet implemented")
+            Position::Option(pos) => {
+                self.set_option_position(pos).await
             }
-            | Position::LeveragedToken(_) => {
-                // TODO: Implement the update logic for Margin positions
-                todo!("[UniLink_Execution] : Updating Margin positions is not yet implemented")
+            Position::LeveragedToken(pos) => {
+                self.set_leveraged_token_position(pos).await
             }
         }
+    }
+
+    /// 更新 PerpetualPosition 的方法
+    ///
+    /// 这个方法用于更新账户中的永续合约仓位信息。如果当前账户中已经存在
+    /// 对应金融工具（`Instrument`）的仓位，则更新其信息；否则，将新的仓位
+    /// 添加到永续合约仓位列表中。
+    ///
+    /// # 参数
+    ///
+    /// * `pos` - 需要更新的 `PerpetualPosition` 对象。
+    ///
+    /// # 返回值
+    ///
+    /// 如果更新成功，返回 `Ok(())`，否则返回一个 `ExecutionError`。
+    async fn set_perpetual_position(&mut self, pos: PerpetualPosition) -> Result<(), ExecutionError> {
+        // 获取账户的锁，确保在更新仓位信息时没有并发访问的问题
+        let mut positions = self.positions.lock().await;
+
+        // 检查账户是否已经有永续合约仓位
+        if let Some(perpetual_positions) = &mut positions.perpetual_pos {
+            // 尝试查找是否存在与传入 `pos` 相同的 `instrument`
+            if let Some(existing_pos) = perpetual_positions.iter_mut().find(|p| p.meta.instrument == pos.meta.instrument) {
+                // 如果找到了相同的 `instrument`，则更新现有仓位信息
+                *existing_pos = pos;
+            } else {
+                // 如果没有找到相同的 `instrument`，将新的仓位添加到永续合约仓位列表中
+                perpetual_positions.push(pos);
+            }
+        } else {
+            // 如果账户中没有永续合约仓位，初始化一个新的包含 `pos` 的列表
+            positions.perpetual_pos = Some(vec![pos]);
+        }
+
+        Ok(())
+    }
+    /// 更新 FuturePosition 的方法（占位符）
+    async fn set_future_position(&mut self, _pos: FuturesPosition) -> Result<(), ExecutionError> {
+        todo!("[UniLink_Execution] : Updating Future positions is not yet implemented")
+    }
+
+    /// 更新 OptionPosition 的方法（占位符）
+    async fn set_option_position(&mut self, _pos: OptionPosition) -> Result<(), ExecutionError> {
+        todo!("[UniLink_Execution] : Updating Option positions is not yet implemented")
+    }
+
+    /// 更新 LeveragedTokenPosition 的方法（占位符）
+    async fn set_leveraged_token_position(&mut self, _pos: LeveragedTokenPosition) -> Result<(), ExecutionError> {
+        todo!("[UniLink_Execution] : Updating Leveraged Token positions is not yet implemented")
     }
 
     /// 检查在 AccountPositions 中是否已经存在该 instrument 的某个仓位

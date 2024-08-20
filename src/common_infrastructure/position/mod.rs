@@ -7,9 +7,9 @@ use crate::common_infrastructure::{
     position::{future::FuturesPosition, leveraged_token::LeveragedTokenPosition, option::OptionPosition, perpetual::PerpetualPosition},
 };
 
-mod future;
-mod leveraged_token;
-mod option;
+pub(crate) mod future;
+pub(crate) mod leveraged_token;
+pub(crate) mod option;
 pub mod perpetual;
 pub(crate) mod position_meta;
 
