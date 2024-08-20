@@ -4,14 +4,14 @@ use crate::common_infrastructure::position::{position_meta::PositionMeta, Positi
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct PerpetualPosition
-{
-    pub meta: PositionMeta,
-    pub pos_config: PerpetualPositionConfig,
-    pub liquidation_price: f64,
-    pub margin: f64,
-    pub funding_fee: f64,
+pub struct PerpetualPosition {
+    pub meta: PositionMeta,                    // 复合类型，包含静态数据、实时更新数据和静态更新数据
+    pub pos_config: PerpetualPositionConfig,   // 静态数据
+    pub liquidation_price: f64,                // 实时更新
+    pub margin: f64,                           // 实时更新
+    pub funding_fee: f64,                      // 实时更新
 }
+
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct PerpetualPositionConfig
