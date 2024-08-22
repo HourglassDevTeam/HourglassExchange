@@ -114,11 +114,10 @@ impl AccountOrders
                                                price: order.state.price,
                                                size: order.state.size,
                                                predicted_ts: adjusted_client_ts } };
-        self.pending_registry.push(pending.clone());
         pending
     }
 
-    pub async fn keep_new_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
+    pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
     {
         // 检查请求是否有效 NOTE 这里或许可以添加更多的验证逻辑
         if self.pending_registry.iter().any(|pending| pending.cid == request.cid) {
@@ -129,7 +128,7 @@ impl AccountOrders
         let pending_order = self.process_request_as_pending(request).await;
 
         // 将挂起订单添加到注册表
-        self.pending_registry.push(pending_order.clone());
+        self.pending_registry.push(pending_order);
 
         // 返回成功结果
         Ok(())
@@ -243,4 +242,205 @@ impl AccountOrders
         let mut latency = self.latency_generator.write().await;
         fluctuate_latency(&mut latency, current_time);
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use uuid::Uuid;
+    use super::*;
+    use crate::common_infrastructure::instrument::Instrument;
+    use crate::sandbox::account::account_latency::{AccountLatency, FluctuationMode};
+    use crate::common_infrastructure::instrument::kind::InstrumentKind;
+    use crate::ExchangeVariant;
+
+    #[tokio::test]
+    async fn test_new_account_orders() {
+        let instruments = vec![
+            Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            Instrument::new("ETH", "USD", InstrumentKind::Spot),
+        ];
+
+        // 手动创建一个 AccountLatency 实例
+        let account_latency = AccountLatency::new(
+            FluctuationMode::Sine, // 设置波动模式
+            100,                   // 设置最大延迟
+            10,                    // 设置最小延迟
+        );
+
+        let account_orders = AccountOrders::new(instruments.clone(), account_latency).await;
+
+        assert_eq!(account_orders.request_counter.load(Ordering::Acquire), 0);
+        assert_eq!(account_orders.instrument_orders_map.len(), instruments.len());
+        assert!(account_orders.pending_registry.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_generate_latencies() {
+        let account_latency = AccountLatency::new(
+            FluctuationMode::NormalDistribution,
+            100,
+            10,
+        );
+
+        let latency_generator = Arc::new(RwLock::new(account_latency));
+        let latencies = AccountOrders::generate_latencies(&latency_generator).await;
+
+        assert_eq!(latencies.len(), 20);
+        for latency in &latencies {
+            assert!(*latency >= 10 && *latency <= 100);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_random_latency() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(
+            FluctuationMode::Uniform,
+            100,
+            10,
+        );
+
+        let account_orders = AccountOrders::new(instruments, account_latency).await;
+
+        let latency = account_orders.get_random_latency();
+        assert!(latency >= 10 && latency <= 100);
+    }
+
+    #[tokio::test]
+    async fn test_ins_orders_mut() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(
+            FluctuationMode::LinearIncrease,
+            100,
+            10,
+        );
+
+        let mut account_orders = AccountOrders::new(instruments.clone(), account_latency).await;
+
+        let result = account_orders.ins_orders_mut(&instruments[0]);
+        assert!(result.is_ok());
+
+        let invalid_instrument = Instrument::new("INVALID", "USD", InstrumentKind::Spot);
+        let invalid_result = account_orders.ins_orders_mut(&invalid_instrument);
+        assert!(invalid_result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(
+            FluctuationMode::LinearDecrease,
+            100,
+            10,
+        );
+
+        let account_orders = AccountOrders::new(instruments, account_latency).await;
+
+        let orders = account_orders.fetch_all();
+        assert!(orders.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_remove_order_from_pending_registry() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(
+            FluctuationMode::StepFunction,
+            100,
+            10,
+        );
+        // 使用特定的UUID来创建一个ClientOrderId实例，模拟一个不存在的订单
+        let client_order_id = ClientOrderId(Uuid::from_u128(999));
+
+        let mut account_orders = AccountOrders::new(instruments, account_latency).await;
+
+        let order = Order {
+            kind: OrderKind::Limit,
+            exchange: ExchangeVariant::SandBox,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            cid: client_order_id,
+            client_ts: 0,
+            side: Side::Buy,
+            state: Pending {
+                reduce_only: false,
+                price: 50.0,
+                size: 1.0,
+                predicted_ts: 0,
+            },
+        };
+
+        account_orders.pending_registry.push(order.clone());
+        let remove_result = account_orders.remove_order_from_pending_registry(order.cid);
+        assert!(remove_result.is_ok());
+        assert!(account_orders.pending_registry.is_empty());
+
+        let remove_invalid_result = account_orders.remove_order_from_pending_registry(client_order_id);
+        assert!(remove_invalid_result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_process_request_as_pending() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(
+            FluctuationMode::RandomWalk,
+            100,
+            10,
+        );
+
+        let client_order_id = ClientOrderId(Uuid::from_u128(999));
+
+        let mut account_orders = AccountOrders::new(instruments, account_latency).await;
+
+        let request_order = Order {
+            kind: OrderKind::Limit,
+            exchange: ExchangeVariant::SandBox,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            cid: client_order_id,
+            client_ts: 1000,
+            side: Side::Buy,
+            state: RequestOpen {
+                reduce_only: false,
+                price: 50.0,
+                size: 1.0,
+            },
+        };
+
+        let pending_order = account_orders.process_request_as_pending(request_order).await;
+        assert_eq!(pending_order.cid, client_order_id);
+        assert!(pending_order.state.predicted_ts > 1000);
+    }
+
+    #[tokio::test]
+    async fn test_register_pending_order() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(
+            FluctuationMode::Sine,
+            100,
+            10,
+        );
+        let client_order_id = ClientOrderId(Uuid::from_u128(999));
+
+        let mut account_orders = AccountOrders::new(instruments, account_latency).await;
+
+        let request_order = Order {
+            kind: OrderKind::Limit,
+            exchange: ExchangeVariant::SandBox,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            cid: client_order_id,
+            client_ts: 1000,
+            side: Side::Buy,
+            state: RequestOpen {
+                reduce_only: false,
+                price: 50.0,
+                size: 1.0,
+            },
+        };
+
+        let result = account_orders.register_pending_order(request_order.clone()).await;
+        assert!(result.is_ok());
+        assert_eq!(account_orders.pending_registry.len(), 1);
+
+        let duplicate_result = account_orders.register_pending_order(request_order).await;
+        assert!(duplicate_result.is_err());
+    }
+
 }
