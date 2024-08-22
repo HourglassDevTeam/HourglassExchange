@@ -7,6 +7,7 @@ use std::{
 };
 
 use futures::future::join_all;
+use futures::lock::Mutex;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use tokio::sync::{mpsc, oneshot, RwLock};
@@ -31,6 +32,7 @@ use crate::{
     sandbox::{account::account_market_feed::AccountDataStreams, clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade, instrument_orders::InstrumentOrders},
     ExchangeVariant,
 };
+use crate::common_infrastructure::position::AccountPositions;
 
 pub mod account_config;
 pub mod account_latency;
@@ -47,7 +49,7 @@ pub struct Account<Event>
     pub account_event_tx: UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub market_event_tx: UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub config: Arc<AccountConfig>,                           // 帐户配置
-    pub states: Arc<RwLock<AccountState<Event>>>,             // 帐户余额
+    pub states: Arc<Mutex<AccountState<Event>>>,             // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
 }
 
@@ -73,7 +75,7 @@ pub struct AccountInitiator<Event>
     account_event_tx: Option<UnboundedSender<AccountEvent>>,
     market_event_tx: Option<UnboundedSender<MarketEvent<Event>>>,
     config: Option<Arc<AccountConfig>>,
-    balances: Option<Arc<RwLock<AccountState<Event>>>>,
+    states: Option<Arc<Mutex<AccountState<Event>>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
@@ -93,7 +95,7 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
                            account_event_tx: None,
                            market_event_tx: None,
                            config: None,
-                           balances: None,
+                           states: None,
                            orders: None }
     }
 
@@ -123,7 +125,7 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
 
     pub fn balances(mut self, value: AccountState<Event>) -> Self
     {
-        self.balances = Some(Arc::new(RwLock::new(value)));
+        self.states = Some(Arc::new(Mutex::new(value)));
         self
     }
 
@@ -140,7 +142,7 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
                      market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
                      config: self.config.ok_or("config is required")?,                               // 检查并获取config
-                     states: self.balances.ok_or("balances is required")?,                           // 检查并获取balances
+                     states: self.states.ok_or("balances is required")?,                           // 检查并获取balances
                      orders: self.orders.ok_or("orders are required")? })
     }
 }
@@ -171,7 +173,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     pub async fn fetch_balances(&self, response_tx: Sender<Result<Vec<TokenBalance>, ExecutionError>>)
     {
-        let balances = self.states.read().await.fetch_all();
+        let balances = self.states.lock().await.fetch_all_balances();
         respond(response_tx, Ok(balances));
     }
 
@@ -225,7 +227,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         let (token, required_balance) = self.calculate_required_available_balance(&order, current_price).await;
 
         // 检查可用余额是否充足
-        self.states.read().await.has_sufficient_available_balance(token, required_balance)?;
+        self.states.lock().await.has_sufficient_available_balance(token, required_balance)?;
 
         // 构建 Open<Order> 并获取写锁
         let open_order = {
@@ -241,7 +243,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         };
 
         // 更新客户余额
-        let balance_event = self.states.write().await.update_from_open(&open_order, required_balance).await.unwrap();
+        let balance_event = self.states.lock().await.apply_open_order_changes(&open_order, required_balance).await.unwrap();
 
         // 获取当前的 exchange_timestamp
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
@@ -259,6 +261,14 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         // 返回已打开的订单
         Ok(open_order)
     }
+
+    pub async fn fetch_positions(&self, response_tx: Sender<Result<AccountPositions, ExecutionError>>)
+    {
+        let positions = self.states.lock().await.positions.lock().await.to_owned();
+        respond(response_tx, Ok(positions));
+    }
+
+
 
     pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
     {
@@ -366,7 +376,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
             for trade in trades {
-                let balance_event = match self.states.write().await.update_from_trade(&trade).await {
+                let balance_event = match self.states.lock().await.apply_trade_changes(&trade).await {
                     | Ok(event) => event,
                     | Err(err) => {
                         warn!("Failed to update balance: {:?}", err);
@@ -434,8 +444,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
         // 在可失败操作成功后，更新客户端余额
         let balance_event = {
-            let mut balances_guard = self.states.write().await;
-            balances_guard.update_from_cancel(&removed)
+            let mut balances_guard = self.states.lock().await;
+            balances_guard.apply_cancel_order_changes(&removed)
         };
 
         // 将 Order<Open> 映射到 Order<Cancelled>

@@ -80,11 +80,6 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
         }
     }
 
-    // pub async fn fetch_positions(&self, response_tx: Sender<Result<Vec<AccountPositions>, ExecutionError>>)
-    // {
-    //     let positions = self.positions.lock().await.clone();
-    //     respond(response_tx, Ok(positions));
-    // }
 
     pub async fn get_exchange_ts(&self) -> Result<i64, ExecutionError>
     {
@@ -98,7 +93,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 
     /// 获取所有[`Token`]的[`Balance`]。
-    pub fn fetch_all(&self) -> Vec<TokenBalance>
+    pub fn fetch_all_balances(&self) -> Vec<TokenBalance>
     {
         self.balances.clone().into_iter().map(|(token, balance)| TokenBalance::new(token, balance)).collect()
     }
@@ -324,7 +319,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
 
     /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
-    pub async fn update_from_open(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExecutionError>
+    pub async fn apply_open_order_changes(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExecutionError>
     {
         if let Some(account) = self.account_ref.upgrade() {
             let position_mode = self.determine_position_mode().await?;
@@ -364,13 +359,13 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                         | Side::Buy => {
                             let delta = BalanceDelta { total: 0.0,
                                                        available: -required_balance };
-                            self.update(&open.instrument.quote, delta);
+                            self.apply_balance_delta(&open.instrument.quote, delta);
                             // position 中增加 deposited_margin
                         }
                         | Side::Sell => {
                             let delta = BalanceDelta { total: 0.0,
                                                        available: -required_balance };
-                            self.update(&open.instrument.base, delta);
+                            self.apply_balance_delta(&open.instrument.base, delta);
                             // position 中增加 deposited_margin
                         }
                     }
@@ -400,7 +395,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
 
     /// 当client取消[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
-    pub fn update_from_cancel(&mut self, cancelled: &Order<Open>) -> TokenBalance
+    pub fn apply_cancel_order_changes(&mut self, cancelled: &Order<Open>) -> TokenBalance
     {
         match cancelled.side {
             | Side::Buy => {
@@ -419,7 +414,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 
     /// 从交易中更新余额并返回 [`AccountEvent`]
-    pub async fn update_from_trade(&mut self, trade_event: &ClientTrade) -> Result<AccountEvent, ExecutionError>
+    pub async fn apply_trade_changes(&mut self, trade_event: &ClientTrade) -> Result<AccountEvent, ExecutionError>
     {
         let Instrument { base, quote, kind, .. } = &trade_event.instrument;
         let fee = trade_event.fees; // 直接从 TradeEvent 中获取费用
@@ -460,8 +455,8 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                     }
                 };
 
-                let base_balance = self.update(base, base_delta);
-                let quote_balance = self.update(quote, quote_delta);
+                let base_balance = self.apply_balance_delta(base, base_delta);
+                let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
                 Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
                                   exchange: ExchangeVariant::SandBox,
@@ -471,7 +466,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 
     /// 将 [`BalanceDelta`] 应用于指定 [`Token`] 的 [`Balance`]，并返回更新后的 [`Balance`] 。
-    pub fn update(&mut self, token: &Token, delta: BalanceDelta) -> Balance
+    pub fn apply_balance_delta(&mut self, token: &Token, delta: BalanceDelta) -> Balance
     {
         let base_balance = self.balance_mut(token).unwrap();
 
