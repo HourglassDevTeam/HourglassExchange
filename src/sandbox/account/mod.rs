@@ -160,6 +160,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     /// `update_exchange_timestamp` 是基本的时间戳更新方法，用于更新 `exchange_timestamp` 值。
     /// `fetch_orders_open` 发送当前所有开放的订单给调用者，用于获取所有未完成的订单。
     /// `fetch_balances` 发送当前所有代币的余额信息，用于获取账户中所有代币的账本数据。
+    /// `fetch_positions` 发送当前所有代币的持仓信息，用于获取账户中所有代币的仓位数据。
     pub fn update_exchange_timestamp(&self, timestamp: i64)
     {
         self.exchange_timestamp.store(timestamp, Ordering::SeqCst);
@@ -177,6 +178,11 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         respond(response_tx, Ok(balances));
     }
 
+    pub async fn fetch_positions(&self, response_tx: Sender<Result<AccountPositions, ExecutionError>>)
+    {
+        let positions = self.states.lock().await.positions.clone();
+        respond(response_tx, Ok(positions));
+    }
     /// [PART 2]
     /// `try_open_order_atomic` 尝试以原子操作方式打开一个订单，确保在验证和更新账户余额后安全地打开订单。
     /// `open_requests_into_pendings` 处理一组订单请求，将其转换为挂起订单，并在成功后更新状态。
@@ -261,13 +267,6 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         // 返回已打开的订单
         Ok(open_order)
     }
-
-    pub async fn fetch_positions(&self, response_tx: Sender<Result<AccountPositions, ExecutionError>>)
-    {
-        let positions = &self.states.lock().await.positions;
-        respond(response_tx, Ok(positions.clone()));
-    }
-
 
 
     pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
