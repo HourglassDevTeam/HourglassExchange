@@ -4,10 +4,6 @@ position_margin_mode = "Isolated"
 commission_level = "Lv2"
 account_leverage_rate = 100.0  # Example leverage rate
 
-[current_commission_rate]
-maker_fees = 0.001
-taker_fees = 0.002
-
 [fees_book]
 spot = { maker_fees = 0.001, taker_fees = 0.002 }
 perpetual = { maker_fees = 0.0005, taker_fees = 0.001 }
