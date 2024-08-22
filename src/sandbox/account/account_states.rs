@@ -543,8 +543,8 @@ mod tests
                         position_mode: PositionDirectionMode::NetMode,
                         position_margin_mode: PositionMarginMode::Isolated,
                         commission_level: CommissionLevel::Lv1,
-                        current_commission_rate: CommissionRates { maker_fees: 0.001,
-                                                                   taker_fees: 0.0015 },
+                        // current_commission_rate: CommissionRates { maker_fees: 0.001,
+                        //                                            taker_fees: 0.0015 },
             account_leverage_rate: leverage_rate,
                         fees_book: HashMap::new() }
     }

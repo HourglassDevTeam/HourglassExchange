@@ -18,7 +18,7 @@ pub struct AccountConfig
     pub position_mode: PositionDirectionMode,
     pub position_margin_mode: PositionMarginMode,
     pub commission_level: CommissionLevel,
-    pub current_commission_rate: CommissionRates,
+    // pub current_commission_rate: CommissionRates,
     pub account_leverage_rate: f64,    // NOTE 每种金融工具应该拥有杠杆比例Registry。这个写法是高度简化的。
     pub fees_book: HashMap<InstrumentKind, CommissionRates>, // 每种金融工具的手续费Registry NOTE 某种些交易所的设置颗粒会精确到Instrument.
 }
@@ -82,6 +82,7 @@ impl CommissionRatesInitiator
                              taker_fees: self.taker_fees.ok_or("Spot taker rate is missing")? })
     }
 }
+
 // NOTE 更新费率函数的样本：为 AccountConfig 添加一个方法来更新佣金费率
 impl AccountConfig
 {
@@ -108,22 +109,22 @@ impl AccountConfig
     }
 
     // 更新当前佣金费率 NOTE This function is currently only demonstrative.
-    pub fn update_commission_rate_with_discount(mut self, commission_rates: &CommissionRates) -> Self
-    {
-        self.current_commission_rate = match self.commission_level {
-            | CommissionLevel::Lv1 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.9,
-                                                        taker_fees: commission_rates.taker_fees * 0.9 },
-            | CommissionLevel::Lv2 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.8,
-                                                        taker_fees: commission_rates.taker_fees * 0.8 },
-            | CommissionLevel::Lv3 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.7,
-                                                        taker_fees: commission_rates.taker_fees * 0.7 },
-            | CommissionLevel::Lv4 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.6,
-                                                        taker_fees: commission_rates.taker_fees * 0.6 },
-            | CommissionLevel::Lv5 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.5,
-                                                        taker_fees: commission_rates.taker_fees * 0.5 },
-        };
-        self
-    }
+    // pub fn update_commission_rate_with_discount(mut self, commission_rates: &CommissionRates) -> Self
+    // {
+    //     self.current_commission_rate = match self.commission_level {
+    //         | CommissionLevel::Lv1 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.9,
+    //                                                     taker_fees: commission_rates.taker_fees * 0.9 },
+    //         | CommissionLevel::Lv2 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.8,
+    //                                                     taker_fees: commission_rates.taker_fees * 0.8 },
+    //         | CommissionLevel::Lv3 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.7,
+    //                                                     taker_fees: commission_rates.taker_fees * 0.7 },
+    //         | CommissionLevel::Lv4 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.6,
+    //                                                     taker_fees: commission_rates.taker_fees * 0.6 },
+    //         | CommissionLevel::Lv5 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.5,
+    //                                                     taker_fees: commission_rates.taker_fees * 0.5 },
+    //     };
+    //     self
+    // }
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -190,7 +191,7 @@ impl AccountConfigInitiator
                            position_mode: self.position_mode.ok_or("position_mode is required")?,
                            position_margin_mode: self.position_margin_mode.ok_or("position_mode is required")?,
                            commission_level: self.commission_level.ok_or("commission_level is required")?,
-                           current_commission_rate: CommissionRates { maker_fees: 0.0, taker_fees: 0.0 },
+                           // current_commission_rate: CommissionRates { maker_fees: 0.0, taker_fees: 0.0 },
                            account_leverage_rate: Default::default(),
                            fees_book: Default::default() })
     }

@@ -382,7 +382,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     fn determine_fees_percent(&self, kind: &InstrumentKind, role: &OrderRole) -> Option<f64>
     {
-        let commission_rates = &self.config.current_commission_rate;
+        let commission_rates = &self.config.fees_book.get(kind)?;
 
         match kind {
             | InstrumentKind::Spot | InstrumentKind::Perpetual => match role {
