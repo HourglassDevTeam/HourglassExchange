@@ -50,9 +50,9 @@ impl PerpetualPosition
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct PerpetualPositionConfig
 {
-    pos_margin_mode: PositionMarginMode,
-    leverage: f64,
-    position_mode: PositionDirectionMode,
+    pub(crate) pos_margin_mode: PositionMarginMode,
+    pub(crate) leverage: f64,
+    pub(crate) position_mode: PositionDirectionMode,
 }
 #[allow(dead_code)]
 pub struct PerpetualPositionBuilder
