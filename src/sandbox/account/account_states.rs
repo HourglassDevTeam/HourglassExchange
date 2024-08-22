@@ -1098,7 +1098,74 @@ use super::*;
         let result = account_state.lock().await.check_position_direction_conflict(&instrument_commodity_option, Side::Buy).await;
         assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
     }
-
-
+    //
+    // #[tokio::test]
+    // async fn test_apply_open_order_changes() {
+    //     let account_state = create_test_account_state().await;
+    //
+    //     // 创建一个新的 AccountConfig 并手动设置 fees_book
+    //     let mut config = create_test_account_config();
+    //     config.fees_book.insert(InstrumentKind::Perpetual, 0.001);
+    //
+    //     // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
+    //     let account = Arc::new(Account {
+    //         exchange_timestamp: AtomicI64::new(123456789),  // 设置一个非零的初始时间戳值
+    //         data: Arc::new(RwLock::new(AccountDataStreams::default())),
+    //         account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+    //         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+    //         config: Arc::new(config),
+    //         states: account_state.clone(),
+    //         orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency {
+    //             fluctuation_mode: FluctuationMode::Sine,
+    //             maximum: 0,
+    //             minimum: 0,
+    //             current_value: 0,
+    //         }).await)),
+    //     });
+    //
+    //     // 设置初始余额
+    //     {
+    //         let mut account_state_locked = account_state.lock().await;
+    //         account_state_locked.balances.insert(Token::from("USDT"), Balance::new(100.0, 100.0, 1.0));
+    //         account_state_locked.account_ref = Arc::downgrade(&account);
+    //     }
+    //
+    //     // 模拟 Open Order 和所需余额
+    //     let instrument = create_test_instrument(InstrumentKind::Perpetual);
+    //     let open_order = Order::<Open> {
+    //         kind: OrderKind::Market,
+    //         exchange: ExchangeVariant::SandBox,
+    //         instrument: instrument.clone(),
+    //         client_ts: 123456789,
+    //         cid: ClientOrderId(Uuid::new_v4()),
+    //         side: Side::Buy,
+    //         state: Open {
+    //             id: OrderId::from("test_order"),
+    //             price: 100.0,
+    //             size: 1.0,
+    //             filled_quantity: 0.0,
+    //             order_role: OrderRole::Maker,
+    //             received_ts: 123456789,
+    //         },
+    //     };
+    //     let required_balance = 50.0;
+    //
+    //     // 执行 apply_open_order_changes 并检查结果
+    //     let result = account_state.lock().await.apply_open_order_changes(&open_order, required_balance).await;
+    //
+    //     // 打印结果
+    //     if let Err(e) = &result {
+    //         println!("Error: {:?}", e);
+    //     }
+    //
+    //     // 确保结果是 Ok
+    //     assert!(result.is_ok());
+    //
+    //     // 先锁定 account_state，再获取余额
+    //     let account_state_guard = account_state.lock().await;
+    //     let updated_balance = account_state_guard.balance(&instrument.quote).unwrap();
+    //
+    //     assert_eq!(updated_balance.available, 100.0 - required_balance);
+    // }
 
 }
