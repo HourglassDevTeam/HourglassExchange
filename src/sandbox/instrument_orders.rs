@@ -20,7 +20,8 @@ use crate::{
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct InstrumentOrders
 {
-    pub batch_id: i64, // NOTE might be redundant
+    pub batch_id: i64
+    , // NOTE might be redundant
     pub bids: Vec<Order<Open>>,
     pub asks: Vec<Order<Open>>,
 }
