@@ -356,7 +356,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Cross) => {
                     // FIXME: NOTE this is DEMONSTRATIVE AND PROBLEMATIC and the common pool is yet to be built.
                     // Cross margin: apply the required balance to a common pool
-                    todo!()
+                    todo!("Handle Cross Margin")
                 }
                 | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Isolated) => {
                     // Isolated margin: apply changes to the specific position's margin
@@ -365,13 +365,11 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                             let delta = BalanceDelta { total: 0.0,
                                                        available: -required_balance };
                             self.apply_balance_delta(&open.instrument.quote, delta);
-                            // position 中增加 deposited_margin
                         }
                         | Side::Sell => {
                             let delta = BalanceDelta { total: 0.0,
                                                        available: -required_balance };
                             self.apply_balance_delta(&open.instrument.base, delta);
-                            // position 中增加 deposited_margin
                         }
                     }
                 }

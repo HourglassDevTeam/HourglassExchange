@@ -2,10 +2,13 @@
 /// CONSIDER: can these positions coexist, if so enums might not be ideal.
 use serde::{Deserialize, Serialize};
 
-use crate::common_infrastructure::{
-    instrument::{kind::InstrumentKind, Instrument},
-    position::{future::FuturePosition, leveraged_token::LeveragedTokenPosition, option::OptionPosition, perpetual::PerpetualPosition},
-};
+use crate::common_infrastructure::{instrument::{kind::InstrumentKind, Instrument}, position::{future::FuturePosition, leveraged_token::LeveragedTokenPosition, option::OptionPosition, perpetual::PerpetualPosition}, Side};
+use crate::common_infrastructure::balance::{Balance, TokenBalance};
+use crate::common_infrastructure::friction::{Fees, PerpetualFees};
+use crate::common_infrastructure::position::perpetual::{PerpetualPositionBuilder, PerpetualPositionConfig};
+use crate::common_infrastructure::position::position_meta::PositionMetaBuilder;
+use crate::error::ExecutionError;
+use crate::ExchangeVariant;
 
 pub(crate) mod future;
 pub(crate) mod leveraged_token;
@@ -31,6 +34,115 @@ impl AccountPositions
             perpetual_pos: None,
             futures_pos: None,
             option_pos: None,
+        }
+    }
+
+    /// 构建一个新的仓位但不更新到仓位列表中
+    // pub async fn build_new_position(
+    //     &self,
+    //     instrument: Instrument,
+    //     side: Side,
+    //     leverage: f64,
+    //     pos_margin_mode: PositionMarginMode,
+    //     position_mode: PositionDirectionMode,
+    //     exchange_ts: i64,
+    //     current_symbol_price: f64,
+    // ) -> Result<PerpetualPosition, ExecutionError> {
+    //     let position_meta = PositionMetaBuilder::new()
+    //         .position_id("new_position".to_string()) // 生成唯一ID，实际实现时需要用到合适的ID生成策略
+    //         .enter_ts(exchange_ts) // 使用当前交易所时间戳
+    //         .update_ts(exchange_ts)
+    //         .exit_balance(TokenBalance {
+    //             token: instrument.base.clone(),
+    //             balance: Balance {
+    //                 current_price: current_symbol_price,
+    //                 total: 0.0,
+    //                 available: 0.0,
+    //             },
+    //         })
+    //         .account_exchange_ts(exchange_ts)
+    //         .exchange(ExchangeVariant::SandBox)
+    //         .instrument(instrument.clone())
+    //         .side(side)
+    //         .current_size(0.0)
+    //         .current_fees_total(Fees::Perpetual(PerpetualFees {
+    //             open_fee_rate: 0.0004, // NOTE 应该从config中调用
+    //             close_fee_rate: 0.0004,// NOTE 应该从config中调用
+    //             funding_rate: 0.0,// NOTE 应该从config中调用
+    //         }))
+    //         .current_avg_price_gross(current_symbol_price)
+    //         .current_symbol_price(current_symbol_price)
+    //         .current_avg_price(current_symbol_price)
+    //         .unrealised_pnl(0.0)
+    //         .realised_pnl(0.0)
+    //         .build()
+    //         .map_err(|err| ExecutionError::SandBox(format!("Failed to build position meta: {}", err)))?;
+    //
+    //     let pos_config = PerpetualPositionConfig {
+    //         pos_margin_mode,
+    //         leverage,
+    //         position_mode,
+    //     };
+    //
+    //     let new_position = PerpetualPositionBuilder::new()
+    //         .meta(position_meta)
+    //         .pos_config(pos_config)
+    //         .liquidation_price(0.0) // 初始设定为 0，稍后可以根据需要更新
+    //         .margin(0.0)            // 初始设定为 0，稍后可以根据需要更新
+    //         .funding_fee(0.0)       // 初始设定为 0，稍后可以根据需要更新
+    //         .build()
+    //         .ok_or_else(|| ExecutionError::SandBox("Failed to build new position".to_string()))?;
+    //
+    //     Ok(new_position)
+    // }
+
+    /// 更新或添加新的仓位
+    pub fn update_position(&mut self, new_position: Position) {
+        match new_position {
+            Position::Perpetual(p) => {
+                if let Some(ref mut positions) = self.perpetual_pos {
+                    if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
+                        *existing_position = p;
+                    } else {
+                        positions.push(p);
+                    }
+                } else {
+                    self.perpetual_pos = Some(vec![p]);
+                }
+            }
+            Position::LeveragedToken(p) => {
+                if let Some(ref mut positions) = self.margin_pos {
+                    if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
+                        *existing_position = p;
+                    } else {
+                        positions.push(p);
+                    }
+                } else {
+                    self.margin_pos = Some(vec![p]);
+                }
+            }
+            Position::Future(p) => {
+                if let Some(ref mut positions) = self.futures_pos {
+                    if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
+                        *existing_position = p;
+                    } else {
+                        positions.push(p);
+                    }
+                } else {
+                    self.futures_pos = Some(vec![p]);
+                }
+            }
+            Position::Option(p) => {
+                if let Some(ref mut positions) = self.option_pos {
+                    if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
+                        *existing_position = p;
+                    } else {
+                        positions.push(p);
+                    }
+                } else {
+                    self.option_pos = Some(vec![p]);
+                }
+            }
         }
     }
     /// 检查账户中是否持有指定交易工具的仓位
