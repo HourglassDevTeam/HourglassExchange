@@ -24,6 +24,15 @@ pub struct AccountPositions
 
 impl AccountPositions
 {
+    /// 创建一个新的 AccountPositions 实例
+    pub fn new_empty() -> Self {
+        Self {
+            margin_pos: None,
+            perpetual_pos: None,
+            futures_pos: None,
+            option_pos: None,
+        }
+    }
     /// 检查账户中是否持有指定交易工具的仓位
     pub(crate) fn has_position(&self, instrument: &Instrument) -> bool
     {

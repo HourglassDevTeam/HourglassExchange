@@ -46,7 +46,13 @@ impl<Event> PartialEq for AccountState<Event> where Event: Clone + Send + Sync +
 }
 
 impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
-{
+{pub fn new(balances: HashMap<Token, Balance>, positions: AccountPositions) -> Self {
+    Self {
+        balances,
+        positions,
+        account_ref: Weak::new(),
+    }
+}
     /// 返回指定[`Token`]的[`Balance`]的引用。
     pub fn balance(&self, token: &Token) -> Result<&Balance, ExecutionError>
     {
@@ -490,5 +496,26 @@ impl<Event> DerefMut for AccountState<Event> where Event: Clone + Send + Sync + 
     fn deref_mut(&mut self) -> &mut Self::Target
     {
         &mut self.balances
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common_infrastructure::token::Token;
+
+    #[tokio::test]
+    async fn test_balance() {
+        let token = Token::from("SOL");
+        let mut balances = HashMap::new();
+        balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
+
+        let positions = AccountPositions::new_empty(); // 假设有一个用于初始化 AccountPositions 的方法
+        let account_state = AccountState::<()>::new(balances, positions);
+
+        let balance = account_state.balance(&token).unwrap();
+        assert_eq!(balance.total, 100.0);
+        assert_eq!(balance.available, 50.0);
     }
 }
