@@ -443,4 +443,69 @@ mod tests {
         assert!(duplicate_result.is_err());
     }
 
+    #[tokio::test]
+    async fn test_determine_maker_taker() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
+        let mut account_orders = AccountOrders::new(instruments, account_latency).await;
+
+        let order = Order {
+            kind: OrderKind::Limit,
+            exchange: ExchangeVariant::SandBox,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            cid: ClientOrderId(Uuid::new_v4()),
+            client_ts: 1000,
+            side: Side::Buy,
+            state: Pending {
+                reduce_only: false,
+                price: 50.0,
+                size: 1.0,
+                predicted_ts: 1000,
+            },
+        };
+
+        let role_maker = account_orders.determine_maker_taker(&order, 50.0).unwrap();
+        assert_eq!(role_maker, OrderRole::Maker);
+
+        let role_taker = account_orders.determine_maker_taker(&order, 60.0).unwrap();
+        assert_eq!(role_taker, OrderRole::Taker);
+    }
+
+    #[tokio::test]
+    async fn test_increment_request_counter() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
+        let account_orders = AccountOrders::new(instruments, account_latency).await;
+
+        assert_eq!(account_orders.request_counter.load(Ordering::Acquire), 0);
+        account_orders.increment_request_counter();
+        assert_eq!(account_orders.request_counter.load(Ordering::Acquire), 1);
+    }
+
+    #[tokio::test]
+    async fn test_order_id() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
+        let account_orders = AccountOrders::new(instruments, account_latency).await;
+
+        let first_order_id = account_orders.order_id();
+        assert_eq!(first_order_id, OrderId("0".to_string()));
+
+        account_orders.increment_request_counter();
+        let second_order_id = account_orders.order_id();
+        assert_eq!(second_order_id, OrderId("1".to_string()));
+    }
+
+
+    #[tokio::test]
+    async fn test_update_latency() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
+        let mut account_orders = AccountOrders::new(instruments, account_latency).await;
+
+        account_orders.update_latency(1000).await;
+
+        let latency = account_orders.latency_generator.read().await;
+        assert!(latency.current_value >= 10 && latency.current_value <= 100);
+    }
 }
