@@ -692,7 +692,7 @@ use super::*;
         let mut balances = HashMap::new();
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
-        let positions = AccountPositions::new(); // 假设有一个用于初始化 AccountPositions 的方法
+        let positions = AccountPositions::init(); // 假设有一个用于初始化 AccountPositions 的方法
         let account_state = AccountState::<()>::new(balances, positions);
 
         let balance = account_state.balance(&token).unwrap();
@@ -706,7 +706,7 @@ use super::*;
         let mut balances = HashMap::new();
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
-        let positions = AccountPositions::new();
+        let positions = AccountPositions::init();
         let mut account_state = AccountState::<()>::new(balances, positions);
 
         let balance_mut = account_state.balance_mut(&token).unwrap();
@@ -724,7 +724,7 @@ use super::*;
         let mut balances = HashMap::new();
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
-        let positions = AccountPositions::new();
+        let positions = AccountPositions::init();
         let account_state = AccountState::<()>::new(balances, positions);
 
         assert!(account_state.has_sufficient_available_balance(&token, 40.0).is_ok());
@@ -737,7 +737,7 @@ use super::*;
         let mut balances = HashMap::new();
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
-        let positions = AccountPositions::new();
+        let positions = AccountPositions::init();
         let mut account_state = AccountState::<()>::new(balances, positions);
 
         let delta = BalanceDelta::new(0.0, -10.0);

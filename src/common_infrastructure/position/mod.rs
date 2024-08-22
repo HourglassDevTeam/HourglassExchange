@@ -9,6 +9,7 @@ use crate::common_infrastructure::position::perpetual::{PerpetualPositionBuilder
 use crate::common_infrastructure::position::position_meta::PositionMetaBuilder;
 use crate::error::ExecutionError;
 use crate::ExchangeVariant;
+use crate::sandbox::account::account_config::AccountConfig;
 
 pub(crate) mod future;
 pub(crate) mod leveraged_token;
@@ -28,7 +29,7 @@ pub struct AccountPositions
 impl AccountPositions
 {
     /// 创建一个新的 AccountPositions 实例
-    pub fn new() -> Self {
+    pub fn init() -> Self {
         Self {
             margin_pos: None,
             perpetual_pos: None,
@@ -36,65 +37,67 @@ impl AccountPositions
             option_pos: None,
         }
     }
+    /// 构建一个新的 PerpetualPosition，但不直接更新到仓位列表中
+    pub async fn build_new_position(
+        &self,
+        config: &AccountConfig,
+        instrument: Instrument,
+        side: Side,
+        leverage: f64,
+        pos_margin_mode: PositionMarginMode,
+        position_mode: PositionDirectionMode,
+        exchange_ts: i64,
+        current_symbol_price: f64,
+    ) -> Result<PerpetualPosition, ExecutionError> {
+        let open_fee_rate = config.get_open_fee_rate(&instrument.kind)?;
 
-    /// 构建一个新的仓位但不更新到仓位列表中
-    // pub async fn build_new_position(
-    //     &self,
-    //     instrument: Instrument,
-    //     side: Side,
-    //     leverage: f64,
-    //     pos_margin_mode: PositionMarginMode,
-    //     position_mode: PositionDirectionMode,
-    //     exchange_ts: i64,
-    //     current_symbol_price: f64,
-    // ) -> Result<PerpetualPosition, ExecutionError> {
-    //     let position_meta = PositionMetaBuilder::new()
-    //         .position_id("new_position".to_string()) // 生成唯一ID，实际实现时需要用到合适的ID生成策略
-    //         .enter_ts(exchange_ts) // 使用当前交易所时间戳
-    //         .update_ts(exchange_ts)
-    //         .exit_balance(TokenBalance {
-    //             token: instrument.base.clone(),
-    //             balance: Balance {
-    //                 current_price: current_symbol_price,
-    //                 total: 0.0,
-    //                 available: 0.0,
-    //             },
-    //         })
-    //         .account_exchange_ts(exchange_ts)
-    //         .exchange(ExchangeVariant::SandBox)
-    //         .instrument(instrument.clone())
-    //         .side(side)
-    //         .current_size(0.0)
-    //         .current_fees_total(Fees::Perpetual(PerpetualFees {
-    //             open_fee_rate: 0.0004, // NOTE 应该从config中调用
-    //             close_fee_rate: 0.0004,// NOTE 应该从config中调用
-    //             funding_rate: 0.0,// NOTE 应该从config中调用
-    //         }))
-    //         .current_avg_price_gross(current_symbol_price)
-    //         .current_symbol_price(current_symbol_price)
-    //         .current_avg_price(current_symbol_price)
-    //         .unrealised_pnl(0.0) // NOTE 初始化为0是否合适
-    //         .realised_pnl(0.0) // NOTE  初始化为0是否合适
-    //         .build()
-    //         .map_err(|err| ExecutionError::SandBox(format!("Failed to build position meta: {}", err)))?;
-    //
-    //     let pos_config = PerpetualPositionConfig {
-    //         pos_margin_mode,
-    //         leverage,
-    //         position_mode,
-    //     };
-    //
-    //     let new_position = PerpetualPositionBuilder::new()
-    //         .meta(position_meta)
-    //         .pos_config(pos_config)
-    //         .liquidation_price(0.0) // 初始设定为 0，稍后可以根据需要更新
-    //         .margin(0.0)            // 初始设定为 0，稍后可以根据需要更新
-    //         .funding_fee(0.0)       // 初始设定为 0，稍后可以根据需要更新
-    //         .build()
-    //         .ok_or_else(|| ExecutionError::SandBox("Failed to build new position".to_string()))?;
-    //
-    //     Ok(new_position)
-    // }
+        let position_meta = PositionMetaBuilder::new()
+            .position_id("new_position".to_string()) // 使用适当的ID生成策略
+            .enter_ts(exchange_ts)
+            .update_ts(exchange_ts)
+            .exit_balance(TokenBalance {
+                token: instrument.base.clone(),
+                balance: Balance {
+                    current_price: current_symbol_price,
+                    total: 0.0,
+                    available: 0.0,
+                },
+            })
+            .account_exchange_ts(exchange_ts)
+            .exchange(ExchangeVariant::SandBox)
+            .instrument(instrument.clone())
+            .side(side)
+            .current_size(0.0)
+            .current_fees_total(Fees::Perpetual(PerpetualFees {
+                open_fee_rate,
+                close_fee_rate: open_fee_rate, // 假设平仓费率与开仓费率相同
+                funding_rate: 0.0, // 可以根据配置或其他逻辑来更新
+            }))
+            .current_avg_price_gross(current_symbol_price)
+            .current_symbol_price(current_symbol_price)
+            .current_avg_price(current_symbol_price)
+            .unrealised_pnl(0.0)
+            .realised_pnl(0.0)
+            .build()
+            .map_err(|err| ExecutionError::SandBox(format!("Failed to build position meta: {}", err)))?;
+
+        let pos_config = PerpetualPositionConfig {
+            pos_margin_mode,
+            leverage,
+            position_mode,
+        };
+
+        let new_position = PerpetualPositionBuilder::new()
+            .meta(position_meta)
+            .pos_config(pos_config)
+            .liquidation_price(0.0) // 初始设定为 0，稍后可以根据需要更新
+            .margin(0.0)            // 初始设定为 0，稍后可以根据需要更新
+            .funding_fee(0.0)       // 初始设定为 0，稍后可以根据需要更新
+            .build()
+            .ok_or_else(|| ExecutionError::SandBox("Failed to build new position".to_string()))?;
+
+        Ok(new_position)
+    }
 
     /// 更新或添加新的仓位
     pub fn update_position(&mut self, new_position: Position) {

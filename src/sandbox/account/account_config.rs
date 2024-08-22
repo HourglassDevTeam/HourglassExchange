@@ -111,6 +111,16 @@ impl AccountConfig
         read_config_file()
     }
 
+
+    /// 根据 InstrumentKind 获取当前的开仓手续费率
+    pub fn get_open_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError> {
+        self.fees_book
+            .get(instrument_kind)
+            .cloned()
+            .ok_or_else(|| ExecutionError::SandBox(format!("Fee rate for {:?} not found", instrument_kind)))
+    }
+
+
     // 更新当前佣金费率
     pub fn update_commission_rate(mut self, commission_rates: &CommissionRates) -> Self
     {
