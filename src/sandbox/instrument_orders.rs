@@ -20,8 +20,7 @@ use crate::{
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct InstrumentOrders
 {
-    pub batch_id: i64
-    , // NOTE might be redundant
+    pub batch_id: i64, // NOTE might be redundant
     pub bids: Vec<Order<Open>>,
     pub asks: Vec<Order<Open>>,
 }
@@ -39,9 +38,9 @@ pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f6
 
         // 针对永续合约的费用计算
         | InstrumentKind::Perpetual => {
-            let perpetual_fees = PerpetualFees { maker_rate: fees_percent * trade_quantity,  // 开仓费率计算
-                                                 taker_rate: fees_percent * trade_quantity, // 平仓费率计算
-                                                 funding_rate: fees_percent * trade_quantity    /* 资金费率计算 */ };
+            let perpetual_fees = PerpetualFees { maker_rate: fees_percent * trade_quantity,   // 开仓费率计算
+                                                 taker_rate: fees_percent * trade_quantity,   // 平仓费率计算
+                                                 funding_rate: fees_percent * trade_quantity  /* 资金费率计算 */ };
             InstrumentFees::new(order.instrument.kind, Fees::Perpetual(perpetual_fees))
         }
 

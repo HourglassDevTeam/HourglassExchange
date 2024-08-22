@@ -27,20 +27,19 @@ pub struct SpotFees
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct PerpetualFees
 {
-    pub maker_rate: f64,  // 开仓费率
-    pub taker_rate: f64, // 平仓费率
-    pub funding_rate: f64,   // 资金费率
+    pub maker_rate: f64,   // 开仓费率
+    pub taker_rate: f64,   // 平仓费率
+    pub funding_rate: f64, // 资金费率
 }
 
 // 期货合约交易费用结构体
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct FutureFees
 {
-    pub maker_rate: f64,  // 开仓费率
-    pub taker_rate: f64, // 平仓费率
-    pub funding_rate: f64,   // 资金费率
+    pub maker_rate: f64,   // 开仓费率
+    pub taker_rate: f64,   // 平仓费率
+    pub funding_rate: f64, // 资金费率
 }
-
 
 // 期权交易费用结构体
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]

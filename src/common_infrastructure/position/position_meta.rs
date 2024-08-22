@@ -1,10 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_infrastructure::{balance::TokenBalance, friction::Fees, instrument::Instrument, Side},
+    common_infrastructure::{balance::TokenBalance, friction::Fees, instrument::Instrument, order::OrderRole, Side},
     ExchangeVariant,
 };
-use crate::common_infrastructure::order::OrderRole;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionMeta
@@ -29,7 +28,7 @@ pub struct PositionMeta
 impl PositionMeta
 {
     // CONSIDER 是否应该吧close fees成本计算进去
-    fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64, include_fees: bool,  order_role: OrderRole)
+    fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64, include_fees: bool, order_role: OrderRole)
     {
         let total_size = self.current_size + trade_size;
         if total_size > 0.0 {
@@ -45,7 +44,7 @@ impl PositionMeta
                 | Fees::Option(fee) => fee.trade_fee_rate * self.current_size,
             }
         }
-        //FIXME BUG~~~~!!!!!
+        // FIXME BUG~~~~!!!!!
         else {
             0.0
         };
@@ -65,7 +64,7 @@ impl PositionMeta
     }
 
     /// 更新 current_avg_price，同时考虑费用
-    pub fn update_avg_price(&mut self, trade_price: f64, trade_size: f64, fees: Fees,  order_role: OrderRole)
+    pub fn update_avg_price(&mut self, trade_price: f64, trade_size: f64, fees: Fees, order_role: OrderRole)
     {
         // 更新 current_fees_total，基于新交易的费用
         self.current_fees_total = fees;
