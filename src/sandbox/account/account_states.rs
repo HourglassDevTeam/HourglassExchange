@@ -16,7 +16,7 @@ use crate::{
     sandbox::account::{account_config::MarginMode, Account},
     ExchangeVariant,
 };
-use future::FuturesPosition;
+use future::FuturePosition;
 use leveraged_token::LeveragedTokenPosition;
 use option::OptionPosition;
 use position::future;
@@ -240,7 +240,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
         Ok(())
     }
     /// 更新 FuturePosition 的方法（占位符）
-    async fn set_future_position(&mut self, _pos: FuturesPosition) -> Result<(), ExecutionError> {
+    async fn set_future_position(&mut self, _pos: FuturePosition) -> Result<(), ExecutionError> {
         todo!("[UniLink_Execution] : Updating Future positions is not yet implemented")
     }
 
@@ -644,6 +644,47 @@ use super::*;
             funding_fee: 0.0,
         }
     }
+
+
+    fn create_test_future_position_with_side(instrument: Instrument, side: Side) -> FuturePosition {
+        FuturePosition {
+            meta: PositionMeta {
+                position_id: Uuid::new_v4().to_string(),
+                enter_ts: 0,
+                update_ts: 0,
+                exit_balance: TokenBalance {
+                    token: instrument.base.clone(),
+                    balance: Balance {
+                        current_price: 0.0,
+                        total: 0.0,
+                        available: 0.0,
+                    },
+                },
+                account_exchange_ts: 0,
+                exchange: ExchangeVariant::SandBox,
+                instrument: instrument.clone(),
+                side,
+                current_size: 0.0,
+                current_fees_total: Fees::Future(FutureFees {
+                    open_fee_rate: 0.0,
+                    close_fee_rate: 0.0,
+                }),
+                current_avg_price_gross: 0.0,
+                current_symbol_price: 0.0,
+                current_avg_price: 0.0,
+                unrealised_pnl: 0.0,
+                realised_pnl: 0.0,
+            },
+            pos_config: FuturePositionConfig {
+                pos_margin_mode: PositionMarginMode::Isolated,
+                leverage: 1.0,
+                position_mode: PositionDirectionMode::LongShortMode,
+            },
+            liquidation_price: 0.0,
+            margin: 0.0,
+        }
+    }
+
     #[tokio::test]
     async fn test_balance() {
         let token = Token::from("SOL");

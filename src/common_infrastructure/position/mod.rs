@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::common_infrastructure::{
     instrument::{kind::InstrumentKind, Instrument},
-    position::{future::FuturesPosition, leveraged_token::LeveragedTokenPosition, option::OptionPosition, perpetual::PerpetualPosition},
+    position::{future::FuturePosition, leveraged_token::LeveragedTokenPosition, option::OptionPosition, perpetual::PerpetualPosition},
 };
 
 pub(crate) mod future;
@@ -18,7 +18,7 @@ pub struct AccountPositions
 {
     pub margin_pos: Option<Vec<LeveragedTokenPosition>>, // NOTE useless in backtest
     pub perpetual_pos: Option<Vec<PerpetualPosition>>,
-    pub futures_pos: Option<Vec<FuturesPosition>>,
+    pub futures_pos: Option<Vec<FuturePosition>>,
     pub option_pos: Option<Vec<OptionPosition>>,
 }
 
@@ -94,6 +94,6 @@ pub enum Position
 {
     Perpetual(PerpetualPosition),
     LeveragedToken(LeveragedTokenPosition),
-    Future(FuturesPosition),
+    Future(FuturePosition),
     Option(OptionPosition),
 }

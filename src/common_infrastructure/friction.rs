@@ -32,6 +32,16 @@ pub struct PerpetualFees
     pub funding_rate: f64,   // 资金费率
 }
 
+// 期货合约交易费用结构体
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
+pub struct FutureFees
+{
+    pub open_fee_rate: f64,  // 开仓费率
+    pub close_fee_rate: f64, // 平仓费率
+    pub funding_rate: f64,   // 资金费率
+}
+
+
 // 期权交易费用结构体
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct OptionFees
@@ -45,6 +55,7 @@ pub struct OptionFees
 pub enum Fees
 {
     Spot(SpotFees),
+    Future(FutureFees),
     Perpetual(PerpetualFees),
     Option(OptionFees),
 }
