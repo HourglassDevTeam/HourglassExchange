@@ -538,9 +538,6 @@ mod tests
     fn create_test_account_config() -> AccountConfig
     {
         let leverage_rate = 1.0;
-        let instrument = Instrument { base: Token::new("BTC"),
-                                      quote: Token::new("USDT"),
-                                      kind: InstrumentKind::Perpetual };
 
         AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
                         position_mode: PositionDirectionMode::NetMode,

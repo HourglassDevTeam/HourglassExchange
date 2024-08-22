@@ -2,22 +2,11 @@ margin_mode = "SimpleMode"
 position_mode = "NetMode"
 position_margin_mode = "Isolated"
 commission_level = "Lv2"
+account_leverage_rate = 100.0  # Example leverage rate
 
 [current_commission_rate]
 maker_fees = 0.001
 taker_fees = 0.002
-
-#[leverage_book.btc_usd_perpetual]
-#base = "btc"
-#quote = "usd"
-#kind = "Perpetual"
-#leverage = 100.0
-
-#[leverage_book.eth_usd_perpetual]
-#base = "eth"
-#quote = "usd"
-#kind = "Perpetual"
-#leverage = 50.0
 
 [fees_book]
 spot = { maker_fees = 0.001, taker_fees = 0.002 }

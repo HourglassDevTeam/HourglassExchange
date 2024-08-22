@@ -33,7 +33,6 @@ impl From<toml::de::Error> for ExecutionError
 
 #[cfg(test)]
 mod tests {
-    use crate::common_infrastructure::instrument::Instrument;
 use super::*;
     use std::fs;
     use std::io::Write;
@@ -50,22 +49,12 @@ use super::*;
     position_mode = "NetMode"
     position_margin_mode = "Isolated"
     commission_level = "Lv2"
+    account_leverage_rate = 100.0  # Example leverage rate
 
     [current_commission_rate]
     maker_fees = 0.001
     taker_fees = 0.002
 
-    [leverage_book.btc_usd_perpetual]
-    base = "btc"
-    quote = "usd"
-    kind = "Perpetual"
-    leverage = 100.0
-
-    [leverage_book.eth_usd_perpetual]
-    base = "eth"
-    quote = "usd"
-    kind = "Perpetual"
-    leverage = 50.0
 
     [fees_book]
     "spot" = { maker_fees = 0.001, taker_fees = 0.002 }
@@ -89,19 +78,13 @@ use super::*;
 
         let config = result.unwrap();
 
-        // Create Instruments to compare with
-        let btc_usd_perpetual = Instrument::new("btc", "usd", InstrumentKind::Perpetual);
-        let eth_usd_perpetual = Instrument::new("eth", "usd", InstrumentKind::Perpetual);
-
-
         assert_eq!(config.margin_mode, MarginMode::SimpleMode);
         assert_eq!(config.position_mode, PositionDirectionMode::NetMode);
         assert_eq!(config.position_margin_mode, PositionMarginMode::Isolated);
         assert_eq!(config.commission_level, CommissionLevel::Lv2);
         assert_eq!(config.current_commission_rate.maker_fees, 0.001);
         assert_eq!(config.current_commission_rate.taker_fees, 0.002);
-        assert_eq!(config.account_leverage_rate, Some(100.0));
-        assert_eq!(config.account_leverage_rate, Some(50.0));
+        assert_eq!(config.account_leverage_rate, 100.0);
         assert_eq!(
             config.fees_book.get(&InstrumentKind::Spot).cloned(),
             Some(CommissionRates {

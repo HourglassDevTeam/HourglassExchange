@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common_infrastructure::{
-        instrument::{kind::InstrumentKind, Instrument},
+        instrument::{kind::InstrumentKind},
         position::{PositionDirectionMode, PositionMarginMode},
     },
     error::ExecutionError,
