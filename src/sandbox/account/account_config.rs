@@ -183,8 +183,7 @@ impl AccountConfigInitiator
         self
     }
 
-    // NOTE CommissionRates here are initiated as all zeros. this could be replaced with actual values fetched from the exchange,
-    //      be it sandbox or not.
+    // NOTE CommissionRates should be imported from config file in the project root.
     pub fn initiate(self) -> Result<AccountConfig, &'static str>
     {
         Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
