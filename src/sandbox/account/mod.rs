@@ -264,8 +264,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     pub async fn fetch_positions(&self, response_tx: Sender<Result<AccountPositions, ExecutionError>>)
     {
-        let positions = self.states.lock().await.positions.lock().await.to_owned();
-        respond(response_tx, Ok(positions));
+        let positions = &self.states.lock().await.positions;
+        respond(response_tx, Ok(positions.clone()));
     }
 
 

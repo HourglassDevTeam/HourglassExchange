@@ -1,21 +1,13 @@
-use std::{
-    collections::HashMap,
-    fmt::Debug,
-    ops::{Deref, DerefMut},
-    sync::{atomic::Ordering, Arc, Weak},
-};
-use tokio::sync::{Mutex, RwLock};
-use future::FuturesPosition;
-use leveraged_token::LeveragedTokenPosition;
-use option::OptionPosition;
-use position::future;
+use crate::common_infrastructure::position;
+use crate::common_infrastructure::position::perpetual::PerpetualPosition;
+use crate::common_infrastructure::position::{leveraged_token, option};
 use crate::{
     common_infrastructure::{
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
         order::{Open, Order},
-        position::{AccountPositions, PositionDirectionMode, Position, PositionMarginMode},
+        position::{AccountPositions, Position, PositionDirectionMode, PositionMarginMode},
         token::Token,
         trade::ClientTrade,
         Side,
@@ -24,17 +16,24 @@ use crate::{
     sandbox::account::{account_config::MarginMode, Account},
     ExchangeVariant,
 };
-use crate::common_infrastructure::position;
-use crate::common_infrastructure::position::{leveraged_token, option};
-use crate::common_infrastructure::position::perpetual::PerpetualPosition;
+use future::FuturesPosition;
+use leveraged_token::LeveragedTokenPosition;
+use option::OptionPosition;
+use position::future;
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    ops::{Deref, DerefMut},
+    sync::{atomic::Ordering, Weak},
+};
 
 #[derive(Clone, Debug)]
 pub struct AccountState<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord + Ord
 {
     pub balances: HashMap<Token, Balance>,
-    pub positions: Arc<Mutex<AccountPositions>>,
-    pub account_ref: Weak<RwLock<Account<Event>>>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
+    pub positions: AccountPositions,
+    pub account_ref: Weak<Account<Event>>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
 }
 
 impl<Event> PartialEq for AccountState<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
@@ -68,7 +67,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     pub async fn get_fee(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
     {
         if let Some(account) = self.account_ref.upgrade() {
-            let account_read = account.read().await;
+            let account_read = account;
             account_read.config
                         .fees_book
                         .get(instrument_kind)
@@ -84,7 +83,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     pub async fn get_exchange_ts(&self) -> Result<i64, ExecutionError>
     {
         if let Some(account) = self.account_ref.upgrade() {
-            let account_read = account.read().await;
+            let account_read = account;
             Ok(account_read.exchange_timestamp.load(Ordering::SeqCst))
         }
         else {
@@ -115,7 +114,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     async fn determine_position_mode(&self) -> Result<PositionDirectionMode, ExecutionError>
     {
         if let Some(account) = self.account_ref.upgrade() {
-            let account_read = account.read().await;
+            let account_read = account;
             Ok(account_read.config.position_mode.clone())
         }
         else {
@@ -128,7 +127,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     async fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError>
     {
         if let Some(account) = self.account_ref.upgrade() {
-            let account_read = account.read().await;
+            let account_read = account;
             Ok(account_read.config.margin_mode.clone())
         }
         else {
@@ -139,7 +138,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     /// 获取指定 `Instrument` 的仓位/
     pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<Position>, ExecutionError>
     {
-        let positions = self.positions.lock().await; // 获取锁
+        let positions = &self.positions; // 获取锁
 
         match instrument.kind {
             | InstrumentKind::Spot => return Err(ExecutionError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument))),
@@ -215,7 +214,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     /// 如果更新成功，返回 `Ok(())`，否则返回一个 `ExecutionError`。
     async fn set_perpetual_position(&mut self, pos: PerpetualPosition) -> Result<(), ExecutionError> {
         // 获取账户的锁，确保在更新仓位信息时没有并发访问的问题
-        let mut positions = self.positions.lock().await;
+        let positions = &mut self.positions;
 
         // 检查账户是否已经有永续合约仓位
         if let Some(perpetual_positions) = &mut positions.perpetual_pos {
@@ -253,7 +252,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     /// 需要首先从 open 订单中确定 InstrumentKind，因为仓位类型各不相同
     pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError>
     {
-        let positions_lock = self.positions.lock().await; // 获取锁
+        let positions_lock = &self.positions; // 获取锁
 
         // 直接调用 AccountPositions 中的 has_position 方法
         if positions_lock.has_position(&open.instrument) {
@@ -265,7 +264,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
 
     async fn check_position_direction_conflict(&self, instrument: &Instrument, side: Side) -> Result<(), ExecutionError>
     {
-        let positions_lock = self.positions.lock().await;
+        let positions_lock = &self.positions;
 
         match instrument.kind {
             | InstrumentKind::Spot => {
@@ -323,7 +322,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     {
         if let Some(account) = self.account_ref.upgrade() {
             let position_mode = self.determine_position_mode().await?;
-            let position_margin_mode = account.read().await.config.position_margin_mode.clone();
+            let position_margin_mode = account.config.position_margin_mode.clone();
 
             // 前置检查 InstrumentKind 和 NetMode 方向
             match open.instrument.kind {
