@@ -49,7 +49,7 @@ impl AccountPositions
         exchange_ts: i64,
         current_symbol_price: f64,
     ) -> Result<PerpetualPosition, ExecutionError> {
-        let open_fee_rate = config.get_open_fee_rate(&instrument.kind)?;
+        let open_fee_rate = config.get_maker_fee_rate(&instrument.kind)?;
 
         let position_meta = PositionMetaBuilder::new()
             .position_id("new_position".to_string()) // 使用适当的ID生成策略
@@ -69,8 +69,8 @@ impl AccountPositions
             .side(side)
             .current_size(0.0)
             .current_fees_total(Fees::Perpetual(PerpetualFees {
-                open_fee_rate,
-                close_fee_rate: open_fee_rate, // 假设平仓费率与开仓费率相同
+                maker_rate: open_fee_rate,
+                taker_rate: open_fee_rate, // 假设平仓费率与开仓费率相同
                 funding_rate: 0.0, // 可以根据配置或其他逻辑来更新
             }))
             .current_avg_price_gross(current_symbol_price)

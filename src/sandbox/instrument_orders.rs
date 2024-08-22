@@ -31,15 +31,15 @@ pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f6
     match order.instrument.kind {
         // 针对现货交易的费用计算
         | InstrumentKind::Spot => {
-            let spot_fees = SpotFees { maker_fee_rate: fees_percent * trade_quantity, // 制造流动性的费率计算
-                                       taker_fee_rate: fees_percent * trade_quantity  /* 消耗流动性的费率计算 */ };
+            let spot_fees = SpotFees { maker_rate: fees_percent * trade_quantity, // 制造流动性的费率计算
+                                       taker_rate: fees_percent * trade_quantity  /* 消耗流动性的费率计算 */ };
             InstrumentFees::new(order.instrument.kind, Fees::Spot(spot_fees))
         }
 
         // 针对永续合约的费用计算
         | InstrumentKind::Perpetual => {
-            let perpetual_fees = PerpetualFees { open_fee_rate: fees_percent * trade_quantity,  // 开仓费率计算
-                                                 close_fee_rate: fees_percent * trade_quantity, // 平仓费率计算
+            let perpetual_fees = PerpetualFees { maker_rate: fees_percent * trade_quantity,  // 开仓费率计算
+                                                 taker_rate: fees_percent * trade_quantity, // 平仓费率计算
                                                  funding_rate: fees_percent * trade_quantity    /* 资金费率计算 */ };
             InstrumentFees::new(order.instrument.kind, Fees::Perpetual(perpetual_fees))
         }

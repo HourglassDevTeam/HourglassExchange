@@ -27,19 +27,15 @@ pub struct AccountConfig
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct CommissionRates
 {
-    pub spot_maker: f64,
-    pub spot_taker: f64,
-    pub perpetual_open: f64,
-    pub perpetual_close: f64,
+    pub maker_fees: f64,
+    pub taker_fees: f64,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CommissionRatesInitiator
 {
-    pub spot_maker: Option<f64>,
-    pub spot_taker: Option<f64>,
-    pub perpetual_open: Option<f64>,
-    pub perpetual_close: Option<f64>,
+    pub maker_fees: Option<f64>,
+    pub taker_fees: Option<f64>,
 }
 
 // 为了确保 CommissionRatesBuilder 被强制实现，可以将 CommissionRates 结构体的初始化方法封装在 builder 方法中。
@@ -64,45 +60,32 @@ impl CommissionRatesInitiator
 {
     pub fn new() -> Self
     {
-        CommissionRatesInitiator { spot_maker: None,
-                                   spot_taker: None,
-                                   perpetual_open: None,
-                                   perpetual_close: None }
-    }
+        CommissionRatesInitiator {
+            maker_fees: None,
+            taker_fees: None,
+        }}
 
-    pub fn spot_maker(mut self, rate: f64) -> Self
-    {
-        self.spot_maker = Some(rate);
-        self
-    }
+        pub fn maker(mut self, rate: f64) -> Self
+        {
+            self.maker_fees = Some(rate);
+            self
+        }
 
-    pub fn spot_taker(mut self, rate: f64) -> Self
-    {
-        self.spot_taker = Some(rate);
-        self
-    }
+        pub fn taker(mut self, rate: f64) -> Self
+        {
+            self.taker_fees = Some(rate);
+            self
+        }
 
-    pub fn perpetual_open(mut self, rate: f64) -> Self
-    {
-        self.perpetual_open = Some(rate);
-        self
-    }
 
-    pub fn perpetual_close(mut self, rate: f64) -> Self
-    {
-        self.perpetual_close = Some(rate);
-        self
+        pub fn build(self) -> Result<CommissionRates, &'static str>
+        {
+            Ok(CommissionRates {
+                maker_fees: self.maker_fees.ok_or("Spot maker rate is missing")?,
+                taker_fees: self.taker_fees.ok_or("Spot taker rate is missing")?,
+            })
+        }
     }
-
-    pub fn build(self) -> Result<CommissionRates, &'static str>
-    {
-        Ok(CommissionRates { spot_maker: self.spot_maker.ok_or("Spot maker rate is missing")?,
-                             spot_taker: self.spot_taker.ok_or("Spot taker rate is missing")?,
-                             perpetual_open: self.perpetual_open.ok_or("Perpetual open rate is missing")?,
-                             perpetual_close: self.perpetual_close.ok_or("Perpetual close rate is missing")? })
-    }
-}
-
 // NOTE 更新费率函数的样本：为 AccountConfig 添加一个方法来更新佣金费率
 impl AccountConfig
 {
@@ -111,18 +94,18 @@ impl AccountConfig
         read_config_file()
     }
 
-    pub fn get_open_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError> {
+    pub fn get_maker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError> {
         self.fees_book
             .get(instrument_kind)
-            .map(|rates| rates.perpetual_open)
+            .map(|rates| rates.maker_fees)
             .ok_or_else(|| ExecutionError::SandBox(format!("Open fee rate for {:?} not found", instrument_kind)))
     }
 
     // 获取指定InstrumentKind的平仓费率
-    pub fn get_close_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError> {
+    pub fn get_taker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError> {
         self.fees_book
             .get(instrument_kind)
-            .map(|rates| rates.perpetual_close)
+            .map(|rates| rates.taker_fees)
             .ok_or_else(|| ExecutionError::SandBox(format!("Close fee rate for {:?} not found", instrument_kind)))
     }
 
@@ -131,26 +114,18 @@ impl AccountConfig
     pub fn update_commission_rate(mut self, commission_rates: &CommissionRates) -> Self
     {
         self.current_commission_rate = match self.commission_level {
-            | CommissionLevel::Lv1 => CommissionRates { spot_maker: commission_rates.spot_maker * 0.9,
-                                                        spot_taker: commission_rates.spot_taker * 0.9,
-                                                        perpetual_open: commission_rates.perpetual_open * 0.9,
-                                                        perpetual_close: commission_rates.perpetual_close * 0.9 },
-            | CommissionLevel::Lv2 => CommissionRates { spot_maker: commission_rates.spot_maker * 0.8,
-                                                        spot_taker: commission_rates.spot_taker * 0.8,
-                                                        perpetual_open: commission_rates.perpetual_open * 0.8,
-                                                        perpetual_close: commission_rates.perpetual_close * 0.8 },
-            | CommissionLevel::Lv3 => CommissionRates { spot_maker: commission_rates.spot_maker * 0.7,
-                                                        spot_taker: commission_rates.spot_taker * 0.7,
-                                                        perpetual_open: commission_rates.perpetual_open * 0.7,
-                                                        perpetual_close: commission_rates.perpetual_close * 0.7 },
-            | CommissionLevel::Lv4 => CommissionRates { spot_maker: commission_rates.spot_maker * 0.6,
-                                                        spot_taker: commission_rates.spot_taker * 0.6,
-                                                        perpetual_open: commission_rates.perpetual_open * 0.6,
-                                                        perpetual_close: commission_rates.perpetual_close * 0.6 },
-            | CommissionLevel::Lv5 => CommissionRates { spot_maker: commission_rates.spot_maker * 0.5,
-                                                        spot_taker: commission_rates.spot_taker * 0.5,
-                                                        perpetual_open: commission_rates.perpetual_open * 0.5,
-                                                        perpetual_close: commission_rates.perpetual_close * 0.5 },
+            | CommissionLevel::Lv1 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.9,
+                                                        taker_fees: commission_rates.taker_fees * 0.9, },
+            | CommissionLevel::Lv2 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.8,
+                                                        taker_fees: commission_rates.taker_fees * 0.8, },
+            | CommissionLevel::Lv3 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.7,
+                                                        taker_fees: commission_rates.taker_fees * 0.7, },
+            | CommissionLevel::Lv4 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.6,
+                                                        taker_fees: commission_rates.taker_fees * 0.6,
+                                                         },
+            | CommissionLevel::Lv5 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.5,
+                                                        taker_fees: commission_rates.taker_fees * 0.5,
+                                                       },
         };
         self
     }
@@ -221,10 +196,8 @@ impl AccountConfigInitiator
                            position_mode: self.position_mode.ok_or("position_mode is required")?,
                            position_margin_mode: self.position_margin_mode.ok_or("position_mode is required")?,
                            commission_level: self.commission_level.ok_or("commission_level is required")?,
-                           current_commission_rate: CommissionRates { spot_maker: 0.0,
-                                                                      spot_taker: 0.0,
-                                                                      perpetual_open: 0.0,
-                                                                      perpetual_close: 0.0 },
+                           current_commission_rate: CommissionRates { maker_fees: 0.0,
+                                                                      taker_fees: 0.0, },
                            leverage_book: Default::default(),
                            fees_book: Default::default() })
     }

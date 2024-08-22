@@ -4,13 +4,8 @@ use crate::{
     common_infrastructure::{balance::TokenBalance, friction::Fees, instrument::Instrument, Side},
     ExchangeVariant,
 };
+use crate::common_infrastructure::order::OrderRole;
 
-#[derive(Debug, PartialEq)]
-pub enum TransactionType
-{
-    Open,  // 开仓
-    Close, // 平仓
-}
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionMeta
 {
@@ -34,7 +29,7 @@ pub struct PositionMeta
 impl PositionMeta
 {
     // CONSIDER 是否应该吧close fees成本计算进去
-    fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64, include_fees: bool, transaction_type: TransactionType)
+    fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64, include_fees: bool,  order_role: OrderRole)
     {
         let total_size = self.current_size + trade_size;
         if total_size > 0.0 {
@@ -42,14 +37,15 @@ impl PositionMeta
             self.current_size = total_size;
         }
 
-        let total_fees = if include_fees && transaction_type == TransactionType::Open {
+        let total_fees = if include_fees && order_role == OrderRole::Maker {
             match &self.current_fees_total {
-                | Fees::Spot(fee) => fee.taker_fee_rate * self.current_size,
-                | Fees::Future(fee) => fee.open_fee_rate * self.current_size,
-                | Fees::Perpetual(fee) => fee.open_fee_rate * self.current_size,
+                | Fees::Spot(fee) => fee.taker_rate * self.current_size,
+                | Fees::Future(fee) => fee.maker_rate * self.current_size,
+                | Fees::Perpetual(fee) => fee.maker_rate * self.current_size,
                 | Fees::Option(fee) => fee.trade_fee_rate * self.current_size,
             }
         }
+        //FIXME BUG~~~~!!!!!
         else {
             0.0
         };
@@ -63,19 +59,19 @@ impl PositionMeta
     }
 
     /// 更新 current_avg_price_gross
-    pub fn update_avg_price_gross(&mut self, trade_price: f64, trade_size: f64, transaction_type: TransactionType)
+    pub fn update_avg_price_gross(&mut self, trade_price: f64, trade_size: f64, transaction_type: OrderRole)
     {
         self.calculate_avg_price(trade_price, trade_size, false, transaction_type);
     }
 
     /// 更新 current_avg_price，同时考虑费用
-    pub fn update_avg_price(&mut self, trade_price: f64, trade_size: f64, fees: Fees, transaction_type: TransactionType)
+    pub fn update_avg_price(&mut self, trade_price: f64, trade_size: f64, fees: Fees,  order_role: OrderRole)
     {
         // 更新 current_fees_total，基于新交易的费用
         self.current_fees_total = fees;
 
         // 调用通用方法计算并更新平均价格
-        self.calculate_avg_price(trade_price, trade_size, true, transaction_type);
+        self.calculate_avg_price(trade_price, trade_size, true, order_role);
     }
 
     /// 更新 current_symbol_price

@@ -26,7 +26,7 @@ use std::{
     ops::{Deref, DerefMut},
     sync::{atomic::Ordering, Weak},
 };
-use crate::common_infrastructure::position::position_meta::TransactionType;
+use crate::common_infrastructure::order::OrderRole;
 
 #[derive(Clone, Debug)]
 pub struct AccountState<Event>
@@ -70,7 +70,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {token}")))
     }
 
-    pub async fn get_fee(&self, instrument_kind: &InstrumentKind, transaction_type:TransactionType) -> Result<f64, ExecutionError> {
+    pub async fn get_fee(&self, instrument_kind: &InstrumentKind, role:OrderRole) -> Result<f64, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account;
             let commission_rates = account_read
@@ -80,9 +80,9 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 .cloned()
                 .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
 
-            match transaction_type {
-                TransactionType::Open => Ok(commission_rates.perpetual_open),
-                TransactionType::Close=> Ok(commission_rates.perpetual_close),
+            match role {
+                OrderRole::Maker => Ok(commission_rates.maker_fees),
+                OrderRole::Taker=> Ok(commission_rates.taker_fees),
             }
         } else {
             Err(ExecutionError::SandBox("Account reference is not set".to_string()))
@@ -551,10 +551,8 @@ use super::*;
             position_margin_mode: PositionMarginMode::Isolated,
             commission_level: CommissionLevel::Lv1,
             current_commission_rate: CommissionRates {
-                spot_maker: 0.001,
-                spot_taker: 0.0015,
-                perpetual_open: 0.0004,
-                perpetual_close: 0.0004,
+                maker_fees: 0.001,
+                taker_fees: 0.0015,
             },
             leverage_book,
             fees_book: HashMap::new(),
@@ -627,8 +625,8 @@ use super::*;
                 side: Side::Buy,
                 current_size: 1.0,
                 current_fees_total: Fees::Perpetual(PerpetualFees {
-                    open_fee_rate: 0.0,
-                    close_fee_rate: 0.0,
+                    maker_rate: 0.0,
+                    taker_rate: 0.0,
                     funding_rate: 0.0,
                 }),
                 current_avg_price_gross: 0.0,
@@ -669,8 +667,8 @@ use super::*;
                 side,
                 current_size: 0.0,
                 current_fees_total: Fees::Future(FutureFees {
-                    open_fee_rate: 0.0,
-                    close_fee_rate: 0.0,
+                    maker_rate: 0.0,
+                    taker_rate: 0.0,
                     funding_rate: 0.0,
                 }),
                 current_avg_price_gross: 0.0,
@@ -780,10 +778,8 @@ use super::*;
 
         // 设置 CommissionRates 并插入到 fees_book 中
         let commission_rates = CommissionRates {
-            spot_maker: 0.0,
-            spot_taker: 0.0,
-            perpetual_open: 0.001, // 设置你想要测试的费率
-            perpetual_close: 0.002, // 设置另一个费率
+            maker_fees: 0.0,
+            taker_fees: 0.0,
         };
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
@@ -810,7 +806,7 @@ use super::*;
         }
 
         // 解锁并调用 get_fee 方法
-        let fee_result = account_state.lock().await.get_fee(&InstrumentKind::Perpetual, TransactionType::Open).await;
+        let fee_result = account_state.lock().await.get_fee(&InstrumentKind::Perpetual, OrderRole::Maker).await;
 
         if let Err(e) = &fee_result {
             println!("Error: {:?}", e);
@@ -829,10 +825,8 @@ use super::*;
 
         // 设置 CommissionRates 并插入到 fees_book 中
         let commission_rates = CommissionRates {
-            spot_maker: 0.0,
-            spot_taker: 0.0,
-            perpetual_open: 0.001, // 设置你想要测试的费率
-            perpetual_close: 0.002, // 设置另一个费率
+            maker_fees: 0.0,
+            taker_fees: 0.0,
         };
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
@@ -876,10 +870,8 @@ use super::*;
 
         // 设置 CommissionRates 并插入到 fees_book 中
         let commission_rates = CommissionRates {
-            spot_maker: 0.0,
-            spot_taker: 0.0,
-            perpetual_open: 0.001, // 设置你想要测试的费率
-            perpetual_close: 0.002, // 设置另一个费率
+            maker_fees: 0.0,
+            taker_fees: 0.0,
         };
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
@@ -921,10 +913,8 @@ use super::*;
 
         // 设置 CommissionRates 并插入到 fees_book 中
         let commission_rates = CommissionRates {
-            spot_maker: 0.0,
-            spot_taker: 0.0,
-            perpetual_open: 0.001, // 设置你想要测试的费率
-            perpetual_close: 0.002, // 设置另一个费率
+            maker_fees: 0.0,
+            taker_fees: 0.0,
         };
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
@@ -980,8 +970,8 @@ use super::*;
                 side: Side::Buy,
                 current_size: 0.0,
                 current_fees_total: Fees::Perpetual(PerpetualFees {
-                    open_fee_rate: 0.0,
-                    close_fee_rate: 0.0,
+                    maker_rate: 0.0,
+                    taker_rate: 0.0,
                     funding_rate: 0.0,
                 }),
                 current_avg_price_gross: 0.0,

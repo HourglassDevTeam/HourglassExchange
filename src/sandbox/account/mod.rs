@@ -340,15 +340,15 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     fn determine_fees_percent(&self, kind: &InstrumentKind, side: &Side) -> Option<f64>
     {
         let commission_rates = &self.config.current_commission_rate;
-
+        // FIXME 大错特错～～！！
         match kind {
             | InstrumentKind::Spot => match side {
-                | Side::Buy => Some(commission_rates.spot_maker),
-                | Side::Sell => Some(commission_rates.spot_taker),
+                | Side::Buy => Some(commission_rates.maker_fees),
+                | Side::Sell => Some(commission_rates.taker_fees),
             },
             | InstrumentKind::Perpetual => match side {
-                | Side::Buy => Some(commission_rates.perpetual_open),
-                | Side::Sell => Some(commission_rates.perpetual_close),
+                | Side::Buy => Some(commission_rates.maker_fees),
+                | Side::Sell => Some(commission_rates.taker_fees),
             },
             | _ => {
                 warn!("Unsupported InstrumentKind: {:?}", kind);
