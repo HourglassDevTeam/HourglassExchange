@@ -307,28 +307,77 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
+
     pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhousePublicTrade>) {
-        // FIXME 根据某种逻辑确定订单角色（这里假设所有的订单都是taker）
-        let order_role = OrderRole::Taker;
+        let current_price = market_event.kind.price;
 
-        // 确定费用百分比
-        let fees_percent = match self.determine_fees_percent(&market_event.instrument.kind, &order_role) {
-            Some(fees) => fees,
-            None => return, // 无效的 InstrumentKind，直接返回
-        };
+        // 克隆 pending_registry 避免借用冲突
+        let pending_registry = &self.orders.read().await.pending_registry;
 
-        // 获取Instrument相关的订单
-        let mut orders = match self.get_orders_for_instrument(&market_event.instrument).await {
-            Some(orders) => orders,
-            None => return, // 未找到对应的 InstrumentOrders，直接返回
-        };
+        // 遍历 pending_registry 来处理每个订单
+        for order in pending_registry {
+            // 在需要时获取可写锁来调用可变方法
+            let role = self.orders.write().await.determine_maker_taker(order, current_price);
 
-        // 根据Side匹配订单并生成交易
-        let trades = self.match_orders_by_side(&mut orders, &market_event, fees_percent, &market_event.kind.parse_side());
+            if let Ok(OrderRole::Maker) = role {
+                // 生成 open_order 在 orders_write 的借用作用域外
+                let open_order = {
+                    let mut orders_write = self.orders.write().await;
+                    orders_write.build_order_open(order.clone(), OrderRole::Maker).await
+                };
 
-        // 处理生成的交易
-        self.process_trades(trades).await;
+                // 在 orders_write 的作用域内处理 instrument_orders
+                let mut orders_write = self.orders.write().await;
+                if let Ok(instrument_orders) = orders_write.ins_orders_mut(&order.instrument) {
+                    // 将订单加入到相应的订单簿
+                    instrument_orders.add_order_open(open_order);
+
+                    // 获取手续费
+                    let fees_percent = self.determine_fees_percent(&order.instrument.kind, &OrderRole::Maker);
+
+                    // 匹配订单并生成交易
+                    let trades = match instrument_orders.determine_matching_side(&market_event) {
+                        Some(Side::Buy) => instrument_orders.match_bids(&market_event, fees_percent.expect("REASON")),
+                        Some(Side::Sell) => instrument_orders.match_asks(&market_event, fees_percent.expect("REASON")),
+                        None => continue, // 跳过当前订单处理
+                    };
+
+                    self.process_trades(trades).await;
+
+                }
+            } else if let Ok(OrderRole::Taker) = role {
+                // 生成 open_order 在 orders_write 的借用作用域外
+                let open_order = {
+                    let mut orders_write = self.orders.write().await;
+                    orders_write.build_order_open(order.clone(), OrderRole::Taker).await
+                };
+
+                // 在 orders_write 的作用域内处理 instrument_orders
+                let mut orders_write = self.orders.write().await;
+                if let Ok(instrument_orders) = orders_write.ins_orders_mut(&order.instrument) {
+                    // 将订单加入到相应的订单簿
+                    instrument_orders.add_order_open(open_order);
+
+                    // 获取手续费
+                    let fees_percent = self.determine_fees_percent(&order.instrument.kind, &OrderRole::Taker);
+
+                    // 匹配订单并生成交易
+                    let trades = match instrument_orders.determine_matching_side(&market_event) {
+                        Some(Side::Buy) => instrument_orders.match_bids(&market_event, fees_percent.expect("REASON")),
+                        Some(Side::Sell) => instrument_orders.match_asks(&market_event, fees_percent.expect("REASON")),
+                        None => continue, // 跳过当前订单处理
+                    };
+
+                    self.process_trades(trades).await;
+
+                }
+            }
+        }
     }
+
+
+
+
 
     fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade>
     {
