@@ -45,6 +45,7 @@ impl PositionMeta
         let total_fees = if include_fees && transaction_type == TransactionType::Open {
             match &self.current_fees_total {
                 | Fees::Spot(fee) => fee.taker_fee_rate * self.current_size,
+                | Fees::Future(fee) => fee.open_fee_rate * self.current_size,
                 | Fees::Perpetual(fee) => fee.open_fee_rate * self.current_size,
                 | Fees::Option(fee) => fee.trade_fee_rate * self.current_size,
             }

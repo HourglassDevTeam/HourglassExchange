@@ -273,14 +273,14 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
         let positions_lock = &self.positions;
 
         match instrument.kind {
-            | InstrumentKind::Spot => {
-                todo!()
+            InstrumentKind::Spot => {
+                return Err(ExecutionError::NotImplemented("Spot position conflict check not implemented".into()));
             }
-            | InstrumentKind::CommodityOption => {
-                todo!()
+            InstrumentKind::CommodityOption => {
+                return Err(ExecutionError::NotImplemented("CommodityOption position conflict check not implemented".into()));
             }
-            | InstrumentKind::CommodityFuture => {
-                todo!()
+            InstrumentKind::CommodityFuture => {
+                return Err(ExecutionError::NotImplemented("CommodityFuture position conflict check not implemented".into()));
             }
             | InstrumentKind::Perpetual => {
                 if let Some(perpetual_positions) = &positions_lock.perpetual_pos {
@@ -521,8 +521,9 @@ use super::*;
     use tokio::sync::RwLock;
     use uuid::Uuid;
     use crate::common_infrastructure::event::ClientOrderId;
-    use crate::common_infrastructure::friction::{Fees, PerpetualFees};
+    use crate::common_infrastructure::friction::{Fees, FutureFees, PerpetualFees};
     use crate::common_infrastructure::order::{OrderId, OrderKind, OrderRole};
+    use crate::common_infrastructure::position::future::FuturePositionConfig;
     use crate::common_infrastructure::position::perpetual::PerpetualPositionConfig;
     use crate::common_infrastructure::position::position_meta::PositionMeta;
 
@@ -668,6 +669,7 @@ use super::*;
                 current_fees_total: Fees::Future(FutureFees {
                     open_fee_rate: 0.0,
                     close_fee_rate: 0.0,
+                    funding_rate: 0.0,
                 }),
                 current_avg_price_gross: 0.0,
                 current_symbol_price: 0.0,
@@ -682,6 +684,7 @@ use super::*;
             },
             liquidation_price: 0.0,
             margin: 0.0,
+            funding_fee: 0.0,
         }
     }
 
@@ -1059,12 +1062,12 @@ use super::*;
         let result = account_state.lock().await.check_position_direction_conflict(&instrument, Side::Buy).await;
         assert!(result.is_ok());
 
-        // 情况2：模拟存在冲突的Perpetual仓位
+        // 情况2：模拟存在冲突的Perpetual仓位，注意这里 `side` 是 `Sell`
         account_state.lock().await.positions.perpetual_pos = Some(vec![
             create_test_perpetual_position(instrument.clone()),
         ]);
 
-        let result = account_state.lock().await.check_position_direction_conflict(&instrument, Side::Buy).await;
+        let result = account_state.lock().await.check_position_direction_conflict(&instrument, Side::Sell).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), ExecutionError::InvalidDirection);
 
@@ -1073,7 +1076,7 @@ use super::*;
         let result = account_state.lock().await.check_position_direction_conflict(&instrument_future, Side::Buy).await;
         assert!(result.is_ok());
 
-        // 情况4：模拟存在冲突的Future仓位
+        // 情况4：模拟存在冲突的Future仓位，注意这里 `side` 是 `Sell`
         account_state.lock().await.positions.futures_pos = Some(vec![
             create_test_future_position_with_side(instrument_future.clone(), Side::Sell),
         ]);
@@ -1095,6 +1098,7 @@ use super::*;
         let result = account_state.lock().await.check_position_direction_conflict(&instrument_commodity_option, Side::Buy).await;
         assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
     }
+
 
 
 }
