@@ -94,4 +94,8 @@ pub enum ExecutionError
     /// 无效的金融工具。
     #[error("[UniLinkExecution] : Invalid instrument: {0}")]
     InvalidInstrument(String),
+
+    /// NotImplemented。
+    #[error("[UniLinkExecution] : Invalid instrument: {0}")]
+    NotImplemented(String),
 }
