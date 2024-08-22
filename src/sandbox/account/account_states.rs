@@ -511,11 +511,59 @@ mod tests {
         let mut balances = HashMap::new();
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
-        let positions = AccountPositions::new_empty(); // 假设有一个用于初始化 AccountPositions 的方法
+        let positions = AccountPositions::new(); // 假设有一个用于初始化 AccountPositions 的方法
         let account_state = AccountState::<()>::new(balances, positions);
 
         let balance = account_state.balance(&token).unwrap();
         assert_eq!(balance.total, 100.0);
         assert_eq!(balance.available, 50.0);
     }
+
+    #[tokio::test]
+    async fn test_balance_mut() {
+        let token = Token::from("TEST");
+        let mut balances = HashMap::new();
+        balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
+
+        let positions = AccountPositions::new();
+        let mut account_state = AccountState::<()>::new(balances, positions);
+
+        let balance_mut = account_state.balance_mut(&token).unwrap();
+        balance_mut.available -= 10.0;
+        assert_eq!(balance_mut.available, 40.0);
+
+        let balance = account_state.balance(&token).unwrap();
+        assert_eq!(balance.available, 40.0);
+    }
+
+
+    #[tokio::test]
+    async fn test_has_sufficient_available_balance() {
+        let token = Token::from("TEST");
+        let mut balances = HashMap::new();
+        balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
+
+        let positions = AccountPositions::new();
+        let account_state = AccountState::<()>::new(balances, positions);
+
+        assert!(account_state.has_sufficient_available_balance(&token, 40.0).is_ok());
+        assert!(account_state.has_sufficient_available_balance(&token, 60.0).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_apply_balance_delta() {
+        let token = Token::from("TEST");
+        let mut balances = HashMap::new();
+        balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
+
+        let positions = AccountPositions::new();
+        let mut account_state = AccountState::<()>::new(balances, positions);
+
+        let delta = BalanceDelta::new(0.0, -10.0);
+        let balance = account_state.apply_balance_delta(&token, delta);
+
+        assert_eq!(balance.total, 100.0);
+        assert_eq!(balance.available, 40.0);
+    }
+
 }

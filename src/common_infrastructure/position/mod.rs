@@ -25,7 +25,7 @@ pub struct AccountPositions
 impl AccountPositions
 {
     /// 创建一个新的 AccountPositions 实例
-    pub fn new_empty() -> Self {
+    pub fn new() -> Self {
         Self {
             margin_pos: None,
             perpetual_pos: None,
