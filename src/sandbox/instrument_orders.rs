@@ -215,7 +215,7 @@ impl InstrumentOrders
         trades
     }
 
-    // FIXME count和tradeid 还有orderid的关系是错误的。
+    // FIXME count和 tradeid 还有 orderid 的关系是错误的。
     // 辅助函数：生成 TradeEvent
     fn generate_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> ClientTrade
     {
