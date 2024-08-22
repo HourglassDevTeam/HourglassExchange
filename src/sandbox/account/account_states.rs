@@ -537,11 +537,10 @@ mod tests
     }
     fn create_test_account_config() -> AccountConfig
     {
-        let mut leverage_book = HashMap::new();
+        let leverage_rate = 1.0;
         let instrument = Instrument { base: Token::new("BTC"),
                                       quote: Token::new("USDT"),
                                       kind: InstrumentKind::Perpetual };
-        leverage_book.insert(instrument.clone(), 10.0);
 
         AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
                         position_mode: PositionDirectionMode::NetMode,
@@ -549,7 +548,7 @@ mod tests
                         commission_level: CommissionLevel::Lv1,
                         current_commission_rate: CommissionRates { maker_fees: 0.001,
                                                                    taker_fees: 0.0015 },
-                        leverage_book,
+            account_leverage_rate: leverage_rate,
                         fees_book: HashMap::new() }
     }
     async fn create_test_account_state() -> Arc<Mutex<AccountState<()>>>

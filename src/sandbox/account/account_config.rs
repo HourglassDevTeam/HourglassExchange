@@ -19,7 +19,7 @@ pub struct AccountConfig
     pub position_margin_mode: PositionMarginMode,
     pub commission_level: CommissionLevel,
     pub current_commission_rate: CommissionRates,
-    pub leverage_book: HashMap<Instrument, f64>,             // 每种金融工具的杠杆比例Registry
+    pub account_leverage_rate: f64,    // NOTE 每种金融工具应该拥有杠杆比例Registry。这个写法是高度简化的。
     pub fees_book: HashMap<InstrumentKind, CommissionRates>, // 每种金融工具的手续费Registry NOTE 某种些交易所的设置颗粒会精确到Instrument.
 }
 
@@ -191,7 +191,7 @@ impl AccountConfigInitiator
                            position_margin_mode: self.position_margin_mode.ok_or("position_mode is required")?,
                            commission_level: self.commission_level.ok_or("commission_level is required")?,
                            current_commission_rate: CommissionRates { maker_fees: 0.0, taker_fees: 0.0 },
-                           leverage_book: Default::default(),
+                           account_leverage_rate: Default::default(),
                            fees_book: Default::default() })
     }
 }
