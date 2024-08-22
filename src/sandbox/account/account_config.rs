@@ -107,8 +107,8 @@ impl AccountConfig
             .ok_or_else(|| ExecutionError::SandBox(format!("Close fee rate for {:?} not found", instrument_kind)))
     }
 
-    // 更新当前佣金费率
-    pub fn update_commission_rate(mut self, commission_rates: &CommissionRates) -> Self
+    // 更新当前佣金费率 NOTE This function is currently only demonstrative.
+    pub fn update_commission_rate_with_discount(mut self, commission_rates: &CommissionRates) -> Self
     {
         self.current_commission_rate = match self.commission_level {
             | CommissionLevel::Lv1 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.9,
