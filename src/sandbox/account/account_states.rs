@@ -26,7 +26,6 @@ use std::{
     ops::{Deref, DerefMut},
     sync::{atomic::Ordering, Weak},
 };
-use crate::common_infrastructure::position::position_meta::TransactionType;
 
 #[derive(Clone, Debug)]
 pub struct AccountState<Event>
@@ -70,21 +69,18 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {token}")))
     }
 
-    pub async fn get_fee(&self, instrument_kind: &InstrumentKind, transaction_type:TransactionType) -> Result<f64, ExecutionError> {
+    /// 获取指定 [`InstrumentKind`] 的手续费。
+    pub async fn get_fee(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
+    {
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account;
-            let commission_rates = account_read
-                .config
-                .fees_book
-                .get(instrument_kind)
-                .cloned()
-                .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
-
-            match transaction_type {
-                TransactionType::Open => Ok(commission_rates.perpetual_open),
-                TransactionType::Close=> Ok(commission_rates.perpetual_close),
-            }
-        } else {
+            account_read.config
+                        .fees_book
+                        .get(instrument_kind)
+                        .cloned()
+                        .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))
+        }
+        else {
             Err(ExecutionError::SandBox("Account reference is not set".to_string()))
         }
     }
@@ -773,19 +769,11 @@ use super::*;
 
     #[tokio::test]
     async fn test_get_fee() {
-        let account_state = create_test_account_state().await;
+        let  account_state = create_test_account_state().await;
 
         // 创建一个新的 AccountConfig 并手动设置 fees_book
         let mut config = create_test_account_config();
-
-        // 设置 CommissionRates 并插入到 fees_book 中
-        let commission_rates = CommissionRates {
-            spot_maker: 0.0,
-            spot_taker: 0.0,
-            perpetual_open: 0.001, // 设置你想要测试的费率
-            perpetual_close: 0.002, // 设置另一个费率
-        };
-        config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
+        config.fees_book.insert(InstrumentKind::Perpetual, 0.001);
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account {
@@ -810,14 +798,15 @@ use super::*;
         }
 
         // 解锁并调用 get_fee 方法
-        let fee_result = account_state.lock().await.get_fee(&InstrumentKind::Perpetual, TransactionType::Open).await;
+        let fee_result = account_state.lock().await.get_fee(&InstrumentKind::Perpetual).await;
+
 
         if let Err(e) = &fee_result {
             println!("Error: {:?}", e);
         }
 
         assert!(fee_result.is_ok());
-        assert_eq!(fee_result.unwrap(), 0.001); // 确保你检查的是插入的 perpetual_open 费率
+        assert_eq!(fee_result.unwrap(), 0.001);
     }
 
     #[tokio::test]
@@ -826,15 +815,7 @@ use super::*;
 
         // 创建一个新的 AccountConfig 并手动设置 fees_book
         let mut config = create_test_account_config();
-
-        // 设置 CommissionRates 并插入到 fees_book 中
-        let commission_rates = CommissionRates {
-            spot_maker: 0.0,
-            spot_taker: 0.0,
-            perpetual_open: 0.001, // 设置你想要测试的费率
-            perpetual_close: 0.002, // 设置另一个费率
-        };
-        config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
+        config.fees_book.insert(InstrumentKind::Perpetual, 0.001);
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account {
@@ -873,15 +854,7 @@ use super::*;
 
         // 创建一个新的 AccountConfig 并手动设置 fees_book
         let mut config = create_test_account_config();
-
-        // 设置 CommissionRates 并插入到 fees_book 中
-        let commission_rates = CommissionRates {
-            spot_maker: 0.0,
-            spot_taker: 0.0,
-            perpetual_open: 0.001, // 设置你想要测试的费率
-            perpetual_close: 0.002, // 设置另一个费率
-        };
-        config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
+        config.fees_book.insert(InstrumentKind::Perpetual, 0.001);
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account {
@@ -918,15 +891,7 @@ use super::*;
 
         // 创建一个新的 AccountConfig 并手动设置 fees_book
         let mut config = create_test_account_config();
-
-        // 设置 CommissionRates 并插入到 fees_book 中
-        let commission_rates = CommissionRates {
-            spot_maker: 0.0,
-            spot_taker: 0.0,
-            perpetual_open: 0.001, // 设置你想要测试的费率
-            perpetual_close: 0.002, // 设置另一个费率
-        };
-        config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
+        config.fees_book.insert(InstrumentKind::Perpetual, 0.001);
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account {

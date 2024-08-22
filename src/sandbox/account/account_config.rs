@@ -20,7 +20,7 @@ pub struct AccountConfig
     pub commission_level: CommissionLevel,
     pub current_commission_rate: CommissionRates,
     pub leverage_book: HashMap<Instrument, f64>, // 每种金融工具的杠杆比例Registry
-    pub fees_book: HashMap<InstrumentKind, CommissionRates>, // 每种金融工具的手续费Registry NOTE 某种些交易所的设置颗粒会精确到Instrument.
+    pub fees_book: HashMap<InstrumentKind, f64>, // 每种金融工具的手续费Registry NOTE 某种些交易所的设置颗粒会精确到Instrument.
 }
 
 // NOTE 增加假设的佣金费率结构, 用于模拟交易所账户上。每个账户都有自己的佣金费率。
@@ -111,19 +111,13 @@ impl AccountConfig
         read_config_file()
     }
 
+
+    /// 根据 InstrumentKind 获取当前的开仓手续费率
     pub fn get_open_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError> {
         self.fees_book
             .get(instrument_kind)
-            .map(|rates| rates.perpetual_open)
-            .ok_or_else(|| ExecutionError::SandBox(format!("Open fee rate for {:?} not found", instrument_kind)))
-    }
-
-    // 获取指定InstrumentKind的平仓费率
-    pub fn get_close_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError> {
-        self.fees_book
-            .get(instrument_kind)
-            .map(|rates| rates.perpetual_close)
-            .ok_or_else(|| ExecutionError::SandBox(format!("Close fee rate for {:?} not found", instrument_kind)))
+            .cloned()
+            .ok_or_else(|| ExecutionError::SandBox(format!("Fee rate for {:?} not found", instrument_kind)))
     }
 
 
