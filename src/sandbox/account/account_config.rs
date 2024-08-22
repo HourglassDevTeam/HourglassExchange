@@ -108,23 +108,6 @@ impl AccountConfig
             .ok_or_else(|| ExecutionError::SandBox(format!("Close fee rate for {:?} not found", instrument_kind)))
     }
 
-    // 更新当前佣金费率 NOTE This function is currently only demonstrative.
-    // pub fn update_commission_rate_with_discount(mut self, commission_rates: &CommissionRates) -> Self
-    // {
-    //     self.current_commission_rate = match self.commission_level {
-    //         | CommissionLevel::Lv1 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.9,
-    //                                                     taker_fees: commission_rates.taker_fees * 0.9 },
-    //         | CommissionLevel::Lv2 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.8,
-    //                                                     taker_fees: commission_rates.taker_fees * 0.8 },
-    //         | CommissionLevel::Lv3 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.7,
-    //                                                     taker_fees: commission_rates.taker_fees * 0.7 },
-    //         | CommissionLevel::Lv4 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.6,
-    //                                                     taker_fees: commission_rates.taker_fees * 0.6 },
-    //         | CommissionLevel::Lv5 => CommissionRates { maker_fees: commission_rates.maker_fees * 0.5,
-    //                                                     taker_fees: commission_rates.taker_fees * 0.5 },
-    //     };
-    //     self
-    // }
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -191,7 +174,6 @@ impl AccountConfigInitiator
                            position_mode: self.position_mode.ok_or("position_mode is required")?,
                            position_margin_mode: self.position_margin_mode.ok_or("position_mode is required")?,
                            commission_level: self.commission_level.ok_or("commission_level is required")?,
-                           // current_commission_rate: CommissionRates { maker_fees: 0.0, taker_fees: 0.0 },
                            account_leverage_rate: Default::default(),
                            fees_book: Default::default() })
     }
