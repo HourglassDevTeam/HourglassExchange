@@ -1122,7 +1122,7 @@ use super::*;
         assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
     }
 
-    /// NOTE tests for functions used to apply changes are currently frozen as they are yet subject to further changes under construction.
+    // NOTE tests for functions used to apply changes are currently frozen as they are yet subject to further changes under construction.
     // #[tokio::test]
     // async fn test_apply_open_order_changes() {
     //     let account_state = create_test_account_state().await;
