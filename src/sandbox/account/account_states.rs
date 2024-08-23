@@ -730,52 +730,52 @@ mod tests
         assert!(all_balances.iter().any(|b| b.token == token2));
     }
 
-    // #[tokio::test]
-    // async fn test_get_fee() {
-    //     let account_state = create_test_account_state().await;
-    //
-    //     // 创建一个新的 AccountConfig 并手动设置 fees_book
-    //     let mut config = create_test_account_config();
-    //
-    //     // 设置 CommissionRates 并插入到 fees_book 中
-    //     let commission_rates = CommissionRates {
-    //         maker_fees: 0.0,
-    //         taker_fees: 0.0,
-    //     };
-    //     config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
-    //
-    //     // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
-    //     let account = Arc::new(Account {
-    //         exchange_timestamp: AtomicI64::new(0),
-    //         data: Arc::new(RwLock::new(AccountDataStreams::default())),
-    //         account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-    //         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-    //         config: Arc::new(config),
-    //         states: account_state.clone(),
-    //         orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency {
-    //             fluctuation_mode: FluctuationMode::Sine,
-    //             maximum: 0,
-    //             minimum: 0,
-    //             current_value: 0,
-    //         }).await)),
-    //     });
-    //
-    //     // 更新 account_state 的 account_ref
-    //     {
-    //         let mut account_state_locked = account_state.lock().await;
-    //         account_state_locked.account_ref = Arc::downgrade(&account);
-    //     }
-    //
-    //     // 解锁并调用 get_fee 方法
-    //     let fee_result = account_state.lock().await.get_fee(&InstrumentKind::Perpetual, OrderRole::Maker).await;
-    //
-    //     if let Err(e) = &fee_result {
-    //         println!("Error: {:?}", e);
-    //     }
-    //
-    //     assert!(fee_result.is_ok());
-    //     assert_eq!(fee_result.unwrap(), 0.001); // 确保你检查的是插入的 perpetual_open 费率
-    // }
+    #[tokio::test]
+    async fn test_get_fee() {
+        let account_state = create_test_account_state().await;
+
+        // 创建一个新的 AccountConfig 并手动设置 fees_book
+        let mut config = create_test_account_config();
+
+        // 设置 CommissionRates 并插入到 fees_book 中
+        let commission_rates = CommissionRates {
+            maker_fees: 0.001,
+            taker_fees: 0.002,
+        };
+        config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
+
+        // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
+        let account = Arc::new(Account {
+            exchange_timestamp: AtomicI64::new(0),
+            data: Arc::new(RwLock::new(AccountDataStreams::default())),
+            account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+            market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+            config: Arc::new(config),
+            states: account_state.clone(),
+            orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency {
+                fluctuation_mode: FluctuationMode::Sine,
+                maximum: 0,
+                minimum: 0,
+                current_value: 0,
+            }).await)),
+        });
+
+        // 更新 account_state 的 account_ref
+        {
+            let mut account_state_locked = account_state.lock().await;
+            account_state_locked.account_ref = Arc::downgrade(&account);
+        }
+
+        // 解锁并调用 get_fee 方法
+        let fee_result = account_state.lock().await.get_fee(&InstrumentKind::Perpetual, OrderRole::Maker).await;
+
+        if let Err(e) = &fee_result {
+            println!("Error: {:?}", e);
+        }
+
+        assert!(fee_result.is_ok());
+        assert_eq!(fee_result.unwrap(), 0.001); // 确保你检查的是插入的 perpetual_open 费率
+    }
 
     #[tokio::test]
     async fn test_get_exchange_ts()
@@ -941,12 +941,12 @@ mod tests
         let instrument = perpetual_position.meta.instrument.clone(); // 确保使用相同的 Instrument
         let position_result = account_state.lock().await.get_position(&instrument).await;
 
-        if let Ok(Some(position)) = &position_result {
-            println!("Position found: {:?}", position);
-        }
-        else {
-            println!("Position not found or error occurred.");
-        }
+        // if let Ok(Some(position)) = &position_result {
+        //     println!("Position found: {:?}", position);
+        // }
+        // else {
+        //     println!("Position not found or error occurred.");
+        // }
 
         assert!(position_result.is_ok());
         assert!(position_result.unwrap().is_some());
@@ -978,11 +978,6 @@ mod tests
         // 在没有任何仓位的情况下调用
         let result = account_state.lock().await.any_position_open(&open_order).await;
 
-        // 打印结果以帮助调试
-        match &result {
-            | Ok(val) => println!("Success: {:?}", val),
-            | Err(e) => println!("Error occurred: {:?}", e),
-        }
 
         assert_eq!(result.expect("Failed to check position open status"), false);
 
@@ -991,11 +986,6 @@ mod tests
 
         let result = account_state.lock().await.any_position_open(&open_order).await;
 
-        // 再次打印结果
-        match &result {
-            | Ok(val) => println!("Success: {:?}", val),
-            | Err(e) => println!("Error occurred: {:?}", e),
-        }
 
         assert_eq!(result.expect("Failed to check position open status"), true);
     }
@@ -1043,73 +1033,4 @@ mod tests
         assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
     }
 
-    // NOTE tests for functions used to apply changes are currently frozen as they are yet subject to further changes under construction.
-    // #[tokio::test]
-    // async fn test_apply_open_order_changes() {
-    //     let account_state = create_test_account_state().await;
-    //
-    //     // 创建一个新的 AccountConfig 并手动设置 fees_book
-    //     let mut config = create_test_account_config();
-    //     config.fees_book.insert(InstrumentKind::Perpetual, 0.001);
-    //
-    //     // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
-    //     let account = Arc::new(Account {
-    //         exchange_timestamp: AtomicI64::new(123456789),  // 设置一个非零的初始时间戳值
-    //         data: Arc::new(RwLock::new(AccountDataStreams::default())),
-    //         account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-    //         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-    //         config: Arc::new(config),
-    //         states: account_state.clone(),
-    //         orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency {
-    //             fluctuation_mode: FluctuationMode::Sine,
-    //             maximum: 0,
-    //             minimum: 0,
-    //             current_value: 0,
-    //         }).await)),
-    //     });
-    //
-    //     // 设置初始余额
-    //     {
-    //         let mut account_state_locked = account_state.lock().await;
-    //         account_state_locked.balances.insert(Token::from("USDT"), Balance::new(100.0, 100.0, 1.0));
-    //         account_state_locked.account_ref = Arc::downgrade(&account);
-    //     }
-    //
-    //     // 模拟 Open Order 和所需余额
-    //     let instrument = create_test_instrument(InstrumentKind::Perpetual);
-    //     let open_order = Order::<Open> {
-    //         kind: OrderKind::Market,
-    //         exchange: ExchangeVariant::SandBox,
-    //         instrument: instrument.clone(),
-    //         client_ts: 123456789,
-    //         cid: ClientOrderId(Uuid::new_v4()),
-    //         side: Side::Buy,
-    //         state: Open {
-    //             id: OrderId::from("test_order"),
-    //             price: 100.0,
-    //             size: 1.0,
-    //             filled_quantity: 0.0,
-    //             order_role: OrderRole::Maker,
-    //             received_ts: 123456789,
-    //         },
-    //     };
-    //     let required_balance = 50.0;
-    //
-    //     // 执行 apply_open_order_changes 并检查结果
-    //     let result = account_state.lock().await.apply_open_order_changes(&open_order, required_balance).await;
-    //
-    //     // 打印结果
-    //     if let Err(e) = &result {
-    //         println!("Error: {:?}", e);
-    //     }
-    //
-    //     // 确保结果是 Ok
-    //     assert!(result.is_ok());
-    //
-    //     // 先锁定 account_state，再获取余额
-    //     let account_state_guard = account_state.lock().await;
-    //     let updated_balance = account_state_guard.balance(&instrument.quote).unwrap();
-    //
-    //     assert_eq!(updated_balance.available, 100.0 - required_balance);
-    // }
 }

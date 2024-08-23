@@ -35,11 +35,11 @@ pub enum SandBoxClientEvent
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    // in our case the 'optional' config parameter in the sandbox exchange is an UnboundedSender
-    type Config = (UnboundedSender<SandBoxClientEvent>, UnboundedReceiver<SandBoxClientEvent>);
-
     // very naturally, the client's kind is determined by and aligned the exchange.
     const CLIENT_KIND: ExchangeVariant = ExchangeVariant::SandBox;
+
+    // in our case the 'optional' config parameter in the sandbox exchange is an UnboundedSender
+    type Config = (UnboundedSender<SandBoxClientEvent>, UnboundedReceiver<SandBoxClientEvent>);
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>, local_timestamp: i64) -> Self
     {
