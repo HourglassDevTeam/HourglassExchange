@@ -58,9 +58,8 @@ impl AccountPositions
     ) -> Result<PerpetualPosition, ExecutionError> {
         let open_fee_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
         // 根据 Instrument 和 Side 动态生成 position_id
-        let position_id = format!("{}_{}", trade.instrument, if trade.side == Side::Buy { "Long" } else { "Short" });
         let position_meta = PositionMetaBuilder::new()
-            .position_id(position_id) // NOTE 使用适当的ID生成策略。 {"Instrument"} + {"Long"||"Short"}
+            .position_id(format!("{}_{}", trade.instrument, if trade.side == Side::Buy { "Long" } else { "Short" }))
             .enter_ts(exchange_ts)
             .update_ts(exchange_ts)
             .exit_balance(TokenBalance { // NOTE 怎么搞
@@ -71,7 +70,6 @@ impl AccountPositions
                     available: 0.0,
                 },
             })
-            .account_exchange_ts(exchange_ts) // NOTE this may well be Redundant
             .exchange(ExchangeVariant::SandBox)
             .instrument(trade.instrument.clone())
             .side(trade.side)

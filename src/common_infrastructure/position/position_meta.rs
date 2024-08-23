@@ -12,7 +12,6 @@ pub struct PositionMeta
     pub enter_ts: i64,                // 静态数据
     pub update_ts: i64,               // 实时更新
     pub exit_balance: TokenBalance,   // 静态更新（退出时更新）
-    pub account_exchange_ts: i64,     // 实时更新
     pub exchange: ExchangeVariant,    // 静态数据
     pub instrument: Instrument,       // 静态数据
     pub side: Side,                   // 静态数据
@@ -102,7 +101,6 @@ pub struct PositionMetaBuilder
     enter_ts: Option<i64>,
     update_ts: Option<i64>,
     exit_balance: Option<TokenBalance>,
-    account_exchange_ts: Option<i64>,
     exchange: Option<ExchangeVariant>,
     instrument: Option<Instrument>,
     side: Option<Side>,
@@ -124,7 +122,6 @@ impl PositionMetaBuilder
                enter_ts: None,
                update_ts: None,
                exit_balance: None,
-               account_exchange_ts: None,
                exchange: None,
                instrument: None,
                side: None,
@@ -161,11 +158,6 @@ impl PositionMetaBuilder
         self
     }
 
-    pub fn account_exchange_ts(mut self, account_exchange_ts: i64) -> Self
-    {
-        self.account_exchange_ts = Some(account_exchange_ts);
-        self
-    }
 
     pub fn exchange(mut self, exchange: ExchangeVariant) -> Self
     {
@@ -233,7 +225,6 @@ impl PositionMetaBuilder
                           enter_ts: self.enter_ts.ok_or("enter_ts is required")?,
                           update_ts: self.update_ts.ok_or("update_ts is required")?,
                           exit_balance: self.exit_balance.ok_or("exit_balance is required")?,
-                          account_exchange_ts: self.account_exchange_ts.ok_or("account_exchange_ts is required")?,
                           exchange: self.exchange.ok_or("exchange is required")?,
                           instrument: self.instrument.ok_or("instrument is required")?,
                           side: self.side.ok_or("side is required")?,
