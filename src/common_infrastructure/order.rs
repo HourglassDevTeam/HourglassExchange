@@ -80,9 +80,7 @@ pub struct RequestCancel
 }
 
 // 从Id直接生成RequestCancel
-impl<Id> From<Id> for RequestCancel
-where
-    Id: Into<OrderId>,
+impl<Id> From<Id> for RequestCancel where Id: Into<OrderId>
 {
     fn from(id: Id) -> Self
     {
@@ -136,20 +134,22 @@ pub enum OrderRole
     Maker,
     Taker,
 }
-impl Ord for Order<Open> {
-    fn cmp(&self, other: &Self) -> Ordering {
+impl Ord for Order<Open>
+{
+    fn cmp(&self, other: &Self) -> Ordering
+    {
         match self.state.price.partial_cmp(&other.state.price) {
-            Some(ordering) => ordering,
-            None => panic!(
-                "[UniLinkExecution] : Failed to compare prices. One of the prices is NaN: self = {:?}, other = {:?}",
-                self.state.price, other.state.price
-            ),
+            | Some(ordering) => ordering,
+            | None => panic!("[UniLinkExecution] : Failed to compare prices. One of the prices is NaN: self = {:?}, other = {:?}",
+                             self.state.price, other.state.price),
         }
     }
 }
 
-impl PartialOrd for Order<Open> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+impl PartialOrd for Order<Open>
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering>
+    {
         // 使用 Ord 实现的 cmp 方法，这样 partial_cmp 可以继承 Ord 的错误处理逻辑
         Some(self.cmp(other))
     }
@@ -165,9 +165,7 @@ pub struct Cancelled
     pub id: OrderId,
 }
 
-impl<Id> From<Id> for Cancelled
-where
-    Id: Into<OrderId>,
+impl<Id> From<Id> for Cancelled where Id: Into<OrderId>
 {
     fn from(id: Id) -> Self
     {
@@ -179,9 +177,7 @@ where
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct OrderId(pub String);
 
-impl<Id> From<Id> for OrderId
-where
-    Id: Display,
+impl<Id> From<Id> for OrderId where Id: Display
 {
     fn from(id: Id) -> Self
     {
@@ -193,14 +189,12 @@ impl From<Order<Open>> for Order<Cancelled>
 {
     fn from(order: Order<Open>) -> Self
     {
-        Self {
-            kind: order.kind,
-            exchange: order.exchange,
-            instrument: order.instrument.clone(),
-            cid: order.cid,
-            client_ts: order.client_ts,
-            side: order.side,
-            state: Cancelled { id: order.state.id },
-        }
+        Self { kind: order.kind,
+               exchange: order.exchange,
+               instrument: order.instrument.clone(),
+               cid: order.cid,
+               client_ts: order.client_ts,
+               side: order.side,
+               state: Cancelled { id: order.state.id } }
     }
 }

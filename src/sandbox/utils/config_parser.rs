@@ -47,20 +47,24 @@ impl From<toml::de::Error> for ExecutionError
     }
 }
 
-
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
-    use crate::common_infrastructure::instrument::kind::InstrumentKind;
-    use crate::common_infrastructure::position::{PositionDirectionMode, PositionMarginMode};
-    use crate::sandbox::account::account_config::{CommissionLevel, CommissionRates, MarginMode};
-    use std::fs;
-    use std::io::Write;
+    use crate::{
+        common_infrastructure::{
+            instrument::kind::InstrumentKind,
+            position::{PositionDirectionMode, PositionMarginMode},
+        },
+        sandbox::account::account_config::{CommissionLevel, CommissionRates, MarginMode},
+    };
+    use std::{fs, io::Write};
     use tempfile::tempdir;
 
     /// 测试成功读取配置文件的情况
     #[test]
-    fn test_read_config_file_success() {
+    fn test_read_config_file_success()
+    {
         // 创建一个临时的TOML配置，符合`AccountConfig`结构体的定义
         let toml_content = r#"
     margin_mode = "SimpleMode"
@@ -82,9 +86,7 @@ mod tests {
         // 将TOML内容写入临时文件
         let config_path = Path::new("test_config.toml");
         let mut file = fs::File::create(&config_path).expect("Failed to create test config file");
-        file.write_all(toml_content.as_bytes())
-            .expect("Failed to write to test config file");
-
+        file.write_all(toml_content.as_bytes()).expect("Failed to write to test config file");
 
         // 执行`read_config_file`函数
         let result = read_config_file();
@@ -102,25 +104,18 @@ mod tests {
         assert_eq!(config.position_margin_mode, PositionMarginMode::Isolated);
         assert_eq!(config.commission_level, CommissionLevel::Lv2);
         assert_eq!(config.account_leverage_rate, 100.0);
-        assert_eq!(
-            config.fees_book.get(&InstrumentKind::Spot).cloned(),
-            Some(CommissionRates {
-                maker_fees: 0.001,
-                taker_fees: 0.002
-            })
-        );
-        assert_eq!(
-            config.fees_book.get(&InstrumentKind::Perpetual).cloned(),
-            Some(CommissionRates {
-                maker_fees: 0.0005,
-                taker_fees: 0.001
-            })
-        );
+        assert_eq!(config.fees_book.get(&InstrumentKind::Spot).cloned(),
+                   Some(CommissionRates { maker_fees: 0.001,
+                                          taker_fees: 0.002 }));
+        assert_eq!(config.fees_book.get(&InstrumentKind::Perpetual).cloned(),
+                   Some(CommissionRates { maker_fees: 0.0005,
+                                          taker_fees: 0.001 }));
     }
 
     /// 测试配置文件缺失的情况
     #[test]
-    fn test_read_config_file_missing() {
+    fn test_read_config_file_missing()
+    {
         // 创建临时目录
         let dir = tempdir().unwrap();
 
@@ -130,11 +125,9 @@ mod tests {
 
         // 调用函数并检查结果
         let config_result = read_config_file();
-        assert!(
-            matches!(config_result, Err(ExecutionError::ConfigMissing(_))),
-            "Expected ConfigMissing error, got {:?}",
-            config_result
-        );
+        assert!(matches!(config_result, Err(ExecutionError::ConfigMissing(_))),
+                "Expected ConfigMissing error, got {:?}",
+                config_result);
 
         // 将当前目录切换回原来的目录
         std::env::set_current_dir(original_dir).unwrap();

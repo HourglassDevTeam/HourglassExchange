@@ -1,7 +1,6 @@
 /// NOTE currently under construction
 use serde::{Deserialize, Serialize};
 
-
 pub mod event;
 pub mod historical;
 pub mod live;

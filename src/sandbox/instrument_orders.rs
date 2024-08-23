@@ -1,9 +1,7 @@
-use std::cmp::Ordering;
-use std::fmt::Debug;
+use std::{cmp::Ordering, fmt::Debug};
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::ExecutionError;
 use crate::{
     common_infrastructure::{
         datafeed::event::MarketEvent,
@@ -13,6 +11,7 @@ use crate::{
         trade::{ClientTrade, TradeId},
         Side,
     },
+    error::ExecutionError,
     sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade,
 };
 
@@ -31,20 +30,16 @@ pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f6
     match order.instrument.kind {
         // 针对现货交易的费用计算
         | InstrumentKind::Spot => {
-            let spot_fees = SpotFees {
-                maker_rate: fees_percent * trade_quantity, // 制造流动性的费率计算
-                taker_rate: fees_percent * trade_quantity, /* 消耗流动性的费率计算 */
-            };
+            let spot_fees = SpotFees { maker_rate: fees_percent * trade_quantity, // 制造流动性的费率计算
+                                       taker_rate: fees_percent * trade_quantity  /* 消耗流动性的费率计算 */ };
             InstrumentFees::new(order.instrument.kind, Fees::Spot(spot_fees))
         }
 
         // 针对永续合约的费用计算
         | InstrumentKind::Perpetual => {
-            let perpetual_fees = PerpetualFees {
-                maker_rate: fees_percent * trade_quantity,   // 开仓费率计算
-                taker_rate: fees_percent * trade_quantity,   // 平仓费率计算
-                funding_rate: fees_percent * trade_quantity, /* 资金费率计算 */
-            };
+            let perpetual_fees = PerpetualFees { maker_rate: fees_percent * trade_quantity,   // 开仓费率计算
+                                                 taker_rate: fees_percent * trade_quantity,   // 平仓费率计算
+                                                 funding_rate: fees_percent * trade_quantity  /* 资金费率计算 */ };
             InstrumentFees::new(order.instrument.kind, Fees::Perpetual(perpetual_fees))
         }
 
@@ -155,7 +150,8 @@ impl InstrumentOrders
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            } else {
+            }
+            else {
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_bid.state.filled_quantity += trade_quantity;
@@ -205,7 +201,8 @@ impl InstrumentOrders
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            } else {
+            }
+            else {
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_ask.state.filled_quantity += trade_quantity;
@@ -220,21 +217,20 @@ impl InstrumentOrders
 
     // FIXME count和 tradeid 还有 orderid 的关系是错误的。
     // 辅助函数：生成 TradeEvent
-    pub fn generate_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> Result<ClientTrade, ExecutionError> {
+    pub fn generate_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> Result<ClientTrade, ExecutionError>
+    {
         let fee = trade_quantity * order.state.price * fees_percent;
 
         // 尝试将 OrderId 转换为 TradeId
         let trade_id = order.state.id.0.parse::<i64>().map_err(|_| ExecutionError::InvalidID)?;
 
-        Ok(ClientTrade {
-            id: TradeId(trade_id),
-            instrument: order.instrument.clone(),
-            side: order.side,
-            price: order.state.price,
-            size: trade_quantity,
-            count: 1, // NOTE 假设每笔交易计数为1，可以根据实际情况调整
-            fees: fee,
-        })
+        Ok(ClientTrade { id: TradeId(trade_id),
+                         instrument: order.instrument.clone(),
+                         side: order.side,
+                         price: order.state.price,
+                         size: trade_quantity,
+                         count: 1, // NOTE 假设每笔交易计数为1，可以根据实际情况调整
+                         fees: fee })
     }
 
     /// 计算所有未成交买单和卖单的总数。
@@ -244,46 +240,43 @@ impl InstrumentOrders
     }
 }
 
-
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
-    use crate::common_infrastructure::order::{OrderId, OrderKind, OrderRole};
-    use crate::common_infrastructure::token::Token;
-    use crate::common_infrastructure::{
-        event::ClientOrderId,
-        instrument::Instrument,
-        Side,
+    use crate::{
+        common_infrastructure::{
+            event::ClientOrderId,
+            instrument::Instrument,
+            order::{OrderId, OrderKind, OrderRole},
+            token::Token,
+            Side,
+        },
+        ExchangeVariant,
     };
-    use crate::ExchangeVariant;
     use uuid::Uuid;
 
-    fn create_order(side: Side, price: f64, size: f64) -> Order<Open> {
-        Order {
-            kind: OrderKind::Limit,
-            exchange: ExchangeVariant::Binance,
-            instrument: Instrument {
-                base: Token::from("SOL"),
-                quote: Token::from("USDT"),
-                kind: Default::default(),
-            },
-            client_ts: 0,
-            cid: ClientOrderId(Uuid::new_v4()),
-            side,
-            state: Open {
-                id: OrderId("12345".into()), // 使用一个有效的 OrderId
-                price,
-                size,
-                filled_quantity: 0.0,
-                order_role: OrderRole::Maker,
-                received_ts: 0,
-            },
-        }
+    fn create_order(side: Side, price: f64, size: f64) -> Order<Open>
+    {
+        Order { kind: OrderKind::Limit,
+                exchange: ExchangeVariant::Binance,
+                instrument: Instrument { base: Token::from("SOL"),
+                                         quote: Token::from("USDT"),
+                                         kind: Default::default() },
+                client_ts: 0,
+                cid: ClientOrderId(Uuid::new_v4()),
+                side,
+                state: Open { id: OrderId("12345".into()), // 使用一个有效的 OrderId
+                              price,
+                              size,
+                              filled_quantity: 0.0,
+                              order_role: OrderRole::Maker,
+                              received_ts: 0 } }
     }
 
-
     #[test]
-    fn test_add_order_open() {
+    fn test_add_order_open()
+    {
         let mut instrument_orders = InstrumentOrders::default();
 
         let order_buy = create_order(Side::Buy, 100.0, 1.0);
@@ -299,12 +292,11 @@ mod tests {
     }
 
     #[test]
-    fn test_determine_matching_side() {
-        let mut instrument_orders = InstrumentOrders {
-            batch_id: 0,
-            bids: Vec::new(),
-            asks: Vec::new(),
-        };
+    fn test_determine_matching_side()
+    {
+        let mut instrument_orders = InstrumentOrders { batch_id: 0,
+                                                       bids: Vec::new(),
+                                                       asks: Vec::new() };
 
         let order_buy = create_order(Side::Buy, 100.0, 1.0);
         let order_sell = create_order(Side::Sell, 110.0, 1.0);
@@ -313,105 +305,82 @@ mod tests {
         instrument_orders.add_order_open(order_sell);
 
         // 创建 MarketEvent，价格在买单和卖单之间
-        let market_event = MarketEvent {
-            exchange_time: 1625097600000,
-            received_time: 1625097610000,
-            exchange: ExchangeVariant::Binance,
-            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-            kind: ClickhousePublicTrade {
-                symbol: "BTCUSDT".to_string(),
-                side: "buy".to_string(),
-                price: 105.0,
-                timestamp: 1625097600000,
-                amount: 1.0,
-            },
-        };
+        let market_event = MarketEvent { exchange_time: 1625097600000,
+                                         received_time: 1625097610000,
+                                         exchange: ExchangeVariant::Binance,
+                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+                                         kind: ClickhousePublicTrade { symbol: "BTCUSDT".to_string(),
+                                                                       side: "buy".to_string(),
+                                                                       price: 105.0,
+                                                                       timestamp: 1625097600000,
+                                                                       amount: 1.0 } };
 
         let matching_side = instrument_orders.determine_matching_side(&market_event);
         assert_eq!(matching_side, None);
 
         // 创建 MarketEvent，价格匹配买单
-        let market_event = MarketEvent {
-            exchange_time: 1625097600000,
-            received_time: 1625097610000,
-            exchange: ExchangeVariant::Binance,
-            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-            kind: ClickhousePublicTrade {
-                symbol: "BTCUSDT".to_string(),
-                side: "buy".to_string(),
-                price: 100.0,
-                timestamp: 1625097600000,
-                amount: 1.0,
-            },
-        };
+        let market_event = MarketEvent { exchange_time: 1625097600000,
+                                         received_time: 1625097610000,
+                                         exchange: ExchangeVariant::Binance,
+                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+                                         kind: ClickhousePublicTrade { symbol: "BTCUSDT".to_string(),
+                                                                       side: "buy".to_string(),
+                                                                       price: 100.0,
+                                                                       timestamp: 1625097600000,
+                                                                       amount: 1.0 } };
 
         let matching_side = instrument_orders.determine_matching_side(&market_event);
         assert_eq!(matching_side, Some(Side::Buy));
 
         // 创建 MarketEvent，价格匹配卖单
-        let market_event = MarketEvent {
-            exchange_time: 1625097600000,
-            received_time: 1625097610000,
-            exchange: ExchangeVariant::Binance,
-            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-            kind: ClickhousePublicTrade {
-                symbol: "BTCUSDT".to_string(),
-                side: "sell".to_string(),
-                price: 110.0,
-                timestamp: 1625097600000,
-                amount: 1.0,
-            },
-        };
+        let market_event = MarketEvent { exchange_time: 1625097600000,
+                                         received_time: 1625097610000,
+                                         exchange: ExchangeVariant::Binance,
+                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+                                         kind: ClickhousePublicTrade { symbol: "BTCUSDT".to_string(),
+                                                                       side: "sell".to_string(),
+                                                                       price: 110.0,
+                                                                       timestamp: 1625097600000,
+                                                                       amount: 1.0 } };
 
         let matching_side = instrument_orders.determine_matching_side(&market_event);
         assert_eq!(matching_side, Some(Side::Sell));
     }
 
-
     #[test]
-    fn test_match_bids() {
-        let mut instrument_orders = InstrumentOrders {
-            batch_id: 0,
-            bids: Vec::new(),
-            asks: Vec::new(),
-        };
+    fn test_match_bids()
+    {
+        let mut instrument_orders = InstrumentOrders { batch_id: 0,
+                                                       bids: Vec::new(),
+                                                       asks: Vec::new() };
 
         let order_buy = create_order(Side::Buy, 100.0, 1.0);
         instrument_orders.add_order_open(order_buy);
 
         // 创建 MarketEvent，价格便宜
-        let market_event = MarketEvent {
-            exchange_time: 1625097600000,
-            received_time: 1625097610000,
-            exchange: ExchangeVariant::Binance,
-            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-            kind: ClickhousePublicTrade {
-                symbol: "BTCUSDT".to_string(),
-                side: "sell".to_string(),
-                price: 95.0,
-                timestamp: 1625097600000,
-                amount: 1.0,
-            },
-        };
+        let market_event = MarketEvent { exchange_time: 1625097600000,
+                                         received_time: 1625097610000,
+                                         exchange: ExchangeVariant::Binance,
+                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+                                         kind: ClickhousePublicTrade { symbol: "BTCUSDT".to_string(),
+                                                                       side: "sell".to_string(),
+                                                                       price: 95.0,
+                                                                       timestamp: 1625097600000,
+                                                                       amount: 1.0 } };
 
         let trades = InstrumentOrders::match_bids(&mut instrument_orders, &market_event, 0.01);
         assert_eq!(trades.len(), 1); // 价格匹配
 
-
         // 创建 MarketEvent，价格刚好达到买单
-        let market_event = MarketEvent {
-            exchange_time: 1625097600000,
-            received_time: 1625097610000,
-            exchange: ExchangeVariant::Binance,
-            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-            kind: ClickhousePublicTrade {
-                symbol: "BTCUSDT".to_string(),
-                side: "sell".to_string(),
-                price: 100.0,
-                timestamp: 1625097600000,
-                amount: 1.0,
-            },
-        };
+        let market_event = MarketEvent { exchange_time: 1625097600000,
+                                         received_time: 1625097610000,
+                                         exchange: ExchangeVariant::Binance,
+                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+                                         kind: ClickhousePublicTrade { symbol: "BTCUSDT".to_string(),
+                                                                       side: "sell".to_string(),
+                                                                       price: 100.0,
+                                                                       timestamp: 1625097600000,
+                                                                       amount: 1.0 } };
 
         let trades = instrument_orders.match_bids(&market_event, 0.01);
         assert_eq!(trades.len(), 0); // 价格匹配，但是之前的订单已经完成了，所以现在bids长度是0.
@@ -421,19 +390,15 @@ mod tests {
         let order_buy_partial = create_order(Side::Buy, 100.0, 2.0);
         instrument_orders.add_order_open(order_buy_partial);
 
-        let market_event = MarketEvent {
-            exchange_time: 1625097600000,
-            received_time: 1625097610000,
-            exchange: ExchangeVariant::Binance,
-            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-            kind: ClickhousePublicTrade {
-                symbol: "BTCUSDT".to_string(),
-                side: "sell".to_string(),
-                price: 100.0,
-                timestamp: 1625097600000,
-                amount: 1.0,
-            },
-        };
+        let market_event = MarketEvent { exchange_time: 1625097600000,
+                                         received_time: 1625097610000,
+                                         exchange: ExchangeVariant::Binance,
+                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+                                         kind: ClickhousePublicTrade { symbol: "BTCUSDT".to_string(),
+                                                                       side: "sell".to_string(),
+                                                                       price: 100.0,
+                                                                       timestamp: 1625097600000,
+                                                                       amount: 1.0 } };
 
         let trades = instrument_orders.match_bids(&market_event, 0.01);
         assert_eq!(trades.len(), 1); // 部分匹配
@@ -443,48 +408,39 @@ mod tests {
         assert_eq!(remaining_order.state.filled_quantity, 1.0); // 已成交数量为1.0
     }
     #[test]
-    fn test_match_asks() {
-        let mut instrument_orders = InstrumentOrders {
-            batch_id: 0,
-            bids: Vec::new(),
-            asks: Vec::new(),
-        };
+    fn test_match_asks()
+    {
+        let mut instrument_orders = InstrumentOrders { batch_id: 0,
+                                                       bids: Vec::new(),
+                                                       asks: Vec::new() };
 
         let order_sell = create_order(Side::Sell, 100.0, 1.0);
         instrument_orders.add_order_open(order_sell);
 
         // 创建 MarketEvent，价格刚好达到卖单
-        let market_event = MarketEvent {
-            exchange_time: 1625097600000,
-            received_time: 1625097610000,
-            exchange: ExchangeVariant::Binance,
-            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-            kind: ClickhousePublicTrade {
-                symbol: "BTCUSDT".to_string(),
-                side: "buy".to_string(),
-                price: 100.0,
-                timestamp: 1625097600000,
-                amount: 1.0,
-            },
-        };
+        let market_event = MarketEvent { exchange_time: 1625097600000,
+                                         received_time: 1625097610000,
+                                         exchange: ExchangeVariant::Binance,
+                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+                                         kind: ClickhousePublicTrade { symbol: "BTCUSDT".to_string(),
+                                                                       side: "buy".to_string(),
+                                                                       price: 100.0,
+                                                                       timestamp: 1625097600000,
+                                                                       amount: 1.0 } };
 
         let trades = instrument_orders.match_asks(&market_event, 0.01);
         assert_eq!(trades.len(), 1); // 价格匹配成功
 
         // 创建 MarketEvent，价格更高
-        let market_event = MarketEvent {
-            exchange_time: 1625097600000,
-            received_time: 1625097610000,
-            exchange: ExchangeVariant::Binance,
-            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-            kind: ClickhousePublicTrade {
-                symbol: "BTCUSDT".to_string(),
-                side: "buy".to_string(),
-                price: 105.0,
-                timestamp: 1625097600000,
-                amount: 1.0,
-            },
-        };
+        let market_event = MarketEvent { exchange_time: 1625097600000,
+                                         received_time: 1625097610000,
+                                         exchange: ExchangeVariant::Binance,
+                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+                                         kind: ClickhousePublicTrade { symbol: "BTCUSDT".to_string(),
+                                                                       side: "buy".to_string(),
+                                                                       price: 105.0,
+                                                                       timestamp: 1625097600000,
+                                                                       amount: 1.0 } };
 
         let trades = instrument_orders.match_asks(&market_event, 0.01);
         assert_eq!(trades.len(), 0); // ，价格匹配，但是之前的订单已经完成了，所以现在asks长度是0
@@ -494,19 +450,15 @@ mod tests {
         let order_sell_partial = create_order(Side::Sell, 100.0, 2.0);
         instrument_orders.add_order_open(order_sell_partial);
 
-        let market_event = MarketEvent {
-            exchange_time: 1625097600000,
-            received_time: 1625097610000,
-            exchange: ExchangeVariant::Binance,
-            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-            kind: ClickhousePublicTrade {
-                symbol: "BTCUSDT".to_string(),
-                side: "buy".to_string(),
-                price: 100.0,
-                timestamp: 1625097600000,
-                amount: 1.0,
-            },
-        };
+        let market_event = MarketEvent { exchange_time: 1625097600000,
+                                         received_time: 1625097610000,
+                                         exchange: ExchangeVariant::Binance,
+                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+                                         kind: ClickhousePublicTrade { symbol: "BTCUSDT".to_string(),
+                                                                       side: "buy".to_string(),
+                                                                       price: 100.0,
+                                                                       timestamp: 1625097600000,
+                                                                       amount: 1.0 } };
 
         let trades = instrument_orders.match_asks(&market_event, 0.01);
         assert_eq!(trades.len(), 1); // 部分匹配
@@ -517,38 +469,35 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_trade_event_success() {
-        let instrument_orders = InstrumentOrders {
-            batch_id: 0,
-            bids: Vec::new(),
-            asks: Vec::new(),
-        };
+    fn test_generate_trade_event_success()
+    {
+        let instrument_orders = InstrumentOrders { batch_id: 0,
+                                                   bids: Vec::new(),
+                                                   asks: Vec::new() };
 
         // 创建一个有效的 OrderId
         let order = create_order(Side::Buy, 100.0, 1.0);
         let trade_event = instrument_orders.generate_trade_event(&order, 1.0, 0.01);
 
         match trade_event {
-            Ok(trade) => {
+            | Ok(trade) => {
                 assert_eq!(trade.id, TradeId(12345));
                 assert_eq!(trade.price, 100.0);
                 assert_eq!(trade.size, 1.0);
                 assert_eq!(trade.fees, 1.0); // 100 * 1 * 0.01 = 1.0
-                assert_eq!(trade.count, 1);  // 确保 count 为 1
+                assert_eq!(trade.count, 1); // 确保 count 为 1
             }
-            Err(e) => panic!("Test failed with error: {:?}", e),
+            | Err(e) => panic!("Test failed with error: {:?}", e),
         }
     }
 
-
     // 测试 generate_trade_event 方法处理无效 OrderId 时是否正确返回 ExecutionError::InvalidID。
     #[test]
-    fn test_generate_trade_event_invalid_order_id() {
-        let instrument_orders = InstrumentOrders {
-            batch_id: 0,
-            bids: Vec::new(),
-            asks: Vec::new(),
-        };
+    fn test_generate_trade_event_invalid_order_id()
+    {
+        let instrument_orders = InstrumentOrders { batch_id: 0,
+                                                   bids: Vec::new(),
+                                                   asks: Vec::new() };
 
         // 创建一个无效的 OrderId
         let mut order = create_order(Side::Buy, 100.0, 1.0);
@@ -559,14 +508,12 @@ mod tests {
         assert!(matches!(result, Err(ExecutionError::InvalidID))); // 检查返回结果是否为 InvalidID 错误
     }
 
-
     #[test]
-    fn test_num_orders() {
-        let mut instrument_orders = InstrumentOrders {
-            batch_id: 0,
-            bids: Vec::new(),
-            asks: Vec::new(),
-        };
+    fn test_num_orders()
+    {
+        let mut instrument_orders = InstrumentOrders { batch_id: 0,
+                                                       bids: Vec::new(),
+                                                       asks: Vec::new() };
 
         // 测试无订单的情况
         assert_eq!(instrument_orders.num_orders(), 0);
@@ -576,14 +523,12 @@ mod tests {
         instrument_orders.add_order_open(order_buy);
         assert_eq!(instrument_orders.num_orders(), 1);
 
-
         // 添加一个卖单
         let order_sell = create_order(Side::Sell, 110.0, 1.0);
         let order_sell_2 = create_order(Side::Sell, 115.0, 1.0);
         instrument_orders.add_order_open(order_sell);
         assert_eq!(instrument_orders.num_orders(), 2);
 
-        //
         // 再添加两个买单和一个卖单
         let order_buy_2 = create_order(Side::Buy, 105.0, 1.0);
         let order_buy_3 = create_order(Side::Buy, 107.0, 1.0);

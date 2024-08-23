@@ -41,13 +41,11 @@ impl AccountOrders
         let latency_generator = Arc::new(RwLock::new(account_latency));
         let selectable_latencies = Self::generate_latencies(&latency_generator).await;
 
-        Self {
-            request_counter: AtomicU64::new(0),
-            pending_registry: vec![],
-            instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
-            latency_generator,
-            selectable_latencies,
-        }
+        Self { request_counter: AtomicU64::new(0),
+               pending_registry: vec![],
+               instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
+               latency_generator,
+               selectable_latencies }
     }
 
     async fn generate_latencies(latency_generator: &Arc<RwLock<AccountLatency>>) -> [i64; 20]
@@ -95,7 +93,8 @@ impl AccountOrders
         if let Some(index) = self.pending_registry.iter().position(|x| x.cid == order_id) {
             self.pending_registry.remove(index);
             Ok(())
-        } else {
+        }
+        else {
             Err(ExecutionError::OrderNotFound(order_id))
         }
     }
@@ -105,20 +104,16 @@ impl AccountOrders
         // turn the request into an pending order with a predicted timestamp
         let latency = self.get_random_latency();
         let adjusted_client_ts = order.client_ts + latency;
-        let pending = Order {
-            kind: order.kind,
-            exchange: order.exchange,
-            instrument: order.instrument,
-            cid: order.cid,
-            client_ts: order.client_ts,
-            side: order.side,
-            state: Pending {
-                reduce_only: order.state.reduce_only,
-                price: order.state.price,
-                size: order.state.size,
-                predicted_ts: adjusted_client_ts,
-            },
-        };
+        let pending = Order { kind: order.kind,
+                              exchange: order.exchange,
+                              instrument: order.instrument,
+                              cid: order.cid,
+                              client_ts: order.client_ts,
+                              side: order.side,
+                              state: Pending { reduce_only: order.state.reduce_only,
+                                               price: order.state.price,
+                                               size: order.state.size,
+                                               predicted_ts: adjusted_client_ts } };
         pending
     }
 
@@ -149,7 +144,8 @@ impl AccountOrders
                     // 对于买单，限价单的价格应高于或等于当前价格才为Maker
                     if order.state.price >= current_price {
                         Ok(OrderRole::Maker)
-                    } else {
+                    }
+                    else {
                         Ok(OrderRole::Taker)
                     }
                 }
@@ -157,7 +153,8 @@ impl AccountOrders
                     // 对于卖单，限价单的价格应低于或等于当前价格才为Maker
                     if order.state.price <= current_price {
                         Ok(OrderRole::Maker)
-                    } else {
+                    }
+                    else {
                         Ok(OrderRole::Taker)
                     }
                 }
@@ -168,7 +165,8 @@ impl AccountOrders
                     // PostOnly订单如果无法作为挂单（即成为Taker），则被取消
                     if order.state.price >= current_price {
                         Ok(OrderRole::Maker)
-                    } else {
+                    }
+                    else {
                         self.remove_order_from_pending_registry(order.cid)?; // 处理删除操作
                         Err(ExecutionError::OrderRejected("PostOnly order rejected".into()))
                     }
@@ -176,7 +174,8 @@ impl AccountOrders
                 | Side::Sell => {
                     if order.state.price <= current_price {
                         Ok(OrderRole::Maker)
-                    } else {
+                    }
+                    else {
                         self.remove_order_from_pending_registry(order.cid)?; // 处理删除操作
                         Err(ExecutionError::OrderRejected("PostOnly order rejected".into()))
                     }
@@ -189,14 +188,16 @@ impl AccountOrders
                     // GTC订单和Limit订单相似
                     if order.state.price >= current_price {
                         Ok(OrderRole::Maker)
-                    } else {
+                    }
+                    else {
                         Ok(OrderRole::Taker)
                     }
                 }
                 | Side::Sell => {
                     if order.state.price <= current_price {
                         Ok(OrderRole::Maker)
-                    } else {
+                    }
+                    else {
                         Ok(OrderRole::Taker)
                     }
                 }
@@ -211,22 +212,18 @@ impl AccountOrders
         self.increment_request_counter();
 
         // 直接构建 Order<Open>
-        Order {
-            kind: request.kind,
-            exchange: request.exchange,
-            instrument: request.instrument,
-            cid: request.cid,
-            client_ts: request.client_ts,
-            side: request.side,
-            state: Open {
-                id: self.order_id(),
-                price: request.state.price,
-                size: request.state.size,
-                filled_quantity: 0.0,
-                received_ts: request.state.predicted_ts,
-                order_role: role,
-            },
-        }
+        Order { kind: request.kind,
+                exchange: request.exchange,
+                instrument: request.instrument,
+                cid: request.cid,
+                client_ts: request.client_ts,
+                side: request.side,
+                state: Open { id: self.order_id(),
+                              price: request.state.price,
+                              size: request.state.size,
+                              filled_quantity: 0.0,
+                              received_ts: request.state.predicted_ts,
+                              order_role: role } }
     }
 
     pub fn increment_request_counter(&self)
@@ -248,27 +245,25 @@ impl AccountOrders
 }
 
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
-    use crate::common_infrastructure::instrument::kind::InstrumentKind;
-    use crate::common_infrastructure::instrument::Instrument;
-    use crate::sandbox::account::account_latency::{AccountLatency, FluctuationMode};
-    use crate::ExchangeVariant;
+    use crate::{
+        common_infrastructure::instrument::{kind::InstrumentKind, Instrument},
+        sandbox::account::account_latency::{AccountLatency, FluctuationMode},
+        ExchangeVariant,
+    };
     use uuid::Uuid;
 
     #[tokio::test]
-    async fn test_new_account_orders() {
-        let instruments = vec![
-            Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            Instrument::new("ETH", "USD", InstrumentKind::Spot),
-        ];
+    async fn test_new_account_orders()
+    {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot), Instrument::new("ETH", "USD", InstrumentKind::Spot),];
 
         // 手动创建一个 AccountLatency 实例
-        let account_latency = AccountLatency::new(
-            FluctuationMode::Sine, // 设置波动模式
-            100,                   // 设置最大延迟
-            10,                    // 设置最小延迟
-        );
+        let account_latency = AccountLatency::new(FluctuationMode::Sine, // 设置波动模式
+                                                  100,                   // 设置最大延迟
+                                                  10                     /* 设置最小延迟 */);
 
         let account_orders = AccountOrders::new(instruments.clone(), account_latency).await;
 
@@ -278,12 +273,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_generate_latencies() {
-        let account_latency = AccountLatency::new(
-            FluctuationMode::NormalDistribution,
-            100,
-            10,
-        );
+    async fn test_generate_latencies()
+    {
+        let account_latency = AccountLatency::new(FluctuationMode::NormalDistribution, 100, 10);
 
         let latency_generator = Arc::new(RwLock::new(account_latency));
         let latencies = AccountOrders::generate_latencies(&latency_generator).await;
@@ -295,13 +287,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_random_latency() {
+    async fn test_get_random_latency()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
-        let account_latency = AccountLatency::new(
-            FluctuationMode::Uniform,
-            100,
-            10,
-        );
+        let account_latency = AccountLatency::new(FluctuationMode::Uniform, 100, 10);
 
         let account_orders = AccountOrders::new(instruments, account_latency).await;
 
@@ -310,13 +299,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_ins_orders_mut() {
+    async fn test_ins_orders_mut()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
-        let account_latency = AccountLatency::new(
-            FluctuationMode::LinearIncrease,
-            100,
-            10,
-        );
+        let account_latency = AccountLatency::new(FluctuationMode::LinearIncrease, 100, 10);
 
         let mut account_orders = AccountOrders::new(instruments.clone(), account_latency).await;
 
@@ -329,13 +315,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fetch_all() {
+    async fn test_fetch_all()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
-        let account_latency = AccountLatency::new(
-            FluctuationMode::LinearDecrease,
-            100,
-            10,
-        );
+        let account_latency = AccountLatency::new(FluctuationMode::LinearDecrease, 100, 10);
 
         let account_orders = AccountOrders::new(instruments, account_latency).await;
 
@@ -344,32 +327,25 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_remove_order_from_pending_registry() {
+    async fn test_remove_order_from_pending_registry()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
-        let account_latency = AccountLatency::new(
-            FluctuationMode::StepFunction,
-            100,
-            10,
-        );
+        let account_latency = AccountLatency::new(FluctuationMode::StepFunction, 100, 10);
         // 使用特定的UUID来创建一个ClientOrderId实例，模拟一个不存在的订单
         let client_order_id = ClientOrderId(Uuid::from_u128(999));
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let order = Order {
-            kind: OrderKind::Limit,
-            exchange: ExchangeVariant::SandBox,
-            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            cid: client_order_id,
-            client_ts: 0,
-            side: Side::Buy,
-            state: Pending {
-                reduce_only: false,
-                price: 50.0,
-                size: 1.0,
-                predicted_ts: 0,
-            },
-        };
+        let order = Order { kind: OrderKind::Limit,
+                            exchange: ExchangeVariant::SandBox,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            cid: client_order_id,
+                            client_ts: 0,
+                            side: Side::Buy,
+                            state: Pending { reduce_only: false,
+                                             price: 50.0,
+                                             size: 1.0,
+                                             predicted_ts: 0 } };
 
         account_orders.pending_registry.push(order.clone());
         let remove_result = account_orders.remove_order_from_pending_registry(order.cid);
@@ -381,31 +357,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_process_request_as_pending() {
+    async fn test_process_request_as_pending()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
-        let account_latency = AccountLatency::new(
-            FluctuationMode::RandomWalk,
-            100,
-            10,
-        );
+        let account_latency = AccountLatency::new(FluctuationMode::RandomWalk, 100, 10);
 
         let client_order_id = ClientOrderId(Uuid::from_u128(999));
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let request_order = Order {
-            kind: OrderKind::Limit,
-            exchange: ExchangeVariant::SandBox,
-            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            cid: client_order_id,
-            client_ts: 1000,
-            side: Side::Buy,
-            state: RequestOpen {
-                reduce_only: false,
-                price: 50.0,
-                size: 1.0,
-            },
-        };
+        let request_order = Order { kind: OrderKind::Limit,
+                                    exchange: ExchangeVariant::SandBox,
+                                    instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                                    cid: client_order_id,
+                                    client_ts: 1000,
+                                    side: Side::Buy,
+                                    state: RequestOpen { reduce_only: false,
+                                                         price: 50.0,
+                                                         size: 1.0 } };
 
         let pending_order = account_orders.process_request_as_pending(request_order).await;
         assert_eq!(pending_order.cid, client_order_id);
@@ -413,30 +382,23 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_register_pending_order() {
+    async fn test_register_pending_order()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
-        let account_latency = AccountLatency::new(
-            FluctuationMode::Sine,
-            100,
-            10,
-        );
+        let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let client_order_id = ClientOrderId(Uuid::from_u128(999));
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let request_order = Order {
-            kind: OrderKind::Limit,
-            exchange: ExchangeVariant::SandBox,
-            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            cid: client_order_id,
-            client_ts: 1000,
-            side: Side::Buy,
-            state: RequestOpen {
-                reduce_only: false,
-                price: 50.0,
-                size: 1.0,
-            },
-        };
+        let request_order = Order { kind: OrderKind::Limit,
+                                    exchange: ExchangeVariant::SandBox,
+                                    instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                                    cid: client_order_id,
+                                    client_ts: 1000,
+                                    side: Side::Buy,
+                                    state: RequestOpen { reduce_only: false,
+                                                         price: 50.0,
+                                                         size: 1.0 } };
 
         let result = account_orders.register_pending_order(request_order.clone()).await;
         assert!(result.is_ok());
@@ -447,25 +409,22 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_determine_maker_taker() {
+    async fn test_determine_maker_taker()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let order = Order {
-            kind: OrderKind::Limit,
-            exchange: ExchangeVariant::SandBox,
-            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            cid: ClientOrderId(Uuid::new_v4()),
-            client_ts: 1000,
-            side: Side::Buy,
-            state: Pending {
-                reduce_only: false,
-                price: 50.0,
-                size: 1.0,
-                predicted_ts: 1000,
-            },
-        };
+        let order = Order { kind: OrderKind::Limit,
+                            exchange: ExchangeVariant::SandBox,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            cid: ClientOrderId(Uuid::new_v4()),
+                            client_ts: 1000,
+                            side: Side::Buy,
+                            state: Pending { reduce_only: false,
+                                             price: 50.0,
+                                             size: 1.0,
+                                             predicted_ts: 1000 } };
 
         let role_maker = account_orders.determine_maker_taker(&order, 50.0).unwrap();
         assert_eq!(role_maker, OrderRole::Maker);
@@ -475,7 +434,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_increment_request_counter() {
+    async fn test_increment_request_counter()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
         let account_orders = AccountOrders::new(instruments, account_latency).await;
@@ -486,7 +446,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_order_id() {
+    async fn test_order_id()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
         let account_orders = AccountOrders::new(instruments, account_latency).await;
@@ -499,9 +460,9 @@ mod tests {
         assert_eq!(second_order_id, OrderId("1".to_string()));
     }
 
-
     #[tokio::test]
-    async fn test_update_latency() {
+    async fn test_update_latency()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;

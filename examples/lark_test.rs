@@ -25,9 +25,9 @@ async fn main()
 
     // 发送富文本消息
     let message = MessagePost::new("zh_cn").title("Hello World from Arthur")
-        .append_content(vec![MessagePostNode::Text(TextNode::new("Yo Yo Check Now")),
-                             MessagePostNode::A(ANode::new("查看详情", "https://github.com/foxzool/open-lark")),
-                             MessagePostNode::At(AtNode::new("ou_1avnmsbv3k45jnk34j5")), ]);
+                                           .append_content(vec![MessagePostNode::Text(TextNode::new("Yo Yo Check Now")),
+                                                                MessagePostNode::A(ANode::new("查看详情", "https://github.com/foxzool/open-lark")),
+                                                                MessagePostNode::At(AtNode::new("ou_1avnmsbv3k45jnk34j5")),]);
     bot.send_message(message).await.unwrap();
 
     // 发送消息卡片

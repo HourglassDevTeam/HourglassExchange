@@ -41,8 +41,7 @@ pub mod account_states;
 
 #[derive(Debug)]
 pub struct Account<Event>
-where
-    Event: Clone + Send + Sync + Debug + 'static + Ord,
+    where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     pub exchange_timestamp: AtomicI64,
     pub data: Arc<RwLock<AccountDataStreams<Event>>>,         // 帐户数据
@@ -54,27 +53,22 @@ where
 }
 
 // 手动实现 Clone trait
-impl<Event> Clone for Account<Event>
-where
-    Event: Clone + Send + Sync + Debug + 'static + Ord,
+impl<Event> Clone for Account<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     fn clone(&self) -> Self
     {
-        Account {
-            exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
-            data: Arc::clone(&self.data),
-            account_event_tx: self.account_event_tx.clone(),
-            market_event_tx: self.market_event_tx.clone(),
-            config: Arc::clone(&self.config),
-            states: Arc::clone(&self.states),
-            orders: Arc::clone(&self.orders),
-        }
+        Account { exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
+                  data: Arc::clone(&self.data),
+                  account_event_tx: self.account_event_tx.clone(),
+                  market_event_tx: self.market_event_tx.clone(),
+                  config: Arc::clone(&self.config),
+                  states: Arc::clone(&self.states),
+                  orders: Arc::clone(&self.orders) }
     }
 }
 #[derive(Clone, Debug)]
 pub struct AccountInitiator<Event>
-where
-    Event: Clone + Send + Sync + Debug + 'static + Ord,
+    where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     data: Option<Arc<RwLock<AccountDataStreams<Event>>>>,
     account_event_tx: Option<UnboundedSender<AccountEvent>>,
@@ -84,9 +78,7 @@ where
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
-impl<Event> Default for AccountInitiator<Event>
-where
-    Event: Clone + Send + Sync + Debug + 'static + Ord,
+impl<Event> Default for AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     fn default() -> Self
     {
@@ -94,20 +86,16 @@ where
     }
 }
 
-impl<Event> AccountInitiator<Event>
-where
-    Event: Clone + Send + Sync + Debug + 'static + Ord,
+impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     pub fn new() -> Self
     {
-        AccountInitiator {
-            data: None,
-            account_event_tx: None,
-            market_event_tx: None,
-            config: None,
-            states: None,
-            orders: None,
-        }
+        AccountInitiator { data: None,
+                           account_event_tx: None,
+                           market_event_tx: None,
+                           config: None,
+                           states: None,
+                           orders: None }
     }
 
     pub fn data(mut self, value: AccountDataStreams<Event>) -> Self
@@ -148,22 +136,18 @@ where
 
     pub fn build(self) -> Result<Account<Event>, String>
     {
-        Ok(Account {
-            exchange_timestamp: 0.into(),
-            data: self.data.ok_or("datafeed is required")?,                                 // 检查并获取data
-            account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
-            market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
-            config: self.config.ok_or("config is required")?,                               // 检查并获取config
-            states: self.states.ok_or("balances is required")?,                             // 检查并获取balances
-            orders: self.orders.ok_or("orders are required")?,
-        })
+        Ok(Account { exchange_timestamp: 0.into(),
+                     data: self.data.ok_or("datafeed is required")?,                                 // 检查并获取data
+                     account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
+                     market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
+                     config: self.config.ok_or("config is required")?,                               // 检查并获取config
+                     states: self.states.ok_or("balances is required")?,                             // 检查并获取balances
+                     orders: self.orders.ok_or("orders are required")? })
     }
 }
 
 #[allow(dead_code)]
-impl<Event> Account<Event>
-where
-    Event: Clone + Send + Sync + Debug + 'static + Ord,
+impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     /// [Initiation] `Account` 模块的初始化函数`initiate`
     pub fn initiate() -> AccountInitiator<Event>
@@ -276,11 +260,9 @@ where
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Balance");
 
         self.account_event_tx
-            .send(AccountEvent {
-                exchange_timestamp,
-                exchange: ExchangeVariant::SandBox,
-                kind: AccountEventKind::OrdersNew(vec![open_order.clone()]),
-            })
+            .send(AccountEvent { exchange_timestamp,
+                                 exchange: ExchangeVariant::SandBox,
+                                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
         // 返回已打开的订单
         Ok(open_order)
@@ -360,7 +342,8 @@ where
 
                     self.process_trades(trades).await;
                 }
-            } else if let Ok(OrderRole::Taker) = role {
+            }
+            else if let Ok(OrderRole::Taker) = role {
                 // 生成 open_order 在 orders_write 的借用作用域外
                 let open_order = {
                     let mut orders_write = self.orders.write().await;
@@ -439,11 +422,9 @@ where
                     }
                 };
 
-                if let Err(err) = self.account_event_tx.send(AccountEvent {
-                    exchange_timestamp,
-                    exchange: ExchangeVariant::SandBox,
-                    kind: AccountEventKind::Trade(trade),
-                })
+                if let Err(err) = self.account_event_tx.send(AccountEvent { exchange_timestamp,
+                                                                            exchange: ExchangeVariant::SandBox,
+                                                                            kind: AccountEventKind::Trade(trade) })
                 {
                     // 如果发送交易事件失败，记录警告日志
                     warn!("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade: {:?}", err);
@@ -464,9 +445,9 @@ where
     pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
-            let mut this = self.clone();
-            async move { this.try_cancel_order_atomic(request).await }
-        });
+                                                            let mut this = self.clone();
+                                                            async move { this.try_cancel_order_atomic(request).await }
+                                                        });
 
         // 等待所有的取消操作完成
         let cancel_results = join_all(cancel_futures).await;
@@ -484,17 +465,17 @@ where
             | Side::Buy => {
                 // 使用 OrderId 查找 Order<Open>
                 let index = orders.bids
-                    .iter()
-                    .position(|bid| bid.state.id == request.state.id)
-                    .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                                  .iter()
+                                  .position(|bid| bid.state.id == request.state.id)
+                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                 orders.bids.remove(index)
             }
             | Side::Sell => {
                 // 使用 OrderId 查找 Order<Open>
                 let index = orders.asks
-                    .iter()
-                    .position(|ask| ask.state.id == request.state.id)
-                    .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                                  .iter()
+                                  .position(|ask| ask.state.id == request.state.id)
+                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                 orders.asks.remove(index)
             }
         };
@@ -513,19 +494,15 @@ where
 
         // 发送 AccountEvents 给客户端
         self.account_event_tx
-            .send(AccountEvent {
-                exchange_timestamp,
-                exchange: ExchangeVariant::SandBox,
-                kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
-            })
+            .send(AccountEvent { exchange_timestamp,
+                                 exchange: ExchangeVariant::SandBox,
+                                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.account_event_tx
-            .send(AccountEvent {
-                exchange_timestamp,
-                exchange: ExchangeVariant::SandBox,
-                kind: AccountEventKind::Balance(balance_event),
-            })
+            .send(AccountEvent { exchange_timestamp,
+                                 exchange: ExchangeVariant::SandBox,
+                                 kind: AccountEventKind::Balance(balance_event) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
 
         Ok(cancelled)
@@ -541,16 +518,14 @@ where
 
         // 将所有打开的订单转换为取消请求
         let cancel_requests: Vec<Order<RequestCancel>> = orders_to_cancel.into_iter()
-            .map(|order| Order {
-                state: RequestCancel { id: order.state.id },
-                instrument: order.instrument,
-                side: order.side,
-                kind: order.kind,
-                cid: order.cid,
-                exchange: ExchangeVariant::SandBox,
-                client_ts: 0,
-            })
-            .collect();
+                                                                         .map(|order| Order { state: RequestCancel { id: order.state.id },
+                                                                                              instrument: order.instrument,
+                                                                                              side: order.side,
+                                                                                              kind: order.kind,
+                                                                                              cid: order.cid,
+                                                                                              exchange: ExchangeVariant::SandBox,
+                                                                                              client_ts: 0 })
+                                                                         .collect();
 
         // 调用现有的 cancel_orders 方法
         let (tx, rx) = oneshot::channel();
@@ -561,14 +536,14 @@ where
             | Ok(results) => {
                 let cancelled_orders: Vec<_> = results.into_iter().collect::<Result<Vec<_>, _>>().expect("Failed to collect cancel results");
                 response_tx.send(Ok(cancelled_orders)).unwrap_or_else(|_| {
-                    eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all response");
-                });
+                                                          eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all response");
+                                                      });
             }
             | Err(_) => {
                 response_tx.send(Err(ExecutionError::InternalError("Failed to receive cancel results".to_string())))
-                    .unwrap_or_else(|_| {
-                        eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all error response");
-                    });
+                           .unwrap_or_else(|_| {
+                               eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all error response");
+                           });
             }
         }
     }
@@ -577,11 +552,10 @@ where
 /// [PART5]
 /// `respond` 函数:响应处理。
 pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
-where
-    Response: Debug + Send + 'static,
+    where Response: Debug + Send + 'static
 {
     tokio::spawn(async move {
         response_tx.send(response)
-            .expect("[UniLink_Execution] : SandBoxExchange failed to send oneshot response to execution request")
+                   .expect("[UniLink_Execution] : SandBoxExchange failed to send oneshot response to execution request")
     });
 }

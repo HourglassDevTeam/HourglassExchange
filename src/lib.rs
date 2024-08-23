@@ -38,9 +38,7 @@ pub trait ClientExecution
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize, Debug)]
 pub struct ExchangeID(String);
 
-impl<E> From<E> for ExchangeID
-where
-    E: Into<String>,
+impl<E> From<E> for ExchangeID where E: Into<String>
 {
     fn from(exchange: E) -> Self
     {

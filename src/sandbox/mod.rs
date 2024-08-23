@@ -16,16 +16,13 @@ pub mod ws_trade;
 
 #[derive(Debug)]
 pub struct SandBoxExchange<Event>
-where
-    Event: Clone + Send + Sync + Debug + 'static + Ord,
+    where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     pub event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
     pub account: Account<Event>,
 }
 
-impl<Event> SandBoxExchange<Event>
-where
-    Event: Clone + Send + Sync + Debug + 'static + Ord,
+impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     pub fn initiator() -> ExchangeInitiator<Event>
     {
@@ -49,31 +46,24 @@ where
     }
 }
 
-impl<Event> Default for ExchangeInitiator<Event>
-where
-    Event: Clone + Send + Sync + Debug + 'static + Ord,
+impl<Event> Default for ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     fn default() -> Self
     {
         let (_tx, rx) = mpsc::unbounded_channel();
-        Self {
-            event_sandbox_rx: Some(rx),
-            account: None,
-        }
+        Self { event_sandbox_rx: Some(rx),
+               account: None }
     }
 }
 #[derive(Debug)]
 pub struct ExchangeInitiator<Event>
-where
-    Event: Clone + Send + Sync + Debug + 'static + Ord,
+    where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     event_sandbox_rx: Option<mpsc::UnboundedReceiver<SandBoxClientEvent>>,
     account: Option<Account<Event>>,
 }
 
-impl<Event> ExchangeInitiator<Event>
-where
-    Event: Clone + Send + Sync + Debug + 'static + Ord,
+impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     pub fn new() -> Self
     {
@@ -82,10 +72,8 @@ where
 
     pub fn event_sandbox_rx(self, value: mpsc::UnboundedReceiver<SandBoxClientEvent>) -> Self
     {
-        Self {
-            event_sandbox_rx: Some(value),
-            ..self
-        }
+        Self { event_sandbox_rx: Some(value),
+               ..self }
     }
 
     pub fn account(self, value: Account<Event>) -> Self
@@ -95,9 +83,7 @@ where
 
     pub fn initiate(self) -> Result<SandBoxExchange<Event>, ExecutionError>
     {
-        Ok(SandBoxExchange {
-            event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
-            account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))?,
-        })
+        Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
+                             account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
     }
 }
