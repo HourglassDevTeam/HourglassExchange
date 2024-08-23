@@ -196,7 +196,7 @@ impl ClickHouseClient
         let queries = Arc::try_unwrap(queries).expect("Failed to unwrap Arc").into_inner().unwrap();
         let union_all_query = queries.join(" UNION DISTINCT ");
 
-        // 假设你要创建的表使用MergeTree引擎并按timestamp排序
+        // 假设你要创建的表使用MergeTree引擎并按timestamp排序 NOTE this ought to be replaced with ReplacingMergeTree Engine in due course.
         let final_query = format!(
                                   "CREATE TABLE {}.{} ENGINE = MergeTree() \
         PARTITION BY toYYYYMMDD(toDate(timestamp)) \
