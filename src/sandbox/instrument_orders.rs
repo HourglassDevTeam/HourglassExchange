@@ -246,3 +246,128 @@ impl InstrumentOrders
         self.bids.len() + self.asks.len()
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use uuid::Uuid;
+    use super::*;
+    use crate::common_infrastructure::{
+        event::ClientOrderId,
+        instrument::Instrument,
+        Side,
+    };
+    use crate::common_infrastructure::order::{OrderId, OrderKind, OrderRole};
+    use crate::common_infrastructure::token::Token;
+    use crate::ExchangeVariant;
+
+    fn create_order(side: Side, price: f64, size: f64) -> Order<Open> {
+        Order {
+            kind: OrderKind::Limit,
+            exchange: ExchangeVariant::Binance,
+            instrument: Instrument {
+                base: Token::from("SOL"),
+                quote: Token::from("USDT"),
+                kind: Default::default(),
+            }, // 使用默认的 Instrument，你可以根据需要调整
+            client_ts: 0, // 使用默认时间戳
+            cid: ClientOrderId(Uuid::new_v4()), // 使用测试用的 ClientOrderId
+            side,
+            state: Open {
+                id: OrderId("test_order_id".into()),
+                price,
+                size,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Maker,
+                received_ts: 0,
+            },
+        }
+    }
+
+
+    #[test]
+    fn test_add_order_open() {
+        let mut instrument_orders = InstrumentOrders::default();
+
+        let order_buy = create_order(Side::Buy, 100.0, 1.0);
+        let order_sell = create_order(Side::Sell, 110.0, 1.0);
+
+        instrument_orders.add_order_open(order_buy.clone());
+        instrument_orders.add_order_open(order_sell.clone());
+
+        assert_eq!(instrument_orders.bids.len(), 1);
+        assert_eq!(instrument_orders.asks.len(), 1);
+        assert_eq!(instrument_orders.bids[0], order_buy);
+        assert_eq!(instrument_orders.asks[0], order_sell);
+    }
+
+    #[test]
+    fn test_determine_matching_side() {
+        let mut instrument_orders = InstrumentOrders {
+            batch_id: 0,
+            bids: Vec::new(),
+            asks: Vec::new(),
+        };
+
+        let order_buy = create_order(Side::Buy, 100.0, 1.0);
+        let order_sell = create_order(Side::Sell, 110.0, 1.0);
+
+        instrument_orders.add_order_open(order_buy);
+        instrument_orders.add_order_open(order_sell);
+
+        // 创建 MarketEvent，价格在买单和卖单之间
+        let market_event = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: ExchangeVariant::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(),InstrumentKind::Spot),
+            kind: ClickhousePublicTrade {
+                symbol: "BTCUSDT".to_string(),
+                side: "buy".to_string(),
+                price: 105.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            }
+        };
+
+        let matching_side = instrument_orders.determine_matching_side(&market_event);
+        assert_eq!(matching_side, None);
+
+        // 创建 MarketEvent，价格匹配买单
+        let market_event = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: ExchangeVariant::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(),InstrumentKind::Spot),
+            kind: ClickhousePublicTrade {
+                symbol: "BTCUSDT".to_string(),
+                side: "buy".to_string(),
+                price: 100.0,
+                timestamp: 1625097600000,
+                amount:  1.0,
+            }
+        };
+
+        let matching_side = instrument_orders.determine_matching_side(&market_event);
+        assert_eq!(matching_side, Some(Side::Buy));
+
+        // 创建 MarketEvent，价格匹配卖单
+        let market_event = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: ExchangeVariant::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(),InstrumentKind::Spot),
+            kind: ClickhousePublicTrade {
+                symbol: "BTCUSDT".to_string(),
+                side: "sell".to_string(),
+                price: 110.0,
+                timestamp: 1625097600000,
+                amount:  1.0,
+            }
+        };
+
+        let matching_side = instrument_orders.determine_matching_side(&market_event);
+        assert_eq!(matching_side, Some(Side::Sell));
+    }
+
+}
