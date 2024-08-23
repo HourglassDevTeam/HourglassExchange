@@ -86,8 +86,8 @@ impl AccountPositions
             .current_avg_price_gross(trade.price)
             .current_symbol_price(trade.price)
             .current_avg_price(trade.price)
-            .unrealised_pnl(0.0) // all good
-            .realised_pnl(0.0) // all good
+            .unrealised_pnl(0.0)  // NOTE 就这样初始化吧
+            .realised_pnl(0.0)  // NOTE 就这样初始化吧
             .build()
             .map_err(|err| ExecutionError::SandBox(format!("Failed to build position meta: {}", err)))?;
 
