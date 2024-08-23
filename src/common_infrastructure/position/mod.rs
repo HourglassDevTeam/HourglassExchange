@@ -1,3 +1,4 @@
+use crate::common_infrastructure::Side;
 /// FIXME  : code below needs to be restructured and fitted to the framework. need to provide enums?
 /// CONSIDER: can these positions coexist, if so enums might not be ideal.
 use serde::{Deserialize, Serialize};
@@ -56,9 +57,10 @@ impl AccountPositions
         exchange_ts: i64,
     ) -> Result<PerpetualPosition, ExecutionError> {
         let open_fee_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
-
+        // 根据 Instrument 和 Side 动态生成 position_id
+        let position_id = format!("{}_{}", trade.instrument, if trade.side == Side::Buy { "Long" } else { "Short" });
         let position_meta = PositionMetaBuilder::new()
-            .position_id("new_position".to_string()) // NOTE 使用适当的ID生成策略。 {"Instrument"} + {"Long"||"Short"}
+            .position_id(position_id) // NOTE 使用适当的ID生成策略。 {"Instrument"} + {"Long"||"Short"}
             .enter_ts(exchange_ts)
             .update_ts(exchange_ts)
             .exit_balance(TokenBalance { // NOTE 怎么搞
@@ -69,7 +71,7 @@ impl AccountPositions
                     available: 0.0,
                 },
             })
-            .account_exchange_ts(exchange_ts)
+            .account_exchange_ts(exchange_ts) // NOTE this may well be Redundant
             .exchange(ExchangeVariant::SandBox)
             .instrument(trade.instrument.clone())
             .side(trade.side)
@@ -77,13 +79,13 @@ impl AccountPositions
             .current_fees_total(Fees::Perpetual(PerpetualFees {
                 maker_rate: open_fee_rate,
                 taker_rate: open_fee_rate, // 假设平仓费率与开仓费率相同
-                funding_rate: 0.0,         // NOTE 是不是应该在外面预设
+                funding_rate: 0.0,         // NOTE 应该在外面预设
             }))
             .current_avg_price_gross(trade.price)
             .current_symbol_price(trade.price)
             .current_avg_price(trade.price)
-            .unrealised_pnl(0.0) // NOTE 应该初始化时候就计算
-            .realised_pnl(0.0) // NOTE 应该初始化时候就计算
+            .unrealised_pnl(0.0) // all good
+            .realised_pnl(0.0) // all good
             .build()
             .map_err(|err| ExecutionError::SandBox(format!("Failed to build position meta: {}", err)))?;
 
@@ -98,7 +100,7 @@ impl AccountPositions
             .pos_config(pos_config)
             .liquidation_price(0.0) // NOTE 初始设定为 0，稍后可以根据需要更新
             .margin(0.0) // NOTE 初始设定为 0，稍后可以根据需要更新
-            .funding_fee(0.0) // NOTE 初始设定为 0，稍后可以根据需要更新
+            .funding_fee(0.0) // NOTE Redundant?
             .build()
             .ok_or_else(|| ExecutionError::SandBox("Failed to build new position".to_string()))?;
 
