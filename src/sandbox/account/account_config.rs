@@ -18,6 +18,7 @@ pub struct AccountConfig
     pub position_mode: PositionDirectionMode,
     pub position_margin_mode: PositionMarginMode,
     pub commission_level: CommissionLevel,
+    pub fund_fee_rate:f64,  // NOTE 每种金融工具可以拥有fund_fee_rate。甚至没有。这个写法是高度简化的。
     // pub current_commission_rate: CommissionRates,
     pub account_leverage_rate: f64,                          // NOTE 每种金融工具应该拥有杠杆比例Registry。这个写法是高度简化的。
     pub fees_book: HashMap<InstrumentKind, CommissionRates>, // 每种金融工具的手续费Registry NOTE 某种些交易所的设置颗粒会精确到Instrument.
