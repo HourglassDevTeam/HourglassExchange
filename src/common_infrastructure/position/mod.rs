@@ -57,12 +57,16 @@ impl AccountPositions
         exchange_ts: i64,
     ) -> Result<PerpetualPosition, ExecutionError> {
         let open_fee_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
+
+        // 计算初始保证金
+        let initial_margin = trade.price * trade.size / config.account_leverage_rate;
+
         // 根据 Instrument 和 Side 动态生成 position_id
         let position_meta = PositionMetaBuilder::new()
             .position_id(format!("{}_{}", trade.instrument, if trade.side == Side::Buy { "Long" } else { "Short" }))
             .enter_ts(exchange_ts)
             .update_ts(exchange_ts)
-            .exit_balance(TokenBalance { // NOTE 怎么搞
+            .exit_balance(TokenBalance { // NOTE 就这样吧
                 token: trade.instrument.base.clone(),
                 balance: Balance {
                     current_price: trade.price,
@@ -87,6 +91,13 @@ impl AccountPositions
             .build()
             .map_err(|err| ExecutionError::SandBox(format!("Failed to build position meta: {}", err)))?;
 
+
+        // 计算 liquidation_price
+        let liquidation_price = if trade.side == Side::Buy {
+            trade.price * (1.0 - initial_margin / (trade.size * trade.price))
+        } else {
+            trade.price * (1.0 + initial_margin / (trade.size * trade.price))
+        };
         let pos_config = PerpetualPositionConfig {
             pos_margin_mode,
             leverage: config.account_leverage_rate,  // 从配置中获取杠杆
@@ -96,7 +107,7 @@ impl AccountPositions
         let new_position = PerpetualPositionBuilder::new()
             .meta(position_meta)
             .pos_config(pos_config)
-            .liquidation_price(0.0) // NOTE 初始设定为 0，稍后可以根据需要更新
+            .liquidation_price(liquidation_price)
             .margin(0.0) // NOTE 初始设定为 0，稍后可以根据需要更新
             .funding_fee(0.0) // NOTE Redundant?
             .build()
