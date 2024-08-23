@@ -8,8 +8,8 @@ pub struct PerpetualPosition
 {
     pub meta: PositionMeta,                  // 复合类型，包含静态数据、实时更新数据和静态更新数据
     pub pos_config: PerpetualPositionConfig, // 静态数据
-    pub liquidation_price: f64,              // 实时更新 NOTE : To Be Checked
-    pub margin: f64,                         // 实时更新 NOTE : To Be Checked
+    pub liquidation_price: f64,              // 实时更新 NOTE : 需要持续更新吗
+    pub margin: f64,                         // 实时更新 NOTE : 需要持续更新吗
 }
 
 impl PerpetualPosition

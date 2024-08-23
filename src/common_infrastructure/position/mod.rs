@@ -174,11 +174,11 @@ impl AccountPositions
     {
         match instrument.kind {
             // 对于现货，检查余额而不是仓位
-            | InstrumentKind::Spot => todo!(),
+            | InstrumentKind::Spot => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of Spot as of yet."),
             // 商品期权
-            | InstrumentKind::CommodityOption => todo!(),
+            | InstrumentKind::CommodityOption => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of CommodityOption as of yet."),
             // 商品期货
-            | InstrumentKind::CommodityFuture => todo!(),
+            | InstrumentKind::CommodityFuture => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
             // 永续合约
             | InstrumentKind::Perpetual => self.perpetual_pos
                                                .as_ref() // 如果存在仓位列表
