@@ -505,7 +505,7 @@ impl ClickHouseClient
         });
 
         let queries = Arc::try_unwrap(queries).expect("Failed to unwrap Arc").into_inner().unwrap();
-        let union_all_query = queries.join(" UNION ALL ");
+        let union_all_query = queries.join(" UNION DISTINCT ");
 
         let final_query = format!(
             "INSERT INTO {}.{} SELECT DISTINCT * FROM ({})",

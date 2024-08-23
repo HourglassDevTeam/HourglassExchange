@@ -69,7 +69,7 @@ async fn main()
     let bot = {
         let hook_url = env::var("HOOK_URL").unwrap();
         let secret = env::var("HOOK_SECRET").ok();
-        CustomBot::new(hook_url, secret.as_deref())
+        CustomBot::new(&hook_url, secret.as_deref())
     };
 
     // 遍历日期范围
