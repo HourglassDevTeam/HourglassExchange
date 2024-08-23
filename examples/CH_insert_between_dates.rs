@@ -23,8 +23,10 @@ async fn main() {
 
     // 在循环外部获取所有表名
     let database = format!("{}_{}_{}", exchange, instrument, channel);
-    let start_date = NaiveDate::from_ymd_opt(2019, 11, 19).expect("Invalid start date");
-    let end_date = NaiveDate::from_ymd_opt(2024, 8, 10).expect("Invalid end date");
+    // let start_date = NaiveDate::from_ymd_opt(2019, 11, 19).expect("Invalid start date");
+    // let end_date = NaiveDate::from_ymd_opt(2024, 8, 10).expect("Invalid end date");
+    let start_date = NaiveDate::from_ymd_opt(2024, 5, 5).expect("Invalid start date");
+    let end_date = NaiveDate::from_ymd_opt(2024, 5, 5).expect("Invalid end date");
 
     // 获取所有表名
     let table_names = client.get_table_names(&database).await;
@@ -41,13 +43,15 @@ async fn main() {
             .filter(|table_name| {
                 if let Some(date_str) = extract_date(table_name) {
                     if let Ok(table_date) = NaiveDate::parse_from_str(&date_str, "%Y_%m_%d") {
-                        return table_date == current_date;
+                        return table_date == current_date && !table_name.contains("union");
                     }
                 }
                 false
             })
             .cloned()
             .collect();
+
+        println!("!!!the filtered_table_names to be added into the target table are:{:?}",filtered_table_names );
 
         // 如果有符合的表，调用 insert_into_unioned_table 方法
         if !filtered_table_names.is_empty() {
