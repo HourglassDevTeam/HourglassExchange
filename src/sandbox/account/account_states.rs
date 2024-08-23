@@ -970,7 +970,7 @@ mod tests
                                          side: Side::Buy,
                                          state: Open { id: OrderId::from("test_order"),
                                                        price: 100.0,
-                                                       size: 1.0,
+                                                      size: 1.0,
                                                        filled_quantity: 0.0,
                                                        order_role: OrderRole::Maker,
                                                        received_ts: 123456789 } };
