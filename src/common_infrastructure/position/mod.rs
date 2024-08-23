@@ -58,7 +58,7 @@ impl AccountPositions
     {
         let maker_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
         let taker_rate = config.get_taker_fee_rate(&trade.instrument.kind)?;
-        // 计算初始保证金
+        // NOTE 计算初始保证金
         let initial_margin = trade.price * trade.size / config.account_leverage_rate;
         // 计算费用
         let maker_fee = trade.size * trade.price * maker_rate;
