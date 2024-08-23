@@ -13,13 +13,6 @@ pub struct AccountDataStreams<Event>
     pub streams: HashMap<StreamID, UnboundedReceiver<Event>>, // 使用HashMap存储数据流，键为StreamID
 }
 
-// // NOTE this is foreign to this module
-// pub struct Subscription<Exchange, Kind>
-// {
-//     pub exchange: Exchange,
-//     pub instrument: Instrument,
-//     pub kind: Kind,
-// }
 
 impl<Event> Default for AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static + Ord
 {
