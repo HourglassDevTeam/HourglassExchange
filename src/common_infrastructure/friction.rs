@@ -63,9 +63,12 @@ impl InstrumentFees
 {
     /// 构造一个新的 [`InstrumentFees`]。
     pub fn new<S>(instrument: S, fees: Fees) -> Self
-        where S: Into<InstrumentKind>
+    where
+        S: Into<InstrumentKind>,
     {
-        Self { instrument_kind: instrument.into(),
-               fees }
+        Self {
+            instrument_kind: instrument.into(),
+            fees,
+        }
     }
 }

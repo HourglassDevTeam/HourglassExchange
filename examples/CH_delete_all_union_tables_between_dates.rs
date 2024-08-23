@@ -24,15 +24,14 @@ async fn main()
 
     // 创建一个表名与日期的字典
     let table_date_map: HashMap<String, String> = all_tables.iter()
-                                                            .filter_map(|table_name| {
-                                                                if let Some(table_date) = extract_date(table_name) {
-                                                                    Some((table_name.clone(), table_date))
-                                                                }
-                                                                else {
-                                                                    None
-                                                                }
-                                                            })
-                                                            .collect();
+        .filter_map(|table_name| {
+            if let Some(table_date) = extract_date(table_name) {
+                Some((table_name.clone(), table_date))
+            } else {
+                None
+            }
+        })
+        .collect();
 
     // 计算总天数，用于进度汇报
     let total_days = (end_date - start_date).num_days() + 1;
@@ -50,9 +49,9 @@ async fn main()
 
         // 筛选出与当前日期匹配的 union 表名
         let tables_to_delete: Vec<String> = table_date_map.par_iter()
-                                                          .filter(|&(table_name, table_date)| table_name.contains("union") && table_date == &date_str)
-                                                          .map(|(table_name, _)| table_name.clone())
-                                                          .collect();
+            .filter(|&(table_name, table_date)| table_name.contains("union") && table_date == &date_str)
+            .map(|(table_name, _)| table_name.clone())
+            .collect();
 
         // 如果找到对应的表，则删除表
         for table in tables_to_delete {

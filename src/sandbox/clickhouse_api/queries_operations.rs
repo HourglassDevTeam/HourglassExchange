@@ -130,41 +130,40 @@ impl ClickHouseClient
 
     pub async fn get_table_names(&self, database: &str) -> Vec<String>
     {
-        let table_names_query = format!("SHOW TABLES FROM {database}",);
+        let table_names_query = format!("SHOW TABLES FROM {database}", );
         println!("[UniLinkExecution] : Trying to retrieve table names within the database : {:?}", table_names_query);
         self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
-                                                                                          eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
+            eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
 
-                                                                                          vec![]
-                                                                                      })
+            vec![]
+        })
     }
 
     pub async fn get_union_table_names(&self, database: &str) -> Vec<String>
     {
-        let table_names_query = format!("SHOW TABLES FROM {database} LIKE '%union%'",);
+        let table_names_query = format!("SHOW TABLES FROM {database} LIKE '%union%'", );
         println!("[UniLinkExecution] : Trying to retrieve table names within the database that contain 'union': {:?}",
                  table_names_query);
         self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
-                                                                                          eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
+            eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
 
-                                                                                          vec![]
-                                                                                      })
+            vec![]
+        })
     }
 
     pub async fn get_tables_for_date(&self, table_names: &[String], date: &str) -> Vec<String>
     {
         // 筛选出指定日期的表名
         let tables_for_date: Vec<String> = table_names.par_iter()
-                                                      .filter(|table_name| {
-                                                          if let Some(table_date) = extract_date(table_name) {
-                                                              table_date == date
-                                                          }
-                                                          else {
-                                                              false
-                                                          }
-                                                      })
-                                                      .cloned()
-                                                      .collect();
+            .filter(|table_name| {
+                if let Some(table_date) = extract_date(table_name) {
+                    table_date == date
+                } else {
+                    false
+                }
+            })
+            .cloned()
+            .collect();
         tables_for_date
     }
 
@@ -181,8 +180,8 @@ impl ClickHouseClient
 
         for (i, table_name) in table_names.iter().enumerate() {
             let select_query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount") // Select required fields
-                                                            .from(database, table_name) // Format the table name with database
-                                                            .build(); // Build the individual query
+                .from(database, table_name) // Format the table name with database
+                .build(); // Build the individual query
 
             queries.push(select_query);
 
@@ -207,10 +206,10 @@ impl ClickHouseClient
 
         // NOTE : A partition syntax has been added to this query.
         let final_query = format!(
-                                  "CREATE TABLE {}.{} ENGINE = MergeTree() \
+            "CREATE TABLE {}.{} ENGINE = MergeTree() \
             PARTITION BY toYYYYMMDD(toDate(timestamp)) \
             ORDER BY timestamp AS {}",
-                                  database, new_table_name, union_all_query
+            database, new_table_name, union_all_query
         );
 
         if report_progress {
@@ -233,9 +232,9 @@ impl ClickHouseClient
         // let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount")
-                                                 .from(&database_name, &table_name)
-                                                 .order("timestamp", Some("DESC"))
-                                                 .build();
+            .from(&database_name, &table_name)
+            .order("timestamp", Some("DESC"))
+            .build();
 
         println!("[UniLinkExecution] : Constructed query {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<ClickhousePublicTrade>().await?;
@@ -248,10 +247,10 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         // let full_table_path = format!("{}.{}", database_name, table_name);
         let query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount")
-                                                 .from(&database_name, &table_name)
-                                                 .order("timestamp", Some("DESC"))
-                                                 .limit(1)
-                                                 .build();
+            .from(&database_name, &table_name)
+            .order("timestamp", Some("DESC"))
+            .limit(1)
+            .build();
         println!("[UniLinkExecution] : Constructed query :  {}", query);
         let trade_data = self.client.read().await.query(&query).fetch_one::<ClickhousePublicTrade>().await?;
         Ok(trade_data)
@@ -273,7 +272,7 @@ impl ClickHouseClient
                                                        channel: &'a str,
                                                        date: &'a str,
                                                        batch_size: usize)
-                                                       -> impl Stream<Item = MarketEvent<ClickhousePublicTrade>> + 'a
+                                                       -> impl Stream<Item=MarketEvent<ClickhousePublicTrade>> + 'a
     {
         stream! {
             let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
@@ -345,11 +344,11 @@ impl ClickHouseClient
 
                 loop {
                     let query = ClickHouseQueryBuilder::new().select("*")
-                                                             .from(&database, &table_name)
-                                                             .order("timestamp", Some("ASC"))
-                                                             .limit(batch_size)
-                                                             .offset(offset)
-                                                             .build();
+                        .from(&database, &table_name)
+                        .order("timestamp", Some("ASC"))
+                        .limit(batch_size)
+                        .offset(offset)
+                        .build();
                     println!("[UniLinkExecution] : Executing query: {}", query);
 
                     let client = client.read().await;
@@ -399,9 +398,9 @@ impl ClickHouseClient
 
         // 使用 ClickHouseQueryBuilder 构造查询语句
         let query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount")
-                                                 .from(&database_name, &table_name)
-                                                 .order("timestamp", Some("DESC"))
-                                                 .build();
+            .from(&database_name, &table_name)
+            .order("timestamp", Some("DESC"))
+            .build();
 
         println!("[UniLinkExecution] : Constructed query {}", query);
 
@@ -420,9 +419,9 @@ impl ClickHouseClient
 
         // 使用 ClickHouseQueryBuilder 构造查询语句
         let query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount")
-                                                 .from(&database_name, &table_name)
-                                                 .order("timestamp", Some("DESC"))
-                                                 .build();
+            .from(&database_name, &table_name)
+            .order("timestamp", Some("DESC"))
+            .build();
 
         println!("[UniLinkExecution] : Constructed query {}", query);
 

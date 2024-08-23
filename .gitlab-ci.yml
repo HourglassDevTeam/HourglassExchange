@@ -25,7 +25,7 @@ mergeCode:
     ##
     - git config --global user.email "$PCF_COMMIT_USER_EMAIL"
     - git config --global user.name "$PCF_COMMIT_USER_NAME"
-    - git config pull.rebase false 
+    - git config pull.rebase false
     
     ##
     ## Check if inside a git repository, if not, initialize one
@@ -122,7 +122,7 @@ mergeCode:
     
     ## Force push changes to gitee
     ##
-    - git push -f gitee $PCF_DEPLOY_BRANCH 
+    - git push -f gitee $PCF_DEPLOY_BRANCH
 
   tags:
     - sync_task

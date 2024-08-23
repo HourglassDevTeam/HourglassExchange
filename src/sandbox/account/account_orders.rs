@@ -41,11 +41,13 @@ impl AccountOrders
         let latency_generator = Arc::new(RwLock::new(account_latency));
         let selectable_latencies = Self::generate_latencies(&latency_generator).await;
 
-        Self { request_counter: AtomicU64::new(0),
-               pending_registry: vec![],
-               instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
-               latency_generator,
-               selectable_latencies }
+        Self {
+            request_counter: AtomicU64::new(0),
+            pending_registry: vec![],
+            instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
+            latency_generator,
+            selectable_latencies,
+        }
     }
 
     async fn generate_latencies(latency_generator: &Arc<RwLock<AccountLatency>>) -> [i64; 20]
@@ -93,8 +95,7 @@ impl AccountOrders
         if let Some(index) = self.pending_registry.iter().position(|x| x.cid == order_id) {
             self.pending_registry.remove(index);
             Ok(())
-        }
-        else {
+        } else {
             Err(ExecutionError::OrderNotFound(order_id))
         }
     }
@@ -104,16 +105,20 @@ impl AccountOrders
         // turn the request into an pending order with a predicted timestamp
         let latency = self.get_random_latency();
         let adjusted_client_ts = order.client_ts + latency;
-        let pending = Order { kind: order.kind,
-                              exchange: order.exchange,
-                              instrument: order.instrument,
-                              cid: order.cid,
-                              client_ts: order.client_ts,
-                              side: order.side,
-                              state: Pending { reduce_only: order.state.reduce_only,
-                                               price: order.state.price,
-                                               size: order.state.size,
-                                               predicted_ts: adjusted_client_ts } };
+        let pending = Order {
+            kind: order.kind,
+            exchange: order.exchange,
+            instrument: order.instrument,
+            cid: order.cid,
+            client_ts: order.client_ts,
+            side: order.side,
+            state: Pending {
+                reduce_only: order.state.reduce_only,
+                price: order.state.price,
+                size: order.state.size,
+                predicted_ts: adjusted_client_ts,
+            },
+        };
         pending
     }
 
@@ -144,8 +149,7 @@ impl AccountOrders
                     // 对于买单，限价单的价格应高于或等于当前价格才为Maker
                     if order.state.price >= current_price {
                         Ok(OrderRole::Maker)
-                    }
-                    else {
+                    } else {
                         Ok(OrderRole::Taker)
                     }
                 }
@@ -153,8 +157,7 @@ impl AccountOrders
                     // 对于卖单，限价单的价格应低于或等于当前价格才为Maker
                     if order.state.price <= current_price {
                         Ok(OrderRole::Maker)
-                    }
-                    else {
+                    } else {
                         Ok(OrderRole::Taker)
                     }
                 }
@@ -165,8 +168,7 @@ impl AccountOrders
                     // PostOnly订单如果无法作为挂单（即成为Taker），则被取消
                     if order.state.price >= current_price {
                         Ok(OrderRole::Maker)
-                    }
-                    else {
+                    } else {
                         self.remove_order_from_pending_registry(order.cid)?; // 处理删除操作
                         Err(ExecutionError::OrderRejected("PostOnly order rejected".into()))
                     }
@@ -174,8 +176,7 @@ impl AccountOrders
                 | Side::Sell => {
                     if order.state.price <= current_price {
                         Ok(OrderRole::Maker)
-                    }
-                    else {
+                    } else {
                         self.remove_order_from_pending_registry(order.cid)?; // 处理删除操作
                         Err(ExecutionError::OrderRejected("PostOnly order rejected".into()))
                     }
@@ -188,16 +189,14 @@ impl AccountOrders
                     // GTC订单和Limit订单相似
                     if order.state.price >= current_price {
                         Ok(OrderRole::Maker)
-                    }
-                    else {
+                    } else {
                         Ok(OrderRole::Taker)
                     }
                 }
                 | Side::Sell => {
                     if order.state.price <= current_price {
                         Ok(OrderRole::Maker)
-                    }
-                    else {
+                    } else {
                         Ok(OrderRole::Taker)
                     }
                 }
@@ -212,18 +211,22 @@ impl AccountOrders
         self.increment_request_counter();
 
         // 直接构建 Order<Open>
-        Order { kind: request.kind,
-                exchange: request.exchange,
-                instrument: request.instrument,
-                cid: request.cid,
-                client_ts: request.client_ts,
-                side: request.side,
-                state: Open { id: self.order_id(),
-                              price: request.state.price,
-                              size: request.state.size,
-                              filled_quantity: 0.0,
-                              received_ts: request.state.predicted_ts,
-                              order_role: role } }
+        Order {
+            kind: request.kind,
+            exchange: request.exchange,
+            instrument: request.instrument,
+            cid: request.cid,
+            client_ts: request.client_ts,
+            side: request.side,
+            state: Open {
+                id: self.order_id(),
+                price: request.state.price,
+                size: request.state.size,
+                filled_quantity: 0.0,
+                received_ts: request.state.predicted_ts,
+                order_role: role,
+            },
+        }
     }
 
     pub fn increment_request_counter(&self)
@@ -246,12 +249,12 @@ impl AccountOrders
 
 #[cfg(test)]
 mod tests {
-    use uuid::Uuid;
     use super::*;
+    use crate::common_infrastructure::instrument::kind::InstrumentKind;
     use crate::common_infrastructure::instrument::Instrument;
     use crate::sandbox::account::account_latency::{AccountLatency, FluctuationMode};
-    use crate::common_infrastructure::instrument::kind::InstrumentKind;
     use crate::ExchangeVariant;
+    use uuid::Uuid;
 
     #[tokio::test]
     async fn test_new_account_orders() {

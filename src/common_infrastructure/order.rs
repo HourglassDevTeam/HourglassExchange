@@ -80,7 +80,9 @@ pub struct RequestCancel
 }
 
 // 从Id直接生成RequestCancel
-impl<Id> From<Id> for RequestCancel where Id: Into<OrderId>
+impl<Id> From<Id> for RequestCancel
+where
+    Id: Into<OrderId>,
 {
     fn from(id: Id) -> Self
     {
@@ -163,7 +165,9 @@ pub struct Cancelled
     pub id: OrderId,
 }
 
-impl<Id> From<Id> for Cancelled where Id: Into<OrderId>
+impl<Id> From<Id> for Cancelled
+where
+    Id: Into<OrderId>,
 {
     fn from(id: Id) -> Self
     {
@@ -175,7 +179,9 @@ impl<Id> From<Id> for Cancelled where Id: Into<OrderId>
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct OrderId(pub String);
 
-impl<Id> From<Id> for OrderId where Id: Display
+impl<Id> From<Id> for OrderId
+where
+    Id: Display,
 {
     fn from(id: Id) -> Self
     {
@@ -187,12 +193,14 @@ impl From<Order<Open>> for Order<Cancelled>
 {
     fn from(order: Order<Open>) -> Self
     {
-        Self { kind: order.kind,
-               exchange: order.exchange,
-               instrument: order.instrument.clone(),
-               cid: order.cid,
-               client_ts: order.client_ts,
-               side: order.side,
-               state: Cancelled { id: order.state.id } }
+        Self {
+            kind: order.kind,
+            exchange: order.exchange,
+            instrument: order.instrument.clone(),
+            cid: order.cid,
+            client_ts: order.client_ts,
+            side: order.side,
+            state: Cancelled { id: order.state.id },
+        }
     }
 }

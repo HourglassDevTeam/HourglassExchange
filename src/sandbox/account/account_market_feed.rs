@@ -8,7 +8,8 @@ pub type StreamID = String;
 
 // 定义一个结构体，用于管理多个数据流。
 pub struct AccountDataStreams<Event>
-    where Event: Debug + Clone + Send + Sync + 'static + Ord
+where
+    Event: Debug + Clone + Send + Sync + 'static + Ord,
 {
     pub streams: HashMap<StreamID, UnboundedReceiver<Event>>, // 使用HashMap存储数据流，键为StreamID
 }
@@ -21,7 +22,9 @@ pub struct AccountDataStreams<Event>
 //     pub kind: Kind,
 // }
 
-impl<Event> Default for AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static + Ord
+impl<Event> Default for AccountDataStreams<Event>
+where
+    Event: Debug + Clone + Send + Sync + 'static + Ord,
 {
     fn default() -> Self
     {
@@ -30,7 +33,9 @@ impl<Event> Default for AccountDataStreams<Event> where Event: Debug + Clone + S
 }
 
 // 为 AccountDataStreams 实现创建和增减数据流的方法，用于管理数据流。
-impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static + Ord
+impl<Event> AccountDataStreams<Event>
+where
+    Event: Debug + Clone + Send + Sync + 'static + Ord,
 {
     // 创建一个新的 AccountDataStreams 实例。
     pub fn new() -> Self
@@ -52,7 +57,8 @@ impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync +
 
     // 将所有数据流合并到一个新的接收器中，并按时间戳排序。
     pub async fn join(self) -> UnboundedReceiver<Event>
-        where Event: Send + 'static
+    where
+        Event: Send + 'static,
     {
         let mut joined_rx = self.merge_streams().await;
 
@@ -75,14 +81,16 @@ impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync +
 
     // 将所有数据流合并到一个新的接收器中，不进行排序。
     pub async fn join_without_sort(self) -> UnboundedReceiver<Event>
-        where Event: Send + 'static
+    where
+        Event: Send + 'static,
     {
         self.merge_streams().await
     }
 
     // 合并所有数据流到一个新的接收器中。
     async fn merge_streams(self) -> UnboundedReceiver<Event>
-        where Event: Send + 'static
+    where
+        Event: Send + 'static,
     {
         let (joined_tx, joined_rx) = mpsc::unbounded_channel();
 
@@ -101,7 +109,9 @@ impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync +
 }
 
 // 为 AccountDataStreams 实现 Debug trait，方便调试。
-impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static + Ord
+impl<Event> Debug for AccountDataStreams<Event>
+where
+    Event: Debug + Clone + Send + Sync + 'static + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {

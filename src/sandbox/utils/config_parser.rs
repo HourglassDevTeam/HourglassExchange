@@ -50,13 +50,13 @@ impl From<toml::de::Error> for ExecutionError
 
 #[cfg(test)]
 mod tests {
-use super::*;
-    use std::fs;
-    use std::io::Write;
-    use tempfile::tempdir;
+    use super::*;
     use crate::common_infrastructure::instrument::kind::InstrumentKind;
     use crate::common_infrastructure::position::{PositionDirectionMode, PositionMarginMode};
     use crate::sandbox::account::account_config::{CommissionLevel, CommissionRates, MarginMode};
+    use std::fs;
+    use std::io::Write;
+    use tempfile::tempdir;
 
     /// 测试成功读取配置文件的情况
     #[test]
@@ -138,4 +138,5 @@ use super::*;
 
         // 将当前目录切换回原来的目录
         std::env::set_current_dir(original_dir).unwrap();
-    }}
+    }
+}

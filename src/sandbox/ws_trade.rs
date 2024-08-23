@@ -1,6 +1,7 @@
 /// NOTE code below is to be merged later
 use serde::{Deserialize, Serialize};
 
+
 use crate::{
     common_infrastructure::{
         datafeed::event::MarketEvent,
@@ -37,16 +38,20 @@ impl MarketEvent<WsTrade>
         let exchange_time = ws_trade.ts.parse::<i64>().unwrap_or(0);
         let received_time = ws_trade.ts.parse::<i64>().unwrap_or(0); // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
 
-        let instrument = Instrument { base: Token::from(base),
-                                      quote: Token::from(quote),
-                                      kind: instrument };
+        let instrument = Instrument {
+            base: Token::from(base),
+            quote: Token::from(quote),
+            kind: instrument,
+        };
 
-        MarketEvent { exchange_time,
-                      received_time,
-                      exchange: ExchangeVariant::SandBox,
+        MarketEvent {
+            exchange_time,
+            received_time,
+            exchange: ExchangeVariant::SandBox,
 
-                      instrument,
-                      kind: ws_trade }
+            instrument,
+            kind: ws_trade,
+        }
     }
 }
 
@@ -58,15 +63,19 @@ impl MarketEvent<ClickhousePublicTrade>
         let exchange_time = trade.timestamp;
         let received_time = trade.timestamp; // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
 
-        let instrument = Instrument { base: Token::from(base),
-                                      quote: Token::from(quote),
-                                      kind: Perpetual };
+        let instrument = Instrument {
+            base: Token::from(base),
+            quote: Token::from(quote),
+            kind: Perpetual,
+        };
 
-        MarketEvent { exchange_time,
-                      received_time,
-                      exchange: ExchangeVariant::SandBox,
-                      instrument,
-                      kind: trade }
+        MarketEvent {
+            exchange_time,
+            received_time,
+            exchange: ExchangeVariant::SandBox,
+            instrument,
+            kind: trade,
+        }
     }
 }
 
@@ -75,11 +84,13 @@ impl From<ClickhousePublicTrade> for WsTrade
 {
     fn from(trade: ClickhousePublicTrade) -> Self
     {
-        WsTrade { instId: trade.symbol,
-                  side: trade.side,
-                  px: trade.price.to_string(),
-                  ts: trade.timestamp.to_string(),
-                  amount: trade.amount }
+        WsTrade {
+            instId: trade.symbol,
+            side: trade.side,
+            px: trade.price.to_string(),
+            ts: trade.timestamp.to_string(),
+            amount: trade.amount,
+        }
     }
 }
 
@@ -105,10 +116,11 @@ impl WsTrade
     pub(crate) fn from_ref(trade: &ClickhousePublicTrade) -> Self
     {
         WsTrade { // 这里假设 WsTrade 结构体字段和 TradeDataFromClickhouse 结构体字段对应
-                  instId: trade.symbol.clone(),
-                  side: trade.side.clone(),
-                  px: trade.price.to_string(),
-                  ts: trade.timestamp.to_string(),
-                  amount: trade.amount }
+            instId: trade.symbol.clone(),
+            side: trade.side.clone(),
+            px: trade.price.to_string(),
+            ts: trade.timestamp.to_string(),
+            amount: trade.amount,
+        }
     }
 }

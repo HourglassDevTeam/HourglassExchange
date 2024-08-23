@@ -49,7 +49,7 @@ async fn main()
 
     // 如果有表需要优化，汇报开始优化
     if total_tables > 0 {
-        let message = MessageText::new(format!("[UniLinkExecution] : Starting optimization for {} tables.", total_tables,).as_str());
+        let message = MessageText::new(format!("[UniLinkExecution] : Starting optimization for {} tables.", total_tables, ).as_str());
         println!("[UniLinkExecution] : Starting optimization for {} tables.", total_tables);
         bot.send_message(message).await.unwrap();
     }

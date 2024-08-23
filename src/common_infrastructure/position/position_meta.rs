@@ -51,8 +51,7 @@ impl PositionMeta
 
         if self.current_size > 0.0 {
             self.current_avg_price = (self.current_avg_price_gross * self.current_size + total_fees) / self.current_size;
-        }
-        else {
+        } else {
             self.current_avg_price = self.current_avg_price_gross;
         }
     }
@@ -120,21 +119,23 @@ impl PositionMetaBuilder
 {
     pub fn new() -> Self
     {
-        Self { position_id: None,
-               enter_ts: None,
-               update_ts: None,
-               exit_balance: None,
-               account_exchange_ts: None,
-               exchange: None,
-               instrument: None,
-               side: None,
-               current_size: None,
-               current_fees_total: None,
-               current_avg_price_gross: None,
-               current_symbol_price: None,
-               current_avg_price: None,
-               unrealised_pnl: None,
-               realised_pnl: None }
+        Self {
+            position_id: None,
+            enter_ts: None,
+            update_ts: None,
+            exit_balance: None,
+            account_exchange_ts: None,
+            exchange: None,
+            instrument: None,
+            side: None,
+            current_size: None,
+            current_fees_total: None,
+            current_avg_price_gross: None,
+            current_symbol_price: None,
+            current_avg_price: None,
+            unrealised_pnl: None,
+            realised_pnl: None,
+        }
     }
 
     pub fn position_id(mut self, position_id: String) -> Self
@@ -229,20 +230,22 @@ impl PositionMetaBuilder
 
     pub fn build(self) -> Result<PositionMeta, &'static str>
     {
-        Ok(PositionMeta { position_id: self.position_id.ok_or("position_id is required")?,
-                          enter_ts: self.enter_ts.ok_or("enter_ts is required")?,
-                          update_ts: self.update_ts.ok_or("update_ts is required")?,
-                          exit_balance: self.exit_balance.ok_or("exit_balance is required")?,
-                          account_exchange_ts: self.account_exchange_ts.ok_or("account_exchange_ts is required")?,
-                          exchange: self.exchange.ok_or("exchange is required")?,
-                          instrument: self.instrument.ok_or("instrument is required")?,
-                          side: self.side.ok_or("side is required")?,
-                          current_size: self.current_size.ok_or("current_size is required")?,
-                          current_fees_total: self.current_fees_total.ok_or("current_fees_total is required")?,
-                          current_avg_price_gross: self.current_avg_price_gross.ok_or("current_avg_price_gross is required")?,
-                          current_symbol_price: self.current_symbol_price.ok_or("current_symbol_price is required")?,
-                          current_avg_price: self.current_avg_price.ok_or("current_avg_price is required")?,
-                          unrealised_pnl: self.unrealised_pnl.ok_or("unrealised_pnl is required")?,
-                          realised_pnl: self.realised_pnl.ok_or("realised_pnl is required")? })
+        Ok(PositionMeta {
+            position_id: self.position_id.ok_or("position_id is required")?,
+            enter_ts: self.enter_ts.ok_or("enter_ts is required")?,
+            update_ts: self.update_ts.ok_or("update_ts is required")?,
+            exit_balance: self.exit_balance.ok_or("exit_balance is required")?,
+            account_exchange_ts: self.account_exchange_ts.ok_or("account_exchange_ts is required")?,
+            exchange: self.exchange.ok_or("exchange is required")?,
+            instrument: self.instrument.ok_or("instrument is required")?,
+            side: self.side.ok_or("side is required")?,
+            current_size: self.current_size.ok_or("current_size is required")?,
+            current_fees_total: self.current_fees_total.ok_or("current_fees_total is required")?,
+            current_avg_price_gross: self.current_avg_price_gross.ok_or("current_avg_price_gross is required")?,
+            current_symbol_price: self.current_symbol_price.ok_or("current_symbol_price is required")?,
+            current_avg_price: self.current_avg_price.ok_or("current_avg_price is required")?,
+            unrealised_pnl: self.unrealised_pnl.ok_or("unrealised_pnl is required")?,
+            realised_pnl: self.realised_pnl.ok_or("realised_pnl is required")?,
+        })
     }
 }

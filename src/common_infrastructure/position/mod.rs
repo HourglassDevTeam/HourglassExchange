@@ -2,6 +2,7 @@
 /// CONSIDER: can these positions coexist, if so enums might not be ideal.
 use serde::{Deserialize, Serialize};
 
+
 use crate::{
     common_infrastructure::{
         balance::{Balance, TokenBalance},
@@ -41,10 +42,12 @@ impl AccountPositions
     /// 创建一个新的 AccountPositions 实例
     pub fn init() -> Self
     {
-        Self { margin_pos: None,
-               perpetual_pos: None,
-               futures_pos: None,
-               option_pos: None }
+        Self {
+            margin_pos: None,
+            perpetual_pos: None,
+            futures_pos: None,
+            option_pos: None,
+        }
     }
 
     /// 构建一个新的 PerpetualPosition，但不直接更新到仓位列表中
@@ -62,39 +65,47 @@ impl AccountPositions
         let open_fee_rate = config.get_maker_fee_rate(&instrument.kind)?;
 
         let position_meta = PositionMetaBuilder::new().position_id("new_position".to_string()) // 使用适当的ID生成策略
-                                                      .enter_ts(exchange_ts)
-                                                      .update_ts(exchange_ts)
-                                                      .exit_balance(TokenBalance { token: instrument.base.clone(),
-                                                                                   balance: Balance { current_price: current_symbol_price,
-                                                                                                      total: 0.0,
-                                                                                                      available: 0.0 } })
-                                                      .account_exchange_ts(exchange_ts)
-                                                      .exchange(ExchangeVariant::SandBox)
-                                                      .instrument(instrument.clone())
-                                                      .side(side)
-                                                      .current_size(0.0)
-                                                      .current_fees_total(Fees::Perpetual(PerpetualFees { maker_rate: open_fee_rate,
-                                                                                                          taker_rate: open_fee_rate, // 假设平仓费率与开仓费率相同
-                                                                                                          funding_rate: 0.0          /* 可以根据配置或其他逻辑来更新 */ }))
-                                                      .current_avg_price_gross(current_symbol_price)
-                                                      .current_symbol_price(current_symbol_price)
-                                                      .current_avg_price(current_symbol_price)
-                                                      .unrealised_pnl(0.0)
-                                                      .realised_pnl(0.0)
-                                                      .build()
-                                                      .map_err(|err| ExecutionError::SandBox(format!("Failed to build position meta: {}", err)))?;
+            .enter_ts(exchange_ts)
+            .update_ts(exchange_ts)
+            .exit_balance(TokenBalance {
+                token: instrument.base.clone(),
+                balance: Balance {
+                    current_price: current_symbol_price,
+                    total: 0.0,
+                    available: 0.0,
+                },
+            })
+            .account_exchange_ts(exchange_ts)
+            .exchange(ExchangeVariant::SandBox)
+            .instrument(instrument.clone())
+            .side(side)
+            .current_size(0.0)
+            .current_fees_total(Fees::Perpetual(PerpetualFees {
+                maker_rate: open_fee_rate,
+                taker_rate: open_fee_rate, // 假设平仓费率与开仓费率相同
+                funding_rate: 0.0, /* 可以根据配置或其他逻辑来更新 */
+            }))
+            .current_avg_price_gross(current_symbol_price)
+            .current_symbol_price(current_symbol_price)
+            .current_avg_price(current_symbol_price)
+            .unrealised_pnl(0.0)
+            .realised_pnl(0.0)
+            .build()
+            .map_err(|err| ExecutionError::SandBox(format!("Failed to build position meta: {}", err)))?;
 
-        let pos_config = PerpetualPositionConfig { pos_margin_mode,
-                                                   leverage,
-                                                   position_mode };
+        let pos_config = PerpetualPositionConfig {
+            pos_margin_mode,
+            leverage,
+            position_mode,
+        };
 
         let new_position = PerpetualPositionBuilder::new().meta(position_meta)
-                                                          .pos_config(pos_config)
-                                                          .liquidation_price(0.0) // 初始设定为 0，稍后可以根据需要更新
-                                                          .margin(0.0) // 初始设定为 0，稍后可以根据需要更新
-                                                          .funding_fee(0.0) // 初始设定为 0，稍后可以根据需要更新
-                                                          .build()
-                                                          .ok_or_else(|| ExecutionError::SandBox("Failed to build new position".to_string()))?;
+            .pos_config(pos_config)
+            .liquidation_price(0.0) // 初始设定为 0，稍后可以根据需要更新
+            .margin(0.0) // 初始设定为 0，稍后可以根据需要更新
+            .funding_fee(0.0) // 初始设定为 0，稍后可以根据需要更新
+            .build()
+            .ok_or_else(|| ExecutionError::SandBox("Failed to build new position".to_string()))?;
 
         Ok(new_position)
     }
@@ -107,12 +118,10 @@ impl AccountPositions
                 if let Some(ref mut positions) = self.perpetual_pos {
                     if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                         *existing_position = p;
-                    }
-                    else {
+                    } else {
                         positions.push(p);
                     }
-                }
-                else {
+                } else {
                     self.perpetual_pos = Some(vec![p]);
                 }
             }
@@ -120,12 +129,10 @@ impl AccountPositions
                 if let Some(ref mut positions) = self.margin_pos {
                     if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                         *existing_position = p;
-                    }
-                    else {
+                    } else {
                         positions.push(p);
                     }
-                }
-                else {
+                } else {
                     self.margin_pos = Some(vec![p]);
                 }
             }
@@ -133,12 +140,10 @@ impl AccountPositions
                 if let Some(ref mut positions) = self.futures_pos {
                     if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                         *existing_position = p;
-                    }
-                    else {
+                    } else {
                         positions.push(p);
                     }
-                }
-                else {
+                } else {
                     self.futures_pos = Some(vec![p]);
                 }
             }
@@ -146,12 +151,10 @@ impl AccountPositions
                 if let Some(ref mut positions) = self.option_pos {
                     if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                         *existing_position = p;
-                    }
-                    else {
+                    } else {
                         positions.push(p);
                     }
-                }
-                else {
+                } else {
                     self.option_pos = Some(vec![p]);
                 }
             }
@@ -170,24 +173,24 @@ impl AccountPositions
             | InstrumentKind::CommodityFuture => todo!(),
             // 永续合约
             | InstrumentKind::Perpetual => self.perpetual_pos
-                                               .as_ref() // 如果存在仓位列表
-                                               .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
+                .as_ref() // 如果存在仓位列表
+                .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
                     positions.iter().any(|pos| pos.meta.instrument == *instrument)),
 
             // 普通期货
             | InstrumentKind::Future => self.futures_pos
-                                            .as_ref()
-                                            .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                .as_ref()
+                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
 
             // 加密期权
             | InstrumentKind::CryptoOption => self.option_pos
-                                                  .as_ref()
-                                                  .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                .as_ref()
+                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
 
             // 加密杠杆代币
             | InstrumentKind::CryptoLeveragedToken => self.margin_pos
-                                                          .as_ref()
-                                                          .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                .as_ref()
+                .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
         }
     }
 }

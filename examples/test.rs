@@ -38,16 +38,15 @@ async fn main()
 
         // 筛选出与当前日期匹配的表名
         let _tables: Vec<String> = table_names.iter()
-                                              .filter(|table_name| {
-                                                  if let Some(table_date) = extract_date(table_name) {
-                                                      table_date == date_str // 仅保留匹配当前日期的表
-                                                  }
-                                                  else {
-                                                      false
-                                                  }
-                                              })
-                                              .cloned() // 克隆以避免引用问题
-                                              .collect();
+            .filter(|table_name| {
+                if let Some(table_date) = extract_date(table_name) {
+                    table_date == date_str // 仅保留匹配当前日期的表
+                } else {
+                    false
+                }
+            })
+            .cloned() // 克隆以避免引用问题
+            .collect();
         let duration = start_time.elapsed();
         println!("TABLES for {} FILTERED in: {:?}", date_str, duration);
         // 迭代到下一天
