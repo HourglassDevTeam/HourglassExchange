@@ -6,13 +6,6 @@ use unilink_execution::sandbox::utils::chrono_operations::extract_date;
 
 #[tokio::main]
 async fn main() {
-    // 检测是否为 release 模式
-    #[cfg(debug_assertions)]
-    println!("[UniLinkExecution] : Running in debug mode");
-
-    #[cfg(not(debug_assertions))]
-    println!("[UniLinkExecution] : Running in release mode");
-
     // 创建 ClickHouse 客户端实例
     let client = Arc::new(ClickHouseClient::new());
 
@@ -51,17 +44,17 @@ async fn main() {
             .cloned()
             .collect();
 
-        println!("!!!the filtered_table_names to be added into the target table are:{:?}",filtered_table_names );
+        println!("\n[NOTE] : The filtered_table_names to be added into the target table are:");
+
+        for table_name in &filtered_table_names {
+            println!("- {}", table_name);
+        }
+
+        println!("\n[NOTE] : End of the list.\n");
 
         // 如果有符合的表，调用 insert_into_unioned_table 方法
         if !filtered_table_names.is_empty() {
-            match client.insert_into_unioned_table(&database, &target_table_name, &filtered_table_names, true).await {
-                Ok(_) => println!("[UniLinkExecution] : Data inserted into {} successfully.", target_table_name),
-                Err(e) => eprintln!("[UniLinkExecution] : Error inserting data into {}: {}", target_table_name, e),
-            }
-        }
-
-        // 移动到下一天
-        current_date += Duration::days(1);
+            client.insert_into_unioned_table(&database, &target_table_name, &filtered_table_names, true).await.unwrap();
+            current_date += Duration::days(1);
     }
-}
+}}
