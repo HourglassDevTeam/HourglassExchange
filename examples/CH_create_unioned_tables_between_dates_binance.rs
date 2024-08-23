@@ -96,7 +96,7 @@ async fn main()
             let table_date_map = Arc::clone(&table_date_map);
 
             tokio::spawn(async move {
-                match client.create_unioned_table_for_date(&database, &new_table_name, &tables_for_task, true).await {
+                match client.create_unioned_table(&database, &new_table_name, &tables_for_task, true).await {
                     | Ok(_) => {
                         // 删除处理掉的表名
                         let mut map = table_date_map.lock().unwrap();

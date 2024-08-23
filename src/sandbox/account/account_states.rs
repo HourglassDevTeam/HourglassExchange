@@ -39,7 +39,6 @@ impl<Event> PartialEq for AccountState<Event> where Event: Clone + Send + Sync +
     fn eq(&self, other: &Self) -> bool
     {
         self.balances == other.balances
-        // account_ref 是Weak<RwLock<>>，一般不会比较其内容
     }
 }
 

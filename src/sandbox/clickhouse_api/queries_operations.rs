@@ -167,12 +167,12 @@ impl ClickHouseClient
         tables_for_date
     }
 
-    pub async fn create_unioned_table_for_date(&self,
-                                               database: &str,
-                                               new_table_name: &str,
-                                               table_names: &[String],
-                                               report_progress: bool /* 新增参数，用于控制是否启用进度汇报 */)
-                                               -> Result<(), Error>
+    pub async fn create_unioned_table(&self,
+                                      database: &str,
+                                      new_table_name: &str,
+                                      table_names: &[String],
+                                      report_progress: bool /* 新增参数，用于控制是否启用进度汇报 */)
+                                      -> Result<(), Error>
     {
         // 构建UNION ALL查询
         let queries = Arc::new(Mutex::new(Vec::new()));
@@ -194,7 +194,7 @@ impl ClickHouseClient
                                           });
 
         let queries = Arc::try_unwrap(queries).expect("Failed to unwrap Arc").into_inner().unwrap();
-        let union_all_query = queries.join(" UNION ALL ");
+        let union_all_query = queries.join(" UNION DISTINCT ");
 
         // 假设你要创建的表使用MergeTree引擎并按timestamp排序
         let final_query = format!(
@@ -476,4 +476,54 @@ impl ClickHouseClient
         println!("Union table optimization is complete for {} days.", total_days);
         Ok(())
     }
+
+    pub async fn insert_into_unioned_table(
+        &self,
+        database: &str,
+        target_table_name: &str,
+        additional_table_names: &[String],
+        report_progress: bool
+    ) -> Result<(), Error> {
+        // 构建UNION ALL查询
+        let queries = Arc::new(Mutex::new(Vec::new()));
+        let total_tables = additional_table_names.len();
+
+        additional_table_names.par_iter().enumerate().for_each(|(i, table_name)| {
+            let select_query = ClickHouseQueryBuilder::new()
+                .select("symbol, side, price, timestamp, amount") // Select required fields
+                .from(database, table_name) // Format the table name with database
+                .build(); // Build the individual query
+
+            let mut queries_lock = queries.lock().unwrap();
+            queries_lock.push(select_query);
+
+            // 如果启用进度汇报，每处理完一个表就汇报一次进度
+            if report_progress {
+                let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
+                println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
+            }
+        });
+
+        let queries = Arc::try_unwrap(queries).expect("Failed to unwrap Arc").into_inner().unwrap();
+        let union_all_query = queries.join(" UNION ALL ");
+
+        let final_query = format!(
+            "INSERT INTO {}.{} SELECT DISTINCT * FROM ({})",
+            database, target_table_name, union_all_query
+        );
+
+        if report_progress {
+            println!("[UniLinkExecution] : Successfully constructed the final insert query.");
+        }
+
+        // 执行插入数据的查询
+        self.client.read().await.query(&final_query).execute().await?;
+
+        if report_progress {
+            println!("[UniLinkExecution] : Data inserted into {}.{} successfully.", database, target_table_name);
+        }
+
+        Ok(())
+    }
+
 }
