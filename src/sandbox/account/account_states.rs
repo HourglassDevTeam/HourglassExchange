@@ -419,11 +419,11 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 
     /// 从交易中更新余额并返回 [`AccountEvent`]
-    pub async fn apply_trade_changes(&mut self, trade_event: &ClientTrade) -> Result<AccountEvent, ExecutionError>
+    pub async fn apply_trade_changes(&mut self, trade: &ClientTrade) -> Result<AccountEvent, ExecutionError>
     {
-        let Instrument { base, quote, kind, .. } = &trade_event.instrument;
-        let fee = trade_event.fees; // 直接从 TradeEvent 中获取费用
-        let side = trade_event.side; // 直接使用 TradeEvent 中的 side
+        let Instrument { base, quote, kind, .. } = &trade.instrument;
+        let fee = trade.fees; // 直接从 TradeEvent 中获取费用
+        let side = trade.side; // 直接使用 TradeEvent 中的 side
 
         match kind {
             | InstrumentKind::Spot => {
@@ -441,19 +441,19 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let (base_delta, quote_delta) = match side {
                     | Side::Buy => {
-                        let base_increase = trade_event.size - fee;
+                        let base_increase = trade.size - fee;
                         // Note: available was already decreased by the opening of the Side::Buy order
                         let base_delta = BalanceDelta { total: base_increase,
                                                         available: base_increase };
-                        let quote_delta = BalanceDelta { total: -trade_event.size * trade_event.price,
+                        let quote_delta = BalanceDelta { total: -trade.size * trade.price,
                                                          available: 0.0 };
                         (base_delta, quote_delta)
                     }
                     | Side::Sell => {
                         // Note: available was already decreased by the opening of the Side::Sell order
-                        let base_delta = BalanceDelta { total: -trade_event.size,
+                        let base_delta = BalanceDelta { total: -trade.size,
                                                         available: 0.0 };
-                        let quote_increase = (trade_event.size * trade_event.price) - fee;
+                        let quote_increase = (trade.size * trade.price) - fee;
                         let quote_delta = BalanceDelta { total: quote_increase,
                                                          available: quote_increase };
                         (base_delta, quote_delta)
