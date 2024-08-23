@@ -508,7 +508,7 @@ impl ClickHouseClient
         let union_all_query = queries.join(" UNION DISTINCT ");
 
         let final_query = format!(
-            "INSERT INTO {}.{} SELECT DISTINCT * FROM ({})",
+            "INSERT INTO {}.{} SELECT DISTINCT symbol, side, price, timestamp, amount FROM ({})",
             database, target_table_name, union_all_query
         );
 
