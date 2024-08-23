@@ -10,7 +10,6 @@ pub struct PerpetualPosition
     pub pos_config: PerpetualPositionConfig, // 静态数据
     pub liquidation_price: f64,              // 实时更新 NOTE : To Be Checked
     pub margin: f64,                         // 实时更新 NOTE : To Be Checked
-    pub funding_fee: f64,                    // 实时更新 NOTE : To Be Checked
 }
 
 impl PerpetualPosition
@@ -25,12 +24,6 @@ impl PerpetualPosition
     pub fn update_margin(&mut self, new_margin: f64)
     {
         self.margin = new_margin;
-    }
-
-    /// 更新资金费率
-    pub fn update_funding_fee(&mut self, new_fee: f64)
-    {
-        self.funding_fee = new_fee;
     }
 
     /// 更新静态数据部分
@@ -61,7 +54,6 @@ pub struct PerpetualPositionBuilder
     pos_config: Option<PerpetualPositionConfig>,
     liquidation_price: Option<f64>,
     margin: Option<f64>,
-    funding_fee: Option<f64>,
 }
 #[allow(dead_code)]
 impl PerpetualPositionBuilder
@@ -71,8 +63,7 @@ impl PerpetualPositionBuilder
         Self { meta: None,
                pos_config: None,
                liquidation_price: None,
-               margin: None,
-               funding_fee: None }
+               margin: None }
     }
 
     pub fn meta(mut self, meta: PositionMeta) -> Self
@@ -99,18 +90,11 @@ impl PerpetualPositionBuilder
         self
     }
 
-    pub fn funding_fee(mut self, funding_fee: f64) -> Self
-    {
-        self.funding_fee = Some(funding_fee);
-        self
-    }
-
     pub fn build(self) -> Option<PerpetualPosition>
     {
         Some(PerpetualPosition { meta: self.meta?,
                                  pos_config: self.pos_config?,
                                  liquidation_price: self.liquidation_price?,
-                                 margin: self.margin?,
-                                 funding_fee: self.funding_fee? })
+                                 margin: self.margin? })
     }
 }

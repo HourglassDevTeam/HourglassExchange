@@ -158,7 +158,6 @@ impl PositionMetaBuilder
         self
     }
 
-
     pub fn exchange(mut self, exchange: ExchangeVariant) -> Self
     {
         self.exchange = Some(exchange);

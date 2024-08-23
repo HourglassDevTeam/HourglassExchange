@@ -21,8 +21,8 @@ use crate::{
         account::account_latency::{fluctuate_latency, AccountLatency},
         instrument_orders::InstrumentOrders,
     },
-};use rayon::iter::IndexedParallelIterator;
-use rayon::iter::IntoParallelRefIterator;
+};
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
 #[derive(Debug)]
 pub struct AccountOrders
 {

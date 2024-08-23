@@ -3,14 +3,15 @@ use chrono::{Duration, NaiveDate};
 use dotenvy::dotenv;
 #[cfg(feature = "lark")]
 use open_lark::{custom_bot::CustomBot, service::im::v1::message::MessageText};
-#[cfg(feature = "lark")]
-use std::env;
 use rayon::prelude::*;
 use std::collections::HashSet;
+#[cfg(feature = "lark")]
+use std::env;
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     // 检测是否为 release 模式
     #[cfg(debug_assertions)]
     println!("[UniLinkExecution] : Running in debug mode");
@@ -94,16 +95,13 @@ async fn main() {
                          date_str, processed_tables, total_tables, progress);
             }
 
-
             // 迭代到下一天
             start_date += Duration::days(1);
         }
 
         // 汇报最终结果
-        let final_message = format!(
-            "[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
-            total_tables, total_days
-        );
+        let final_message = format!("[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
+                                    total_tables, total_days);
 
         let message = MessageText::new(final_message.as_str());
         bot.send_message(message).await.unwrap();
@@ -144,10 +142,8 @@ async fn main() {
         }
 
         // 汇报最终结果
-        let final_message = format!(
-            "[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
-            total_tables, total_days
-        );
+        let final_message = format!("[UniLinkExecution] : Clickhouse Database Optimization is complete for {} tables across {} days.",
+                                    total_tables, total_days);
 
         println!("{}", final_message);
     }

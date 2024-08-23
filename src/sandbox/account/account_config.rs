@@ -18,7 +18,7 @@ pub struct AccountConfig
     pub position_mode: PositionDirectionMode,
     pub position_margin_mode: PositionMarginMode,
     pub commission_level: CommissionLevel,
-    pub funding_rate:f64,  // NOTE 每种金融工具可以拥有fund_fee_rate。甚至没有。这个写法是高度简化的。
+    pub funding_rate: f64,                                   // NOTE 每种金融工具可以拥有fund_fee_rate。甚至没有。这个写法是高度简化的。
     pub account_leverage_rate: f64,                          // NOTE 每种金融工具应该拥有杠杆比例Registry。这个写法是高度简化的。
     pub fees_book: HashMap<InstrumentKind, CommissionRates>, // 每种金融工具的手续费Registry NOTE 某种些交易所的设置颗粒会精确到Instrument.
 }
@@ -136,7 +136,7 @@ pub struct AccountConfigInitiator
     position_mode: Option<PositionDirectionMode>,
     position_margin_mode: Option<PositionMarginMode>,
     commission_level: Option<CommissionLevel>,
-    fund_fee_rate: Option<f64>
+    fund_fee_rate: Option<f64>,
 }
 
 impl AccountConfigInitiator
@@ -147,8 +147,7 @@ impl AccountConfigInitiator
                position_mode: None,
                position_margin_mode: None,
                commission_level: None,
-               fund_fee_rate: None,
-        }
+               fund_fee_rate: None }
     }
 
     pub fn margin_mode(mut self, margin_mode: MarginMode) -> Self
@@ -175,9 +174,9 @@ impl AccountConfigInitiator
                            position_mode: self.position_mode.ok_or("position_mode is required")?,
                            position_margin_mode: self.position_margin_mode.ok_or("position_mode is required")?,
                            commission_level: self.commission_level.ok_or("commission_level is required")?,
-            funding_rate: self.fund_fee_rate.ok_or("commission_level is required")?,
+                           funding_rate: self.fund_fee_rate.ok_or("commission_level is required")?,
 
-            account_leverage_rate: Default::default(),
+                           account_leverage_rate: Default::default(),
                            fees_book: Default::default() })
     }
 }

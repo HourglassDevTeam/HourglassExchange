@@ -13,7 +13,6 @@ pub struct AccountDataStreams<Event>
     pub streams: HashMap<StreamID, UnboundedReceiver<Event>>, // 使用HashMap存储数据流，键为StreamID
 }
 
-
 impl<Event> Default for AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static + Ord
 {
     fn default() -> Self

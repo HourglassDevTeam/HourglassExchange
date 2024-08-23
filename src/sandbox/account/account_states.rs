@@ -545,8 +545,8 @@ mod tests
                         commission_level: CommissionLevel::Lv1,
                         // current_commission_rate: CommissionRates { maker_fees: 0.001,
                         //                                            taker_fees: 0.0015 },
-            funding_rate: 0.0,
-            account_leverage_rate: leverage_rate,
+                        funding_rate: 0.0,
+                        account_leverage_rate: leverage_rate,
                         fees_book: HashMap::new() }
     }
     async fn create_test_account_state() -> Arc<Mutex<AccountState<()>>>
@@ -613,8 +613,7 @@ mod tests
                                                                   leverage: 1.0,
                                                                   position_mode: PositionDirectionMode::LongShortMode },
                             liquidation_price: 0.0,
-                            margin: 0.0,
-                            funding_fee: 0.0 }
+                            margin: 0.0 }
     }
 
     fn create_test_future_position_with_side(instrument: Instrument, side: Side) -> FuturePosition
@@ -730,34 +729,29 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_get_fee() {
+    async fn test_get_fee()
+    {
         let account_state = create_test_account_state().await;
 
         // 创建一个新的 AccountConfig 并手动设置 fees_book
         let mut config = create_test_account_config();
 
         // 设置 CommissionRates 并插入到 fees_book 中
-        let commission_rates = CommissionRates {
-            maker_fees: 0.001,
-            taker_fees: 0.002,
-        };
+        let commission_rates = CommissionRates { maker_fees: 0.001,
+                                                 taker_fees: 0.002 };
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
-        let account = Arc::new(Account {
-            exchange_timestamp: AtomicI64::new(0),
-            data: Arc::new(RwLock::new(AccountDataStreams::default())),
-            account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-            market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-            config: Arc::new(config),
-            states: account_state.clone(),
-            orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency {
-                fluctuation_mode: FluctuationMode::Sine,
-                maximum: 0,
-                minimum: 0,
-                current_value: 0,
-            }).await)),
-        });
+        let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(0),
+                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+                                         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+                                         config: Arc::new(config),
+                                         states: account_state.clone(),
+                                         orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
+                                                                                                                  maximum: 0,
+                                                                                                                  minimum: 0,
+                                                                                                                  current_value: 0 }).await)) });
 
         // 更新 account_state 的 account_ref
         {
@@ -915,8 +909,7 @@ mod tests
                                                                                            leverage: 0.0,
                                                                                            position_mode: PositionDirectionMode::LongShortMode },
                                                      liquidation_price: 0.0,
-                                                     margin: 0.0,
-                                                     funding_fee: 0.0 };
+                                                     margin: 0.0 };
 
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(123456789),
                                          data: Arc::new(RwLock::new(AccountDataStreams::default())),
@@ -968,7 +961,7 @@ mod tests
                                          side: Side::Buy,
                                          state: Open { id: OrderId::from("test_order"),
                                                        price: 100.0,
-                                                      size: 1.0,
+                                                       size: 1.0,
                                                        filled_quantity: 0.0,
                                                        order_role: OrderRole::Maker,
                                                        received_ts: 123456789 } };
@@ -976,14 +969,12 @@ mod tests
         // 在没有任何仓位的情况下调用
         let result = account_state.lock().await.any_position_open(&open_order).await;
 
-
         assert_eq!(result.expect("Failed to check position open status"), false);
 
         // 模拟已有仓位的情况
         account_state.lock().await.positions.perpetual_pos = Some(vec![create_test_perpetual_position(instrument.clone())]);
 
         let result = account_state.lock().await.any_position_open(&open_order).await;
-
 
         assert_eq!(result.expect("Failed to check position open status"), true);
     }
@@ -1030,5 +1021,4 @@ mod tests
         let result = account_state.lock().await.check_position_direction_conflict(&instrument_commodity_option, Side::Buy).await;
         assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
     }
-
 }
