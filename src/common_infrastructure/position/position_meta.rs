@@ -37,10 +37,10 @@ impl PositionMeta
 
         let total_fees = if include_fees && order_role == OrderRole::Maker {
             match &self.current_fees_total {
-                | Fees::Spot(fee) => fee.taker_rate * self.current_size,
-                | Fees::Future(fee) => fee.maker_rate * self.current_size,
-                | Fees::Perpetual(fee) => fee.maker_rate * self.current_size,
-                | Fees::Option(fee) => fee.trade_fee_rate * self.current_size,
+                | Fees::Spot(fee) => fee.taker_fee * self.current_size,
+                | Fees::Future(fee) => fee.maker_fee * self.current_size,
+                | Fees::Perpetual(fee) => fee.maker_fee * self.current_size,
+                | Fees::Option(fee) => fee.trade_fee * self.current_size,
             }
         }
         // FIXME BUG~~~~!!!!!

@@ -61,18 +61,22 @@ impl AccountPositions
         let funding_rate = config.funding_rate;
         // 计算初始保证金
         let initial_margin = trade.price * trade.size / config.account_leverage_rate;
+        // 计算费用
+        let maker_fee = trade.size * trade.price * maker_rate;
+        let taker_fee = trade.size * trade.price * taker_rate;
+        let funding_fee = trade.size * trade.price * funding_rate;
 
         // 根据 Instrument 和 Side 动态生成 position_id
         let position_meta = PositionMetaBuilder::new()
             .position_id(format!("{}_{}", trade.instrument, if trade.side == Side::Buy { "Long" } else { "Short" }))
             .enter_ts(exchange_ts)
             .update_ts(exchange_ts)
-            .exit_balance(TokenBalance { // NOTE 就这样吧
+            .exit_balance(TokenBalance { // 初始化为 exit_balance
                 token: trade.instrument.base.clone(),
                 balance: Balance {
                     current_price: trade.price,
-                    total: 0.0,
-                    available: 0.0,
+                    total: trade.size,
+                    available: trade.size,
                 },
             })
             .exchange(ExchangeVariant::SandBox)
@@ -80,15 +84,15 @@ impl AccountPositions
             .side(trade.side)
             .current_size(trade.size)
             .current_fees_total(Fees::Perpetual(PerpetualFees {
-                maker_rate,
-                taker_rate, // 假设平仓费率与开仓费率相同
-                funding_rate,         // NOTE 应该在外面预设
+                maker_fee,
+                taker_fee, // 假设平仓费率与开仓费率相同
+                funding_fee,
             }))
             .current_avg_price_gross(trade.price)
             .current_symbol_price(trade.price)
             .current_avg_price(trade.price)
-            .unrealised_pnl(0.0)  // NOTE 就这样初始化吧
-            .realised_pnl(0.0)  // NOTE 就这样初始化吧
+            .unrealised_pnl(0.0)  // 初始化为 0.0
+            .realised_pnl(0.0)  // 初始化为 0.0
             .build()
             .map_err(|err| ExecutionError::SandBox(format!("Failed to build position meta: {}", err)))?;
 
@@ -101,7 +105,7 @@ impl AccountPositions
         };
         let pos_config = PerpetualPositionConfig {
             pos_margin_mode,
-            leverage: config.account_leverage_rate,  // 从配置中获取杠杆
+            leverage: config.account_leverage_rate,
             position_mode,
         };
 

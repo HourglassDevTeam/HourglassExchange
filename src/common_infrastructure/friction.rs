@@ -19,33 +19,33 @@ pub struct InstrumentFees
 pub struct SpotFees
 {
     // 这里假设费用为固定值，实际情况可能更复杂。
-    pub maker_rate: f64, // 制造流动性的费率
-    pub taker_rate: f64, // 消耗流动性的费率
+    pub maker_fee: f64, // 制造流动性的费率
+    pub taker_fee: f64, // 消耗流动性的费率
 }
 
 // 永续合约交易费用结构体
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct PerpetualFees
 {
-    pub maker_rate: f64,   // 开仓费率
-    pub taker_rate: f64,   // 平仓费率
-    pub funding_rate: f64, // 资金费率
+    pub maker_fee: f64,   // 开仓费率
+    pub taker_fee: f64,   // 平仓费率
+    pub funding_fee: f64, // 资金费率
 }
 
 // 期货合约交易费用结构体
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct FutureFees
 {
-    pub maker_rate: f64,   // 开仓费率
-    pub taker_rate: f64,   // 平仓费率
-    pub funding_rate: f64, // 资金费率
+    pub maker_fee: f64,   // 开仓费率
+    pub taker_fee: f64,   // 平仓费率
+    pub funding_fee: f64, // 资金费率
 }
 
 // 期权交易费用结构体
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct OptionFees
 {
-    pub trade_fee_rate: f64,
+    pub trade_fee: f64,
     // 交易费率
     // 期权可能还有其他费用，如行权费等，根据需要添加
 }
