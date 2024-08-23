@@ -51,6 +51,11 @@ pub enum ExecutionError
     #[error("[UniLinkExecution] : Invalid order direction")]
     InvalidDirection,
 
+
+    /// 无效的ID。
+    #[error("[UniLinkExecution] : Invalid ID")]
+    InvalidID,
+
     /// 未知的交易所错误。
     #[error("[UniLinkExecution] : Unknown exchange error: {0}")]
     UnknownExchangeError(String),
