@@ -512,7 +512,7 @@ impl ClickHouseClient
             database, target_table_name, union_all_query
         );
 
-        // println!("The Final Query is : {}",final_query);
+        println!("The Final Query is : {}",final_query);
         if report_progress {
             println!("[UniLinkExecution] : Successfully constructed the final insert query.");
         }
