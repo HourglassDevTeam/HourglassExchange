@@ -21,8 +21,8 @@ use crate::{
         account::account_latency::{fluctuate_latency, AccountLatency},
         instrument_orders::InstrumentOrders,
     },
-};
-
+};use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelRefIterator;
 #[derive(Debug)]
 pub struct AccountOrders
 {
@@ -90,7 +90,7 @@ impl AccountOrders
     {
         // 假设你有方法来找到并删除PendingRegistry中的订单
         // 这里只是一个简单的示例
-        if let Some(index) = self.pending_registry.iter().position(|x| x.cid == order_id) {
+        if let Some(index) = self.pending_registry.par_iter().position_any(|x| x.cid == order_id) {
             self.pending_registry.remove(index);
             Ok(())
         }
