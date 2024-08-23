@@ -58,7 +58,7 @@ impl AccountPositions
         let open_fee_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
 
         let position_meta = PositionMetaBuilder::new()
-            .position_id("new_position".to_string()) // NOTE 使用适当的ID生成策略
+            .position_id("new_position".to_string()) // NOTE 使用适当的ID生成策略。 {"Instrument"} + {"Long"||"Short"}
             .enter_ts(exchange_ts)
             .update_ts(exchange_ts)
             .exit_balance(TokenBalance { // NOTE 怎么搞
