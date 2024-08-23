@@ -545,7 +545,8 @@ mod tests
                         commission_level: CommissionLevel::Lv1,
                         // current_commission_rate: CommissionRates { maker_fees: 0.001,
                         //                                            taker_fees: 0.0015 },
-                        account_leverage_rate: leverage_rate,
+            funding_rate: 0.0,
+            account_leverage_rate: leverage_rate,
                         fees_book: HashMap::new() }
     }
     async fn create_test_account_state() -> Arc<Mutex<AccountState<()>>>

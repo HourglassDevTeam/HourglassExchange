@@ -56,8 +56,9 @@ impl AccountPositions
         position_mode: PositionDirectionMode,
         exchange_ts: i64,
     ) -> Result<PerpetualPosition, ExecutionError> {
-        let open_fee_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
-
+        let maker_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
+        let taker_rate =  config.get_taker_fee_rate(&trade.instrument.kind)?;
+        let funding_rate = config.funding_rate;
         // 计算初始保证金
         let initial_margin = trade.price * trade.size / config.account_leverage_rate;
 
@@ -79,9 +80,9 @@ impl AccountPositions
             .side(trade.side)
             .current_size(trade.size)
             .current_fees_total(Fees::Perpetual(PerpetualFees {
-                maker_rate: open_fee_rate,
-                taker_rate: open_fee_rate, // 假设平仓费率与开仓费率相同
-                funding_rate: 0.0,         // NOTE 应该在外面预设
+                maker_rate,
+                taker_rate, // 假设平仓费率与开仓费率相同
+                funding_rate,         // NOTE 应该在外面预设
             }))
             .current_avg_price_gross(trade.price)
             .current_symbol_price(trade.price)
@@ -104,12 +105,16 @@ impl AccountPositions
             position_mode,
         };
 
+        // 计算 funding fee
+        let funding_fee = trade.size * trade.price * funding_rate;
+
+
         let new_position = PerpetualPositionBuilder::new()
             .meta(position_meta)
             .pos_config(pos_config)
             .liquidation_price(liquidation_price)
             .margin(initial_margin) // NOTE DOUBLE CHECK
-            .funding_fee(0.0) // NOTE Redundant?
+            .funding_fee(funding_fee)
             .build()
             .ok_or_else(|| ExecutionError::SandBox("Failed to build new position".to_string()))?;
 
