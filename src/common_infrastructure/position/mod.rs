@@ -108,7 +108,7 @@ impl AccountPositions
             .meta(position_meta)
             .pos_config(pos_config)
             .liquidation_price(liquidation_price)
-            .margin(0.0) // NOTE 初始设定为 0，稍后可以根据需要更新
+            .margin(initial_margin) // NOTE DOUBLE CHECK
             .funding_fee(0.0) // NOTE Redundant?
             .build()
             .ok_or_else(|| ExecutionError::SandBox("Failed to build new position".to_string()))?;
