@@ -1,7 +1,7 @@
 use rayon::iter::ParallelIterator;
 /// NOTE 目前表名的构建方式都以`Tardis API`的`Binance`数据为基础。可能并不适用于其他交易所。日后**必须**扩展。
-use std::sync::Arc;
-
+use rayon::prelude::*;
+use std::sync::{Arc, Mutex};
 use async_stream::stream;
 use chrono::NaiveDate;
 use clickhouse::query::RowCursor;
@@ -168,49 +168,47 @@ impl ClickHouseClient
         tables_for_date
     }
 
-    pub async fn create_unioned_table_for_date(&self,
-                                               database: &str,
-                                               new_table_name: &str,
-                                               table_names: &[String],
-                                               report_progress: bool /* 新增参数，用于控制是否启用进度汇报 */)
-                                               -> Result<(), Error>
-    {
+    pub async fn create_unioned_table_for_date(
+        &self,
+        database: &str,
+        new_table_name: &str,
+        table_names: &[String],
+        report_progress: bool, // 新增参数，用于控制是否启用进度汇报
+    ) -> Result<(), Error> {
         // 构建UNION ALL查询
-        let mut queries = Vec::new();
+        let queries = Arc::new(Mutex::new(Vec::new()));
         let total_tables = table_names.len();
 
-        for (i, table_name) in table_names.iter().enumerate() {
-            let select_query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount") // Select required fields
-                                                            .from(database, table_name) // Format the table name with database
-                                                            .build(); // Build the individual query
+        table_names.par_iter().enumerate().for_each(|(i, table_name)| {
+            let select_query = ClickHouseQueryBuilder::new()
+                .select("symbol, side, price, timestamp, amount") // Select required fields
+                .from(database, table_name) // Format the table name with database
+                .build(); // Build the individual query
 
-            queries.push(select_query);
+            let mut queries_lock = queries.lock().unwrap();
+            queries_lock.push(select_query);
 
             // 如果启用进度汇报，每处理完一个表就汇报一次进度
             if report_progress {
                 let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
-                println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
-
-                // 模拟延迟以模拟长时间运行任务的进度汇报
-                // sleep(Duration::from_millis(500)).await;
+                println!(
+                    "Progress: Processed {} / {} tables ({:.2}%)",
+                    i + 1,
+                    total_tables,
+                    progress
+                );
             }
-        }
+        });
 
+        let queries = Arc::try_unwrap(queries).expect("Failed to unwrap Arc").into_inner().unwrap();
         let union_all_query = queries.join(" UNION ALL ");
 
         // 假设你要创建的表使用MergeTree引擎并按timestamp排序
-
-        // NOTE : This chunk is a query without any partition
-        // let final_query = format!("CREATE TABLE {}.{} ENGINE = MergeTree() ORDER BY timestamp AS {}",
-        //                           database, new_table_name, union_all_query);
-        //
-
-        // NOTE : A partition syntax has been added to this query.
         let final_query = format!(
-                                  "CREATE TABLE {}.{} ENGINE = MergeTree() \
-            PARTITION BY toYYYYMMDD(toDate(timestamp)) \
-            ORDER BY timestamp AS {}",
-                                  database, new_table_name, union_all_query
+            "CREATE TABLE {}.{} ENGINE = MergeTree() \
+        PARTITION BY toYYYYMMDD(toDate(timestamp)) \
+        ORDER BY timestamp AS {}",
+            database, new_table_name, union_all_query
         );
 
         if report_progress {
@@ -221,7 +219,10 @@ impl ClickHouseClient
         self.client.read().await.query(&final_query).execute().await?;
 
         if report_progress {
-            println!("[UniLinkExecution] : Table {}.{} created successfully.", database, new_table_name);
+            println!(
+                "[UniLinkExecution] : Table {}.{} created successfully.",
+                database, new_table_name
+            );
         }
 
         Ok(())

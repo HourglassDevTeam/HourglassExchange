@@ -23,7 +23,7 @@ async fn main()
     let all_tables = client.get_table_names(&database).await;
 
     // 创建一个表名与日期的字典
-    let table_date_map: HashMap<String, String> = all_tables.iter()
+    let table_date_map: HashMap<String, String> = all_tables.par_iter()
                                                             .filter_map(|table_name| {
                                                                 if let Some(table_date) = extract_date(table_name) {
                                                                     Some((table_name.clone(), table_date))

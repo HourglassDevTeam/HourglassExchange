@@ -34,6 +34,8 @@ use crate::common_infrastructure::order::{Open, Order, OrderId};
 use crate::common_infrastructure::Side;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
+use rayon::iter::IntoParallelRefIterator;
+use rayon::prelude::IndexedParallelIterator;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceLevel
@@ -201,8 +203,8 @@ impl SandBoxOrderBook
     {
         for levels in [&mut self.bid_levels, &mut self.ask_levels].iter_mut() {
             for level in levels.iter_mut() {
-                if let Some(pos) = level.orders.iter().position(|order| order.state.id == order_id) {
-                    return Some(level.orders.remove(pos).unwrap()); // 移除并返回被取消的订单
+                if let Some(pos) = level.orders.par_iter().position_any(|order| order.state.id == order_id) {
+                    return Some(level.orders.remove(pos)?); // 移除并返回被取消的订单
                 }
             }
         }
