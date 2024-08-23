@@ -135,24 +135,20 @@ pub enum OrderRole
     Taker,
 }
 
-/// 使得Order<Open> 之间可以比较大小
-/// NOTE: 此处Self 等同于 Order<Open>，表示 other 参数也是一个 Order<Open> 类型的引用。
-impl Ord for Order<Open>
-{
-    fn cmp(&self, other: &Self) -> Ordering
-    {
-        self.partial_cmp(other)
-            .unwrap_or_else(|| panic!("[UniLinkExecution] : {:?}.partial_cmp({:?}) impossible", self, other))
+impl Ord for Order<Open> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.state.price
+            .partial_cmp(&other.state.price)
+            .unwrap_or(Ordering::Equal) // 处理 NaN 的情况
     }
 }
 
-impl PartialOrd for Order<Open>
-{
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering>
-    {
+impl PartialOrd for Order<Open> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
+
 // 为Order<Open>实现Eq
 impl Eq for Order<Open> {}
 

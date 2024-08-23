@@ -558,4 +558,42 @@ mod tests {
         let result = instrument_orders.generate_trade_event(&order, 1.0, 0.01);
         assert!(matches!(result, Err(ExecutionError::InvalidID))); // 检查返回结果是否为 InvalidID 错误
     }
+
+
+    #[test]
+    fn test_num_orders() {
+        let mut instrument_orders = InstrumentOrders {
+            batch_id: 0,
+            bids: Vec::new(),
+            asks: Vec::new(),
+        };
+
+        // 测试无订单的情况
+        assert_eq!(instrument_orders.num_orders(), 0);
+
+        // 添加一个买单
+        let order_buy = create_order(Side::Buy, 100.0, 1.0);
+        instrument_orders.add_order_open(order_buy);
+        assert_eq!(instrument_orders.num_orders(), 1);
+
+
+        // 添加一个卖单
+        let order_sell = create_order(Side::Sell, 110.0, 1.0);
+        let order_sell_2 = create_order(Side::Sell, 115.0, 1.0);
+        instrument_orders.add_order_open(order_sell);
+        assert_eq!(instrument_orders.num_orders(), 2);
+
+        //
+        // 再添加两个买单和一个卖单
+        let order_buy_2 = create_order(Side::Buy, 105.0, 1.0);
+        let order_buy_3 = create_order(Side::Buy, 107.0, 1.0);
+
+        instrument_orders.add_order_open(order_buy_2);
+        instrument_orders.add_order_open(order_buy_3);
+        instrument_orders.add_order_open(order_sell_2);
+        //
+        assert_eq!(instrument_orders.num_orders(), 5); // 3 个买单和 2 个卖单
+    }
+
+
 }
