@@ -134,17 +134,21 @@ pub enum OrderRole
     Maker,
     Taker,
 }
-
 impl Ord for Order<Open> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.state.price
-            .partial_cmp(&other.state.price)
-            .unwrap_or(Ordering::Equal) // 处理 NaN 的情况
+        match self.state.price.partial_cmp(&other.state.price) {
+            Some(ordering) => ordering,
+            None => panic!(
+                "[UniLinkExecution] : Failed to compare prices. One of the prices is NaN: self = {:?}, other = {:?}",
+                self.state.price, other.state.price
+            ),
+        }
     }
 }
 
 impl PartialOrd for Order<Open> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // 使用 Ord 实现的 cmp 方法，这样 partial_cmp 可以继承 Ord 的错误处理逻辑
         Some(self.cmp(other))
     }
 }
