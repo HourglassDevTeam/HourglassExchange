@@ -96,9 +96,9 @@ impl AccountPositions
         let new_position = PerpetualPositionBuilder::new()
             .meta(position_meta)
             .pos_config(pos_config)
-            .liquidation_price(0.0) // 初始设定为 0，稍后可以根据需要更新
-            .margin(0.0) // 初始设定为 0，稍后可以根据需要更新
-            .funding_fee(0.0) // 初始设定为 0，稍后可以根据需要更新
+            .liquidation_price(0.0) // NOTE 初始设定为 0，稍后可以根据需要更新
+            .margin(0.0) // NOTE 初始设定为 0，稍后可以根据需要更新
+            .funding_fee(0.0) // NOTE 初始设定为 0，稍后可以根据需要更新
             .build()
             .ok_or_else(|| ExecutionError::SandBox("Failed to build new position".to_string()))?;
 
