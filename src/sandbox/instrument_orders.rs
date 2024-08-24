@@ -1,5 +1,5 @@
 use std::{cmp::Ordering, fmt::Debug};
-
+use rayon::prelude::ParallelSliceMut;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -63,12 +63,12 @@ impl InstrumentOrders
             | Side::Buy => {
                 // 添加 Order<Open> 到买单
                 self.bids.push(new_open_order);
-                self.bids.sort();
+                self.bids.par_sort();
             }
             | Side::Sell => {
                 // 添加 Order<Open> 到卖单
                 self.asks.push(new_open_order);
-                self.asks.sort();
+                self.asks.par_sort();
             }
         }
     }
