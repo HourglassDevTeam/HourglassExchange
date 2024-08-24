@@ -7,8 +7,8 @@ use std::{
 };
 
 use rand::Rng;
-use rayon::iter::IndexedParallelIterator;
-use rayon::prelude::IntoParallelRefIterator;
+// use rayon::iter::IndexedParallelIterator;
+// use rayon::prelude::IntoParallelRefIterator;
 use tokio::sync::RwLock;
 
 use crate::{
