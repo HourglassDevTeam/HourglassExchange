@@ -1,7 +1,7 @@
 use unilink_execution::sandbox::account::account_market_feed::AccountDataStreams;
 use std::{sync::Arc, time::Duration};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
-use tokio::{sync::mpsc, time::timeout};
+use tokio::sync::mpsc;
 use chrono::{NaiveDate, Duration as ChronoDuration};
 
 #[tokio::main]
@@ -39,24 +39,23 @@ async fn main() {
                 // 启动一个任务来从游标读取数据并发送到通道
                 let cursor_task = tokio::spawn(async move {
                     loop {
-                        match timeout(Duration::from_secs(15), cursor.next()).await {
-                            Ok(Ok(Some(trade))) => {
+                        match cursor.next().await {
+                            Ok(Some(trade)) => {
+                                // 打印每个交易数据
+                                println!("[UniLinkExecution] : Received trade for date {}: {:?}", date_str_clone, trade);
+
                                 if tx.send(trade).is_err() {
                                     // 如果发送失败（例如接收者已关闭），退出循环
                                     eprintln!("[UniLinkExecution] : Failed to send trade, receiver might be closed.");
                                     break;
                                 }
                             }
-                            Ok(Ok(None)) => {
+                            Ok(None) => {
                                 println!("[UniLinkExecution] : Cursor data processing for date {} is complete.", date_str_clone);
                                 break;
                             }
-                            Ok(Err(_e)) => {
-                                eprintln!("[UniLinkExecution] : No data available for date {}. Skipping to next date.", date_str_clone);
-                                break;
-                            }
-                            Err(error) => {
-                                eprintln!("[UniLinkExecution] : error while reading cursor : {}", error);
+                            Err(_e) => {
+                                eprintln!("[UniLinkExecution] : Error or no data available for date {}. Skipping to next date.", date_str_clone);
                                 break;
                             }
                         }
