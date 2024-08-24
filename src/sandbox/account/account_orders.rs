@@ -27,7 +27,7 @@ use crate::{
 #[derive(Debug)]
 pub struct AccountOrders
 {
-    pub latency_generator: Arc<RwLock<AccountLatency>>,
+    pub latency_generator: AccountLatency,
     pub selectable_latencies: [i64; 20],
     pub request_counter: AtomicU64,            // 用来生成一个唯一的 [`OrderId`]。
     pub pending_registry: Vec<Order<Pending>>, // Pending订单的寄存器。
@@ -37,25 +37,23 @@ pub struct AccountOrders
 impl AccountOrders
 {
     /// 从给定的 [`Instrument`] 列表选择构造一个新的 [`AccountOrders`]。
-    pub async fn new(instruments: Vec<Instrument>, account_latency: AccountLatency) -> Self
+    pub async fn new(instruments: Vec<Instrument>, mut account_latency: AccountLatency) -> Self
     {
-        let latency_generator = Arc::new(RwLock::new(account_latency));
-        let selectable_latencies = Self::generate_latencies(&latency_generator).await;
+        let selectable_latencies = Self::generate_latencies(&mut account_latency).await;
 
         Self { request_counter: AtomicU64::new(0),
                pending_registry: vec![],
                instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
-               latency_generator,
+               latency_generator: account_latency,
                selectable_latencies }
     }
 
-    async fn generate_latencies(latency_generator: &Arc<RwLock<AccountLatency>>) -> [i64; 20]
+    async fn generate_latencies(latency_generator: &mut AccountLatency) -> [i64; 20]
     {
         let mut latencies = [0; 20];
-        let mut generator = latency_generator.write().await;
         for latency in &mut latencies {
-            fluctuate_latency(&mut generator, 0); // 这里0只是一个占位，可以根据需求调整
-            *latency = generator.current_value;
+            fluctuate_latency(latency_generator, 0); // 这里0只是一个占位，可以根据需求调整
+            *latency = latency_generator.current_value;
         }
         latencies
     }
@@ -238,10 +236,8 @@ impl AccountOrders
         OrderId(self.request_counter.load(Ordering::Acquire).to_string())
     }
 
-    pub async fn update_latency(&mut self, current_time: i64)
-    {
-        let mut latency = self.latency_generator.write().await;
-        fluctuate_latency(&mut latency, current_time);
+    pub fn update_latency(&mut self, current_time: i64) {
+        fluctuate_latency(&mut self.latency_generator, current_time);
     }
 }
 
@@ -279,7 +275,12 @@ mod tests
         let account_latency = AccountLatency::new(FluctuationMode::NormalDistribution, 100, 10);
 
         let latency_generator = Arc::new(RwLock::new(account_latency));
-        let latencies = AccountOrders::generate_latencies(&latency_generator).await;
+
+        // 获取可变引用
+        let mut latency_generator = latency_generator.write().await;
+
+        // 传递给 generate_latencies 函数
+        let latencies = AccountOrders::generate_latencies(&mut latency_generator).await;
 
         assert_eq!(latencies.len(), 20);
         for latency in &latencies {
@@ -468,9 +469,9 @@ mod tests
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        account_orders.update_latency(1000).await;
+        account_orders.update_latency(1000);
 
-        let latency = account_orders.latency_generator.read().await;
+        let latency = account_orders.latency_generator;
         assert!(latency.current_value >= 10 && latency.current_value <= 100);
     }
 }
