@@ -44,21 +44,26 @@ impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync +
 
     // 将所有数据流合并到一个新的接收器中，并按时间戳排序。
     pub async fn join(self) -> UnboundedReceiver<Event>
-        where Event: Send + 'static
+    where Event: Send + 'static
     {
         let mut joined_rx = self.merge_streams().await;
 
-        // 监听合并后的接收器，按时间戳排序后再发送到新的接收器中
+        // 监听合并后的接收器，收集所有事件后再排序并发送到新的接收器中
         let (sorted_tx, sorted_rx) = mpsc::unbounded_channel();
         tokio::spawn(async move {
             let mut buffer = Vec::new();
 
+            // 将所有事件收集到buffer中
             while let Some(event) = joined_rx.recv().await {
                 buffer.push(event);
-                buffer.sort(); // 按时间戳排序
-                for e in buffer.drain(..) {
-                    let _ = sorted_tx.send(e);
-                }
+            }
+
+            // 对buffer中的事件进行排序
+            buffer.sort();
+
+            // 将排序后的事件发送到新的接收器中
+            for e in buffer {
+                let _ = sorted_tx.send(e);
             }
         });
 
@@ -102,4 +107,64 @@ impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Sen
         let stream_keys: Vec<_> = self.streams.keys().collect();
         f.debug_struct("AccountDataStreams").field("streams", &stream_keys).finish()
     }
+}
+
+#[tokio::test]
+async fn add_stream_should_add_new_stream() {
+    let mut streams: AccountDataStreams<i32> = AccountDataStreams::new(); // 明确指定 Event 类型为 i32
+    let (_tx, rx) = mpsc::unbounded_channel();
+    streams.add_stream("stream1".to_string(), rx);
+    assert!(streams.streams.contains_key("stream1"));
+}
+
+#[tokio::test]
+async fn remove_stream_should_remove_existing_stream() {
+    let mut streams: AccountDataStreams<i32> = AccountDataStreams::new(); // 明确指定 Event 类型为 i32
+    let (_tx, rx) = mpsc::unbounded_channel();
+    streams.add_stream("stream1".to_string(), rx);
+    streams.remove_stream("stream1".to_string());
+    assert!(!streams.streams.contains_key("stream1"));
+}
+
+#[tokio::test]
+async fn join_should_merge_and_sort_streams() {
+    let mut streams: AccountDataStreams<i32> = AccountDataStreams::new(); // 明确指定 Event 类型为 i32
+    let (tx1, rx1) = mpsc::unbounded_channel();
+    let (tx2, rx2) = mpsc::unbounded_channel();
+    streams.add_stream("stream1".to_string(), rx1);
+    streams.add_stream("stream2".to_string(), rx2);
+
+    tokio::spawn(async move {
+        tx1.send(3).unwrap();
+        tx2.send(1).unwrap();
+        tx1.send(2).unwrap();
+    });
+
+    let mut joined_rx = streams.join().await;
+    assert_eq!(joined_rx.recv().await, Some(1));
+    assert_eq!(joined_rx.recv().await, Some(2));
+    assert_eq!(joined_rx.recv().await, Some(3));
+}
+
+#[tokio::test]
+async fn join_without_sort_should_merge_streams() {
+    let mut streams: AccountDataStreams<i32> = AccountDataStreams::new(); // 明确指定 Event 类型为 i32
+    let (tx1, rx1) = mpsc::unbounded_channel();
+    let (tx2, rx2) = mpsc::unbounded_channel();
+    streams.add_stream("stream1".to_string(), rx1);
+    streams.add_stream("stream2".to_string(), rx2);
+
+    tokio::spawn(async move {
+        tx1.send(3).unwrap();
+        tx2.send(1).unwrap();
+        tx1.send(2).unwrap();
+    });
+
+    let mut joined_rx = streams.join_without_sort().await;
+    let mut received = vec![];
+    while let Some(event) = joined_rx.recv().await {
+        received.push(event);
+    }
+    received.sort();
+    assert_eq!(received, vec![1, 2, 3]);
 }
