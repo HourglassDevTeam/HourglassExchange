@@ -237,3 +237,124 @@ pub enum Position
     Future(FuturePosition),
     Option(OptionPosition),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common_infrastructure::token::Token;
+
+    fn create_instrument(kind: InstrumentKind) -> Instrument {
+        Instrument {
+            base: Token::from("BTC"),
+            quote: Token::from("USDT"),
+            kind,
+        }
+    }
+
+    fn create_perpetual_position(instrument: &Instrument) -> PerpetualPosition {
+        // 假设初始交易价格和仓位大小
+        let initial_trade_price = 50000.0;
+        let trade_size = 1.0;
+
+        // 设置杠杆率
+        let leverage = 10.0;
+
+        // 计算初始保证金
+        let initial_margin = initial_trade_price * trade_size / leverage;
+
+        // 假设当前市场价格略有波动
+        let current_market_price = 50500.0;
+
+        // 计算当前仓位的未实现盈亏
+        let unrealised_pnl = (current_market_price - initial_trade_price) * trade_size;
+
+        // 计算清算价格 (liquidation_price)
+        let liquidation_price = initial_trade_price * (1.0 - initial_margin / (trade_size * initial_trade_price));
+
+        PerpetualPosition {
+            meta: PositionMetaBuilder::new()
+                .position_id("test_position".into())
+                .instrument(instrument.clone())
+                .side(Side::Buy)
+                .enter_ts(1625097600000)
+                .update_ts(1625097600000)
+                .exit_balance(TokenBalance {
+                    token: instrument.base.clone(),
+                    balance: Balance {
+                        current_price: current_market_price,
+                        total: trade_size,
+                        available: trade_size,
+                    },
+                })
+                .exchange(ExchangeVariant::Binance)
+                .current_size(trade_size)
+                .current_fees_total(Fees::Perpetual(PerpetualFees {
+                    maker_fee: 0.1 * trade_size,
+                    taker_fee: 0.1 * trade_size,
+                    funding_fee: 0.0,
+                }))
+                .current_avg_price_gross(initial_trade_price)
+                .current_symbol_price(current_market_price)
+                .current_avg_price(initial_trade_price)
+                .unrealised_pnl(unrealised_pnl)
+                .realised_pnl(0.0)
+                .build()
+                .unwrap(),
+            liquidation_price,
+            margin: initial_margin,
+            pos_config: PerpetualPositionConfig {
+                pos_margin_mode: PositionMarginMode::Cross,
+                leverage,
+                position_mode: PositionDirectionMode::NetMode,
+            },
+        }
+    }
+
+    #[test]
+    fn test_has_position() {
+        let mut account_positions = AccountPositions::init();
+
+        let perpetual_instrument = create_instrument(InstrumentKind::Perpetual);
+        let future_instrument = create_instrument(InstrumentKind::Future);
+
+        // 初始情况下，没有任何仓位
+        assert!(!account_positions.has_position(&perpetual_instrument));
+        assert!(!account_positions.has_position(&future_instrument));
+
+        // 添加 PerpetualPosition
+        let perpetual_position = create_perpetual_position(&perpetual_instrument);
+        account_positions.update_position(Position::Perpetual(perpetual_position));
+
+        // 现在应该持有 PerpetualPosition，但不持有 FuturePosition
+        assert!(account_positions.has_position(&perpetual_instrument));
+        assert!(!account_positions.has_position(&future_instrument));
+    }
+
+    #[test]
+    fn test_update_position() {
+        let mut account_positions = AccountPositions::init();
+
+        let perpetual_instrument = create_instrument(InstrumentKind::Perpetual);
+
+        // 添加 PerpetualPosition
+        let perpetual_position = create_perpetual_position(&perpetual_instrument);
+        account_positions.update_position(Position::Perpetual(perpetual_position.clone()));
+
+        // 确保 PerpetualPosition 已正确添加
+        assert!(account_positions.has_position(&perpetual_instrument));
+
+        // 更新相同的 PerpetualPosition
+        let mut updated_position = perpetual_position.clone();
+        updated_position.margin = 2000.0; // 修改仓位的保证金
+
+        account_positions.update_position(Position::Perpetual(updated_position.clone()));
+
+        // 确保仓位已更新
+        if let Some(positions) = &account_positions.perpetual_pos {
+            let pos = &positions[0];
+            assert_eq!(pos.margin, 2000.0);
+        } else {
+            panic!("PerpetualPosition should exist but was not found.");
+        }
+    }
+}
