@@ -331,30 +331,63 @@ mod tests {
     }
 
     #[test]
-    fn test_update_position() {
+    fn test_update_existing_position() {
         let mut account_positions = AccountPositions::init();
 
         let perpetual_instrument = create_instrument(InstrumentKind::Perpetual);
 
-        // 添加 PerpetualPosition
+        // 添加初始的 PerpetualPosition
         let perpetual_position = create_perpetual_position(&perpetual_instrument);
         account_positions.update_position(Position::Perpetual(perpetual_position.clone()));
 
-        // 确保 PerpetualPosition 已正确添加
+        // 确保初始 PerpetualPosition 已正确添加
         assert!(account_positions.has_position(&perpetual_instrument));
+        assert_eq!(account_positions.perpetual_pos.as_ref().unwrap().len(), 1);
 
-        // 更新相同的 PerpetualPosition
+        // 更新相同的 PerpetualPosition，修改 `margin`
         let mut updated_position = perpetual_position.clone();
         updated_position.margin = 2000.0; // 修改仓位的保证金
 
         account_positions.update_position(Position::Perpetual(updated_position.clone()));
 
-        // 确保仓位已更新
+        // 确保仓位已更新而不是新添加
         if let Some(positions) = &account_positions.perpetual_pos {
+            assert_eq!(positions.len(), 1); // 确保仓位数量未增加
             let pos = &positions[0];
-            assert_eq!(pos.margin, 2000.0);
+            assert_eq!(pos.margin, 2000.0); // 检查仓位是否已正确更新
         } else {
             panic!("PerpetualPosition should exist but was not found.");
         }
+    }
+
+    #[test]
+    fn test_add_new_position() {
+        let mut account_positions = AccountPositions::init();
+
+        // 创建两个不同的 Instrument
+        let perpetual_instrument_1 = Instrument {
+            base: Token::from("BTC"),
+            quote: Token::from("USDT"),
+            kind: InstrumentKind::Perpetual,
+        };
+
+        let perpetual_instrument_2 = Instrument {
+            base: Token::from("ETH"),
+            quote: Token::from("USDT"),
+            kind: InstrumentKind::Perpetual,
+        };
+
+        // 添加初始的 PerpetualPosition
+        let perpetual_position_1 = create_perpetual_position(&perpetual_instrument_1);
+        account_positions.update_position(Position::Perpetual(perpetual_position_1.clone()));
+
+        // 添加新的 PerpetualPosition
+        let perpetual_position_2 = create_perpetual_position(&perpetual_instrument_2);
+        account_positions.update_position(Position::Perpetual(perpetual_position_2.clone()));
+
+        // 确保新仓位已正确添加
+        assert!(account_positions.has_position(&perpetual_instrument_1));
+        assert!(account_positions.has_position(&perpetual_instrument_2));
+        assert_eq!(account_positions.perpetual_pos.as_ref().unwrap().len(), 2);
     }
 }
