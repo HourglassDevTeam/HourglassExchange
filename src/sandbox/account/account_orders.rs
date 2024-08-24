@@ -117,74 +117,65 @@ impl AccountOrders
     }
 
     // 判断是Maker还是Taker单
-    pub fn determine_maker_taker(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
-    {
+    /// 确定订单是 Maker 还是 Taker
+    pub fn determine_maker_taker(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError> {
         match order.kind {
-            | OrderKind::Market => Ok(OrderRole::Taker),
-            | OrderKind::Limit => match order.side {
-                | Side::Buy => {
-                    // 对于买单，限价单的价格应高于或等于当前价格才为Maker
-                    if order.state.price >= current_price {
-                        Ok(OrderRole::Maker)
-                    }
-                    else {
-                        Ok(OrderRole::Taker)
-                    }
-                }
-                | Side::Sell => {
-                    // 对于卖单，限价单的价格应低于或等于当前价格才为Maker
-                    if order.state.price <= current_price {
-                        Ok(OrderRole::Maker)
-                    }
-                    else {
-                        Ok(OrderRole::Taker)
-                    }
-                }
-            },
-            // PostOnly: 只能作为挂单进入市场。如果无法作为挂单（即成为 Taker），则订单会被取消。
-            | OrderKind::PostOnly => match order.side {
-                | Side::Buy => {
-                    // PostOnly订单如果无法作为挂单（即成为Taker），则被取消
-                    if order.state.price >= current_price {
-                        Ok(OrderRole::Maker)
-                    }
-                    else {
-                        self.remove_order_from_pending_registry(order.cid)?; // 处理删除操作
-                        Err(ExecutionError::OrderRejected("PostOnly order rejected".into()))
-                    }
-                }
-                | Side::Sell => {
-                    if order.state.price <= current_price {
-                        Ok(OrderRole::Maker)
-                    }
-                    else {
-                        self.remove_order_from_pending_registry(order.cid)?; // 处理删除操作
-                        Err(ExecutionError::OrderRejected("PostOnly order rejected".into()))
-                    }
-                }
-            },
-            | OrderKind::ImmediateOrCancel => Ok(OrderRole::Taker), // IOC订单总是作为Taker
-            | OrderKind::FillOrKill => Ok(OrderRole::Taker),        // FOK订单总是作为Taker
-            | OrderKind::GoodTilCancelled => match order.side {
-                | Side::Buy => {
-                    // GTC订单和Limit订单相似
-                    if order.state.price >= current_price {
-                        Ok(OrderRole::Maker)
-                    }
-                    else {
-                        Ok(OrderRole::Taker)
-                    }
-                }
-                | Side::Sell => {
-                    if order.state.price <= current_price {
-                        Ok(OrderRole::Maker)
-                    }
-                    else {
-                        Ok(OrderRole::Taker)
-                    }
-                }
-            },
+            OrderKind::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
+
+            OrderKind::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
+
+            OrderKind::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
+
+            OrderKind::ImmediateOrCancel | OrderKind::FillOrKill => Ok(OrderRole::Taker), // 立即成交或取消的订单总是 Taker
+
+            OrderKind::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
         }
+    }
+
+    /// 判断限价订单是 Maker 还是 Taker
+    fn determine_limit_order_role(&self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError> {
+        match order.side {
+            Side::Buy => {
+                if order.state.price >= current_price {
+                    Ok(OrderRole::Maker)
+                } else {
+                    Ok(OrderRole::Taker)
+                }
+            }
+            Side::Sell => {
+                if order.state.price <= current_price {
+                    Ok(OrderRole::Maker)
+                } else {
+                    Ok(OrderRole::Taker)
+                }
+            }
+        }
+    }
+
+    /// 判断 PostOnly 订单是否符合条件，如果不符合则删除并返回错误
+    fn determine_post_only_order_role(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError> {
+        match order.side {
+            Side::Buy => {
+                if order.state.price >= current_price {
+                    Ok(OrderRole::Maker)
+                } else {
+                    self.reject_post_only_order(order)
+                }
+            }
+            Side::Sell => {
+                if order.state.price <= current_price {
+                    Ok(OrderRole::Maker)
+                } else {
+                    self.reject_post_only_order(order)
+                }
+            }
+        }
+    }
+
+    /// 拒绝不符合条件的 PostOnly 订单并移除
+    fn reject_post_only_order(&mut self, order: &Order<Pending>) -> Result<OrderRole, ExecutionError> {
+        self.remove_order_from_pending_registry(order.cid)?; // 移除订单
+        Err(ExecutionError::OrderRejected("PostOnly order rejected".into())) // 返回拒绝错误
     }
 
     /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，

@@ -221,39 +221,32 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     }
 
     pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError> {
-        // 验证订单合法性
         Self::order_validity_check(order.kind)?;
 
-        // 提前声明 `required_balance` 和 `token`，使它们在整个函数中可用
+        // 提前声明所需的变量
         let (required_balance, token, open_order);
+        let order_role;
 
         {
+            // 缩小锁的范围
             let mut orders_guard = self.orders.write().await;
-
-            let order_role = orders_guard.determine_maker_taker(&order, current_price)?;
+            order_role = orders_guard.determine_maker_taker(&order, current_price)?;
 
             // 计算所需的可用余额
             let (t, r_balance) = self.calculate_required_available_balance(&order, current_price).await;
             required_balance = r_balance;
             token = t;
 
-            // 检查可用余额是否充足
             self.states.lock().await.has_sufficient_available_balance(token, required_balance)?;
 
-            // 构建 Open<Order>
             open_order = orders_guard.build_order_open(order, order_role).await;
 
-            // 添加订单到 Instrument Orders
             orders_guard.ins_orders_mut(&open_order.instrument)?.add_order_open(open_order.clone());
         }
 
-        // 更新客户余额
         let balance_event = self.states.lock().await.apply_open_order_changes(&open_order, required_balance).await.unwrap();
-
-        // 获取当前的 exchange_timestamp
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
-        // 发送账户事件给客户端
         self.account_event_tx
             .send(balance_event)
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Balance");
@@ -264,7 +257,6 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
 
-        // 返回已打开的订单
         Ok(open_order)
     }
 
