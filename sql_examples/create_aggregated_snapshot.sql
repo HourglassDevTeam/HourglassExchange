@@ -316,7 +316,7 @@ FROM
     `bids[24].amount`,
     row_number() OVER (PARTITION BY toStartOfSecond(toDateTime64(timestamp / 1000000, 3)) ORDER BY timestamp DESC) AS rn
     FROM
-    binance_futures_book_snapshot_25.binance_futures_book_snapshot_25_2020_12_19_XRPUSDT
+    binance_futures_book_snapshot_25_secs.binance_futures_book_snapshot_25_2020_12_19_XRPUSDT_secs
     ) AS subquery
 WHERE subquery.rn = 1
 ORDER BY subquery.second_ts ASC;
