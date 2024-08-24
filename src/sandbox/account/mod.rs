@@ -1,4 +1,9 @@
 use crate::common_infrastructure::event::ClientOrderId;
+use futures::{future::join_all, lock::Mutex};
+use mpsc::UnboundedSender;
+use oneshot::Sender;
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelRefIterator;
 use std::{
     fmt::Debug,
     sync::{
@@ -6,11 +11,6 @@ use std::{
         Arc,
     },
 };
-use rayon::iter::IntoParallelRefIterator;
-use rayon::iter::IndexedParallelIterator;
-use futures::{future::join_all, lock::Mutex};
-use mpsc::UnboundedSender;
-use oneshot::Sender;
 use tokio::sync::{mpsc, oneshot, RwLock};
 use tracing::warn;
 
@@ -314,55 +314,59 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
         // 遍历订单 ID 来处理每个订单
         for order_id in order_ids {
-            // 在需要时获取写锁来调用可变方法
-            let mut orders_write = self.orders.write().await;
+            let order = {
+                // 只在获取订单时持有锁
+                let orders_read = self.orders.read().await;
+                orders_read.pending_registry.get(&order_id).cloned()
+            };
 
-            // 获取当前的挂单并克隆它
-            if let Some(order) = orders_write.pending_registry.get(&order_id).cloned() {
-                let role = orders_write.determine_maker_taker(&order, current_price);
+            if let Some(order) = order {
+                let role = {
+                    // 在判断订单角色时再次持有写锁
+                    let mut orders_write = self.orders.write().await;
+                    orders_write.determine_maker_taker(&order, current_price)
+                };
 
                 if let Ok(OrderRole::Maker) = role {
                     // 生成 open_order
-                    let open_order = orders_write.build_order_open(order.clone(), OrderRole::Maker).await;
+                    let open_order = self.orders.write().await.build_order_open(order.clone(), OrderRole::Maker).await;
 
                     // 处理 instrument_orders
-                    if let Ok(instrument_orders) = orders_write.ins_orders_mut(&order.instrument) {
+                    if let Ok(orders_write) = self.orders.write().await.ins_orders_mut(&order.instrument) {
                         // 将订单加入到相应的订单簿
-                        instrument_orders.add_order_open(open_order.clone());
+                        orders_write.add_order_open(open_order.clone());
 
                         // 获取手续费
                         let fees_percent = self.determine_fees_percent(&order.instrument.kind, &OrderRole::Maker);
 
                         // 匹配订单并生成交易
-                        let trades = match instrument_orders.determine_matching_side(&market_event) {
-                            Some(Side::Buy) => instrument_orders.match_bids(&market_event, fees_percent.expect("REASON")),
-                            Some(Side::Sell) => instrument_orders.match_asks(&market_event, fees_percent.expect("REASON")),
+                        let trades = match orders_write.determine_matching_side(&market_event) {
+                            Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
+                            Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
                             None => continue, // 跳过当前订单处理
                         };
 
-                        drop(orders_write); // 释放写锁
                         self.process_trades(trades).await;
                     }
                 } else if let Ok(OrderRole::Taker) = role {
                     // 生成 open_order
-                    let open_order = orders_write.build_order_open(order.clone(), OrderRole::Taker).await;
+                    let open_order = self.orders.write().await.build_order_open(order.clone(), OrderRole::Taker).await;
 
                     // 处理 instrument_orders
-                    if let Ok(instrument_orders) = orders_write.ins_orders_mut(&order.instrument) {
+                    if let Ok(orders_write) = self.orders.write().await.ins_orders_mut(&order.instrument) {
                         // 将订单加入到相应的订单簿
-                        instrument_orders.add_order_open(open_order.clone());
+                        orders_write.add_order_open(open_order.clone());
 
                         // 获取手续费
                         let fees_percent = self.determine_fees_percent(&order.instrument.kind, &OrderRole::Taker);
 
                         // 匹配订单并生成交易
-                        let trades = match instrument_orders.determine_matching_side(&market_event) {
-                            Some(Side::Buy) => instrument_orders.match_bids(&market_event, fees_percent.expect("REASON")),
-                            Some(Side::Sell) => instrument_orders.match_asks(&market_event, fees_percent.expect("REASON")),
+                        let trades = match orders_write.determine_matching_side(&market_event) {
+                            Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
+                            Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
                             None => continue, // 跳过当前订单处理
                         };
 
-                        drop(orders_write); // 释放写锁
                         self.process_trades(trades).await;
                     }
                 }
