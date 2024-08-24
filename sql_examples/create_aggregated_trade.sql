@@ -21,7 +21,7 @@ SELECT
     min(price) AS low_price,  -- 每秒钟的最低成交价
     sum(amount) AS volume,    -- 每秒钟的累计成交量
     count() AS trades_count   -- 每秒钟的交易次数
-FROM binance_futures_trades_secs.binance_futures_trades_2020_12_19_XRPUSDT_secs
+FROM binance_futures_trades_secs.binance_futures_trades_2020_12_19_XRPUSDT
 GROUP BY
     symbol,
     second_ts,               -- 使用second_ts进行分组
