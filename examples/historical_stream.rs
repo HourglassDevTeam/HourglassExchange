@@ -23,8 +23,8 @@ async fn main()
     let exchange = "binance";
     let instrument = "futures";
     let channel = "trades";
-    let start_date = "2024_03_04";
-    let end_date = "2024_03_05";
+    let start_date = "2024_05_05";
+    let end_date = "2024_05_05";
     let batch_size = 1000000;
 
     // 创建 AccountMarketStreams 实例

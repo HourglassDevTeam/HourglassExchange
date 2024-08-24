@@ -349,6 +349,7 @@ impl ClickHouseClient
                             for trade_data in &trade_datas {
                                 let (base, quote) = parse_base_and_quote(&trade_data.symbol);
                                 let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
+                                println!("Sending market event: {:?}", market_event);
                                 if tx.send(market_event).is_err() {
                                     eprintln!("Failed to send market event");
                                     return;
