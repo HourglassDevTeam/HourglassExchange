@@ -220,35 +220,32 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
-    {
+    pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError> {
         // 验证订单合法性
         Self::order_validity_check(order.kind)?;
 
-        // 获取订单角色（maker 或 taker），现在使用写锁
-        let order_role = {
+        // 提前声明 `required_balance` 和 `token`，使它们在整个函数中可用
+        let (required_balance, token, open_order);
+
+        {
             let mut orders_guard = self.orders.write().await;
-            orders_guard.determine_maker_taker(&order, current_price)?
-        };
 
-        // 计算所需的可用余额
-        let (token, required_balance) = self.calculate_required_available_balance(&order, current_price).await;
+            let order_role = orders_guard.determine_maker_taker(&order, current_price)?;
 
-        // 检查可用余额是否充足
-        self.states.lock().await.has_sufficient_available_balance(token, required_balance)?;
+            // 计算所需的可用余额
+            let (t, r_balance) = self.calculate_required_available_balance(&order, current_price).await;
+            required_balance = r_balance;
+            token = t;
 
-        // 构建 Open<Order> 并获取写锁
-        let open_order = {
-            let mut orders_guard = self.orders.write().await;
+            // 检查可用余额是否充足
+            self.states.lock().await.has_sufficient_available_balance(token, required_balance)?;
 
             // 构建 Open<Order>
-            let open = orders_guard.build_order_open(order, order_role).await;
+            open_order = orders_guard.build_order_open(order, order_role).await;
 
             // 添加订单到 Instrument Orders
-            orders_guard.ins_orders_mut(&open.instrument)?.add_order_open(open.clone());
-
-            open
-        };
+            orders_guard.ins_orders_mut(&open_order.instrument)?.add_order_open(open_order.clone());
+        }
 
         // 更新客户余额
         let balance_event = self.states.lock().await.apply_open_order_changes(&open_order, required_balance).await.unwrap();
@@ -263,12 +260,14 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
-                                 exchange: ExchangeVariant::SandBox,
-                                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
+                exchange: ExchangeVariant::SandBox,
+                kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
+
         // 返回已打开的订单
         Ok(open_order)
     }
+
 
     pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
     {
@@ -306,18 +305,19 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                                                                                                                                                           * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
     }
+
     pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhousePublicTrade>) {
         let current_price = market_event.kind.price;
 
-        // 这里不再克隆整个 `pending_registry`，而是逐个处理订单
-        let order_ids: Vec<ClientOrderId> = self.orders.read().await.pending_registry.keys().cloned().collect();
+        // 这里使用 `DashMap` 的 `iter()` 获取所有键值对，并提取键作为 `order_ids`
+        let order_ids: Vec<ClientOrderId> = self.orders.read().await.pending_registry.iter().map(|entry| entry.key().clone()).collect();
 
         // 遍历订单 ID 来处理每个订单
         for order_id in order_ids {
             let order = {
                 // 只在获取订单时持有锁
                 let orders_read = self.orders.read().await;
-                orders_read.pending_registry.get(&order_id).cloned()
+                orders_read.pending_registry.get(&order_id).map(|entry| entry.value().clone())
             };
 
             if let Some(order) = order {
@@ -332,7 +332,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                     let open_order = self.orders.write().await.build_order_open(order.clone(), OrderRole::Maker).await;
 
                     // 处理 instrument_orders
-                    if let Ok(orders_write) = self.orders.write().await.ins_orders_mut(&order.instrument) {
+                    if let Ok(mut orders_write) = self.orders.write().await.ins_orders_mut(&order.instrument) {
                         // 将订单加入到相应的订单簿
                         orders_write.add_order_open(open_order.clone());
 
@@ -353,7 +353,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                     let open_order = self.orders.write().await.build_order_open(order.clone(), OrderRole::Taker).await;
 
                     // 处理 instrument_orders
-                    if let Ok(orders_write) = self.orders.write().await.ins_orders_mut(&order.instrument) {
+                    if let Ok(mut orders_write) = self.orders.write().await.ins_orders_mut(&order.instrument) {
                         // 将订单加入到相应的订单簿
                         orders_write.add_order_open(open_order.clone());
 
@@ -399,18 +399,22 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    async fn get_orders_for_instrument(&self, instrument: &Instrument) -> Option<InstrumentOrders>
-    {
-        let mut orders_lock = self.orders.write().await;
-        match orders_lock.ins_orders_mut(instrument) {
-            | Ok(orders) => Some(orders.to_owned()),
-            | Err(error) => {
+    async fn get_orders_for_instrument(&self, instrument: &Instrument) -> Option<InstrumentOrders> {
+        // 获取 orders_lock 并在 match 之前完成对它的操作
+        let orders_result = {
+            let mut orders_lock = self.orders.write().await;
+            orders_lock.ins_orders_mut(instrument)
+                .map(|orders| orders.to_owned())
+        };
+
+        match orders_result {
+            Ok(orders) => Some(orders),
+            Err(error) => {
                 warn!(?error, %instrument, "Failed to match orders for unrecognized Instrument");
                 None
             }
         }
     }
-
     async fn process_trades(&self, trades: Vec<ClientTrade>)
     {
         if !trades.is_empty() {
@@ -461,7 +465,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     {
         // 获取写锁并查找到对应的Instrument Orders，以便修改订单
         let mut orders_guard = self.orders.write().await;
-        let orders = orders_guard.ins_orders_mut(&request.instrument)?;
+        let mut orders = orders_guard.ins_orders_mut(&request.instrument)?;
 
         // 找到并移除与 Order<RequestCancel> 关联的 Order<Open>
         let removed = match request.side {

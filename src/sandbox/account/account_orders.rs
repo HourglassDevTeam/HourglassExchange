@@ -1,16 +1,13 @@
 use std::{
-    collections::HashMap,
     sync::{
         atomic::{AtomicU64, Ordering},
-        Arc,
     },
 };
-
+use dashmap::DashMap;
+use dashmap::mapref::one::RefMut;
 use rand::Rng;
 // use rayon::iter::IndexedParallelIterator;
 // use rayon::prelude::IntoParallelRefIterator;
-use tokio::sync::RwLock;
-
 use crate::{
     common_infrastructure::{
         event::ClientOrderId,
@@ -30,8 +27,8 @@ pub struct AccountOrders
     pub latency_generator: AccountLatency,
     pub selectable_latencies: [i64; 20],
     pub request_counter: AtomicU64,            // 用来生成一个唯一的 [`OrderId`]。
-    pub pending_registry: HashMap<ClientOrderId, Order<Pending>>, // 使用 HashMap
-    pub instrument_orders_map: HashMap<Instrument, InstrumentOrders>,
+    pub pending_registry: DashMap<ClientOrderId, Order<Pending>>, // 使用 HashMap
+    pub instrument_orders_map: DashMap<Instrument, InstrumentOrders>,
 }
 
 impl AccountOrders
@@ -42,7 +39,7 @@ impl AccountOrders
         let selectable_latencies = Self::generate_latencies(&mut account_latency).await;
 
         Self { request_counter: AtomicU64::new(0),
-               pending_registry: HashMap::new(),
+               pending_registry: DashMap::new(),
                instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
                latency_generator: account_latency,
                selectable_latencies }
@@ -66,7 +63,8 @@ impl AccountOrders
     }
 
     /// 返回指定 [`Instrument`] 的客户端 [`InstrumentOrders`] 的可变引用。
-    pub fn ins_orders_mut(&mut self, instrument: &Instrument) -> Result<&mut InstrumentOrders, ExecutionError>
+
+    pub fn ins_orders_mut(&mut self, instrument: &Instrument) -> Result<RefMut<Instrument, InstrumentOrders>, ExecutionError>
     {
         self.instrument_orders_map
             .get_mut(instrument)
@@ -77,14 +75,15 @@ impl AccountOrders
     pub fn fetch_all(&self) -> Vec<Order<Open>>
     {
         self.instrument_orders_map
-            .values()
-            .flat_map(|market| [&market.bids, &market.asks])
-            .flatten()
-            .cloned()
+            .iter()
+            .flat_map(|entry| {
+                let orders = entry.value();
+                orders.bids.iter().chain(orders.asks.iter()).cloned().collect::<Vec<_>>()
+            })
             .collect()
     }
 
-    // 从PendingRegistry中删除订单的函数
+        // 从PendingRegistry中删除订单的函数
     pub fn remove_order_from_pending_registry(&mut self, order_id: ClientOrderId) -> Result<(), ExecutionError> {
         if self.pending_registry.remove(&order_id).is_some() {
             Ok(())
@@ -230,7 +229,9 @@ impl AccountOrders
 #[cfg(test)]
 mod tests
 {
-    use super::*;
+    use tokio::sync::RwLock;
+use std::sync::Arc;
+use super::*;
     use crate::{
         common_infrastructure::instrument::{kind::InstrumentKind, Instrument},
         sandbox::account::account_latency::{AccountLatency, FluctuationMode},
@@ -287,15 +288,17 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_ins_orders_mut()
-    {
+    async fn test_ins_orders_mut() {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::LinearIncrease, 100, 10);
 
         let mut account_orders = AccountOrders::new(instruments.clone(), account_latency).await;
 
-        let result = account_orders.ins_orders_mut(&instruments[0]);
-        assert!(result.is_ok());
+        {
+            // 创建一个作用域，使用完 `result` 后自动释放它
+            let result = account_orders.ins_orders_mut(&instruments[0]);
+            assert!(result.is_ok());
+        } // `result` 在这里被释放
 
         let invalid_instrument = Instrument::new("INVALID", "USD", InstrumentKind::Spot);
         let invalid_result = account_orders.ins_orders_mut(&invalid_instrument);
