@@ -16,7 +16,7 @@ async fn main() {
 
     // 在循环外部获取所有表名
     let database = format!("{}_{}_{}", exchange, instrument, channel);
-    let start_date = NaiveDate::from_ymd_opt(2024, 5, 5).expect("Invalid start date");
+    let start_date = NaiveDate::from_ymd_opt(2023, 5, 5).expect("Invalid start date");
     let end_date = NaiveDate::from_ymd_opt(2024, 5, 5).expect("Invalid end date");
 
     // 获取所有表名
@@ -58,5 +58,6 @@ async fn main() {
             current_date += Duration::days(1);
     }else {
             println!("[UniLinkExecution] : No tables found for the date: {}", current_date);
+            current_date += Duration::days(1);
         }
 }}
