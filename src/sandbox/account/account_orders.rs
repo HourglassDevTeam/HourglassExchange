@@ -22,7 +22,6 @@ use crate::{
         instrument_orders::InstrumentOrders,
     },
 };
-use rayon::iter::{ IntoParallelRefIterator, ParallelIterator};
 #[derive(Debug)]
 pub struct AccountOrders
 {
@@ -120,7 +119,7 @@ impl AccountOrders
     pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
     {
         // 检查请求是否有效 NOTE 这里或许可以添加更多的验证逻辑
-        if self.pending_registry.par_iter().any(|pending| pending.cid == request.cid) {
+        if self.pending_registry.iter().any(|pending| pending.cid == request.cid) {
             return Err(ExecutionError::OrderAlreadyExists(request.cid));
         }
 

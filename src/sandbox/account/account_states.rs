@@ -14,7 +14,6 @@ use crate::{
     sandbox::account::{account_config::MarginMode, Account},
     ExchangeVariant,
 };
-use rayon::prelude::*; // 导入 rayon 并行操作
 use future::FuturePosition;
 use leveraged_token::LeveragedTokenPosition;
 use option::OptionPosition;
@@ -153,28 +152,28 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             }
             InstrumentKind::Perpetual => {
                 if let Some(perpetual_positions) = &positions.perpetual_pos {
-                    if let Some(position) = perpetual_positions.par_iter().find_any(|pos| pos.meta.instrument == *instrument) {
+                    if let Some(position) = perpetual_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(Position::Perpetual(position.clone())));
                     }
                 }
             }
             InstrumentKind::Future => {
                 if let Some(futures_positions) = &positions.futures_pos {
-                    if let Some(position) = futures_positions.par_iter().find_any(|pos| pos.meta.instrument == *instrument) {
+                    if let Some(position) = futures_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(Position::Future(position.clone())));
                     }
                 }
             }
             InstrumentKind::CryptoOption => {
                 if let Some(option_positions) = &positions.option_pos {
-                    if let Some(position) = option_positions.par_iter().find_any(|pos| pos.meta.instrument == *instrument) {
+                    if let Some(position) = option_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(Position::Option(position.clone())));
                     }
                 }
             }
             InstrumentKind::CryptoLeveragedToken => {
                 if let Some(margin_positions) = &positions.margin_pos {
-                    if let Some(position) = margin_positions.par_iter().find_any(|pos| pos.meta.instrument == *instrument) {
+                    if let Some(position) = margin_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(Position::LeveragedToken(position.clone())));
                     }
                 }
@@ -741,8 +740,8 @@ mod tests
         assert_eq!(all_balances.len(), 2, "Expected 2 balances but got {}", all_balances.len());
 
         // Check that the balances include the expected tokens using rayon for parallel iteration
-        assert!(all_balances.par_iter().any(|b| b.token == token1), "Expected token1 balance not found");
-        assert!(all_balances.par_iter().any(|b| b.token == token2), "Expected token2 balance not found");
+        assert!(all_balances.iter().any(|b| b.token == token1), "Expected token1 balance not found");
+        assert!(all_balances.iter().any(|b| b.token == token2), "Expected token2 balance not found");
     }
     #[tokio::test]
     async fn test_get_fee()

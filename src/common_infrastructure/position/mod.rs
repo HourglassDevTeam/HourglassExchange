@@ -2,8 +2,6 @@ use crate::common_infrastructure::Side;
 /// FIXME  : code below needs to be restructured and fitted to the framework. need to provide enums?
 /// CONSIDER: can these positions coexist, if so enums might not be ideal.
 use serde::{Deserialize, Serialize};
-use rayon::iter::IntoParallelRefIterator;
-use rayon::iter::IndexedParallelIterator;
 use crate::{
     common_infrastructure::{
         balance::{Balance, TokenBalance},
@@ -184,25 +182,25 @@ impl AccountPositions
             | InstrumentKind::Perpetual => self.perpetual_pos
                                                .as_ref() // 如果存在仓位列表
                                                .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
-                    positions.par_iter().position_any(|pos| pos.meta.instrument == *instrument).is_some()),
+                    positions.iter().position(|pos| pos.meta.instrument == *instrument).is_some()),
 
             // 普通期货
             | InstrumentKind::Future => self.futures_pos
                                             .as_ref()
                                             .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
-                                                positions.par_iter().position_any(|pos| pos.meta.instrument == *instrument).is_some()),
+                                                positions.iter().position(|pos| pos.meta.instrument == *instrument).is_some()),
 
             // 加密期权
             | InstrumentKind::CryptoOption => self.option_pos
                                                   .as_ref()
                                                   .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
-                                                      positions.par_iter().position_any(|pos| pos.meta.instrument == *instrument).is_some()),
+                                                      positions.iter().position(|pos| pos.meta.instrument == *instrument).is_some()),
 
             // 加密杠杆代币
             | InstrumentKind::CryptoLeveragedToken => self.margin_pos
                                                           .as_ref()
                                                           .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
-                                                              positions.par_iter().position_any(|pos| pos.meta.instrument == *instrument).is_some()),
+                                                              positions.iter().position(|pos| pos.meta.instrument == *instrument).is_some()),
         }
     }
 }
