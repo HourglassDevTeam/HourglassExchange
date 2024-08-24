@@ -6,8 +6,6 @@ use std::{
 use dashmap::DashMap;
 use dashmap::mapref::one::RefMut;
 use rand::Rng;
-// use rayon::iter::IndexedParallelIterator;
-// use rayon::prelude::IntoParallelRefIterator;
 use crate::{
     common_infrastructure::{
         event::ClientOrderId,
