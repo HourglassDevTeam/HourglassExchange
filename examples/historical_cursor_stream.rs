@@ -15,7 +15,7 @@ async fn main() {
     let quote = "USDT";
 
     // 定义日期范围
-    let start_date = NaiveDate::from_ymd_opt(2024, 5, 1).unwrap();
+    let start_date = NaiveDate::from_ymd_opt(2024, 3, 1).unwrap();
     let end_date = NaiveDate::from_ymd_opt(2024, 5, 7).unwrap();
 
     // 创建 AccountDataStreams 实例
