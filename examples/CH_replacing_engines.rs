@@ -1,6 +1,7 @@
 use chrono::{NaiveDate, Duration};
 use std::{sync::Arc};
-use tokio::sync::RwLock;
+use rayon::iter::IntoParallelRefIterator;
+use rayon::iter::ParallelIterator;
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 
 #[tokio::main]
@@ -25,7 +26,7 @@ async fn main() {
         let date_str = current_date.format("%Y_%m_%d").to_string();
 
         // 筛选出当日的 `union` 表
-        let union_tables: Vec<String> = table_names.iter()
+        let union_tables: Vec<String> = table_names.par_iter()
             .filter(|table_name| {
                 if table_name.contains("union") {
                     if let Some(table_date) = unilink_execution::sandbox::utils::chrono_operations::extract_date(table_name) {
