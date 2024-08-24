@@ -20,23 +20,35 @@ mergeCode:
 
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
     
+        ##
+    ## Check if inside a git repository, if not, initialize one
     ##
+    - |
+      if [ ! -d .git ]; then
+        git init
+        git remote add origin "$PCF_DEPLOY_REPO"
+        git remote add gitee "$GITEE_REPO"
+        git commit --allow-empty -m "Initial commit"
+        git branch -M $PCF_DEPLOY_BRANCH
+      fi
+    ##
+
     ## Configure git
     ##
     - git config --global user.email "$PCF_COMMIT_USER_EMAIL"
     - git config --global user.name "$PCF_COMMIT_USER_NAME"
     - git config pull.rebase false
     
-    ##
-    ## Check if inside a git repository, if not, initialize one
-    ##
-    - |
-      if [ ! -d .git ]; then
-        git init
-        # Create an initial commit to allow pull and push
-        git commit --allow-empty -m "Initial commit"
-        git branch -M $PCF_DEPLOY_BRANCH
-      fi
+    # ##
+    # ## Check if inside a git repository, if not, initialize one
+    # ##
+    # - |
+    #   if [ ! -d .git ]; then
+    #     git init
+    #     # Create an initial commit to allow pull and push
+    #     git commit --allow-empty -m "Initial commit"
+    #     git branch -M $PCF_DEPLOY_BRANCH
+    #   fi
 
     ##
     ## Remove existing remotes and add new ones
