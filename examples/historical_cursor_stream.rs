@@ -1,8 +1,8 @@
 use unilink_execution::sandbox::account::account_market_feed::AccountDataStreams;
 use std::{sync::Arc};
-use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 use tokio::sync::mpsc;
 use chrono::{NaiveDate, Duration as ChronoDuration};
+use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 
 #[tokio::main]
 async fn main() {
@@ -23,7 +23,7 @@ async fn main() {
     // 逐日遍历日期范围
     let mut current_date = start_date;
     while current_date <= end_date {
-        let date_str = current_date.format("%Y-%m-%d").to_string();
+        let date_str = Arc::new(current_date.format("%Y-%m-%d").to_string());
 
         // 获取游标，这里假设你有一个方法 cursor_union_trades 用于查询 union 表
         let cursor_result = client.cursor_unioned_public_trades(exchange, instrument, &date_str).await;
@@ -33,8 +33,8 @@ async fn main() {
                 // 创建通道
                 let (tx, rx) = mpsc::unbounded_channel();
 
-                // 克隆 date_str 供异步任务使用
-                let date_str_clone = date_str.clone();
+                // 克隆 Arc 以在异步任务中使用
+                let date_str_clone = Arc::clone(&date_str);
 
                 // 启动一个任务来从游标读取数据并发送到通道
                 let cursor_task = tokio::spawn(async move {
