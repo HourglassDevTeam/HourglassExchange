@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Duration};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 use tokio::{sync::mpsc, time::timeout};
 use chrono::{NaiveDate, Duration as ChronoDuration};
+
 #[tokio::main]
 async fn main() {
     // 创建 ClickHouse 客户端实例
@@ -11,8 +12,6 @@ async fn main() {
     // 定义参数
     let exchange = "binance";
     let instrument = "futures";
-    let base = "1000BONK";
-    let quote = "USDT";
 
     // 定义日期范围
     let start_date = NaiveDate::from_ymd_opt(2024, 3, 1).unwrap();
@@ -26,8 +25,8 @@ async fn main() {
     while current_date <= end_date {
         let date_str = current_date.format("%Y-%m-%d").to_string();
 
-        // 获取游标
-        let cursor_result = client.cursor_public_trades(exchange, instrument, &date_str, base, quote).await;
+        // 获取游标，这里假设你有一个方法 cursor_union_trades 用于查询 union 表
+        let cursor_result = client.cursor_unioned_public_trades(exchange, instrument, &date_str).await;
 
         match cursor_result {
             Ok(mut cursor) => {

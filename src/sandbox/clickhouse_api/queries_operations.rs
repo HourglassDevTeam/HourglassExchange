@@ -416,7 +416,7 @@ impl ClickHouseClient
                                                  .order("timestamp", Some("DESC"))
                                                  .build();
 
-        println!("[UniLinkExecution] : Constructed query {}", query);
+        // println!("[UniLinkExecution] : Constructed query {}", query);
 
         // 获取 ClickHouse 客户端的只读引用
         let client_ref = self.client.read().await;
