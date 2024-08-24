@@ -1,9 +1,15 @@
-WITH minute_aggregated AS (SELECT toStartOfMinute(toDateTime64(timestamp / 1000, 3)) AS minute_ts,
-                                  max(timestamp)                                     AS latest_ts
-                           FROM binance_futures_book_snapshot_25.binance_futures_book_snapshot_25_2020_12_19_XRPUSDT
-                           GROUP BY minute_ts)
-SELECT m.minute_ts,
-       b.timestamp,
+WITH second_aggregated AS (
+    SELECT
+        toStartOfSecond(toDateTime64(timestamp / 1000, 3)) AS second_ts,
+        max(timestamp) AS latest_ts
+    FROM
+        binance_futures_book_snapshot_25.binance_futures_book_snapshot_25_2020_12_19_XRPUSDT
+    GROUP BY
+        second_ts
+)
+SELECT
+    s.second_ts,
+    b.timestamp,
        b.`asks[0].price`,
              b.`asks[0].amount`,
              b.`bids[0].price`,
@@ -105,8 +111,8 @@ SELECT m.minute_ts,
              b.`bids[24].price`,
              b.`bids[24].amount`,
 FROM
-    minute_aggregated m
+    second_aggregated s
     INNER JOIN binance_futures_book_snapshot_25.binance_futures_book_snapshot_25_2020_12_19_XRPUSDT b
-ON m.latest_ts = b.timestamp
+ON s.latest_ts = b.timestamp
 ORDER BY
-    m.minute_ts ASC;
+    s.second_ts ASC;
