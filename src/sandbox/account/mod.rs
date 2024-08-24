@@ -5,7 +5,8 @@ use std::{
         Arc,
     },
 };
-
+use rayon::iter::IntoParallelRefIterator;
+use rayon::iter::IndexedParallelIterator;
 use futures::{future::join_all, lock::Mutex};
 use mpsc::UnboundedSender;
 use oneshot::Sender;
@@ -465,16 +466,16 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             | Side::Buy => {
                 // 使用 OrderId 查找 Order<Open>
                 let index = orders.bids
-                                  .iter()
-                                  .position(|bid| bid.state.id == request.state.id)
+                                  .par_iter()
+                                  .position_any(|bid| bid.state.id == request.state.id)
                                   .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                 orders.bids.remove(index)
             }
             | Side::Sell => {
                 // 使用 OrderId 查找 Order<Open>
                 let index = orders.asks
-                                  .iter()
-                                  .position(|ask| ask.state.id == request.state.id)
+                                  .par_iter()
+                                  .position_any(|ask| ask.state.id == request.state.id)
                                   .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                 orders.asks.remove(index)
             }

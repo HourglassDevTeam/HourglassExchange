@@ -14,6 +14,7 @@ use crate::{
     sandbox::account::{account_config::MarginMode, Account},
     ExchangeVariant,
 };
+use rayon::prelude::*; // 导入 rayon 并行操作
 use future::FuturePosition;
 use leveraged_token::LeveragedTokenPosition;
 use option::OptionPosition;
@@ -142,51 +143,53 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
         }
     }
 
-    /// 获取指定 `Instrument` 的仓位/
-    pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<Position>, ExecutionError>
-    {
+    /// 获取指定 `Instrument` 的仓位
+    pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<Position>, ExecutionError> {
         let positions = &self.positions; // 获取锁
 
         match instrument.kind {
-            | InstrumentKind::Spot => return Err(ExecutionError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument))),
-            | InstrumentKind::Perpetual => {
+            InstrumentKind::Spot => {
+                return Err(ExecutionError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)));
+            }
+            InstrumentKind::Perpetual => {
                 if let Some(perpetual_positions) = &positions.perpetual_pos {
-                    if let Some(position) = perpetual_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
+                    if let Some(position) = perpetual_positions.par_iter().find_any(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(Position::Perpetual(position.clone())));
                     }
                 }
             }
-            | InstrumentKind::Future => {
+            InstrumentKind::Future => {
                 if let Some(futures_positions) = &positions.futures_pos {
-                    if let Some(position) = futures_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
+                    if let Some(position) = futures_positions.par_iter().find_any(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(Position::Future(position.clone())));
                     }
                 }
             }
-            | InstrumentKind::CryptoOption => {
+            InstrumentKind::CryptoOption => {
                 if let Some(option_positions) = &positions.option_pos {
-                    if let Some(position) = option_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
+                    if let Some(position) = option_positions.par_iter().find_any(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(Position::Option(position.clone())));
                     }
                 }
             }
-            | InstrumentKind::CryptoLeveragedToken => {
+            InstrumentKind::CryptoLeveragedToken => {
                 if let Some(margin_positions) = &positions.margin_pos {
-                    if let Some(position) = margin_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
+                    if let Some(position) = margin_positions.par_iter().find_any(|pos| pos.meta.instrument == *instrument) {
                         return Ok(Some(Position::LeveragedToken(position.clone())));
                     }
                 }
             }
-            | InstrumentKind::CommodityOption => {
+            InstrumentKind::CommodityOption => {
                 todo!() // not quite needed either
             }
-            | InstrumentKind::CommodityFuture => {
+            InstrumentKind::CommodityFuture => {
                 todo!() // not quite needed either
             }
         }
 
         Ok(None) // 没有找到对应的仓位
     }
+
 
     /// 更新指定 `Instrument` 的仓位
     pub async fn set_position(&mut self, position: Position) -> Result<(), ExecutionError>
@@ -708,25 +711,39 @@ mod tests
         assert_eq!(balance.available, 40.0);
     }
 
+
     #[tokio::test]
-    async fn test_fetch_all_balances()
-    {
+    async fn test_fetch_all_balances() {
+        // Define tokens for testing
         let token1 = Token::from("TEST1");
         let token2 = Token::from("TEST2");
+
+        // Create a mock balance map and populate it
         let mut balances = HashMap::new();
         balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
         balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
-        let positions = AccountPositions { margin_pos: None,
-                                           perpetual_pos: None,
-                                           futures_pos: None,
-                                           option_pos: None };
-        let account_state = AccountState::<()>::new(balances, positions);
-        let all_balances = account_state.fetch_all_balances();
-        assert_eq!(all_balances.len(), 2);
-        assert!(all_balances.iter().any(|b| b.token == token1));
-        assert!(all_balances.iter().any(|b| b.token == token2));
-    }
 
+        // Create a mock positions structure with all positions set to None
+        let positions = AccountPositions {
+            margin_pos: None,
+            perpetual_pos: None,
+            futures_pos: None,
+            option_pos: None
+        };
+
+        // Instantiate the account state with the balances and positions
+        let account_state = AccountState::<()>::new(balances, positions);
+
+        // Fetch all balances from the account state
+        let all_balances = account_state.fetch_all_balances();
+
+        // Verify that the correct number of balances is returned
+        assert_eq!(all_balances.len(), 2, "Expected 2 balances but got {}", all_balances.len());
+
+        // Check that the balances include the expected tokens using rayon for parallel iteration
+        assert!(all_balances.par_iter().any(|b| b.token == token1), "Expected token1 balance not found");
+        assert!(all_balances.par_iter().any(|b| b.token == token2), "Expected token2 balance not found");
+    }
     #[tokio::test]
     async fn test_get_fee()
     {
