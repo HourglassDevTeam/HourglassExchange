@@ -42,7 +42,7 @@ async fn main() {
                         match cursor.next().await {
                             Ok(Some(trade)) => {
                                 // 打印每个交易数据
-                                println!("[UniLinkExecution] : Received trade for date {}: {:?}", date_str_clone, trade);
+                                // println!("[UniLinkExecution] : Received trade for date {}: {:?}", date_str_clone, trade);
 
                                 if tx.send(trade).is_err() {
                                     // 如果发送失败（例如接收者已关闭），退出循环
