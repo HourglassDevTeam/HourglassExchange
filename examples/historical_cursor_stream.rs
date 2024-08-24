@@ -1,5 +1,5 @@
 use unilink_execution::sandbox::account::account_market_feed::AccountDataStreams;
-use std::{sync::Arc, time::Duration};
+use std::{sync::Arc};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 use tokio::sync::mpsc;
 use chrono::{NaiveDate, Duration as ChronoDuration};
@@ -55,7 +55,7 @@ async fn main() {
                                 break;
                             }
                             Err(_e) => {
-                                eprintln!("[UniLinkExecution] : Error or no data available for date {}. Skipping to next date.", date_str_clone);
+                                eprintln!("[UniLinkExecution] : No data available for date {}. Skipping to next date.", date_str_clone);
                                 break;
                             }
                         }
