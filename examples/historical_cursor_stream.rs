@@ -55,8 +55,8 @@ async fn main() {
                                 eprintln!("[UniLinkExecution] : No data available for date {}. Skipping to next date.", date_str_clone);
                                 break;
                             }
-                            Err(_) => {
-                                eprintln!("[UniLinkExecution] : Timeout while reading cursor for {}", date_str_clone);
+                            Err(error) => {
+                                eprintln!("[UniLinkExecution] : error while reading cursor : {}", error);
                                 break;
                             }
                         }
@@ -80,6 +80,4 @@ async fn main() {
         // 更新到下一天
         current_date += ChronoDuration::days(1);
     }
-
-    // 你可以继续使用 data_streams 进行进一步的操作，例如合并、排序等
 }
