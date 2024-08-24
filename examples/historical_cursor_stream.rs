@@ -14,7 +14,7 @@ async fn main() {
     let instrument = "futures";
 
     // 定义日期范围
-    let start_date = NaiveDate::from_ymd_opt(2024, 3, 1).unwrap();
+    let start_date = NaiveDate::from_ymd_opt(2024, 5, 4).unwrap();
     let end_date = NaiveDate::from_ymd_opt(2024, 5, 7).unwrap();
 
     // 创建 AccountDataStreams 实例
@@ -39,7 +39,7 @@ async fn main() {
                 // 启动一个任务来从游标读取数据并发送到通道
                 let cursor_task = tokio::spawn(async move {
                     loop {
-                        match timeout(Duration::from_secs(5), cursor.next()).await {
+                        match timeout(Duration::from_secs(15), cursor.next()).await {
                             Ok(Ok(Some(trade))) => {
                                 if tx.send(trade).is_err() {
                                     // 如果发送失败（例如接收者已关闭），退出循环
