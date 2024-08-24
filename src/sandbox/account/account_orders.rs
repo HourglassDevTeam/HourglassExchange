@@ -7,6 +7,8 @@ use std::{
 };
 
 use rand::Rng;
+use rayon::iter::IndexedParallelIterator;
+use rayon::prelude::IntoParallelRefIterator;
 use tokio::sync::RwLock;
 
 use crate::{
@@ -89,7 +91,7 @@ impl AccountOrders
     {
         // 假设你有方法来找到并删除PendingRegistry中的订单
         // 这里只是一个简单的示例
-        if let Some(index) = self.pending_registry.iter().position(|x| x.cid == order_id) {
+        if let Some(index) = self.pending_registry.par_iter().position_any(|x| x.cid == order_id) {
             self.pending_registry.remove(index);
             Ok(())
         }
@@ -119,7 +121,7 @@ impl AccountOrders
     pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
     {
         // 检查请求是否有效 NOTE 这里或许可以添加更多的验证逻辑
-        if self.pending_registry.iter().any(|pending| pending.cid == request.cid) {
+        if self.pending_registry.par_iter().position_any(|pending| pending.cid == request.cid).is_some() {
             return Err(ExecutionError::OrderAlreadyExists(request.cid));
         }
 
