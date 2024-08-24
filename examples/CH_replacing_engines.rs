@@ -49,7 +49,7 @@ async fn main() {
                 let client = Arc::clone(&client);
 
                 let alter_query = format!(
-                    "CREATE TABLE {}.{} ENGINE = ReplacingMergeTree() ORDER BY (timestamp, side, symbol,price,amount) AS SELECT * FROM {}.{}",
+                    "CREATE TABLE {}.{} ENGINE = ReplacingMergeTree() ORDER BY (timestamp,symbol,side, price,amount) AS SELECT * FROM {}.{}",
                     database, new_table_name, database, table_name
                 );
 
