@@ -28,7 +28,7 @@ async fn main() {
                 loop {
                     match timeout(Duration::from_secs(5), cursor.next()).await {
                         Ok(Ok(Some(trade))) => {
-                            // println!("{:?}", &trade);
+                            println!("{:?}", &trade);
                             if tx.send(trade).is_err() {
                                 // 如果发送失败（例如接收者已关闭），退出循环
                                 eprintln!("[UniLinkExecution] : Failed to send trade, receiver might be closed.");
