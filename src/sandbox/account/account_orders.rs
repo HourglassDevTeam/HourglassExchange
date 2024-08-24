@@ -30,7 +30,7 @@ pub struct AccountOrders
     pub latency_generator: AccountLatency,
     pub selectable_latencies: [i64; 20],
     pub request_counter: AtomicU64,            // 用来生成一个唯一的 [`OrderId`]。
-    pub pending_registry: Vec<Order<Pending>>, // Pending订单的寄存器。
+    pub pending_registry: HashMap<ClientOrderId, Order<Pending>>, // 使用 HashMap
     pub instrument_orders_map: HashMap<Instrument, InstrumentOrders>,
 }
 
@@ -42,7 +42,7 @@ impl AccountOrders
         let selectable_latencies = Self::generate_latencies(&mut account_latency).await;
 
         Self { request_counter: AtomicU64::new(0),
-               pending_registry: vec![],
+               pending_registry: HashMap::new(),
                instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
                latency_generator: account_latency,
                selectable_latencies }
@@ -85,19 +85,13 @@ impl AccountOrders
     }
 
     // 从PendingRegistry中删除订单的函数
-    pub fn remove_order_from_pending_registry(&mut self, order_id: ClientOrderId) -> Result<(), ExecutionError>
-    {
-        // 假设你有方法来找到并删除PendingRegistry中的订单
-        // 这里只是一个简单的示例
-        if let Some(index) = self.pending_registry.par_iter().position_any(|x| x.cid == order_id) {
-            self.pending_registry.remove(index);
+    pub fn remove_order_from_pending_registry(&mut self, order_id: ClientOrderId) -> Result<(), ExecutionError> {
+        if self.pending_registry.remove(&order_id).is_some() {
             Ok(())
-        }
-        else {
+        } else {
             Err(ExecutionError::OrderNotFound(order_id))
         }
     }
-
     pub async fn process_request_as_pending(&mut self, order: Order<RequestOpen>) -> Order<Pending>
     {
         // turn the request into an pending order with a predicted timestamp
@@ -116,20 +110,12 @@ impl AccountOrders
         pending
     }
 
-    pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
-    {
-        // 检查请求是否有效 NOTE 这里或许可以添加更多的验证逻辑
-        if self.pending_registry.par_iter().position_any(|pending| pending.cid == request.cid).is_some() {
+    pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError> {
+        if self.pending_registry.contains_key(&request.cid) {
             return Err(ExecutionError::OrderAlreadyExists(request.cid));
         }
-
-        // 尝试转换请求为挂起订单
-        let pending_order = self.process_request_as_pending(request).await;
-
-        // 将挂起订单添加到注册表
-        self.pending_registry.push(pending_order);
-
-        // 返回成功结果
+        let pending_order = self.process_request_as_pending(request.clone()).await;
+        self.pending_registry.insert(request.cid, pending_order);
         Ok(())
     }
 
@@ -327,7 +313,6 @@ mod tests
         let orders = account_orders.fetch_all();
         assert!(orders.is_empty());
     }
-
     #[tokio::test]
     async fn test_remove_order_from_pending_registry()
     {
@@ -339,17 +324,17 @@ mod tests
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
         let order = Order { kind: OrderKind::Limit,
-                            exchange: ExchangeVariant::SandBox,
-                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                            cid: client_order_id,
-                            client_ts: 0,
-                            side: Side::Buy,
-                            state: Pending { reduce_only: false,
-                                             price: 50.0,
-                                             size: 1.0,
-                                             predicted_ts: 0 } };
+            exchange: ExchangeVariant::SandBox,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            cid: client_order_id,
+            client_ts: 0,
+            side: Side::Buy,
+            state: Pending { reduce_only: false,
+                price: 50.0,
+                size: 1.0,
+                predicted_ts: 0 } };
 
-        account_orders.pending_registry.push(order.clone());
+        account_orders.pending_registry.insert(order.cid, order.clone());  // 使用 insert 方法
         let remove_result = account_orders.remove_order_from_pending_registry(order.cid);
         assert!(remove_result.is_ok());
         assert!(account_orders.pending_registry.is_empty());
@@ -357,7 +342,6 @@ mod tests
         let remove_invalid_result = account_orders.remove_order_from_pending_registry(client_order_id);
         assert!(remove_invalid_result.is_err());
     }
-
     #[tokio::test]
     async fn test_process_request_as_pending()
     {
