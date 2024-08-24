@@ -40,7 +40,7 @@ async fn main() {
                             break;
                         }
                         Ok(Err(e)) => {
-                            eprintln!("[UniLinkExecution] : Error reading cursor: {:?}", e);
+                            eprintln!("[UniLinkExecution] : Error while reading cursor: {:?}", e);
                             break;
                         }
                         Err(_) => {
