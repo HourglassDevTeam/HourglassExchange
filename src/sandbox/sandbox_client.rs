@@ -43,10 +43,10 @@ pub enum SandBoxClientEvent
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    // NOTE very naturally, the client's kind is determined by and aligned with the exchange.
+    // 注意：客户端的类型自然地由交易所决定并与其保持一致。
     const CLIENT_KIND: ExchangeVariant = ExchangeVariant::SandBox;
 
-    // NOTE in our case the 'optional' config parameter in the sandbox exchange is an UnboundedSender
+    // 注意：在我们的场景中，沙盒交易所的“可选”配置参数是一个 UnboundedSender。
     type Config = (UnboundedSender<SandBoxClientEvent>, UnboundedReceiver<SandBoxClientEvent>);
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>, local_timestamp: i64) -> Self
