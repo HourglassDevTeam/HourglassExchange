@@ -10,7 +10,7 @@ async fn main()
     let channel = "trades";
 
     // 将上述变量拼接成数据库名
-    let database =client.construct_database_name(exchange, instrument, channel);
+    let database = client.construct_database_name(exchange, instrument, channel);
 
     // 获取所有表名
     let all_tables = client.get_table_names(&database).await;
@@ -29,4 +29,5 @@ async fn main()
             | Ok(_) => println!("Successfully dropped table: {}.{}", database, table),
             | Err(e) => eprintln!("Error dropping table: {}", e),
         }
+    }
 }
