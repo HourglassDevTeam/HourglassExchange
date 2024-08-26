@@ -9,7 +9,7 @@
 // // 定义一个结构体，用于管理多个数据流。
 // pub struct AccountDataStreams
 //     {
-//     pub streams: HashMap<StreamID, UnboundedReceiver<T>>, // 使用HashMap存储数据流，键为StreamID
+//     pub streams: HashMap<StreamID, UnboundedReceiver<DataKind>>, // 使用HashMap存储数据流，键为StreamID
 // }
 //
 // impl Default for AccountDataStreams {
