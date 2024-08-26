@@ -100,11 +100,6 @@ pub struct Open
     pub received_ts: i64,
 }
 
-
-
-
-
-
 impl Open
 {
     pub fn remaining_quantity(&self) -> f64

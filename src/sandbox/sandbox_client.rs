@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use tokio::sync::{mpsc, mpsc::UnboundedReceiver, oneshot};
-
+use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrdersOpen, OpenOrders};
 use crate::{
     common_infrastructure::{
         balance::TokenBalance,
@@ -65,7 +65,7 @@ impl ClientExecution for SandBoxClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送获取开放订单的请求。
         self.request_tx
-            .send(SandBoxClientEvent::FetchOrdersOpen(response_tx))
+            .send(FetchOrdersOpen(response_tx))
             .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to send FetchOrdersOpen request");
         // 从模拟交易所接收开放订单的响应。
         response_rx.await
@@ -77,7 +77,7 @@ impl ClientExecution for SandBoxClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送获取账户余额的请求。
         self.request_tx
-            .send(SandBoxClientEvent::FetchBalances(response_tx))
+            .send(FetchBalances(response_tx))
             .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to send FetchBalances request");
         // 从模拟交易所接收账户余额的响应。
         response_rx.await
@@ -89,7 +89,7 @@ impl ClientExecution for SandBoxClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送开启订单的请求。
         self.request_tx
-            .send(SandBoxClientEvent::OpenOrders((open_requests, response_tx)))
+            .send(OpenOrders((open_requests, response_tx)))
             .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to send OpenOrders request");
         // 从模拟交易所接收开启订单的响应。
         response_rx.await
@@ -101,7 +101,7 @@ impl ClientExecution for SandBoxClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送取消订单的请求。
         self.request_tx
-            .send(SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)))
+            .send(CancelOrders((cancel_requests, response_tx)))
             .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to send CancelOrders request");
         // 从模拟交易所接收取消订单的响应。
         response_rx.await
@@ -114,7 +114,7 @@ impl ClientExecution for SandBoxClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送取消所有订单的请求。
         self.request_tx
-            .send(SandBoxClientEvent::CancelOrdersAll(response_tx))
+            .send(CancelOrdersAll(response_tx))
             .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to send CancelOrdersAll request");
         // 从模拟交易所接收取消所有订单的响应。
         response_rx.await
@@ -129,6 +129,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_orders_open() {
+        // 创建通道，用于请求和响应通信
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
 
         let client = SandBoxClient {
@@ -148,8 +149,9 @@ mod tests {
         // 等待客户端发送 FetchOrdersOpen 请求事件
         // 预期客户端会发送一个获取打开订单的请求
         let request_event = request_rx.recv().await.expect("Expected FetchOrdersOpen event");
+
         // 匹配接收到的事件，确认它是 FetchOrdersOpen 类型
-        if let SandBoxClientEvent::FetchOrdersOpen(tx) = request_event {
+        if let FetchOrdersOpen(tx) = request_event {
             // 使用 oneshot 通道的发送者发送一个模拟的响应
             // 这里模拟返回一个空的订单列表
             let _ = tx.send(Ok(vec![]));
@@ -161,73 +163,94 @@ mod tests {
         // 等待客户端任务完成，确保 fetch_orders_open 方法已成功执行
         client_task.await.expect("Client task should complete successfully");
 
-        // 测试完成，打印日志信息
+        // 断言任务已经完成
+        // 注意：在这里，我们不再需要对 client_task 进行额外的断言，因为在上面已经通过 .await 确保任务完成
         println!("Test completed");
     }
 }
-    //
-    // #[tokio::test]
-    // async fn test_open_orders() {
-    //     // 创建一个模拟的 SandBoxClientEvent 发射器和接收器
-    //     let (request_tx, mut request_rx) = mpsc::unbounded_channel();
-    //     let (response_tx, response_rx) = oneshot::channel();
-    //
-    //     // 初始化 SandBoxClient
-    //     let client = SandBoxClient {
-    //         local_timestamp: 1622547800,
-    //         request_tx: request_tx.clone(),
-    //         strategy_signal_rx: request_rx,
-    //     };
-    //
-    //     // 模拟订单请求
-    //     let open_request = Order {
-    //         kind: crate::common_infrastructure::order::OrderExecutionType::Limit,
-    //         exchange: ExchangeVariant::Binance,
-    //         instrument: crate::common_infrastructure::instrument::Instrument::new("BTC", "USDT", crate::common_infrastructure::instrument::kind::InstrumentKind::Perpetual),
-    //         client_ts: chrono::Utc::now().timestamp_millis(),
-    //         client_order_id: crate::common_infrastructure::event::ClientOrderId(uuid::Uuid::new_v4()),
-    //         side: crate::common_infrastructure::Side::Buy,
-    //         state: RequestOpen {
-    //             reduce_only: false,
-    //             price: 50000.0,
-    //             size: 1.0,
-    //         },
-    //     };
-    //
-    //     // 模拟向客户端发送 OpenOrders 请求
-    //     tokio::spawn(async move {
-    //         let _ = client.open_orders(vec![open_request]).await;
-    //     });
-    //
-    //     // 模拟从 SandBoxClientEvent 接收器获取 OpenOrders 事件
-    //     if let Some(SandBoxClientEvent::OpenOrders((orders, tx))) = request_rx.recv().await {
-    //         assert_eq!(orders.len(), 1);
-    //         assert_eq!(tx.send(vec![Ok(Order {
-    //             kind: orders[0].kind,
-    //             exchange: orders[0].exchange,
-    //             instrument: orders[0].instrument.clone(),
-    //             client_ts: orders[0].client_ts,
-    //             client_order_id: orders[0].client_order_id,
-    //             side: orders[0].side,
-    //             state: Pending {
-    //                 reduce_only: orders[0].state.reduce_only,
-    //                 price: orders[0].state.price,
-    //                 size: orders[0].state.size,
-    //                 predicted_ts: chrono::Utc::now().timestamp_millis(),
-    //             },
-    //         })]), Ok(()));
-    //     }
-    //
-    //     // 验证 OpenOrders 的响应
-    //     let result = response_rx.await;
-    //     assert!(result.is_ok());
-    //     let orders: Vec<Result<Order<Pending>, ExecutionError>> = result.unwrap();
-    //     assert_eq!(orders.len(), 1);
-    //     assert_eq!(orders[0].as_ref().unwrap().state.price, 50000.0);
-    // }
-    //
-    //
-    // #[tokio::test]
+#[tokio::test]
+async fn test_open_orders() {
+    let (request_tx, mut request_rx) = mpsc::unbounded_channel();
+    let (response_tx, response_rx) = oneshot::channel();
+
+    let client = SandBoxClient {
+        local_timestamp: 1622547800,
+        request_tx: request_tx.clone(),
+        strategy_signal_rx: mpsc::unbounded_channel().1,
+    };
+
+    let open_request = Order {
+        kind: crate::common_infrastructure::order::OrderExecutionType::Limit,
+        exchange: ExchangeVariant::Binance,
+        instrument: crate::common_infrastructure::instrument::Instrument::new(
+            "BTC",
+            "USDT",
+            crate::common_infrastructure::instrument::kind::InstrumentKind::Perpetual,
+        ),
+        client_ts: chrono::Utc::now().timestamp_millis(),
+        client_order_id: crate::common_infrastructure::event::ClientOrderId(uuid::Uuid::new_v4()),
+        side: crate::common_infrastructure::Side::Buy,
+        state: RequestOpen {
+            reduce_only: false,
+            price: 50000.0,
+            size: 1.0,
+        },
+    };
+
+    let client_task = tokio::spawn(async move {
+        let orders = client.open_orders(vec![open_request]).await;
+        assert_eq!(orders.len(), 1, "Expected one pending order");
+        assert_eq!(orders[0].as_ref().unwrap().state.price, 50000.0);
+    });
+
+    println!("Waiting to receive event from request_rx");
+    if let Some(SandBoxClientEvent::OpenOrders((orders, tx))) = request_rx.recv().await {
+        println!("Received OpenOrders event");
+        assert_eq!(orders.len(), 1);
+        let order = &orders[0];
+        assert_eq!(order.state.price, 50000.0);
+
+        match tx.send(vec![Ok(Order {
+            kind: order.kind,
+            exchange: order.exchange,
+            instrument: order.instrument.clone(),
+            client_ts: order.client_ts,
+            client_order_id: order.client_order_id,
+            side: order.side,
+            state: Pending {
+                reduce_only: order.state.reduce_only,
+                price: order.state.price,
+                size: order.state.size,
+                predicted_ts: chrono::Utc::now().timestamp_millis(),
+            },
+        })]) {
+            Ok(_) => println!("Response sent successfully"),
+            Err(e) => panic!("Failed to send response: {:?}", e),
+        }
+    } else {
+        panic!("Did not receive OpenOrders event");
+    }
+
+    println!("Waiting to receive response from response_rx");
+    let result: Vec<Result<Order<Pending>, ExecutionError>> = match response_rx.await {
+        Ok(res) => {
+            println!("Received response: {:?}", res);
+            res
+        }
+        Err(e) => {
+            panic!("Failed to receive response: {:?}", e);
+        }
+    };
+
+    assert_eq!(result.len(), 1, "Expected one pending order in response");
+
+    client_task.await.expect("Client task should complete successfully");
+    println!("Test completed");
+}
+
+
+
+// #[tokio::test]
     // async fn test_cancel_orders_all() {
     //     // 创建一个模拟的 SandBoxClientEvent 发射器和接收器
     //     let (request_tx, mut request_rx) = mpsc::unbounded_channel();
