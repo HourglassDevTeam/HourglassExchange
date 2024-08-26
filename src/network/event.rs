@@ -8,6 +8,7 @@
 /// 下面是一个创建并发送 `"OpenOrders"` 事件的示例：
 ///
 /// ```rust
+/// use std::net::Ipv4Addr;
 /// use serde_json::json;
 /// use uuid::Uuid;
 /// use unilink_execution::common_infrastructure::event::ClientOrderId;
@@ -41,14 +42,20 @@
 ///
 ///    // 序列化 orders 为 JSON 字符串
 ///     let payload = serde_json::to_string(&orders).expect("Failed to serialize orders");
-///      NetworkEvent{
-///            event_type: event_type.to_string(),
-///             payload: payload.to_string(),
-///             timestamp: chrono::Utc::now().timestamp(),
-///             source: "source_module".to_string(),
-///             destination: "destination_module".to_string(),
-///             event_id: uuid::Uuid::new_v4().to_string(),
-/// }
+///     // 3. 定义 source 和 destination 为 IP 地址
+///     let source = Ipv4Addr::new(192, 168, 110, 95).to_string(); // 假设这是客户端的 IP
+///     let destination = Ipv4Addr::new(192, 168, 110, 130).to_string(); // 假设这是服务器的 IP
+///
+///     // 4. 创建 NetworkEvent
+///     NetworkEvent {
+///         event_type: event_type.to_string(),
+///         payload,
+///         timestamp: chrono::Utc::now().timestamp(),
+///         source,
+///         destination,
+///         event_id: uuid::Uuid::new_v4().to_string(),
+///         // 其他字段可以根据需要添加，例如 `version`, `correlation_id`, `priority`, `retry_count` 等
+///     }
 ///
 /// }
 /// ```
@@ -87,11 +94,7 @@ pub struct NetworkEvent {
     pub source: String, // 事件来源
     pub destination: String, // 事件目的地
     pub event_id: String, // 唯一事件 ID
-    // pub correlation_id: Option<String>, // 关联 ID (可选)
-    // pub priority: Option<u8>, // 优先级 (可选)
-    // pub retry_count: u8, // 重试次数
 }
-
 
 
 /// FIXME : the current parsing methods of the payload are only for demonstration purposes.
