@@ -2,7 +2,7 @@ use crate::{
     common_infrastructure::{
         event::ClientOrderId,
         instrument::Instrument,
-        order::{Open, Order, OrderId, OrderKind, OrderRole, Pending, RequestOpen},
+        order::{Open, Order, OrderId, OrderExecutionType, OrderRole, Pending, RequestOpen},
         Side,
     },
     error::ExecutionError,
@@ -119,15 +119,15 @@ impl AccountOrders
     pub fn determine_maker_taker(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
     {
         match order.kind {
-            | OrderKind::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
+            | OrderExecutionType::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
 
-            | OrderKind::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
+            | OrderExecutionType::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
 
-            | OrderKind::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
+            | OrderExecutionType::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
 
-            | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill => Ok(OrderRole::Taker), // 立即成交或取消的订单总是 Taker
+            | OrderExecutionType::ImmediateOrCancel | OrderExecutionType::FillOrKill => Ok(OrderRole::Taker), // 立即成交或取消的订单总是 Taker
 
-            | OrderKind::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
+            | OrderExecutionType::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
         }
     }
 
@@ -323,7 +323,7 @@ mod tests
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let order = Order { kind: OrderKind::Limit,
+        let order = Order { kind: OrderExecutionType::Limit,
                             exchange: ExchangeVariant::SandBox,
                             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                             client_order_id: client_order_id,
@@ -352,7 +352,7 @@ mod tests
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let request_order = Order { kind: OrderKind::Limit,
+        let request_order = Order { kind: OrderExecutionType::Limit,
                                     exchange: ExchangeVariant::SandBox,
                                     instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                                     client_order_id: client_order_id,
@@ -376,7 +376,7 @@ mod tests
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let request_order = Order { kind: OrderKind::Limit,
+        let request_order = Order { kind: OrderExecutionType::Limit,
                                     exchange: ExchangeVariant::SandBox,
                                     instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                                     client_order_id: client_order_id,
@@ -401,7 +401,7 @@ mod tests
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let order = Order { kind: OrderKind::Limit,
+        let order = Order { kind: OrderExecutionType::Limit,
                             exchange: ExchangeVariant::SandBox,
                             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                             client_order_id: ClientOrderId(Uuid::new_v4()),

@@ -245,7 +245,7 @@ mod tests
         common_infrastructure::{
             event::ClientOrderId,
             instrument::Instrument,
-            order::{OrderId, OrderKind, OrderRole},
+            order::{OrderId, OrderExecutionType, OrderRole},
             token::Token,
             Side,
         },
@@ -255,7 +255,7 @@ mod tests
 
     fn create_order(side: Side, price: f64, size: f64) -> Order<Open>
     {
-        Order { kind: OrderKind::Limit,
+        Order { kind: OrderExecutionType::Limit,
                 exchange: ExchangeVariant::Binance,
                 instrument: Instrument { base: Token::from("SOL"),
                                          quote: Token::from("USDT"),

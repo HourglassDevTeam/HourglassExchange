@@ -12,7 +12,7 @@ use crate::{
 
 /// 订单类型枚举
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub enum OrderKind
+pub enum OrderExecutionType
 {
     Market,
     Limit,
@@ -22,17 +22,17 @@ pub enum OrderKind
     GoodTilCancelled,
 }
 
-impl Display for OrderKind
+impl Display for OrderExecutionType
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         write!(f, "{}", match self {
-            | OrderKind::Market => "market",
-            | OrderKind::Limit => "limit",
-            | OrderKind::ImmediateOrCancel => "immediate_or_cancel",
-            | OrderKind::FillOrKill => "fill_or_kill",
-            | OrderKind::GoodTilCancelled => "good_til_cancelled",
-            | OrderKind::PostOnly => "post_only",
+            | OrderExecutionType::Market => "market",
+            | OrderExecutionType::Limit => "limit",
+            | OrderExecutionType::ImmediateOrCancel => "immediate_or_cancel",
+            | OrderExecutionType::FillOrKill => "fill_or_kill",
+            | OrderExecutionType::GoodTilCancelled => "good_til_cancelled",
+            | OrderExecutionType::PostOnly => "post_only",
             // | OrderKind::Stop => "stop",
             // | OrderKind::StopLimit => "stop_limit",
             // | OrderKind::TrailingStop => "trailing_stop",
@@ -44,7 +44,7 @@ impl Display for OrderKind
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
-    pub kind: OrderKind,                // 订单种类
+    pub kind: OrderExecutionType,                // 订单种类
     pub exchange: ExchangeVariant,      // 交易所
     pub instrument: Instrument,         // 交易工具
     pub client_ts: i64,                 // 客户端下单时间

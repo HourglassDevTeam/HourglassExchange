@@ -510,7 +510,7 @@ mod tests
             event::ClientOrderId,
             friction::{Fees, FutureFees, PerpetualFees},
             instrument::{kind::InstrumentKind, Instrument},
-            order::{OrderId, OrderKind, OrderRole},
+            order::{OrderId, OrderExecutionType, OrderRole},
             position::{future::FuturePositionConfig, perpetual::PerpetualPositionConfig, position_meta::PositionMeta, AccountPositions},
             token::Token,
         },
@@ -966,7 +966,7 @@ mod tests
         let client_order_id = ClientOrderId(Uuid::new_v4());
 
         // 模拟一个 Open 订单
-        let open_order = Order::<Open> { kind: OrderKind::Market,
+        let open_order = Order::<Open> { kind: OrderExecutionType::Market,
                                          exchange: ExchangeVariant::SandBox,
                                          instrument: instrument.clone(),
                                          client_ts: 123456789,

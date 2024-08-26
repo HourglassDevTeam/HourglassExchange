@@ -23,7 +23,7 @@ use crate::{
         datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
-        order::{Cancelled, Open, Order, OrderKind, OrderRole, Pending, RequestCancel, RequestOpen},
+        order::{Cancelled, Open, Order, OrderExecutionType, OrderRole, Pending, RequestCancel, RequestOpen},
         position::AccountPositions,
         token::Token,
         trade::ClientTrade,
@@ -289,10 +289,10 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     /// `match_orders_by_side` 根据订单的买卖方向（Side）匹配订单并生成交易事件。
     /// `determine_fees_percent` 根据金融工具类型和订单方向确定适用的费用百分比。
 
-    pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError>
+    pub fn order_validity_check(kind: OrderExecutionType) -> Result<(), ExecutionError>
     {
         match kind {
-            | OrderKind::Market | OrderKind::Limit | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill | OrderKind::PostOnly | OrderKind::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
+            | OrderExecutionType::Market | OrderExecutionType::Limit | OrderExecutionType::ImmediateOrCancel | OrderExecutionType::FillOrKill | OrderExecutionType::PostOnly | OrderExecutionType::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
                                                                                                                                                                           * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
     }
