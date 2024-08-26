@@ -39,7 +39,6 @@ impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 's
     }
 
 
-
     /// 网络运行 [`SandBoxExchange`]，并从网络接收事件
     pub async fn run_online(mut self) {
         let address = ([127, 0, 0, 1], 3030);
