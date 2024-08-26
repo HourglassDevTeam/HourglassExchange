@@ -43,7 +43,7 @@ pub enum SandBoxClientEvent
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    // NOTE very naturally, the client's kind is determined by and aligned the exchange.
+    // NOTE very naturally, the client's kind is determined by and aligned with the exchange.
     const CLIENT_KIND: ExchangeVariant = ExchangeVariant::SandBox;
 
     // NOTE in our case the 'optional' config parameter in the sandbox exchange is an UnboundedSender
