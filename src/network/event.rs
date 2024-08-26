@@ -15,6 +15,8 @@ pub struct NetworkEvent {
 }
 
 
+
+/// FIXME NOTE the current parsing methods of the payload are only for demonstration purposes.
 #[allow(dead_code)]
 impl NetworkEvent {
     pub(crate) fn parse_payload(&self) -> Result<SandBoxClientEvent, String> {
