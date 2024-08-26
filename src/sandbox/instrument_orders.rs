@@ -5,7 +5,6 @@ use std::{cmp::Ordering, fmt::Debug};
 use crate::{
     common_infrastructure::{
         datafeed::event::MarketEvent,
-        event::ClientOrderId,
         friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees},
         instrument::kind::InstrumentKind,
         order::{Open, Order},
@@ -223,7 +222,7 @@ impl InstrumentOrders
         let fee = trade_quantity * order.state.price * fees_percent;
 
         Ok(ClientTrade { trade_id: self.batch_id.into(),
-                         order_id: ClientOrderId(order.client_order_id.0),
+                         client_order_id: order.state.id.clone(),
                          instrument: order.instrument.clone(),
                          side: order.side,
                          price: order.state.price,
