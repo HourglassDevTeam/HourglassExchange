@@ -69,3 +69,63 @@ impl InstrumentFees
                fees }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn instrument_fees_new_should_create_instrument_fees() {
+        let fees = Fees::Spot(SpotFees { maker_fee: 0.1, taker_fee: 0.2 });
+        let instrument_fees = InstrumentFees::new(InstrumentKind::Spot, fees.clone());
+        assert_eq!(instrument_fees.instrument_kind, InstrumentKind::Spot);
+        assert_eq!(instrument_fees.fees, fees);
+    }
+
+    #[test]
+    fn spot_fees_should_serialize_and_deserialize_correctly() {
+        let fees = SpotFees { maker_fee: 0.1, taker_fee: 0.2 };
+        let serialized = serde_json::to_string(&fees).unwrap();
+        let deserialized: SpotFees = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(fees, deserialized);
+    }
+
+    #[test]
+    fn perpetual_fees_should_serialize_and_deserialize_correctly() {
+        let fees = PerpetualFees { maker_fee: 0.1, taker_fee: 0.2, funding_fee: 0.01 };
+        let serialized = serde_json::to_string(&fees).unwrap();
+        let deserialized: PerpetualFees = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(fees, deserialized);
+    }
+
+    #[test]
+    fn future_fees_should_serialize_and_deserialize_correctly() {
+        let fees = FutureFees { maker_fee: 0.1, taker_fee: 0.2, funding_fee: 0.01 };
+        let serialized = serde_json::to_string(&fees).unwrap();
+        let deserialized: FutureFees = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(fees, deserialized);
+    }
+
+    #[test]
+    fn option_fees_should_serialize_and_deserialize_correctly() {
+        let fees = OptionFees { trade_fee: 0.1 };
+        let serialized = serde_json::to_string(&fees).unwrap();
+        let deserialized: OptionFees = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(fees, deserialized);
+    }
+
+    #[test]
+    fn fees_should_serialize_and_deserialize_correctly() {
+        let fees_variants = vec![
+            Fees::Spot(SpotFees { maker_fee: 0.1, taker_fee: 0.2 }),
+            Fees::Perpetual(PerpetualFees { maker_fee: 0.1, taker_fee: 0.2, funding_fee: 0.01 }),
+            Fees::Future(FutureFees { maker_fee: 0.1, taker_fee: 0.2, funding_fee: 0.01 }),
+            Fees::Option(OptionFees { trade_fee: 0.1 }),
+        ];
+        for fees in fees_variants {
+            let serialized = serde_json::to_string(&fees).unwrap();
+            let deserialized: Fees = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(fees, deserialized);
+        }
+    }
+}
