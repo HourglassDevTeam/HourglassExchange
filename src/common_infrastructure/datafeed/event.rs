@@ -7,11 +7,11 @@ use crate::{
         instrument::Instrument,
         order::{FullyFill, Order, PartialFill},
         trade::ClientTrade,
-        Side,
     },
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade, ws_trade::WsTrade},
     ExchangeVariant,
 };
+use crate::common_infrastructure::trade::TradeId;
 
 // 定义一个泛型结构体 MarketEvent，包含各种交易市场事件信息
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
@@ -63,47 +63,48 @@ impl From<MarketEvent<WsTrade>> for MarketEvent<DataKind>
                kind: DataKind::WsTrade(event.kind) }
     }
 }
-
 // 为 Order<FullyFill> 实现 From trait
-impl From<Order<FullyFill>> for MarketEvent<ClickhousePublicTrade>
-{
-    fn from(order: Order<FullyFill>) -> Self
-    {
-        let clickhouse_trade = ClickhousePublicTrade { symbol: format!("{}/{}", order.instrument.base, order.instrument.quote),
-                                                       side: match order.side {
-                                                           | Side::Buy => "buy".to_string(),
-                                                           | Side::Sell => "sell".to_string(),
-                                                       },
-                                                       price: order.state.price,
-                                                       timestamp: order.state.id.0.parse().unwrap_or_default(),
-                                                       amount: order.state.size };
+impl From<Order<FullyFill>> for MarketEvent<ClientTrade> {
+    fn from(order: Order<FullyFill>) -> Self {
+        let client_trade = ClientTrade {
+            id: TradeId(order.state.id.0.parse().unwrap_or_default()),
+            instrument: order.instrument.clone(),
+            side: order.side,
+            price: order.state.price,
+            size: order.state.size,
+            count: 1, // 假设 fully filled 的订单只有一个 trade
+            fees: 0.0, // 根据你的逻辑调整 fees 计算
+        };
 
-        MarketEvent { exchange_time: order.state.id.0.parse().unwrap_or_default(),
-                      received_time: order.client_ts,
-                      exchange: order.exchange,
-                      instrument: order.instrument,
-                      kind: clickhouse_trade }
+        MarketEvent {
+            exchange_time: order.state.id.0.parse().unwrap_or_default(),
+            received_time: order.client_ts,
+            exchange: order.exchange,
+            instrument: order.instrument.clone(),
+            kind: client_trade,
+        }
     }
 }
 
 // 为 Order<PartialFill> 实现 From trait
-impl From<Order<PartialFill>> for MarketEvent<ClickhousePublicTrade>
-{
-    fn from(order: Order<PartialFill>) -> Self
-    {
-        let clickhouse_trade = ClickhousePublicTrade { symbol: format!("{}/{}", order.instrument.base, order.instrument.quote),
-                                                       side: match order.side {
-                                                           | Side::Buy => "buy".to_string(),
-                                                           | Side::Sell => "sell".to_string(),
-                                                       },
-                                                       price: order.state.price,
-                                                       timestamp: order.state.id.0.parse().unwrap_or_default(),
-                                                       amount: order.state.size };
+impl From<Order<PartialFill>> for MarketEvent<ClientTrade> {
+    fn from(order: Order<PartialFill>) -> Self {
+        let client_trade = ClientTrade {
+            id: TradeId(order.state.id.0.parse().unwrap_or_default()),
+            instrument: order.instrument.clone(),
+            side: order.side,
+            price: order.state.price,
+            size: order.state.size,
+            count: 1, // 假设部分成交的订单也只有一个 trade
+            fees: 0.0, // 根据你的逻辑调整 fees 计算
+        };
 
-        MarketEvent { exchange_time: order.state.id.0.parse().unwrap_or_default(),
-                      received_time: order.client_ts,
-                      exchange: order.exchange,
-                      instrument: order.instrument,
-                      kind: clickhouse_trade }
+        MarketEvent {
+            exchange_time: order.state.id.0.parse().unwrap_or_default(),
+            received_time: order.client_ts,
+            exchange: order.exchange,
+            instrument: order.instrument.clone(),
+            kind: client_trade,
+        }
     }
 }
