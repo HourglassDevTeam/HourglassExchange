@@ -517,7 +517,6 @@ mod tests
         sandbox::account::{
             account_config::{AccountConfig, CommissionLevel, CommissionRates, MarginMode},
             account_latency::{AccountLatency, FluctuationMode},
-            account_market_feed::AccountDataStreams,
             account_orders::AccountOrders,
             Account,
         },
@@ -569,9 +568,8 @@ mod tests
         let account_state_arc = Arc::new(Mutex::new(account_state.clone()));
 
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(0),
-                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
                                          account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                                         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                                          config: Arc::new(account_config),
                                          states: account_state_arc.clone(), // 使用克隆后的 Arc<Mutex<...>>
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -756,9 +754,8 @@ mod tests
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(0),
-                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
                                          account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                                         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                                          config: Arc::new(config),
                                          states: account_state.clone(),
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -797,9 +794,7 @@ mod tests
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
-                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
                                          account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                                         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                                          config: Arc::new(config),
                                          states: account_state.clone(),
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -835,9 +830,8 @@ mod tests
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
-                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
                                          account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                                         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                                          config: Arc::new(config),
                                          states: account_state.clone(),
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -871,9 +865,8 @@ mod tests
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
-                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
                                          account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                                         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                                          config: Arc::new(config),
                                          states: account_state.clone(),
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -925,9 +918,8 @@ mod tests
                                                      margin: 0.0 };
 
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(123456789),
-                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
                                          account_event_tx: mpsc::unbounded_channel().0,
-                                         market_event_tx: mpsc::unbounded_channel().0,
                                          config: Arc::new(config),
                                          states: account_state.clone(),
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,

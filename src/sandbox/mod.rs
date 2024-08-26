@@ -160,7 +160,6 @@ mod tests {
     use crate::common_infrastructure::position::{AccountPositions, PositionDirectionMode, PositionMarginMode};
     use crate::sandbox::account::account_config::{AccountConfig, CommissionLevel, MarginMode};
     use crate::sandbox::account::account_latency::{AccountLatency, FluctuationMode};
-    use crate::sandbox::account::account_market_feed::AccountDataStreams;
     use crate::sandbox::account::account_orders::AccountOrders;
     use crate::sandbox::account::account_states::AccountState;
     use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
@@ -203,9 +202,8 @@ mod tests {
         // 创建 Account 实例
         let account = Account {
             exchange_timestamp: AtomicI64::new(0),
-            data: Arc::new(RwLock::new(AccountDataStreams::default())),
+            // data: Arc::new(RwLock::new(AccountDataStreams::default())),
             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-            market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
             config: Arc::new(account_config),
             states: account_state_arc.clone(),
             orders: Arc::new(RwLock::new(AccountOrders::new(

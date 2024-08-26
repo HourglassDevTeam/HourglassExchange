@@ -45,9 +45,7 @@ pub struct Account<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
     pub exchange_timestamp: AtomicI64,
-    pub data: Arc<RwLock<AccountDataStreams<Event>>>,         // 帐户数据
     pub account_event_tx: UnboundedSender<AccountEvent>,      // 帐户事件发送器
-    pub market_event_tx: UnboundedSender<PublicEvent<Event>>, // 市场事件发送器
     pub config: Arc<AccountConfig>,                           // 帐户配置
     pub states: Arc<Mutex<AccountState<Event>>>,              // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
@@ -59,9 +57,8 @@ impl<Event> Clone for Account<Event> where Event: Clone + Send + Sync + Debug + 
     fn clone(&self) -> Self
     {
         Account { exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
-                  data: Arc::clone(&self.data),
+                  // data: Arc::clone(&self.data),
                   account_event_tx: self.account_event_tx.clone(),
-                  market_event_tx: self.market_event_tx.clone(),
                   config: Arc::clone(&self.config),
                   states: Arc::clone(&self.states),
                   orders: Arc::clone(&self.orders) }
@@ -73,7 +70,6 @@ pub struct AccountInitiator<Event>
 {
     data: Option<Arc<RwLock<AccountDataStreams<Event>>>>,
     account_event_tx: Option<UnboundedSender<AccountEvent>>,
-    market_event_tx: Option<UnboundedSender<PublicEvent<Event>>>,
     config: Option<Arc<AccountConfig>>,
     states: Option<Arc<Mutex<AccountState<Event>>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
@@ -93,7 +89,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
     {
         AccountInitiator { data: None,
                            account_event_tx: None,
-                           market_event_tx: None,
                            config: None,
                            states: None,
                            orders: None }
@@ -111,11 +106,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
         self
     }
 
-    pub fn market_event_tx(mut self, value: UnboundedSender<PublicEvent<Event>>) -> Self
-    {
-        self.market_event_tx = Some(value);
-        self
-    }
 
     pub fn config(mut self, value: AccountConfig) -> Self
     {
@@ -138,10 +128,8 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
     pub fn build(self) -> Result<Account<Event>, String>
     {
         Ok(Account { exchange_timestamp: 0.into(),
-                     data: self.data.ok_or("datafeed is required")?,                                 // 检查并获取data
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
-                     market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
-                     config: self.config.ok_or("config is required")?,                               // 检查并获取config
+            config: self.config.ok_or("config is required")?,                               // 检查并获取config
                      states: self.states.ok_or("balances is required")?,                             // 检查并获取balances
                      orders: self.orders.ok_or("orders are required")? })
     }

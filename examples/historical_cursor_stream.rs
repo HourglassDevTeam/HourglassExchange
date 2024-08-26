@@ -14,7 +14,7 @@ async fn main()
     let instrument = "futures";
 
     // 定义日期范围
-    let start_date = NaiveDate::from_ymd_opt(2024, 5, 4).unwrap();
+    let start_date = NaiveDate::from_ymd_opt(2024, 5, 5).unwrap();
     let end_date = NaiveDate::from_ymd_opt(2024, 5, 7).unwrap();
 
     // 创建 AccountDataStreams 实例
@@ -42,7 +42,7 @@ async fn main()
                         match cursor.next().await {
                             | Ok(Some(trade)) => {
                                 // 打印每个交易数据
-                                // println!("[UniLinkExecution] : Received trade for date {}: {:?}", date_str_clone, trade);
+                                println!("[UniLinkExecution] : Received trade for date {}: {:?}", date_str_clone, trade);
 
                                 if tx.send(trade).is_err() {
                                     // 如果发送失败（例如接收者已关闭），退出循环
