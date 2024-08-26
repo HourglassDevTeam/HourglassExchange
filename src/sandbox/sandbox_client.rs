@@ -129,37 +129,39 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_orders_open() {
-        // Create the sender and receiver for the request channel
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
 
-        // Initialize the client with a dummy receiver for strategy signals
         let client = SandBoxClient {
             local_timestamp: 1622547800,
-            request_tx: request_tx.clone(),
-            strategy_signal_rx: mpsc::unbounded_channel().1, // dummy receiver
+            request_tx: request_tx.clone(), // 请求通道的发送者用于客户端发送请求
+            strategy_signal_rx: mpsc::unbounded_channel().1, // 虚拟的接收者，用于接收策略信号
         };
 
-        // Spawn a task to invoke the client's fetch_orders_open method
+        // 启动一个异步任务来调用客户端的 fetch_orders_open 方法
         let client_task = tokio::spawn(async move {
+            // 等待 fetch_orders_open 方法完成，并期待没有错误发生
             let orders = client.fetch_orders_open().await.expect("fetch_orders_open failed");
+            // 断言获取到的订单列表是空的
             assert!(orders.is_empty(), "Expected an empty list of orders");
         });
 
-        // Wait for the client to send a FetchOrdersOpen request
+        // 等待客户端发送 FetchOrdersOpen 请求事件
+        // 预期客户端会发送一个获取打开订单的请求
         let request_event = request_rx.recv().await.expect("Expected FetchOrdersOpen event");
+        // 匹配接收到的事件，确认它是 FetchOrdersOpen 类型
         if let SandBoxClientEvent::FetchOrdersOpen(tx) = request_event {
-            // Use the sender to send a response simulating an empty list of open orders
+            // 使用 oneshot 通道的发送者发送一个模拟的响应
+            // 这里模拟返回一个空的订单列表
             let _ = tx.send(Ok(vec![]));
-
-            // The rest of your test code...
         } else {
+            // 如果接收到的事件不是预期的 FetchOrdersOpen 类型，使用 panic 使测试失败
             panic!("Received unexpected event type");
         }
 
-        // Wait for the client task to complete
+        // 等待客户端任务完成，确保 fetch_orders_open 方法已成功执行
         client_task.await.expect("Client task should complete successfully");
 
-        // Test completed
+        // 测试完成，打印日志信息
         println!("Test completed");
     }
 }
