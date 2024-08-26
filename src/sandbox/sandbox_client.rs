@@ -163,9 +163,6 @@ mod tests {
         // 等待客户端任务完成，确保 fetch_orders_open 方法已成功执行
         client_task.await.expect("Client task should complete successfully");
 
-        // 断言任务已经完成
-        // 注意：在这里，我们不再需要对 client_task 进行额外的断言，因为在上面已经通过 .await 确保任务完成
-        println!("Test completed");
     }
 }
 

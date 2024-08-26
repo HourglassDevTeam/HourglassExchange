@@ -44,7 +44,6 @@ impl SandBoxExchange
 
         // 检查端口是否已经被占用
         if is_port_in_use(address) {
-            eprintln!("Port {} is already in use. Please choose another port.", address.1);
             return;
         }
 

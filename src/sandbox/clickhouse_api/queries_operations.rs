@@ -44,9 +44,7 @@ impl ClickHouseClient
     pub fn new() -> Self
     {
         let client = Client::default().with_url("http://localhost:8123").with_user("default").with_password("");
-
         println!("[UniLinkExecution] : Successfully connected to the ClickHouse server.");
-
         Self { client: Arc::new(RwLock::new(client)) }
     }
 }
