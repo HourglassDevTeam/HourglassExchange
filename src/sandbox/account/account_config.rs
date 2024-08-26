@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-
-use serde::{Deserialize, Serialize};
-
 use crate::{
     common_infrastructure::{
         instrument::kind::InstrumentKind,
@@ -10,6 +6,8 @@ use crate::{
     error::ExecutionError,
     sandbox::utils::config_parser::read_config_file,
 };
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountConfig
@@ -18,12 +16,11 @@ pub struct AccountConfig
     pub position_mode: PositionDirectionMode,
     pub position_margin_mode: PositionMarginMode,
     pub commission_level: CommissionLevel,
-    pub funding_rate: f64,                                   // NOTE 每种金融工具可以拥有fund_fee_rate。甚至没有。这个写法是高度简化的。
-    pub account_leverage_rate: f64,                          // NOTE 每种金融工具应该拥有杠杆比例Registry。这个写法是高度简化的。
-    pub fees_book: HashMap<InstrumentKind, CommissionRates>, // 每种金融工具的手续费Registry NOTE 某种些交易所的设置颗粒会精确到Instrument.
+    pub funding_rate: f64,
+    pub account_leverage_rate: f64,
+    pub fees_book: HashMap<InstrumentKind, CommissionRates>,
 }
 
-// NOTE 增加假设的佣金费率结构, 用于模拟交易所账户上。每个账户都有自己的佣金费率。
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct CommissionRates
 {
@@ -38,8 +35,6 @@ pub struct CommissionRatesInitiator
     pub taker_fees: Option<f64>,
 }
 
-// 为了确保 CommissionRatesBuilder 被强制实现，可以将 CommissionRates 结构体的初始化方法封装在 builder 方法中。
-// 这样，用户只能通过 builder 方法来创建 CommissionRates 实例。以下是具体实现：
 impl CommissionRates
 {
     pub fn builder() -> CommissionRatesInitiator
@@ -60,8 +55,8 @@ impl CommissionRatesInitiator
 {
     pub fn new() -> Self
     {
-        CommissionRatesInitiator { maker_fees: None,
-                                   taker_fees: None }
+        Self { maker_fees: None,
+               taker_fees: None }
     }
 
     pub fn maker(mut self, rate: f64) -> Self
@@ -83,7 +78,6 @@ impl CommissionRatesInitiator
     }
 }
 
-// NOTE 更新费率函数的样本：为 AccountConfig 添加一个方法来更新佣金费率
 impl AccountConfig
 {
     pub fn new() -> Result<AccountConfig, ExecutionError>
@@ -99,7 +93,6 @@ impl AccountConfig
             .ok_or_else(|| ExecutionError::SandBox(format!("Open fee rate for {:?} not found", instrument_kind)))
     }
 
-    // 获取指定InstrumentKind的平仓费率
     pub fn get_taker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
     {
         self.fees_book
@@ -118,7 +111,6 @@ pub enum MarginMode
     PortfolioMargin,
 }
 
-// NOTE 本模拟交易所特有，实际情况可能不同
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum CommissionLevel
 {
@@ -129,7 +121,6 @@ pub enum CommissionLevel
     Lv5,
 }
 
-// NOTE : this initiator is currently not useful as we now import config from config.
 pub struct AccountConfigInitiator
 {
     margin_mode: Option<MarginMode>,
@@ -137,6 +128,13 @@ pub struct AccountConfigInitiator
     position_margin_mode: Option<PositionMarginMode>,
     commission_level: Option<CommissionLevel>,
     fund_fee_rate: Option<f64>,
+}
+impl Default for AccountConfigInitiator
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
 }
 
 impl AccountConfigInitiator
@@ -175,7 +173,6 @@ impl AccountConfigInitiator
                            position_margin_mode: self.position_margin_mode.ok_or("position_mode is required")?,
                            commission_level: self.commission_level.ok_or("commission_level is required")?,
                            funding_rate: self.fund_fee_rate.ok_or("commission_level is required")?,
-
                            account_leverage_rate: Default::default(),
                            fees_book: Default::default() })
     }

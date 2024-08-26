@@ -1,3 +1,4 @@
+use crate::common_infrastructure::datafeed::market_event::MarketEvent;
 use async_stream::stream;
 use chrono::NaiveDate;
 use clickhouse::query::RowCursor;
@@ -16,7 +17,7 @@ use tokio::sync::{
 };
 
 use crate::{
-    common_infrastructure::{datafeed::event::MarketEvent, Side},
+    common_infrastructure::{ Side},
     error::ExecutionError,
     sandbox::{
         clickhouse_api::{datatype::clickhouse_trade_data::ClickhousePublicTrade, query_builder::ClickHouseQueryBuilder},
@@ -43,9 +44,7 @@ impl ClickHouseClient
     pub fn new() -> Self
     {
         let client = Client::default().with_url("http://localhost:8123").with_user("default").with_password("");
-
         println!("[UniLinkExecution] : Successfully connected to the ClickHouse server.");
-
         Self { client: Arc::new(RwLock::new(client)) }
     }
 }
@@ -200,7 +199,7 @@ impl ClickHouseClient
         let final_query = format!(
                                   "CREATE TABLE {}.{} ENGINE = ReplacingMergeTree() \
         PARTITION BY toYYYYMMDD(toDate(timestamp)) \
-        ORDER BY (timestamp,symbol,side) AS {}",
+        ORDER BY  (timestamp,symbol,side, price,amount) AS {}",
                                   database, new_table_name, union_all_query
         );
 
@@ -349,6 +348,7 @@ impl ClickHouseClient
                             for trade_data in &trade_datas {
                                 let (base, quote) = parse_base_and_quote(&trade_data.symbol);
                                 let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
+                                // println!("Sending market event: {:?}", market_event);
                                 if tx.send(market_event).is_err() {
                                     eprintln!("Failed to send market event");
                                     return;
@@ -394,7 +394,7 @@ impl ClickHouseClient
                                                  .order("timestamp", Some("DESC"))
                                                  .build();
 
-        println!("[UniLinkExecution] : Constructed query {}", query);
+        // println!("[UniLinkExecution] : Constructed query {}", query);
 
         // 获取 ClickHouse 客户端的只读引用
         let client_ref = self.client.read().await;
@@ -415,7 +415,7 @@ impl ClickHouseClient
                                                  .order("timestamp", Some("DESC"))
                                                  .build();
 
-        println!("[UniLinkExecution] : Constructed query {}", query);
+        // println!("[UniLinkExecution] : Constructed query {}", query);
 
         // 获取 ClickHouse 客户端的只读引用
         let client_ref = self.client.read().await;
@@ -477,42 +477,35 @@ impl ClickHouseClient
         Ok(())
     }
 
-    pub async fn insert_into_unioned_table(
-        &self,
-        database: &str,
-        target_table_name: &str,
-        additional_table_names: &[String],
-        report_progress: bool
-    ) -> Result<(), Error> {
+    pub async fn insert_into_unioned_table(&self, database: &str, target_table_name: &str, additional_table_names: &[String], report_progress: bool) -> Result<(), Error>
+    {
         // 构建UNION ALL查询
         let queries = Arc::new(Mutex::new(Vec::new()));
         let total_tables = additional_table_names.len();
 
         additional_table_names.par_iter().enumerate().for_each(|(i, table_name)| {
-            let select_query = ClickHouseQueryBuilder::new()
-                .select("symbol, side, price, timestamp, amount") // Select required fields
-                .from(database, table_name) // Format the table name with database
-                .build(); // Build the individual query
+                                                         let select_query =
+                                                             ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount") // Select required fields
+                                                                                          .from(database, table_name) // Format the table name with database
+                                                                                          .build(); // Build the individual query
 
-            let mut queries_lock = queries.lock().unwrap();
-            queries_lock.push(select_query);
+                                                         let mut queries_lock = queries.lock().unwrap();
+                                                         queries_lock.push(select_query);
 
-            // 如果启用进度汇报，每处理完一个表就汇报一次进度
-            if report_progress {
-                let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
-                println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
-            }
-        });
+                                                         // 如果启用进度汇报，每处理完一个表就汇报一次进度
+                                                         if report_progress {
+                                                             let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
+                                                             println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
+                                                         }
+                                                     });
 
         let queries = Arc::try_unwrap(queries).expect("Failed to unwrap Arc").into_inner().unwrap();
         let union_all_query = queries.join(" UNION DISTINCT ");
 
-        let final_query = format!(
-            "INSERT INTO {}.{} SELECT DISTINCT symbol, side, price, timestamp, amount FROM ({})",
-            database, target_table_name, union_all_query
-        );
+        let final_query = format!("INSERT INTO {}.{} SELECT DISTINCT symbol, side, price, timestamp, amount FROM ({})",
+                                  database, target_table_name, union_all_query);
 
-        println!("The Final Query is : {}",final_query);
+        println!("The Final Query is : {}", final_query);
         if report_progress {
             println!("[UniLinkExecution] : Successfully constructed the final insert query.");
         }
@@ -526,5 +519,51 @@ impl ClickHouseClient
 
         Ok(())
     }
+}
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    // use chrono::NaiveDate;
+
+    async fn setup_clickhouse_client() -> ClickHouseClient {
+        // 假设 ClickHouse 在本地运行，且使用默认设置
+        ClickHouseClient::new()
+    }
+
+    #[tokio::test]
+    async fn test_construct_table_name() {
+        let client = setup_clickhouse_client().await;
+        let table_name = client.construct_table_name("binance", "futures", "trades", "2024_08_24", "BTC", "USDT");
+        assert_eq!(table_name, "binance_futures_trades_2024_08_24_BTCUSDT");
+    }
+
+    // #[tokio::test]
+    // async fn test_get_table_names() {
+    //     let client = setup_clickhouse_client().await;
+    //     let table_names = client.get_table_names("binance_futures_trades").await;
+    //
+    //     // 假设数据库中有一些表
+    //     assert!(!table_names.is_empty(), "Expected to find some tables in the database");
+    // }
+
+    // #[tokio::test]
+    // async fn test_optimize_table() {
+    //     let client = setup_clickhouse_client().await;
+    //
+    //     let result = client.optimize_table("binance_futures_trades.binance_futures_trades_2024_05_05_1000BONKUSDT").await;
+    //     assert!(result.is_ok(), "Expected table optimization to succeed");
+    // }
+
+    // #[tokio::test]
+    // async fn test_optimize_union_tables_in_date_range() {
+    //     let client = setup_clickhouse_client().await;
+    //
+    //     let start_date = NaiveDate::from_ymd_opt(2024, 5, 5).unwrap();
+    //     let end_date = NaiveDate::from_ymd_opt(2024, 5, 5).unwrap();
+    //
+    //     let result = client.optimize_union_tables_in_date_range("binance", "futures", "trades", start_date, end_date).await;
+    //     assert!(result.is_ok(), "Expected optimization of union tables to succeed");
+    // }
 }

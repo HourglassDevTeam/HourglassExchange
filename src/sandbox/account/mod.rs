@@ -1,3 +1,9 @@
+use crate::common_infrastructure::datafeed::market_event::MarketEvent;
+use crate::common_infrastructure::event::ClientOrderId;
+use futures::{future::join_all};
+use mpsc::UnboundedSender;
+use oneshot::Sender;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
 use std::{
     fmt::Debug,
     sync::{
@@ -5,11 +11,7 @@ use std::{
         Arc,
     },
 };
-
-use futures::{future::join_all, lock::Mutex};
-use mpsc::UnboundedSender;
-use oneshot::Sender;
-use tokio::sync::{mpsc, oneshot, RwLock};
+use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 
 use account_config::AccountConfig;
@@ -19,18 +21,17 @@ use account_states::AccountState;
 use crate::{
     common_infrastructure::{
         balance::TokenBalance,
-        datafeed::event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
-        order::{Cancelled, Open, Order, OrderKind, OrderRole, Pending, RequestCancel, RequestOpen},
+        order::{Cancelled, Open, Order, OrderExecutionType, OrderRole, Pending, RequestCancel, RequestOpen},
         position::AccountPositions,
         token::Token,
         trade::ClientTrade,
         Side,
     },
     error::ExecutionError,
-    sandbox::{account::account_market_feed::AccountDataStreams, clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade, instrument_orders::InstrumentOrders},
-    ExchangeVariant,
+    sandbox::{ clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade, instrument_orders::InstrumentOrders},
+    Exchange,
 };
 
 pub mod account_config;
@@ -40,45 +41,38 @@ pub mod account_orders;
 pub mod account_states;
 
 #[derive(Debug)]
-pub struct Account<Event>
-    where Event: Clone + Send + Sync + Debug + 'static + Ord
+pub struct Account
 {
     pub exchange_timestamp: AtomicI64,
-    pub data: Arc<RwLock<AccountDataStreams<Event>>>,         // 帐户数据
     pub account_event_tx: UnboundedSender<AccountEvent>,      // 帐户事件发送器
-    pub market_event_tx: UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
     pub config: Arc<AccountConfig>,                           // 帐户配置
-    pub states: Arc<Mutex<AccountState<Event>>>,              // 帐户余额
+    pub states: Arc<Mutex<AccountState>>,              // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
 }
 
 // 手动实现 Clone trait
-impl<Event> Clone for Account<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl Clone for Account
 {
     fn clone(&self) -> Self
     {
         Account { exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
-                  data: Arc::clone(&self.data),
+                  // data: Arc::clone(&self.data),
                   account_event_tx: self.account_event_tx.clone(),
-                  market_event_tx: self.market_event_tx.clone(),
                   config: Arc::clone(&self.config),
                   states: Arc::clone(&self.states),
                   orders: Arc::clone(&self.orders) }
     }
 }
 #[derive(Clone, Debug)]
-pub struct AccountInitiator<Event>
-    where Event: Clone + Send + Sync + Debug + 'static + Ord
+pub struct AccountInitiator
 {
-    data: Option<Arc<RwLock<AccountDataStreams<Event>>>>,
     account_event_tx: Option<UnboundedSender<AccountEvent>>,
-    market_event_tx: Option<UnboundedSender<MarketEvent<Event>>>,
     config: Option<Arc<AccountConfig>>,
-    states: Option<Arc<Mutex<AccountState<Event>>>>,
+    states: Option<Arc<Mutex<AccountState>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
-impl<Event> Default for AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl Default for AccountInitiator
 {
     fn default() -> Self
     {
@@ -86,22 +80,15 @@ impl<Event> Default for AccountInitiator<Event> where Event: Clone + Send + Sync
     }
 }
 
-impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl AccountInitiator
 {
     pub fn new() -> Self
     {
-        AccountInitiator { data: None,
+        AccountInitiator {
                            account_event_tx: None,
-                           market_event_tx: None,
                            config: None,
                            states: None,
                            orders: None }
-    }
-
-    pub fn data(mut self, value: AccountDataStreams<Event>) -> Self
-    {
-        self.data = Some(Arc::new(RwLock::new(value)));
-        self
     }
 
     pub fn account_event_tx(mut self, value: UnboundedSender<AccountEvent>) -> Self
@@ -110,11 +97,6 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
         self
     }
 
-    pub fn market_event_tx(mut self, value: UnboundedSender<MarketEvent<Event>>) -> Self
-    {
-        self.market_event_tx = Some(value);
-        self
-    }
 
     pub fn config(mut self, value: AccountConfig) -> Self
     {
@@ -122,7 +104,7 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
         self
     }
 
-    pub fn balances(mut self, value: AccountState<Event>) -> Self
+    pub fn balances(mut self, value: AccountState) -> Self
     {
         self.states = Some(Arc::new(Mutex::new(value)));
         self
@@ -134,23 +116,21 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
         self
     }
 
-    pub fn build(self) -> Result<Account<Event>, String>
+    pub fn build(self) -> Result<Account, String>
     {
         Ok(Account { exchange_timestamp: 0.into(),
-                     data: self.data.ok_or("datafeed is required")?,                                 // 检查并获取data
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
-                     market_event_tx: self.market_event_tx.ok_or("market_event_tx is required")?,    // 检查并获取market_event_tx
-                     config: self.config.ok_or("config is required")?,                               // 检查并获取config
+            config: self.config.ok_or("config is required")?,                               // 检查并获取config
                      states: self.states.ok_or("balances is required")?,                             // 检查并获取balances
                      orders: self.orders.ok_or("orders are required")? })
     }
 }
 
 #[allow(dead_code)]
-impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl Account
 {
     /// [Initiation] `Account` 模块的初始化函数`initiate`
-    pub fn initiate() -> AccountInitiator<Event>
+    pub fn initiate() -> AccountInitiator
     {
         AccountInitiator::new()
     }
@@ -220,51 +200,42 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
     {
-        // 验证订单合法性
         Self::order_validity_check(order.kind)?;
 
-        // 获取订单角色（maker 或 taker），现在使用写锁
-        let order_role = {
+        // 提前声明所需的变量
+        let (required_balance, token, open_order);
+        let order_role;
+
+        {
+            // 缩小锁的范围
             let mut orders_guard = self.orders.write().await;
-            orders_guard.determine_maker_taker(&order, current_price)?
-        };
+            order_role = orders_guard.determine_maker_taker(&order, current_price)?;
 
-        // 计算所需的可用余额
-        let (token, required_balance) = self.calculate_required_available_balance(&order, current_price).await;
+            // 计算所需的可用余额
+            let (t, r_balance) = self.calculate_required_available_balance(&order, current_price).await;
+            required_balance = r_balance;
+            token = t;
 
-        // 检查可用余额是否充足
-        self.states.lock().await.has_sufficient_available_balance(token, required_balance)?;
+            self.states.lock().await.has_sufficient_available_balance(token, required_balance)?;
 
-        // 构建 Open<Order> 并获取写锁
-        let open_order = {
-            let mut orders_guard = self.orders.write().await;
+            open_order = orders_guard.build_order_open(order, order_role).await;
 
-            // 构建 Open<Order>
-            let open = orders_guard.build_order_open(order, order_role).await;
+            orders_guard.ins_orders_mut(&open_order.instrument)?.add_order_open(open_order.clone());
+        }
 
-            // 添加订单到 Instrument Orders
-            orders_guard.ins_orders_mut(&open.instrument)?.add_order_open(open.clone());
-
-            open
-        };
-
-        // 更新客户余额
         let balance_event = self.states.lock().await.apply_open_order_changes(&open_order, required_balance).await.unwrap();
-
-        // 获取当前的 exchange_timestamp
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
-        // 发送账户事件给客户端
         self.account_event_tx
             .send(balance_event)
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Balance");
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
-                                 exchange: ExchangeVariant::SandBox,
+                                 exchange: Exchange::SandBox,
                                  kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
-        // 返回已打开的订单
+
         Ok(open_order)
     }
 
@@ -297,10 +268,10 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     /// `match_orders_by_side` 根据订单的买卖方向（Side）匹配订单并生成交易事件。
     /// `determine_fees_percent` 根据金融工具类型和订单方向确定适用的费用百分比。
 
-    pub fn order_validity_check(kind: OrderKind) -> Result<(), ExecutionError>
+    pub fn order_validity_check(kind: OrderExecutionType) -> Result<(), ExecutionError>
     {
         match kind {
-            | OrderKind::Market | OrderKind::Limit | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill | OrderKind::PostOnly | OrderKind::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
+            | OrderExecutionType::Market | OrderExecutionType::Limit | OrderExecutionType::ImmediateOrCancel | OrderExecutionType::FillOrKill | OrderExecutionType::PostOnly | OrderExecutionType::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
                                                                                                                                                                           * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
     }
@@ -309,64 +280,67 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     {
         let current_price = market_event.kind.price;
 
-        // 克隆 pending_registry 避免借用冲突
-        let pending_registry = &self.orders.read().await.pending_registry;
+        // 这里使用 `DashMap` 的 `iter()` 获取所有键值对，并提取键作为 `order_ids`
+        let order_ids: Vec<ClientOrderId> = self.orders.read().await.pending_registry.iter().map(|entry| *entry.key()).collect();
 
-        // 遍历 pending_registry 来处理每个订单
-        for order in pending_registry {
-            // 在需要时获取可写锁来调用可变方法
-            let role = self.orders.write().await.determine_maker_taker(order, current_price);
+        // 遍历订单 ID 来处理每个订单
+        for order_id in order_ids {
+            let order = {
+                // 只在获取订单时持有锁
+                let orders_read = self.orders.read().await;
+                orders_read.pending_registry.get(&order_id).map(|entry| entry.value().clone())
+            };
 
-            if let Ok(OrderRole::Maker) = role {
-                // 生成 open_order 在 orders_write 的借用作用域外
-                let open_order = {
+            if let Some(order) = order {
+                let role = {
+                    // 在判断订单角色时再次持有写锁
                     let mut orders_write = self.orders.write().await;
-                    orders_write.build_order_open(order.clone(), OrderRole::Maker).await
+                    orders_write.determine_maker_taker(&order, current_price)
                 };
 
-                // 在 orders_write 的作用域内处理 instrument_orders
-                let mut orders_write = self.orders.write().await;
-                if let Ok(instrument_orders) = orders_write.ins_orders_mut(&order.instrument) {
-                    // 将订单加入到相应的订单簿
-                    instrument_orders.add_order_open(open_order);
+                if let Ok(OrderRole::Maker) = role {
+                    // 生成 open_order
+                    let open_order = self.orders.write().await.build_order_open(order.clone(), OrderRole::Maker).await;
 
-                    // 获取手续费
-                    let fees_percent = self.determine_fees_percent(&order.instrument.kind, &OrderRole::Maker);
+                    // 处理 instrument_orders
+                    if let Ok(mut orders_write) = self.orders.write().await.ins_orders_mut(&order.instrument) {
+                        // 将订单加入到相应的订单簿
+                        orders_write.add_order_open(open_order.clone());
 
-                    // 匹配订单并生成交易
-                    let trades = match instrument_orders.determine_matching_side(&market_event) {
-                        | Some(Side::Buy) => instrument_orders.match_bids(&market_event, fees_percent.expect("REASON")),
-                        | Some(Side::Sell) => instrument_orders.match_asks(&market_event, fees_percent.expect("REASON")),
-                        | None => continue, // 跳过当前订单处理
-                    };
+                        // 获取手续费
+                        let fees_percent = self.determine_fees_percent(&order.instrument.kind, &OrderRole::Maker);
 
-                    self.process_trades(trades).await;
+                        // 匹配订单并生成交易
+                        let trades = match orders_write.determine_matching_side(&market_event) {
+                            | Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
+                            | Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
+                            | None => continue, // 跳过当前订单处理
+                        };
+
+                        self.process_trades(trades).await;
+                    }
                 }
-            }
-            else if let Ok(OrderRole::Taker) = role {
-                // 生成 open_order 在 orders_write 的借用作用域外
-                let open_order = {
-                    let mut orders_write = self.orders.write().await;
-                    orders_write.build_order_open(order.clone(), OrderRole::Taker).await
-                };
+                else if let Ok(OrderRole::Taker) = role {
+                    // 生成 open_order
+                    let open_order = self.orders.write().await.build_order_open(order.clone(), OrderRole::Taker).await;
 
-                // 在 orders_write 的作用域内处理 instrument_orders
-                let mut orders_write = self.orders.write().await;
-                if let Ok(instrument_orders) = orders_write.ins_orders_mut(&order.instrument) {
-                    // 将订单加入到相应的订单簿
-                    instrument_orders.add_order_open(open_order);
+                    // 处理 instrument_orders
+                    if let Ok(mut orders_write) = self.orders.write().await.ins_orders_mut(&order.instrument) {
+                        // 将订单加入到相应的订单簿
+                        orders_write.add_order_open(open_order.clone());
 
-                    // 获取手续费
-                    let fees_percent = self.determine_fees_percent(&order.instrument.kind, &OrderRole::Taker);
+                        // 获取手续费
+                        let fees_percent = self.determine_fees_percent(&order.instrument.kind, &OrderRole::Taker);
 
-                    // 匹配订单并生成交易
-                    let trades = match instrument_orders.determine_matching_side(&market_event) {
-                        | Some(Side::Buy) => instrument_orders.match_bids(&market_event, fees_percent.expect("REASON")),
-                        | Some(Side::Sell) => instrument_orders.match_asks(&market_event, fees_percent.expect("REASON")),
-                        | None => continue, // 跳过当前订单处理
-                    };
+                        // 匹配订单并生成交易
+                        let trades = match orders_write.determine_matching_side(&market_event) {
+                            | Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
+                            | Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
+                            | None => continue, // 跳过当前订单处理
+                        };
 
-                    self.process_trades(trades).await;
+                        self.process_trades(trades).await;
+                    }
                 }
             }
         }
@@ -398,9 +372,14 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
     async fn get_orders_for_instrument(&self, instrument: &Instrument) -> Option<InstrumentOrders>
     {
-        let mut orders_lock = self.orders.write().await;
-        match orders_lock.ins_orders_mut(instrument) {
-            | Ok(orders) => Some(orders.to_owned()),
+        // 获取 orders_lock 并在 match 之前完成对它的操作
+        let orders_result = {
+            let mut orders_lock = self.orders.write().await;
+            orders_lock.ins_orders_mut(instrument).map(|orders| orders.to_owned())
+        };
+
+        match orders_result {
+            | Ok(orders) => Some(orders),
             | Err(error) => {
                 warn!(?error, %instrument, "Failed to match orders for unrecognized Instrument");
                 None
@@ -423,7 +402,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 };
 
                 if let Err(err) = self.account_event_tx.send(AccountEvent { exchange_timestamp,
-                                                                            exchange: ExchangeVariant::SandBox,
+                                                                            exchange: Exchange::SandBox,
                                                                             kind: AccountEventKind::Trade(trade) })
                 {
                     // 如果发送交易事件失败，记录警告日志
@@ -458,24 +437,24 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
     {
         // 获取写锁并查找到对应的Instrument Orders，以便修改订单
         let mut orders_guard = self.orders.write().await;
-        let orders = orders_guard.ins_orders_mut(&request.instrument)?;
+        let mut orders = orders_guard.ins_orders_mut(&request.instrument)?;
 
         // 找到并移除与 Order<RequestCancel> 关联的 Order<Open>
         let removed = match request.side {
             | Side::Buy => {
                 // 使用 OrderId 查找 Order<Open>
                 let index = orders.bids
-                                  .iter()
-                                  .position(|bid| bid.state.id == request.state.id)
-                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                                  .par_iter()
+                                  .position_any(|bid| bid.state.id == request.state.id)
+                                  .ok_or(ExecutionError::OrderNotFound(request.client_order_id))?;
                 orders.bids.remove(index)
             }
             | Side::Sell => {
                 // 使用 OrderId 查找 Order<Open>
                 let index = orders.asks
-                                  .iter()
-                                  .position(|ask| ask.state.id == request.state.id)
-                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                                  .par_iter()
+                                  .position_any(|ask| ask.state.id == request.state.id)
+                                  .ok_or(ExecutionError::OrderNotFound(request.client_order_id))?;
                 orders.asks.remove(index)
             }
         };
@@ -495,13 +474,13 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         // 发送 AccountEvents 给客户端
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
-                                 exchange: ExchangeVariant::SandBox,
+                                 exchange: Exchange::SandBox,
                                  kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
-                                 exchange: ExchangeVariant::SandBox,
+                                 exchange: Exchange::SandBox,
                                  kind: AccountEventKind::Balance(balance_event) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
 
@@ -522,8 +501,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                                                                               instrument: order.instrument,
                                                                                               side: order.side,
                                                                                               kind: order.kind,
-                                                                                              cid: order.cid,
-                                                                                              exchange: ExchangeVariant::SandBox,
+                                                                                              client_order_id: order.client_order_id,
+                                                                                              exchange: Exchange::SandBox,
                                                                                               client_ts: 0 })
                                                                          .collect();
 

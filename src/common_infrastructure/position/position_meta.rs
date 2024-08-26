@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common_infrastructure::{balance::TokenBalance, friction::Fees, instrument::Instrument, order::OrderRole, Side},
-    ExchangeVariant,
+    Exchange,
 };
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
@@ -12,7 +12,7 @@ pub struct PositionMeta
     pub enter_ts: i64,                // 静态数据
     pub update_ts: i64,               // 实时更新
     pub exit_balance: TokenBalance,   // 静态更新（退出时更新）当一个仓位被平仓（即完全退出）时，该仓位所涉及的资产或资金的最终状态。
-    pub exchange: ExchangeVariant,    // 静态数据
+    pub exchange: Exchange,    // 静态数据
     pub instrument: Instrument,       // 静态数据
     pub side: Side,                   // 静态数据
     pub current_size: f64,            // 实时更新
@@ -101,7 +101,7 @@ pub struct PositionMetaBuilder
     enter_ts: Option<i64>,
     update_ts: Option<i64>,
     exit_balance: Option<TokenBalance>,
-    exchange: Option<ExchangeVariant>,
+    exchange: Option<Exchange>,
     instrument: Option<Instrument>,
     side: Option<Side>,
     current_size: Option<f64>,
@@ -158,7 +158,7 @@ impl PositionMetaBuilder
         self
     }
 
-    pub fn exchange(mut self, exchange: ExchangeVariant) -> Self
+    pub fn exchange(mut self, exchange: Exchange) -> Self
     {
         self.exchange = Some(exchange);
         self
@@ -234,5 +234,47 @@ impl PositionMetaBuilder
                           current_avg_price: self.current_avg_price.ok_or("current_avg_price is required")?,
                           unrealised_pnl: self.unrealised_pnl.ok_or("unrealised_pnl is required")?,
                           realised_pnl: self.realised_pnl.ok_or("realised_pnl is required")? })
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common_infrastructure::{
+        balance::{Balance, TokenBalance},
+        friction::{Fees, SpotFees},
+        instrument::{kind::InstrumentKind, Instrument},
+        token::Token,
+        order::OrderRole,
+        Side,
+    };
+
+    #[test]
+    fn test_position_meta_update_avg_price_gross() {
+        let mut meta = PositionMeta {
+            position_id: "test_position".to_string(),
+            enter_ts: 1625247600,
+            update_ts: 1625247601,
+            exit_balance: TokenBalance::new(Token::from("BTC"), Balance::new(0.0, 0.0, 0.0)),
+            exchange: Exchange::SandBox,
+            instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
+            side: Side::Buy,
+            current_size: 1.0,
+            current_fees_total: Fees::Spot(SpotFees {
+                maker_fee: 9.0,
+                taker_fee: 7.8,
+            }),
+            current_avg_price_gross: 50_000.0,
+            current_symbol_price: 61_000.0,
+            current_avg_price: 50_000.0,
+            unrealised_pnl: 11_000.0,
+            realised_pnl: 0.0,
+        };
+
+        meta.update_avg_price_gross(60_000.0, 1.0, OrderRole::Taker);
+
+        assert_eq!(meta.current_avg_price_gross, 55_000.0);
+        assert_eq!(meta.current_size, 2.0);
     }
 }

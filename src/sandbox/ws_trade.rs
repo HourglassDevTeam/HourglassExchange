@@ -1,9 +1,10 @@
+use crate::common_infrastructure::datafeed::market_event::MarketEvent;
 /// NOTE code below is to be merged later
 use serde::{Deserialize, Serialize};
 
 use crate::{
     common_infrastructure::{
-        datafeed::event::MarketEvent,
+
         instrument::{
             kind::{InstrumentKind, InstrumentKind::Perpetual},
             Instrument,
@@ -11,7 +12,7 @@ use crate::{
         token::Token,
     },
     sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade,
-    ExchangeVariant,
+    Exchange,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd)]
@@ -43,7 +44,7 @@ impl MarketEvent<WsTrade>
 
         MarketEvent { exchange_time,
                       received_time,
-                      exchange: ExchangeVariant::SandBox,
+                      exchange: Exchange::SandBox,
 
                       instrument,
                       kind: ws_trade }
@@ -64,7 +65,7 @@ impl MarketEvent<ClickhousePublicTrade>
 
         MarketEvent { exchange_time,
                       received_time,
-                      exchange: ExchangeVariant::SandBox,
+                      exchange: Exchange::SandBox,
                       instrument,
                       kind: trade }
     }

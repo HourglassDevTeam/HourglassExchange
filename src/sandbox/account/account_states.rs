@@ -12,7 +12,7 @@ use crate::{
     },
     error::ExecutionError,
     sandbox::account::{account_config::MarginMode, Account},
-    ExchangeVariant,
+    Exchange,
 };
 use future::FuturePosition;
 use leveraged_token::LeveragedTokenPosition;
@@ -26,15 +26,14 @@ use std::{
 };
 
 #[derive(Clone, Debug)]
-pub struct AccountState<Event>
-    where Event: Clone + Send + Sync + Debug + 'static + Ord + Ord
+pub struct AccountState
 {
     pub balances: HashMap<Token, Balance>,
     pub positions: AccountPositions,
-    pub account_ref: Weak<Account<Event>>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
+    pub account_ref: Weak<Account>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
 }
 
-impl<Event> PartialEq for AccountState<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl PartialEq for AccountState
 {
     fn eq(&self, other: &Self) -> bool
     {
@@ -42,7 +41,7 @@ impl<Event> PartialEq for AccountState<Event> where Event: Clone + Send + Sync +
     }
 }
 
-impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl AccountState
 {
     pub fn new(balances: HashMap<Token, Balance>, positions: AccountPositions) -> Self
     {
@@ -142,13 +141,15 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
         }
     }
 
-    /// 获取指定 `Instrument` 的仓位/
+    /// 获取指定 `Instrument` 的仓位
     pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<Position>, ExecutionError>
     {
         let positions = &self.positions; // 获取锁
 
         match instrument.kind {
-            | InstrumentKind::Spot => return Err(ExecutionError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument))),
+            | InstrumentKind::Spot => {
+                return Err(ExecutionError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)));
+            }
             | InstrumentKind::Perpetual => {
                 if let Some(perpetual_positions) = &positions.perpetual_pos {
                     if let Some(position) = perpetual_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
@@ -389,7 +390,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             };
 
             Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
-                              exchange: ExchangeVariant::SandBox,
+                              exchange: Exchange::SandBox,
                               kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)) })
         }
         else {
@@ -440,19 +441,19 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let (base_delta, quote_delta) = match side {
                     | Side::Buy => {
-                        let base_increase = trade.size - fee;
+                        let base_increase = trade.quantity - fee;
                         // Note: available was already decreased by the opening of the Side::Buy order
                         let base_delta = BalanceDelta { total: base_increase,
                                                         available: base_increase };
-                        let quote_delta = BalanceDelta { total: -trade.size * trade.price,
+                        let quote_delta = BalanceDelta { total: -trade.quantity * trade.price,
                                                          available: 0.0 };
                         (base_delta, quote_delta)
                     }
                     | Side::Sell => {
                         // Note: available was already decreased by the opening of the Side::Sell order
-                        let base_delta = BalanceDelta { total: -trade.size,
+                        let base_delta = BalanceDelta { total: -trade.quantity,
                                                         available: 0.0 };
-                        let quote_increase = (trade.size * trade.price) - fee;
+                        let quote_increase = (trade.quantity * trade.price) - fee;
                         let quote_delta = BalanceDelta { total: quote_increase,
                                                          available: quote_increase };
                         (base_delta, quote_delta)
@@ -463,7 +464,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
                 Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
-                                  exchange: ExchangeVariant::SandBox,
+                                  exchange: Exchange::SandBox,
                                   kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) })
             }
         }
@@ -480,7 +481,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 }
 
-impl<Event> Deref for AccountState<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl Deref for AccountState
 {
     type Target = HashMap<Token, Balance>;
 
@@ -490,7 +491,7 @@ impl<Event> Deref for AccountState<Event> where Event: Clone + Send + Sync + Deb
     }
 }
 
-impl<Event> DerefMut for AccountState<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl DerefMut for AccountState
 {
     fn deref_mut(&mut self) -> &mut Self::Target
     {
@@ -508,19 +509,18 @@ mod tests
             event::ClientOrderId,
             friction::{Fees, FutureFees, PerpetualFees},
             instrument::{kind::InstrumentKind, Instrument},
-            order::{OrderId, OrderKind, OrderRole},
+            order::{OrderId, OrderExecutionType, OrderRole},
             position::{future::FuturePositionConfig, perpetual::PerpetualPositionConfig, position_meta::PositionMeta, AccountPositions},
             token::Token,
         },
         sandbox::account::{
             account_config::{AccountConfig, CommissionLevel, CommissionRates, MarginMode},
             account_latency::{AccountLatency, FluctuationMode},
-            account_market_feed::AccountDataStreams,
             account_orders::AccountOrders,
             Account,
         },
     };
-    use futures::lock::Mutex;
+    use tokio::sync::Mutex; // 确保使用 tokio 的 Mutex
     use std::{
         collections::HashMap,
         sync::{atomic::AtomicI64, Arc, Weak},
@@ -548,7 +548,7 @@ mod tests
                         account_leverage_rate: leverage_rate,
                         fees_book: HashMap::new() }
     }
-    async fn create_test_account_state() -> Arc<Mutex<AccountState<()>>>
+    async fn create_test_account_state() -> Arc<Mutex<AccountState>>
     {
         let balances = HashMap::new();
         let positions = AccountPositions { margin_pos: None,
@@ -567,9 +567,8 @@ mod tests
         let account_state_arc = Arc::new(Mutex::new(account_state.clone()));
 
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(0),
-                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
                                          account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                                         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                                          config: Arc::new(account_config),
                                          states: account_state_arc.clone(), // 使用克隆后的 Arc<Mutex<...>>
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -596,7 +595,7 @@ mod tests
                                                                               balance: Balance { current_price: 0.0,
                                                                                                  total: 0.0,
                                                                                                  available: 0.0 } },
-                                                 exchange: ExchangeVariant::SandBox,
+                                                 exchange: Exchange::SandBox,
                                                  instrument,
                                                  side: Side::Buy,
                                                  current_size: 1.0,
@@ -624,7 +623,7 @@ mod tests
                                                                            balance: Balance { current_price: 0.0,
                                                                                               total: 0.0,
                                                                                               available: 0.0 } },
-                                              exchange: ExchangeVariant::SandBox,
+                                              exchange: Exchange::SandBox,
                                               instrument: instrument.clone(),
                                               side,
                                               current_size: 0.0,
@@ -652,7 +651,7 @@ mod tests
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
         let positions = AccountPositions::init(); // 假设有一个用于初始化 AccountPositions 的方法
-        let account_state = AccountState::<()>::new(balances, positions);
+        let account_state = AccountState::new(balances, positions);
 
         let balance = account_state.balance(&token).unwrap();
         assert_eq!(balance.total, 100.0);
@@ -667,7 +666,7 @@ mod tests
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
         let positions = AccountPositions::init();
-        let mut account_state = AccountState::<()>::new(balances, positions);
+        let mut account_state = AccountState::new(balances, positions);
 
         let balance_mut = account_state.balance_mut(&token).unwrap();
         balance_mut.available -= 10.0;
@@ -685,7 +684,7 @@ mod tests
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
         let positions = AccountPositions::init();
-        let account_state = AccountState::<()>::new(balances, positions);
+        let account_state = AccountState::new(balances, positions);
 
         assert!(account_state.has_sufficient_available_balance(&token, 40.0).is_ok());
         assert!(account_state.has_sufficient_available_balance(&token, 60.0).is_err());
@@ -699,7 +698,7 @@ mod tests
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
         let positions = AccountPositions::init();
-        let mut account_state = AccountState::<()>::new(balances, positions);
+        let mut account_state = AccountState::new(balances, positions);
 
         let delta = BalanceDelta::new(0.0, -10.0);
         let balance = account_state.apply_balance_delta(&token, delta);
@@ -711,22 +710,34 @@ mod tests
     #[tokio::test]
     async fn test_fetch_all_balances()
     {
+        // Define tokens for testing
         let token1 = Token::from("TEST1");
         let token2 = Token::from("TEST2");
+
+        // Create a mock balance map and populate it
         let mut balances = HashMap::new();
         balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
         balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
+
+        // Create a mock positions structure with all positions set to None
         let positions = AccountPositions { margin_pos: None,
                                            perpetual_pos: None,
                                            futures_pos: None,
                                            option_pos: None };
-        let account_state = AccountState::<()>::new(balances, positions);
-        let all_balances = account_state.fetch_all_balances();
-        assert_eq!(all_balances.len(), 2);
-        assert!(all_balances.iter().any(|b| b.token == token1));
-        assert!(all_balances.iter().any(|b| b.token == token2));
-    }
 
+        // Instantiate the account state with the balances and positions
+        let account_state = AccountState::new(balances, positions);
+
+        // Fetch all balances from the account state
+        let all_balances = account_state.fetch_all_balances();
+
+        // Verify that the correct number of balances is returned
+        assert_eq!(all_balances.len(), 2, "Expected 2 balances but got {}", all_balances.len());
+
+        // Check that the balances include the expected tokens using rayon for parallel iteration
+        assert!(all_balances.iter().any(|b| b.token == token1), "Expected token1 balance not found");
+        assert!(all_balances.iter().any(|b| b.token == token2), "Expected token2 balance not found");
+    }
     #[tokio::test]
     async fn test_get_fee()
     {
@@ -742,9 +753,8 @@ mod tests
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(0),
-                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
                                          account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                                         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                                          config: Arc::new(config),
                                          states: account_state.clone(),
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -783,9 +793,7 @@ mod tests
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
-                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
                                          account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                                         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                                          config: Arc::new(config),
                                          states: account_state.clone(),
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -821,9 +829,8 @@ mod tests
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
-                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
                                          account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                                         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                                          config: Arc::new(config),
                                          states: account_state.clone(),
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -857,9 +864,8 @@ mod tests
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
-                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
                                          account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                                         market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                                          config: Arc::new(config),
                                          states: account_state.clone(),
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -892,7 +898,7 @@ mod tests
                                                                                                        balance: Balance { current_price: 0.0,
                                                                                                                           total: 0.0,
                                                                                                                           available: 0.0 } },
-                                                                          exchange: ExchangeVariant::SandBox,
+                                                                          exchange: Exchange::SandBox,
                                                                           instrument: create_test_instrument(InstrumentKind::Perpetual),
                                                                           side: Side::Buy,
                                                                           current_size: 0.0,
@@ -911,9 +917,8 @@ mod tests
                                                      margin: 0.0 };
 
         let account = Arc::new(Account { exchange_timestamp: AtomicI64::new(123456789),
-                                         data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
                                          account_event_tx: mpsc::unbounded_channel().0,
-                                         market_event_tx: mpsc::unbounded_channel().0,
                                          config: Arc::new(config),
                                          states: account_state.clone(),
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -952,11 +957,11 @@ mod tests
         let client_order_id = ClientOrderId(Uuid::new_v4());
 
         // 模拟一个 Open 订单
-        let open_order = Order::<Open> { kind: OrderKind::Market,
-                                         exchange: ExchangeVariant::SandBox,
+        let open_order = Order::<Open> { kind: OrderExecutionType::Market,
+                                         exchange: Exchange::SandBox,
                                          instrument: instrument.clone(),
                                          client_ts: 123456789,
-                                         cid: client_order_id,
+                                         client_order_id: client_order_id,
                                          side: Side::Buy,
                                          state: Open { id: OrderId::from("test_order"),
                                                        price: 100.0,

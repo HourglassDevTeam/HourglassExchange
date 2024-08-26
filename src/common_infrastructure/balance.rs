@@ -73,3 +73,56 @@ impl BalanceDelta
         Self { total, available }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn token_balance_new_should_create_token_balance() {
+        let token = Token::from("BTC");
+        let balance = Balance::new(100.0, 50.0, 20000.0);
+        let token_balance = TokenBalance::new(token.clone(), balance);
+        assert_eq!(token_balance.token, token);
+        assert_eq!(token_balance.balance, balance);
+    }
+
+    #[test]
+    fn token_balance_update_current_price_should_update_price() {
+        let token = Token::from("BTC");
+        let balance = Balance::new(100.0, 50.0, 20000.0);
+        let mut token_balance = TokenBalance::new(token, balance);
+        token_balance.update_current_price(21000.0);
+        assert_eq!(token_balance.balance.current_price, 21000.0);
+    }
+
+    #[test]
+    fn balance_new_should_create_balance() {
+        let balance = Balance::new(100.0, 50.0, 20000.0);
+        assert_eq!(balance.total, 100.0);
+        assert_eq!(balance.available, 50.0);
+        assert_eq!(balance.current_price, 20000.0);
+    }
+
+    #[test]
+    fn balance_used_should_return_used_balance() {
+        let balance = Balance::new(100.0, 50.0, 20000.0);
+        assert_eq!(balance.used(), 50.0);
+    }
+
+    #[test]
+    fn balance_apply_should_apply_balance_delta() {
+        let mut balance = Balance::new(100.0, 50.0, 20000.0);
+        let delta = BalanceDelta::new(10.0, 5.0);
+        balance.apply(delta);
+        assert_eq!(balance.total, 110.0);
+        assert_eq!(balance.available, 55.0);
+    }
+
+    #[test]
+    fn balance_delta_new_should_create_balance_delta() {
+        let delta = BalanceDelta::new(10.0, 5.0);
+        assert_eq!(delta.total, 10.0);
+        assert_eq!(delta.available, 5.0);
+    }
+}

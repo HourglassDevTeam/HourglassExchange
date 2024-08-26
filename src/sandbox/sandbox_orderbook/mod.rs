@@ -203,7 +203,7 @@ impl SandBoxOrderBook
         for levels in [&mut self.bid_levels, &mut self.ask_levels].iter_mut() {
             for level in levels.iter_mut() {
                 if let Some(pos) = level.orders.par_iter().position_any(|order| order.state.id == order_id) {
-                    return Some(level.orders.remove(pos)?); // 移除并返回被取消的订单
+                    return level.orders.remove(pos)
                 }
             }
         }

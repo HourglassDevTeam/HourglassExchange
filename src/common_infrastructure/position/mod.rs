@@ -1,8 +1,3 @@
-use crate::common_infrastructure::Side;
-/// FIXME  : code below needs to be restructured and fitted to the framework. need to provide enums?
-/// CONSIDER: can these positions coexist, if so enums might not be ideal.
-use serde::{Deserialize, Serialize};
-
 use crate::{
     common_infrastructure::{
         balance::{Balance, TokenBalance},
@@ -16,11 +11,15 @@ use crate::{
             position_meta::PositionMetaBuilder,
         },
         trade::ClientTrade,
+        Side,
     },
     error::ExecutionError,
     sandbox::account::account_config::AccountConfig,
-    ExchangeVariant,
+    Exchange,
 };
+/// FIXME  : code below needs to be restructured and fitted to the framework. need to provide enums?
+/// CONSIDER: can these positions coexist, if so enums might not be ideal.
+use serde::{Deserialize, Serialize};
 
 pub(crate) mod future;
 pub(crate) mod leveraged_token;
@@ -59,11 +58,11 @@ impl AccountPositions
         let maker_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
         let taker_rate = config.get_taker_fee_rate(&trade.instrument.kind)?;
         // NOTE 计算初始保证金
-        let initial_margin = trade.price * trade.size / config.account_leverage_rate;
+        let initial_margin = trade.price * trade.quantity / config.account_leverage_rate;
         // 计算费用
-        let maker_fee = trade.size * trade.price * maker_rate;
-        let taker_fee = trade.size * trade.price * taker_rate;
-        let funding_fee = trade.size * trade.price * config.funding_rate;
+        let maker_fee = trade.quantity * trade.price * maker_rate;
+        let taker_fee = trade.quantity * trade.price * taker_rate;
+        let funding_fee = trade.quantity * trade.price * config.funding_rate;
 
         // 根据 Instrument 和 Side 动态生成 position_id
         let position_meta = PositionMetaBuilder::new().position_id(format!("{}_{}", trade.instrument, if trade.side == Side::Buy { "Long" } else { "Short" }))
@@ -72,12 +71,12 @@ impl AccountPositions
                                                       .exit_balance(TokenBalance { // 初始化为 exit_balance
                                                                                    token: trade.instrument.base.clone(),
                                                                                    balance: Balance { current_price: trade.price,
-                                                                                                      total: trade.size,
-                                                                                                      available: trade.size } })
-                                                      .exchange(ExchangeVariant::SandBox)
+                                                                                                      total: trade.quantity,
+                                                                                                      available: trade.quantity } })
+                                                      .exchange(Exchange::SandBox)
                                                       .instrument(trade.instrument.clone())
                                                       .side(trade.side)
-                                                      .current_size(trade.size)
+                                                      .current_size(trade.quantity)
                                                       .current_fees_total(Fees::Perpetual(PerpetualFees { maker_fee,
                                                                                                           taker_fee, // 假设平仓费率与开仓费率相同
                                                                                                           funding_fee }))
@@ -91,10 +90,10 @@ impl AccountPositions
 
         // 计算 liquidation_price
         let liquidation_price = if trade.side == Side::Buy {
-            trade.price * (1.0 - initial_margin / (trade.size * trade.price))
+            trade.price * (1.0 - initial_margin / (trade.quantity * trade.price))
         }
         else {
-            trade.price * (1.0 + initial_margin / (trade.size * trade.price))
+            trade.price * (1.0 + initial_margin / (trade.quantity * trade.price))
         };
         let pos_config = PerpetualPositionConfig { pos_margin_mode,
                                                    leverage: config.account_leverage_rate,
@@ -170,6 +169,7 @@ impl AccountPositions
     }
 
     /// 检查账户中是否持有指定交易工具的仓位
+    /// 检查账户中是否持有指定交易工具的仓位
     pub(crate) fn has_position(&self, instrument: &Instrument) -> bool
     {
         match instrument.kind {
@@ -188,17 +188,20 @@ impl AccountPositions
             // 普通期货
             | InstrumentKind::Future => self.futures_pos
                                             .as_ref()
-                                            .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                                            .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
+                    positions.iter().any(|pos| pos.meta.instrument == *instrument)),
 
             // 加密期权
             | InstrumentKind::CryptoOption => self.option_pos
                                                   .as_ref()
-                                                  .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                                                  .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
+                    positions.iter().any(|pos| pos.meta.instrument == *instrument)),
 
             // 加密杠杆代币
             | InstrumentKind::CryptoLeveragedToken => self.margin_pos
                                                           .as_ref()
-                                                          .map_or(false, |positions| positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                                                          .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
+                    positions.iter().any(|pos| pos.meta.instrument == *instrument)),
         }
     }
 }
@@ -232,4 +235,148 @@ pub enum Position
     LeveragedToken(LeveragedTokenPosition),
     Future(FuturePosition),
     Option(OptionPosition),
+}
+
+#[cfg(test)]
+mod tests
+{
+    use super::*;
+    use crate::common_infrastructure::token::Token;
+
+    fn create_instrument(kind: InstrumentKind) -> Instrument
+    {
+        Instrument { base: Token::from("BTC"),
+                     quote: Token::from("USDT"),
+                     kind }
+    }
+
+    fn create_perpetual_position(instrument: &Instrument) -> PerpetualPosition
+    {
+        // 假设初始交易价格和仓位大小
+        let initial_trade_price = 50000.0;
+        let trade_size = 1.0;
+
+        // 设置杠杆率
+        let leverage = 10.0;
+
+        // 计算初始保证金
+        let initial_margin = initial_trade_price * trade_size / leverage;
+
+        // 假设当前市场价格略有波动
+        let current_market_price = 50500.0;
+
+        // 计算当前仓位的未实现盈亏
+        let unrealised_pnl = (current_market_price - initial_trade_price) * trade_size;
+
+        // 计算清算价格 (liquidation_price)
+        let liquidation_price = initial_trade_price * (1.0 - initial_margin / (trade_size * initial_trade_price));
+
+        PerpetualPosition { meta: PositionMetaBuilder::new().position_id("test_position".into())
+                                                            .instrument(instrument.clone())
+                                                            .side(Side::Buy)
+                                                            .enter_ts(1625097600000)
+                                                            .update_ts(1625097600000)
+                                                            .exit_balance(TokenBalance { token: instrument.base.clone(),
+                                                                                         balance: Balance { current_price: current_market_price,
+                                                                                                            total: trade_size,
+                                                                                                            available: trade_size } })
+                                                            .exchange(Exchange::Binance)
+                                                            .current_size(trade_size)
+                                                            .current_fees_total(Fees::Perpetual(PerpetualFees { maker_fee: 0.1 * trade_size,
+                                                                                                                taker_fee: 0.1 * trade_size,
+                                                                                                                funding_fee: 0.0 }))
+                                                            .current_avg_price_gross(initial_trade_price)
+                                                            .current_symbol_price(current_market_price)
+                                                            .current_avg_price(initial_trade_price)
+                                                            .unrealised_pnl(unrealised_pnl)
+                                                            .realised_pnl(0.0)
+                                                            .build()
+                                                            .unwrap(),
+                            liquidation_price,
+                            margin: initial_margin,
+                            pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
+                                                                  leverage,
+                                                                  position_mode: PositionDirectionMode::NetMode } }
+    }
+
+    #[test]
+    fn test_has_position()
+    {
+        let mut account_positions = AccountPositions::init();
+
+        let perpetual_instrument = create_instrument(InstrumentKind::Perpetual);
+        let future_instrument = create_instrument(InstrumentKind::Future);
+
+        // 初始情况下，没有任何仓位
+        assert!(!account_positions.has_position(&perpetual_instrument));
+        assert!(!account_positions.has_position(&future_instrument));
+
+        // 添加 PerpetualPosition
+        let perpetual_position = create_perpetual_position(&perpetual_instrument);
+        account_positions.update_position(Position::Perpetual(perpetual_position));
+
+        // 现在应该持有 PerpetualPosition，但不持有 FuturePosition
+        assert!(account_positions.has_position(&perpetual_instrument));
+        assert!(!account_positions.has_position(&future_instrument));
+    }
+
+    #[test]
+    fn test_update_existing_position()
+    {
+        let mut account_positions = AccountPositions::init();
+
+        let perpetual_instrument = create_instrument(InstrumentKind::Perpetual);
+
+        // 添加初始的 PerpetualPosition
+        let perpetual_position = create_perpetual_position(&perpetual_instrument);
+        account_positions.update_position(Position::Perpetual(perpetual_position.clone()));
+
+        // 确保初始 PerpetualPosition 已正确添加
+        assert!(account_positions.has_position(&perpetual_instrument));
+        assert_eq!(account_positions.perpetual_pos.as_ref().unwrap().len(), 1);
+
+        // 更新相同的 PerpetualPosition，修改 `margin`
+        let mut updated_position = perpetual_position.clone();
+        updated_position.margin = 2000.0; // 修改仓位的保证金
+
+        account_positions.update_position(Position::Perpetual(updated_position.clone()));
+
+        // 确保仓位已更新而不是新添加
+        if let Some(positions) = &account_positions.perpetual_pos {
+            assert_eq!(positions.len(), 1); // 确保仓位数量未增加
+            let pos = &positions[0];
+            assert_eq!(pos.margin, 2000.0); // 检查仓位是否已正确更新
+        }
+        else {
+            panic!("PerpetualPosition should exist but was not found.");
+        }
+    }
+
+    #[test]
+    fn test_add_new_position()
+    {
+        let mut account_positions = AccountPositions::init();
+
+        // 创建两个不同的 Instrument
+        let perpetual_instrument_1 = Instrument { base: Token::from("BTC"),
+                                                  quote: Token::from("USDT"),
+                                                  kind: InstrumentKind::Perpetual };
+
+        let perpetual_instrument_2 = Instrument { base: Token::from("ETH"),
+                                                  quote: Token::from("USDT"),
+                                                  kind: InstrumentKind::Perpetual };
+
+        // 添加初始的 PerpetualPosition
+        let perpetual_position_1 = create_perpetual_position(&perpetual_instrument_1);
+        account_positions.update_position(Position::Perpetual(perpetual_position_1.clone()));
+
+        // 添加新的 PerpetualPosition
+        let perpetual_position_2 = create_perpetual_position(&perpetual_instrument_2);
+        account_positions.update_position(Position::Perpetual(perpetual_position_2.clone()));
+
+        // 确保新仓位已正确添加
+        assert!(account_positions.has_position(&perpetual_instrument_1));
+        assert!(account_positions.has_position(&perpetual_instrument_2));
+        assert_eq!(account_positions.perpetual_pos.as_ref().unwrap().len(), 2);
+    }
 }

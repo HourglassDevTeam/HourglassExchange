@@ -7,12 +7,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common_infrastructure::{event::ClientOrderId, instrument::Instrument, Side},
-    ExchangeVariant,
+    Exchange,
 };
 
 /// 订单类型枚举
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub enum OrderKind
+pub enum OrderExecutionType
 {
     Market,
     Limit,
@@ -22,17 +22,17 @@ pub enum OrderKind
     GoodTilCancelled,
 }
 
-impl Display for OrderKind
+impl Display for OrderExecutionType
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
         write!(f, "{}", match self {
-            | OrderKind::Market => "market",
-            | OrderKind::Limit => "limit",
-            | OrderKind::ImmediateOrCancel => "immediate_or_cancel",
-            | OrderKind::FillOrKill => "fill_or_kill",
-            | OrderKind::GoodTilCancelled => "good_til_cancelled",
-            | OrderKind::PostOnly => "post_only",
+            | OrderExecutionType::Market => "market",
+            | OrderExecutionType::Limit => "limit",
+            | OrderExecutionType::ImmediateOrCancel => "immediate_or_cancel",
+            | OrderExecutionType::FillOrKill => "fill_or_kill",
+            | OrderExecutionType::GoodTilCancelled => "good_til_cancelled",
+            | OrderExecutionType::PostOnly => "post_only",
             // | OrderKind::Stop => "stop",
             // | OrderKind::StopLimit => "stop_limit",
             // | OrderKind::TrailingStop => "trailing_stop",
@@ -44,17 +44,17 @@ impl Display for OrderKind
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
-    pub kind: OrderKind,           // 订单种类
-    pub exchange: ExchangeVariant, // 交易所
-    pub instrument: Instrument,    // 交易工具
-    pub client_ts: i64,            // 客户端下单时间
-    pub cid: ClientOrderId,        // 客户端订单ID
-    pub side: Side,                // 买卖方向
-    pub state: State,              // 订单状态
+    pub kind: OrderExecutionType,       // 订单种类
+    pub exchange: Exchange,      // 交易所
+    pub instrument: Instrument,         // 交易工具
+    pub client_ts: i64,                 // 客户端下单时间
+    pub client_order_id: ClientOrderId, // 客户端订单ID
+    pub side: Side,                     // 买卖方向
+    pub state: State,                   // 订单状态
 }
 
 /// 订单初始状态。发送到client进行操作
-#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
+#[derive(Copy, Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct RequestOpen
 {
     pub reduce_only: bool,
@@ -62,8 +62,26 @@ pub struct RequestOpen
     pub size: f64,
 }
 
+/// FIXME this comparison is now only for the tests below but could be ill-logic.
+impl PartialOrd for RequestOpen {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // First compare by `price`
+        match self.price.partial_cmp(&other.price) {
+            Some(Ordering::Equal) => {},
+            non_eq => return non_eq,
+        }
+        // Then compare by `size`
+        match self.size.partial_cmp(&other.size) {
+            Some(Ordering::Equal) => {},
+            non_eq => return non_eq,
+        }
+        // Finally compare by `reduce_only`
+        Some(self.reduce_only.cmp(&other.reduce_only))
+    }
+}
+
 /// 发送RequestOpen到client后尚未收到确认响应时的状态
-#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
+#[derive(Copy, Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct Pending
 {
     pub reduce_only: bool,
@@ -72,11 +90,36 @@ pub struct Pending
     pub(crate) predicted_ts: i64,
 }
 
+
+/// FIXME this comparison is now only for the tests below but could be ill-logic.
+impl PartialOrd for Pending {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // First compare by `price`
+        match self.price.partial_cmp(&other.price) {
+            Some(Ordering::Equal) => {},
+            non_eq => return non_eq,
+        }
+        // Then compare by `size`
+        match self.size.partial_cmp(&other.size) {
+            Some(Ordering::Equal) => {},
+            non_eq => return non_eq,
+        }
+        // Then compare by `predicted_ts`
+        match self.predicted_ts.partial_cmp(&other.predicted_ts) {
+            Some(Ordering::Equal) => {},
+            non_eq => return non_eq,
+        }
+        // Finally compare by `reduce_only`
+        Some(self.reduce_only.cmp(&other.reduce_only))
+    }
+}
+
+
 /// 在RequestCancel结构体中只记录OrderId的原因主要是因为取消订单操作通常只需要知道哪个订单需要被取消。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct RequestCancel
 {
-    pub id: OrderId, // Consider : 需要记录 CID 吗 ????
+    pub id: OrderId,
 }
 
 // 从Id直接生成RequestCancel
@@ -98,8 +141,6 @@ pub struct Open
     pub filled_quantity: f64,
     pub order_role: OrderRole,
     pub received_ts: i64,
-    // 交易所下单时间 NOTE this might be only applicable in a sandbox exchange. 流动性充足的情况下received到trade状态的时间差不超过2ms，并且是交易所端不可避免的。‘ */
-    // pub expired_ts:i64, /* 交易所订单过期时间 NOTE this might be only applicable in a sandbox exchange.*/
 }
 
 impl Open
@@ -128,6 +169,7 @@ pub struct PartialFill
     pub size: f64,
 }
 
+
 #[derive(Debug, Copy, Clone, PartialOrd, Serialize, Deserialize, PartialEq)]
 pub enum OrderRole
 {
@@ -150,7 +192,6 @@ impl PartialOrd for Order<Open>
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering>
     {
-        // 使用 Ord 实现的 cmp 方法，这样 partial_cmp 可以继承 Ord 的错误处理逻辑
         Some(self.cmp(other))
     }
 }
@@ -192,9 +233,73 @@ impl From<Order<Open>> for Order<Cancelled>
         Self { kind: order.kind,
                exchange: order.exchange,
                instrument: order.instrument.clone(),
-               cid: order.cid,
+               client_order_id: order.client_order_id,
                client_ts: order.client_ts,
                side: order.side,
                state: Cancelled { id: order.state.id } }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn order_execution_type_display_should_format_correctly() {
+        assert_eq!(format!("{}", OrderExecutionType::Market), "market");
+        assert_eq!(format!("{}", OrderExecutionType::Limit), "limit");
+        assert_eq!(format!("{}", OrderExecutionType::PostOnly), "post_only");
+        assert_eq!(format!("{}", OrderExecutionType::ImmediateOrCancel), "immediate_or_cancel");
+        assert_eq!(format!("{}", OrderExecutionType::FillOrKill), "fill_or_kill");
+        assert_eq!(format!("{}", OrderExecutionType::GoodTilCancelled), "good_til_cancelled");
+    }
+
+    #[test]
+    fn request_open_should_be_comparable() {
+        let req1 = RequestOpen { reduce_only: true, price: 50.0, size: 1.0 };
+        let req2 = RequestOpen { reduce_only: false, price: 60.0, size: 2.0 };
+        assert!(req1 < req2);
+    }
+
+    #[test]
+    fn pending_should_be_comparable() {
+        let pending1 = Pending { reduce_only: true, price: 50.0, size: 1.0, predicted_ts: 1000 };
+        let pending2 = Pending { reduce_only: false, price: 60.0, size: 2.0, predicted_ts: 2000 };
+        assert!(pending1 < pending2);
+    }
+
+    #[test]
+    fn request_cancel_should_create_from_order_id() {
+        let order_id = OrderId("123".to_string());
+        let cancel_request: RequestCancel = order_id.clone().into();
+        assert_eq!(cancel_request.id, order_id);
+    }
+
+    #[test]
+    fn open_order_remaining_quantity_should_be_calculated_correctly() {
+        let open_order = Open {
+            id: OrderId("123".to_string()),
+            price: 50.0,
+            size: 10.0,
+            filled_quantity: 3.0,
+            order_role: OrderRole::Maker,
+            received_ts: 1000,
+        };
+        assert_eq!(open_order.remaining_quantity(), 7.0);
+    }
+
+
+    #[test]
+    fn order_id_should_convert_from_string() {
+        let order_id: OrderId = "123".to_string().into();
+        assert_eq!(order_id.0, "123");
+    }
+
+    #[test]
+    fn order_id_should_convert_to_cancelled() {
+        let order_id: OrderId = "123".to_string().into();
+        let cancelled_order: Cancelled = order_id.into();
+        assert_eq!(cancelled_order.id.0, "123");
+    }
+
 }
