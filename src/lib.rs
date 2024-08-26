@@ -24,7 +24,7 @@ pub mod network;
 #[async_trait]
 pub trait ClientExecution
 {
-    const CLIENT_KIND: ExchangeVariant;
+    const CLIENT_KIND: Exchange;
     // NOTE 这个类型关联项表示配置类型，不同的交易所可能需要不同的配置。例如，API 密钥、API 密码、或其他初始化参数等等。
     type Config;
 
@@ -36,42 +36,16 @@ pub trait ClientExecution
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>;
 }
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize, Debug)]
-pub struct ExchangeID(String);
-
-impl<E> From<E> for ExchangeID where E: Into<String>
-{
-    fn from(exchange: E) -> Self
-    {
-        ExchangeID(exchange.into())
-    }
-}
-
-impl Display for ExchangeID
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
-        write!(f, "{}", self.0)
-    }
-}
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub enum ExchangeVariant
+pub enum Exchange
 {
     SandBox,
     Binance,
     Okex,
 }
 
-impl From<ExchangeVariant> for ExchangeID
-{
-    fn from(execution_kind: ExchangeVariant) -> Self
-    {
-        ExchangeID::from(execution_kind.as_str())
-    }
-}
-
-impl Display for ExchangeVariant
+impl Display for Exchange
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
     {
@@ -79,14 +53,33 @@ impl Display for ExchangeVariant
     }
 }
 
-impl ExchangeVariant
+impl Exchange
 {
     pub fn as_str(&self) -> &'static str
     {
         match self {
-            | ExchangeVariant::SandBox => "sandbox",
-            | ExchangeVariant::Okex => "okex",
-            | ExchangeVariant::Binance => "binance",
+            | Exchange::SandBox => "sandbox",
+            | Exchange::Okex => "okex",
+            | Exchange::Binance => "binance",
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_exchange_variant_display() {
+        let variant = Exchange::Okex;
+        assert_eq!(format!("{}", variant), "okex");
+    }
+
+    #[test]
+    fn test_exchange_variant_as_str() {
+        assert_eq!(Exchange::SandBox.as_str(), "sandbox");
+        assert_eq!(Exchange::Binance.as_str(), "binance");
+        assert_eq!(Exchange::Okex.as_str(), "okex");
     }
 }

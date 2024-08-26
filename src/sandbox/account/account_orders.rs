@@ -229,7 +229,7 @@ mod tests
     use crate::{
         common_infrastructure::instrument::{kind::InstrumentKind, Instrument},
         sandbox::account::account_latency::{AccountLatency, FluctuationMode},
-        ExchangeVariant,
+        Exchange,
     };
     use std::sync::Arc;
     use tokio::sync::RwLock;
@@ -324,7 +324,7 @@ mod tests
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
         let order = Order { kind: OrderExecutionType::Limit,
-                            exchange: ExchangeVariant::SandBox,
+                            exchange: Exchange::SandBox,
                             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                             client_order_id,
                             client_ts: 0,
@@ -353,7 +353,7 @@ mod tests
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
         let request_order = Order { kind: OrderExecutionType::Limit,
-                                    exchange: ExchangeVariant::SandBox,
+                                    exchange: Exchange::SandBox,
                                     instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                                     client_order_id,
                                     client_ts: 1000,
@@ -377,7 +377,7 @@ mod tests
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
         let request_order = Order { kind: OrderExecutionType::Limit,
-                                    exchange: ExchangeVariant::SandBox,
+                                    exchange: Exchange::SandBox,
                                     instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                                     client_order_id,
                                     client_ts: 1000,
@@ -402,7 +402,7 @@ mod tests
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
         let order = Order { kind: OrderExecutionType::Limit,
-                            exchange: ExchangeVariant::SandBox,
+                            exchange: Exchange::SandBox,
                             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                             client_order_id: ClientOrderId(Uuid::new_v4()),
                             client_ts: 1000,

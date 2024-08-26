@@ -12,7 +12,7 @@ use crate::{
     },
     error::ExecutionError,
     sandbox::account::{account_config::MarginMode, Account},
-    ExchangeVariant,
+    Exchange,
 };
 use future::FuturePosition;
 use leveraged_token::LeveragedTokenPosition;
@@ -391,7 +391,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             };
 
             Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
-                              exchange: ExchangeVariant::SandBox,
+                              exchange: Exchange::SandBox,
                               kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)) })
         }
         else {
@@ -465,7 +465,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
                 let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
                 Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
-                                  exchange: ExchangeVariant::SandBox,
+                                  exchange: Exchange::SandBox,
                                   kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) })
             }
         }
@@ -598,7 +598,7 @@ mod tests
                                                                               balance: Balance { current_price: 0.0,
                                                                                                  total: 0.0,
                                                                                                  available: 0.0 } },
-                                                 exchange: ExchangeVariant::SandBox,
+                                                 exchange: Exchange::SandBox,
                                                  instrument,
                                                  side: Side::Buy,
                                                  current_size: 1.0,
@@ -626,7 +626,7 @@ mod tests
                                                                            balance: Balance { current_price: 0.0,
                                                                                               total: 0.0,
                                                                                               available: 0.0 } },
-                                              exchange: ExchangeVariant::SandBox,
+                                              exchange: Exchange::SandBox,
                                               instrument: instrument.clone(),
                                               side,
                                               current_size: 0.0,
@@ -906,7 +906,7 @@ mod tests
                                                                                                        balance: Balance { current_price: 0.0,
                                                                                                                           total: 0.0,
                                                                                                                           available: 0.0 } },
-                                                                          exchange: ExchangeVariant::SandBox,
+                                                                          exchange: Exchange::SandBox,
                                                                           instrument: create_test_instrument(InstrumentKind::Perpetual),
                                                                           side: Side::Buy,
                                                                           current_size: 0.0,
@@ -967,7 +967,7 @@ mod tests
 
         // 模拟一个 Open 订单
         let open_order = Order::<Open> { kind: OrderExecutionType::Market,
-                                         exchange: ExchangeVariant::SandBox,
+                                         exchange: Exchange::SandBox,
                                          instrument: instrument.clone(),
                                          client_ts: 123456789,
                                          client_order_id: client_order_id,

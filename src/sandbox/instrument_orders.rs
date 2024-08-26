@@ -249,14 +249,14 @@ mod tests
             token::Token,
             Side,
         },
-        ExchangeVariant,
+        Exchange,
     };
     use uuid::Uuid;
 
     fn create_order(side: Side, price: f64, size: f64) -> Order<Open>
     {
         Order { kind: OrderExecutionType::Limit,
-                exchange: ExchangeVariant::Binance,
+                exchange: Exchange::Binance,
                 instrument: Instrument { base: Token::from("SOL"),
                                          quote: Token::from("USDT"),
                                          kind: Default::default() },
@@ -304,7 +304,7 @@ mod tests
         // 创建 MarketEvent，价格在买单和卖单之间
         let market_event = MarketEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
-                                         exchange: ExchangeVariant::Binance,
+                                         exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
                                          kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
                                                                        symbol: "BTCUSDT".to_string(),
@@ -319,7 +319,7 @@ mod tests
         // 创建 MarketEvent，价格匹配买单
         let market_event = MarketEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
-                                         exchange: ExchangeVariant::Binance,
+                                         exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
                                          kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
                                                                        symbol: "BTCUSDT".to_string(),
@@ -334,7 +334,7 @@ mod tests
         // 创建 MarketEvent，价格匹配卖单
         let market_event = MarketEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
-                                         exchange: ExchangeVariant::Binance,
+                                         exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
                                          kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
                                                                        symbol: "BTCUSDT".to_string(),
@@ -360,7 +360,7 @@ mod tests
         // 创建 MarketEvent，价格便宜
         let market_event = MarketEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
-                                         exchange: ExchangeVariant::Binance,
+                                         exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
                                          kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
                                                                        symbol: "BTCUSDT".to_string(),
@@ -375,7 +375,7 @@ mod tests
         // 创建 MarketEvent，价格刚好达到买单
         let market_event = MarketEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
-                                         exchange: ExchangeVariant::Binance,
+                                         exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
                                          kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
                                                                        symbol: "BTCUSDT".to_string(),
@@ -394,7 +394,7 @@ mod tests
 
         let market_event = MarketEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
-                                         exchange: ExchangeVariant::Binance,
+                                         exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
                                          kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
                                                                        symbol: "BTCUSDT".to_string(),
@@ -423,7 +423,7 @@ mod tests
         // 创建 MarketEvent，价格刚好达到卖单
         let market_event = MarketEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
-                                         exchange: ExchangeVariant::Binance,
+                                         exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
                                          kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
                                                                        symbol: "BTCUSDT".to_string(),
@@ -438,7 +438,7 @@ mod tests
         // 创建 MarketEvent，价格更高
         let market_event = MarketEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
-                                         exchange: ExchangeVariant::Binance,
+                                         exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
                                          kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
                                                                        symbol: "BTCUSDT".to_string(),
@@ -457,7 +457,7 @@ mod tests
 
         let market_event = MarketEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
-                                         exchange: ExchangeVariant::Binance,
+                                         exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
                                          kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
                                                                        symbol: "BTCUSDT".to_string(),

@@ -15,7 +15,7 @@ use crate::{
     },
     error::ExecutionError,
     sandbox::account::account_config::AccountConfig,
-    ExchangeVariant,
+    Exchange,
 };
 /// FIXME  : code below needs to be restructured and fitted to the framework. need to provide enums?
 /// CONSIDER: can these positions coexist, if so enums might not be ideal.
@@ -73,7 +73,7 @@ impl AccountPositions
                                                                                    balance: Balance { current_price: trade.price,
                                                                                                       total: trade.quantity,
                                                                                                       available: trade.quantity } })
-                                                      .exchange(ExchangeVariant::SandBox)
+                                                      .exchange(Exchange::SandBox)
                                                       .instrument(trade.instrument.clone())
                                                       .side(trade.side)
                                                       .current_size(trade.quantity)
@@ -280,7 +280,7 @@ mod tests
                                                                                          balance: Balance { current_price: current_market_price,
                                                                                                             total: trade_size,
                                                                                                             available: trade_size } })
-                                                            .exchange(ExchangeVariant::Binance)
+                                                            .exchange(Exchange::Binance)
                                                             .current_size(trade_size)
                                                             .current_fees_total(Fees::Perpetual(PerpetualFees { maker_fee: 0.1 * trade_size,
                                                                                                                 taker_fee: 0.1 * trade_size,

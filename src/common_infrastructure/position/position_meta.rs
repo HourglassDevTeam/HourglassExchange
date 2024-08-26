@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common_infrastructure::{balance::TokenBalance, friction::Fees, instrument::Instrument, order::OrderRole, Side},
-    ExchangeVariant,
+    Exchange,
 };
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
@@ -12,7 +12,7 @@ pub struct PositionMeta
     pub enter_ts: i64,                // 静态数据
     pub update_ts: i64,               // 实时更新
     pub exit_balance: TokenBalance,   // 静态更新（退出时更新）当一个仓位被平仓（即完全退出）时，该仓位所涉及的资产或资金的最终状态。
-    pub exchange: ExchangeVariant,    // 静态数据
+    pub exchange: Exchange,    // 静态数据
     pub instrument: Instrument,       // 静态数据
     pub side: Side,                   // 静态数据
     pub current_size: f64,            // 实时更新
@@ -101,7 +101,7 @@ pub struct PositionMetaBuilder
     enter_ts: Option<i64>,
     update_ts: Option<i64>,
     exit_balance: Option<TokenBalance>,
-    exchange: Option<ExchangeVariant>,
+    exchange: Option<Exchange>,
     instrument: Option<Instrument>,
     side: Option<Side>,
     current_size: Option<f64>,
@@ -158,7 +158,7 @@ impl PositionMetaBuilder
         self
     }
 
-    pub fn exchange(mut self, exchange: ExchangeVariant) -> Self
+    pub fn exchange(mut self, exchange: Exchange) -> Self
     {
         self.exchange = Some(exchange);
         self

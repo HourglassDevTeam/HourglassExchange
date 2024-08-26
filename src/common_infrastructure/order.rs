@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common_infrastructure::{event::ClientOrderId, instrument::Instrument, Side},
-    ExchangeVariant,
+    Exchange,
 };
 
 /// 订单类型枚举
@@ -45,7 +45,7 @@ impl Display for OrderExecutionType
 pub struct Order<State>
 {
     pub kind: OrderExecutionType,       // 订单种类
-    pub exchange: ExchangeVariant,      // 交易所
+    pub exchange: Exchange,      // 交易所
     pub instrument: Instrument,         // 交易工具
     pub client_ts: i64,                 // 客户端下单时间
     pub client_order_id: ClientOrderId, // 客户端订单ID

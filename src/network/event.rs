@@ -16,7 +16,7 @@
 /// use unilink_execution::common_infrastructure::instrument::kind::InstrumentKind;
 /// use unilink_execution::common_infrastructure::order::{Order, OrderExecutionType, RequestOpen};
 /// use unilink_execution::common_infrastructure::Side;
-/// use unilink_execution::ExchangeVariant;
+/// use unilink_execution::Exchange;
 /// use unilink_execution::network::event::NetworkEvent;
 ///
 /// fn create_open_orders_event() -> NetworkEvent {
@@ -27,7 +27,7 @@
 ///     let orders = vec![
 ///         Order {
 ///             kind: OrderExecutionType::Limit,   // 订单类型，例如限价单
-///             exchange: ExchangeVariant::Binance, // 交易所名称
+///             exchange: Exchange::Binance, // 交易所名称
 ///             instrument: Instrument::new("BTC","USDT",InstrumentKind::Perpetual), // 交易对
 ///             client_ts: chrono::Utc::now().timestamp_millis(), // 客户端下单时间戳
 ///             client_order_id: ClientOrderId(Uuid::new_v4()), // 客户端订单 ID
@@ -144,7 +144,7 @@ mod tests {
     use crate::common_infrastructure::instrument::Instrument;
     use crate::common_infrastructure::order::{Order, OrderExecutionType, RequestOpen};
     use crate::common_infrastructure::Side;
-    use crate::ExchangeVariant;
+    use crate::Exchange;
     use std::net::Ipv4Addr;
     use uuid::Uuid;
     use crate::common_infrastructure::event::ClientOrderId;
@@ -160,7 +160,7 @@ mod tests {
         let orders = vec![
             Order {
                 kind: OrderExecutionType::Limit,   // 订单类型，例如限价单
-                exchange: ExchangeVariant::Binance, // 交易所名称
+                exchange: Exchange::Binance, // 交易所名称
                 instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual), // 交易对
                 client_ts: chrono::Utc::now().timestamp_millis(), // 客户端下单时间戳
                 client_order_id: ClientOrderId(Uuid::new_v4()), // 客户端订单 ID
@@ -203,7 +203,7 @@ mod tests {
         if let Ok(SandBoxClientEvent::OpenOrders((parsed_orders, _))) = parsed_event {
             assert_eq!(parsed_orders.len(), 1);
             assert_eq!(parsed_orders[0].kind, OrderExecutionType::Limit);
-            assert_eq!(parsed_orders[0].exchange, ExchangeVariant::Binance);
+            assert_eq!(parsed_orders[0].exchange, Exchange::Binance);
             assert_eq!(parsed_orders[0].instrument.base, "BTC".into());
             assert_eq!(parsed_orders[0].instrument.quote, "USDT".into());
             assert_eq!(parsed_orders[0].state.price, 50000.0);

@@ -11,7 +11,7 @@ use crate::{
         token::Token,
     },
     sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade,
-    ExchangeVariant,
+    Exchange,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd)]
@@ -43,7 +43,7 @@ impl MarketEvent<WsTrade>
 
         MarketEvent { exchange_time,
                       received_time,
-                      exchange: ExchangeVariant::SandBox,
+                      exchange: Exchange::SandBox,
 
                       instrument,
                       kind: ws_trade }
@@ -64,7 +64,7 @@ impl MarketEvent<ClickhousePublicTrade>
 
         MarketEvent { exchange_time,
                       received_time,
-                      exchange: ExchangeVariant::SandBox,
+                      exchange: Exchange::SandBox,
                       instrument,
                       kind: trade }
     }

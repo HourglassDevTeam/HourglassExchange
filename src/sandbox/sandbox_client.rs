@@ -10,7 +10,7 @@ use crate::{
         order::{Cancelled, Open, Order, Pending},
     },
     sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade,
-    AccountEvent, ClientExecution, ExchangeVariant, ExecutionError, RequestCancel, RequestOpen,
+    AccountEvent, ClientExecution, Exchange, ExecutionError, RequestCancel, RequestOpen,
 };
 
 #[derive(Debug)]
@@ -44,7 +44,7 @@ pub enum SandBoxClientEvent
 impl ClientExecution for SandBoxClient
 {
     // 注意：客户端的类型自然地由交易所决定并与其保持一致。
-    const CLIENT_KIND: ExchangeVariant = ExchangeVariant::SandBox;
+    const CLIENT_KIND: Exchange = Exchange::SandBox;
 
     // 注意：在我们的场景中，沙盒交易所的“可选”配置参数是一个 UnboundedSender。
     type Config = (UnboundedSender<SandBoxClientEvent>, UnboundedReceiver<SandBoxClientEvent>);
@@ -185,7 +185,7 @@ async fn test_open_orders() {
     // 模拟一个订单请求
     let open_request = Order {
         kind: crate::common_infrastructure::order::OrderExecutionType::Limit,
-        exchange: ExchangeVariant::Binance,
+        exchange: Exchange::Binance,
         instrument: crate::common_infrastructure::instrument::Instrument::new(
             "BTC",
             "USDT",

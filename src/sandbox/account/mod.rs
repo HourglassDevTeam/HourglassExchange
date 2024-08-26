@@ -31,7 +31,7 @@ use crate::{
     },
     error::ExecutionError,
     sandbox::{account::account_market_feed::AccountDataStreams, clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade, instrument_orders::InstrumentOrders},
-    ExchangeVariant,
+    Exchange,
 };
 
 pub mod account_config;
@@ -253,7 +253,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
-                                 exchange: ExchangeVariant::SandBox,
+                                 exchange: Exchange::SandBox,
                                  kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
 
@@ -423,7 +423,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 };
 
                 if let Err(err) = self.account_event_tx.send(AccountEvent { exchange_timestamp,
-                                                                            exchange: ExchangeVariant::SandBox,
+                                                                            exchange: Exchange::SandBox,
                                                                             kind: AccountEventKind::Trade(trade) })
                 {
                     // 如果发送交易事件失败，记录警告日志
@@ -495,13 +495,13 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         // 发送 AccountEvents 给客户端
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
-                                 exchange: ExchangeVariant::SandBox,
+                                 exchange: Exchange::SandBox,
                                  kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
-                                 exchange: ExchangeVariant::SandBox,
+                                 exchange: Exchange::SandBox,
                                  kind: AccountEventKind::Balance(balance_event) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
 
@@ -523,7 +523,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                                                                               side: order.side,
                                                                                               kind: order.kind,
                                                                                               client_order_id: order.client_order_id,
-                                                                                              exchange: ExchangeVariant::SandBox,
+                                                                                              exchange: Exchange::SandBox,
                                                                                               client_ts: 0 })
                                                                          .collect();
 
