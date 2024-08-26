@@ -44,7 +44,7 @@ impl Display for OrderExecutionType
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
-    pub kind: OrderExecutionType,                // 订单种类
+    pub kind: OrderExecutionType,       // 订单种类
     pub exchange: ExchangeVariant,      // 交易所
     pub instrument: Instrument,         // 交易工具
     pub client_ts: i64,                 // 客户端下单时间
