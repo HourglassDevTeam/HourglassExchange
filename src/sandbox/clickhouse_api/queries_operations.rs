@@ -16,7 +16,7 @@ use tokio::sync::{
 };
 
 use crate::{
-    common_infrastructure::{datafeed::event::MarketEvent, Side},
+    common_infrastructure::{datafeed::public_event::PublicEvent, Side},
     error::ExecutionError,
     sandbox::{
         clickhouse_api::{datatype::clickhouse_trade_data::ClickhousePublicTrade, query_builder::ClickHouseQueryBuilder},
@@ -264,7 +264,7 @@ impl ClickHouseClient
                                                        channel: &'a str,
                                                        date: &'a str,
                                                        batch_size: usize)
-                                                       -> impl Stream<Item = MarketEvent<ClickhousePublicTrade>> + 'a
+                                                       -> impl Stream<Item = PublicEvent<ClickhousePublicTrade>> + 'a
     {
         stream! {
             let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
@@ -285,7 +285,7 @@ impl ClickHouseClient
                     Ok(trade_datas) => {
                         for trade_data in &trade_datas {
                             let (base, quote) = parse_base_and_quote(&trade_data.symbol);
-                            let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
+                            let market_event = PublicEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
                             yield market_event;
                         }
 
@@ -311,7 +311,7 @@ impl ClickHouseClient
                                                                  start_date: &str,
                                                                  end_date: &str,
                                                                  batch_size: usize)
-                                                                 -> Result<UnboundedReceiver<MarketEvent<ClickhousePublicTrade>>, ExecutionError>
+                                                                 -> Result<UnboundedReceiver<PublicEvent<ClickhousePublicTrade>>, ExecutionError>
     {
         let (tx, rx) = unbounded_channel();
         // 处理 start_date 解析，并映射到 ExecutionError
@@ -348,7 +348,7 @@ impl ClickHouseClient
                         | Ok(trade_datas) => {
                             for trade_data in &trade_datas {
                                 let (base, quote) = parse_base_and_quote(&trade_data.symbol);
-                                let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
+                                let market_event = PublicEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
                                 // println!("Sending market event: {:?}", market_event);
                                 if tx.send(market_event).is_err() {
                                     eprintln!("Failed to send market event");
@@ -520,4 +520,51 @@ impl ClickHouseClient
 
         Ok(())
     }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    // use chrono::NaiveDate;
+
+    async fn setup_clickhouse_client() -> ClickHouseClient {
+        // 假设 ClickHouse 在本地运行，且使用默认设置
+        ClickHouseClient::new()
+    }
+
+    #[tokio::test]
+    async fn test_construct_table_name() {
+        let client = setup_clickhouse_client().await;
+        let table_name = client.construct_table_name("binance", "futures", "trades", "2024_08_24", "BTC", "USDT");
+        assert_eq!(table_name, "binance_futures_trades_2024_08_24_BTCUSDT");
+    }
+
+    // #[tokio::test]
+    // async fn test_get_table_names() {
+    //     let client = setup_clickhouse_client().await;
+    //     let table_names = client.get_table_names("binance_futures_trades").await;
+    //
+    //     // 假设数据库中有一些表
+    //     assert!(!table_names.is_empty(), "Expected to find some tables in the database");
+    // }
+
+    // #[tokio::test]
+    // async fn test_optimize_table() {
+    //     let client = setup_clickhouse_client().await;
+    //
+    //     let result = client.optimize_table("binance_futures_trades.binance_futures_trades_2024_05_05_1000BONKUSDT").await;
+    //     assert!(result.is_ok(), "Expected table optimization to succeed");
+    // }
+
+    // #[tokio::test]
+    // async fn test_optimize_union_tables_in_date_range() {
+    //     let client = setup_clickhouse_client().await;
+    //
+    //     let start_date = NaiveDate::from_ymd_opt(2024, 5, 5).unwrap();
+    //     let end_date = NaiveDate::from_ymd_opt(2024, 5, 5).unwrap();
+    //
+    //     let result = client.optimize_union_tables_in_date_range("binance", "futures", "trades", start_date, end_date).await;
+    //     assert!(result.is_ok(), "Expected optimization of union tables to succeed");
+    // }
 }

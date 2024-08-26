@@ -4,7 +4,7 @@ use std::sync::LazyLock;
 use tokio::{sync::mpsc::unbounded_channel, task};
 
 use unilink_execution::{
-    common_infrastructure::datafeed::event::MarketEvent,
+    common_infrastructure::datafeed::public_event::PublicEvent,
     sandbox::{
         account::account_market_feed::*,
         clickhouse_api::{datatype::clickhouse_trade_data::ClickhousePublicTrade, queries_operations::*},
@@ -28,13 +28,13 @@ async fn main()
     let batch_size = 1000000;
 
     // 创建 AccountMarketStreams 实例
-    let mut account_streams: AccountDataStreams<MarketEvent<ClickhousePublicTrade>> = AccountDataStreams::new();
+    let mut account_streams: AccountDataStreams<PublicEvent<ClickhousePublicTrade>> = AccountDataStreams::new();
 
     // 创建一个唯一的 stream_id
     let stream_id = format!("{}_{}_{}", exchange, instrument, channel);
 
     // 创建 unbounded_channel
-    let (tx, rx) = unbounded_channel::<MarketEvent<ClickhousePublicTrade>>();
+    let (tx, rx) = unbounded_channel::<PublicEvent<ClickhousePublicTrade>>();
 
     // 将接收者添加到 AccountMarketStreams 中
     account_streams.add_stream(stream_id.clone(), rx);

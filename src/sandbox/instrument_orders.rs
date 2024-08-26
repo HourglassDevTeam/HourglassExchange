@@ -4,7 +4,7 @@ use std::{cmp::Ordering, fmt::Debug};
 
 use crate::{
     common_infrastructure::{
-        datafeed::event::MarketEvent,
+        datafeed::public_event::PublicEvent,
         friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees},
         instrument::kind::InstrumentKind,
         order::{Open, Order},
@@ -78,7 +78,7 @@ impl InstrumentOrders
     // NOTE:
     //  - 如果Client在同一价格同时开了买单和卖单 [`Order<Open>`]，优先选择剩余数量较大的
     //    Order<Open> 进行匹配。
-    pub fn determine_matching_side(&self, market_event: &MarketEvent<ClickhousePublicTrade>) -> Option<Side>
+    pub fn determine_matching_side(&self, market_event: &PublicEvent<ClickhousePublicTrade>) -> Option<Side>
     {
         match (self.bids.last(), self.asks.last()) {
             // 检查最佳买单和卖单的 Order<Open> 是否匹配
@@ -119,7 +119,7 @@ impl InstrumentOrders
         }
     }
 
-    pub fn match_bids(&mut self, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64) -> Vec<ClientTrade>
+    pub fn match_bids(&mut self, market_event: &PublicEvent<ClickhousePublicTrade>, fees_percent: f64) -> Vec<ClientTrade>
     {
         // 跟踪剩余的可用流动性，以便匹配
         let mut remaining_liquidity = market_event.kind.amount;
@@ -170,7 +170,7 @@ impl InstrumentOrders
         ClientTradeId(self.batch_id)
     }
 
-    pub fn match_asks(&mut self, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64) -> Vec<ClientTrade>
+    pub fn match_asks(&mut self, market_event: &PublicEvent<ClickhousePublicTrade>, fees_percent: f64) -> Vec<ClientTrade>
     {
         // 跟踪剩余的可用流动性，以便匹配
         let mut remaining_liquidity = market_event.kind.amount;
@@ -302,7 +302,7 @@ mod tests
         instrument_orders.add_order_open(order_sell);
 
         // 创建 MarketEvent，价格在买单和卖单之间
-        let market_event = MarketEvent { exchange_time: 1625097600000,
+        let market_event = PublicEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
@@ -317,7 +317,7 @@ mod tests
         assert_eq!(matching_side, None);
 
         // 创建 MarketEvent，价格匹配买单
-        let market_event = MarketEvent { exchange_time: 1625097600000,
+        let market_event = PublicEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
@@ -332,7 +332,7 @@ mod tests
         assert_eq!(matching_side, Some(Side::Buy));
 
         // 创建 MarketEvent，价格匹配卖单
-        let market_event = MarketEvent { exchange_time: 1625097600000,
+        let market_event = PublicEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
@@ -358,7 +358,7 @@ mod tests
         instrument_orders.add_order_open(order_buy);
 
         // 创建 MarketEvent，价格便宜
-        let market_event = MarketEvent { exchange_time: 1625097600000,
+        let market_event = PublicEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
@@ -373,7 +373,7 @@ mod tests
         assert_eq!(trades.len(), 1); // 价格匹配
 
         // 创建 MarketEvent，价格刚好达到买单
-        let market_event = MarketEvent { exchange_time: 1625097600000,
+        let market_event = PublicEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
@@ -392,7 +392,7 @@ mod tests
         let order_buy_partial = create_order(Side::Buy, 100.0, 2.0);
         instrument_orders.add_order_open(order_buy_partial);
 
-        let market_event = MarketEvent { exchange_time: 1625097600000,
+        let market_event = PublicEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
@@ -421,7 +421,7 @@ mod tests
         instrument_orders.add_order_open(order_sell);
 
         // 创建 MarketEvent，价格刚好达到卖单
-        let market_event = MarketEvent { exchange_time: 1625097600000,
+        let market_event = PublicEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
@@ -436,7 +436,7 @@ mod tests
         assert_eq!(trades.len(), 1); // 价格匹配成功
 
         // 创建 MarketEvent，价格更高
-        let market_event = MarketEvent { exchange_time: 1625097600000,
+        let market_event = PublicEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
@@ -455,7 +455,7 @@ mod tests
         let order_sell_partial = create_order(Side::Sell, 100.0, 2.0);
         instrument_orders.add_order_open(order_sell_partial);
 
-        let market_event = MarketEvent { exchange_time: 1625097600000,
+        let market_event = PublicEvent { exchange_time: 1625097600000,
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),

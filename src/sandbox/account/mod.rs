@@ -20,7 +20,7 @@ use account_states::AccountState;
 use crate::{
     common_infrastructure::{
         balance::TokenBalance,
-        datafeed::event::MarketEvent,
+        datafeed::public_event::PublicEvent,
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
         order::{Cancelled, Open, Order, OrderExecutionType, OrderRole, Pending, RequestCancel, RequestOpen},
@@ -47,7 +47,7 @@ pub struct Account<Event>
     pub exchange_timestamp: AtomicI64,
     pub data: Arc<RwLock<AccountDataStreams<Event>>>,         // 帐户数据
     pub account_event_tx: UnboundedSender<AccountEvent>,      // 帐户事件发送器
-    pub market_event_tx: UnboundedSender<MarketEvent<Event>>, // 市场事件发送器
+    pub market_event_tx: UnboundedSender<PublicEvent<Event>>, // 市场事件发送器
     pub config: Arc<AccountConfig>,                           // 帐户配置
     pub states: Arc<Mutex<AccountState<Event>>>,              // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
@@ -73,7 +73,7 @@ pub struct AccountInitiator<Event>
 {
     data: Option<Arc<RwLock<AccountDataStreams<Event>>>>,
     account_event_tx: Option<UnboundedSender<AccountEvent>>,
-    market_event_tx: Option<UnboundedSender<MarketEvent<Event>>>,
+    market_event_tx: Option<UnboundedSender<PublicEvent<Event>>>,
     config: Option<Arc<AccountConfig>>,
     states: Option<Arc<Mutex<AccountState<Event>>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
@@ -111,7 +111,7 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
         self
     }
 
-    pub fn market_event_tx(mut self, value: UnboundedSender<MarketEvent<Event>>) -> Self
+    pub fn market_event_tx(mut self, value: UnboundedSender<PublicEvent<Event>>) -> Self
     {
         self.market_event_tx = Some(value);
         self
@@ -297,7 +297,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhousePublicTrade>)
+    pub async fn match_orders(&mut self, market_event: PublicEvent<ClickhousePublicTrade>)
     {
         let current_price = market_event.kind.price;
 
@@ -367,7 +367,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade>
+    fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &PublicEvent<ClickhousePublicTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade>
     {
         match side {
             | Side::Buy => orders.match_bids(market_event, fees_percent),
