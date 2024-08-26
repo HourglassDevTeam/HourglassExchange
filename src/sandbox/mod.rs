@@ -111,8 +111,8 @@ impl Default for ExchangeInitiator
 #[derive(Debug)]
 pub struct ExchangeInitiator
 {
-    event_sandbox_rx: Option<UnboundedReceiver<SandBoxClientEvent>>,
-    account: Option<Account>,
+    pub(crate) event_sandbox_rx: Option<UnboundedReceiver<SandBoxClientEvent>>,
+    pub(crate) account: Option<Account>,
 }
 
 impl ExchangeInitiator

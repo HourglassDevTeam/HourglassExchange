@@ -2,6 +2,7 @@
 // use serde::{Deserialize, Serialize};
 //
 pub mod public_event;
+pub mod historical;
 // pub mod historical;
 // pub mod live;
 //
