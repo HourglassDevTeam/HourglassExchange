@@ -1,3 +1,4 @@
+use crate::common_infrastructure::datafeed::public_event::PublicEvent;
 use async_trait::async_trait;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
@@ -6,7 +7,6 @@ use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrde
 use crate::{
     common_infrastructure::{
         balance::TokenBalance,
-        datafeed::public_event::PublicEvent,
         order::{Cancelled, Open, Order, Pending},
     },
     sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade,

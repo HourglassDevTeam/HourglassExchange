@@ -1,10 +1,10 @@
+use crate::common_infrastructure::datafeed::public_event::PublicEvent;
 use rayon::prelude::ParallelSliceMut;
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt::Debug};
 
 use crate::{
     common_infrastructure::{
-        datafeed::public_event::PublicEvent,
         friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees},
         instrument::kind::InstrumentKind,
         order::{Open, Order},

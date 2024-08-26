@@ -1,3 +1,4 @@
+use crate::common_infrastructure::datafeed::public_event::PublicEvent;
 /// # NetworkEvent 结构体
 ///
 /// `NetworkEvent` 是一个用于在网络中传递事件的结构体，包含了事件的类型和相关的负载数据（payload）。
@@ -77,7 +78,6 @@
 /// 客户端在构建 `NetworkEvent` 时，需要确保提供的 `event_type` 是有效的，并且 `payload` 是与该事件类型匹配的有效数据。
 
 
-use crate::common_infrastructure::datafeed::public_event::PublicEvent;
 use crate::common_infrastructure::order::{Order, RequestCancel, RequestOpen};
 use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
 use crate::sandbox::sandbox_client::SandBoxClientEvent;

@@ -1,3 +1,4 @@
+use crate::common_infrastructure::datafeed::public_event::PublicEvent;
 use crate::common_infrastructure::event::ClientOrderId;
 use futures::{future::join_all};
 use mpsc::UnboundedSender;
@@ -20,7 +21,6 @@ use account_states::AccountState;
 use crate::{
     common_infrastructure::{
         balance::TokenBalance,
-        datafeed::public_event::PublicEvent,
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
         order::{Cancelled, Open, Order, OrderExecutionType, OrderRole, Pending, RequestCancel, RequestOpen},
@@ -30,7 +30,7 @@ use crate::{
         Side,
     },
     error::ExecutionError,
-    sandbox::{account::account_market_feed::AccountDataStreams, clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade, instrument_orders::InstrumentOrders},
+    sandbox::{ clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
 
@@ -41,18 +41,17 @@ pub mod account_orders;
 pub mod account_states;
 
 #[derive(Debug)]
-pub struct Account<Event>
-    where Event: Clone + Send + Sync + Debug + 'static + Ord
+pub struct Account
 {
     pub exchange_timestamp: AtomicI64,
     pub account_event_tx: UnboundedSender<AccountEvent>,      // 帐户事件发送器
     pub config: Arc<AccountConfig>,                           // 帐户配置
-    pub states: Arc<Mutex<AccountState<Event>>>,              // 帐户余额
+    pub states: Arc<Mutex<AccountState>>,              // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
 }
 
 // 手动实现 Clone trait
-impl<Event> Clone for Account<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl Clone for Account
 {
     fn clone(&self) -> Self
     {
@@ -65,17 +64,15 @@ impl<Event> Clone for Account<Event> where Event: Clone + Send + Sync + Debug + 
     }
 }
 #[derive(Clone, Debug)]
-pub struct AccountInitiator<Event>
-    where Event: Clone + Send + Sync + Debug + 'static + Ord
+pub struct AccountInitiator
 {
-    data: Option<Arc<RwLock<AccountDataStreams<Event>>>>,
     account_event_tx: Option<UnboundedSender<AccountEvent>>,
     config: Option<Arc<AccountConfig>>,
-    states: Option<Arc<Mutex<AccountState<Event>>>>,
+    states: Option<Arc<Mutex<AccountState>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
 }
 
-impl<Event> Default for AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl Default for AccountInitiator
 {
     fn default() -> Self
     {
@@ -83,21 +80,15 @@ impl<Event> Default for AccountInitiator<Event> where Event: Clone + Send + Sync
     }
 }
 
-impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl AccountInitiator
 {
     pub fn new() -> Self
     {
-        AccountInitiator { data: None,
+        AccountInitiator {
                            account_event_tx: None,
                            config: None,
                            states: None,
                            orders: None }
-    }
-
-    pub fn data(mut self, value: AccountDataStreams<Event>) -> Self
-    {
-        self.data = Some(Arc::new(RwLock::new(value)));
-        self
     }
 
     pub fn account_event_tx(mut self, value: UnboundedSender<AccountEvent>) -> Self
@@ -113,7 +104,7 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
         self
     }
 
-    pub fn balances(mut self, value: AccountState<Event>) -> Self
+    pub fn balances(mut self, value: AccountState) -> Self
     {
         self.states = Some(Arc::new(Mutex::new(value)));
         self
@@ -125,7 +116,7 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
         self
     }
 
-    pub fn build(self) -> Result<Account<Event>, String>
+    pub fn build(self) -> Result<Account, String>
     {
         Ok(Account { exchange_timestamp: 0.into(),
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
@@ -136,10 +127,10 @@ impl<Event> AccountInitiator<Event> where Event: Clone + Send + Sync + Debug + '
 }
 
 #[allow(dead_code)]
-impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl Account
 {
     /// [Initiation] `Account` 模块的初始化函数`initiate`
-    pub fn initiate() -> AccountInitiator<Event>
+    pub fn initiate() -> AccountInitiator
     {
         AccountInitiator::new()
     }

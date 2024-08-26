@@ -1,7 +1,7 @@
 use chrono::{Duration as ChronoDuration, NaiveDate};
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use unilink_execution::sandbox::{account::account_market_feed::AccountDataStreams, clickhouse_api::queries_operations::ClickHouseClient};
+use unilink_execution::sandbox::{ clickhouse_api::queries_operations::ClickHouseClient};
 
 #[tokio::main]
 async fn main()
@@ -17,9 +17,6 @@ async fn main()
     let start_date = NaiveDate::from_ymd_opt(2024, 5, 5).unwrap();
     let end_date = NaiveDate::from_ymd_opt(2024, 5, 7).unwrap();
 
-    // 创建 AccountDataStreams 实例
-    let mut data_streams = AccountDataStreams::new();
-
     // 逐日遍历日期范围
     let mut current_date = start_date;
     while current_date <= end_date {
@@ -31,7 +28,7 @@ async fn main()
         match cursor_result {
             | Ok(mut cursor) => {
                 // 创建通道
-                let (tx, rx) = mpsc::unbounded_channel();
+                let (tx,_rx) = mpsc::unbounded_channel();
 
                 // 克隆 Arc 以在异步任务中使用
                 let date_str_clone = Arc::clone(&date_str);
@@ -61,9 +58,6 @@ async fn main()
                         }
                     }
                 });
-
-                // 将接收器添加到 AccountDataStreams
-                data_streams.add_stream(format!("{}_{}", exchange, date_str), rx);
 
                 // 等待 `cursor_task` 完成
                 if let Err(e) = cursor_task.await {

@@ -26,15 +26,14 @@ use std::{
 };
 
 #[derive(Clone, Debug)]
-pub struct AccountState<Event>
-    where Event: Clone + Send + Sync + Debug + 'static + Ord + Ord
+pub struct AccountState
 {
     pub balances: HashMap<Token, Balance>,
     pub positions: AccountPositions,
-    pub account_ref: Weak<Account<Event>>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
+    pub account_ref: Weak<Account>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
 }
 
-impl<Event> PartialEq for AccountState<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl PartialEq for AccountState
 {
     fn eq(&self, other: &Self) -> bool
     {
@@ -42,7 +41,7 @@ impl<Event> PartialEq for AccountState<Event> where Event: Clone + Send + Sync +
     }
 }
 
-impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl AccountState
 {
     pub fn new(balances: HashMap<Token, Balance>, positions: AccountPositions) -> Self
     {
@@ -482,7 +481,7 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
     }
 }
 
-impl<Event> Deref for AccountState<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl Deref for AccountState
 {
     type Target = HashMap<Token, Balance>;
 
@@ -492,7 +491,7 @@ impl<Event> Deref for AccountState<Event> where Event: Clone + Send + Sync + Deb
     }
 }
 
-impl<Event> DerefMut for AccountState<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl DerefMut for AccountState
 {
     fn deref_mut(&mut self) -> &mut Self::Target
     {
@@ -549,7 +548,7 @@ mod tests
                         account_leverage_rate: leverage_rate,
                         fees_book: HashMap::new() }
     }
-    async fn create_test_account_state() -> Arc<Mutex<AccountState<()>>>
+    async fn create_test_account_state() -> Arc<Mutex<AccountState>>
     {
         let balances = HashMap::new();
         let positions = AccountPositions { margin_pos: None,
@@ -652,7 +651,7 @@ mod tests
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
         let positions = AccountPositions::init(); // 假设有一个用于初始化 AccountPositions 的方法
-        let account_state = AccountState::<()>::new(balances, positions);
+        let account_state = AccountState::new(balances, positions);
 
         let balance = account_state.balance(&token).unwrap();
         assert_eq!(balance.total, 100.0);
@@ -667,7 +666,7 @@ mod tests
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
         let positions = AccountPositions::init();
-        let mut account_state = AccountState::<()>::new(balances, positions);
+        let mut account_state = AccountState::new(balances, positions);
 
         let balance_mut = account_state.balance_mut(&token).unwrap();
         balance_mut.available -= 10.0;
@@ -685,7 +684,7 @@ mod tests
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
         let positions = AccountPositions::init();
-        let account_state = AccountState::<()>::new(balances, positions);
+        let account_state = AccountState::new(balances, positions);
 
         assert!(account_state.has_sufficient_available_balance(&token, 40.0).is_ok());
         assert!(account_state.has_sufficient_available_balance(&token, 60.0).is_err());
@@ -699,7 +698,7 @@ mod tests
         balances.insert(token.clone(), Balance::new(100.0, 50.0, 1.0));
 
         let positions = AccountPositions::init();
-        let mut account_state = AccountState::<()>::new(balances, positions);
+        let mut account_state = AccountState::new(balances, positions);
 
         let delta = BalanceDelta::new(0.0, -10.0);
         let balance = account_state.apply_balance_delta(&token, delta);
@@ -727,7 +726,7 @@ mod tests
                                            option_pos: None };
 
         // Instantiate the account state with the balances and positions
-        let account_state = AccountState::<()>::new(balances, positions);
+        let account_state = AccountState::new(balances, positions);
 
         // Fetch all balances from the account state
         let all_balances = account_state.fetch_all_balances();

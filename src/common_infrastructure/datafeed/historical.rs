@@ -4,16 +4,16 @@ use tokio::sync::mpsc::UnboundedReceiver;
 
 use crate::{common_infrastructure::datafeed::public_event::PublicEvent, sandbox::clickhouse_api::queries_operations::ClickHouseClient};
 
-pub struct HistoricalFeed<Event>
+pub struct HistoricalFeed
 {
     // NOTE ClickHouseClient is opted and hardcoded for simplicity, as a makeshift solution.
     pub database_client: Arc<ClickHouseClient>,
-    pub receiver: UnboundedReceiver<PublicEvent<Event>>,
+    pub receiver: UnboundedReceiver<PublicEvent>,
 }
 
-impl<Event> HistoricalFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
+impl HistoricalFeed
 {
-    pub async fn recv_next(&mut self) -> Option<PublicEvent<Event>>
+    pub async fn recv_next(&mut self) -> Option<PublicEvent>
     {
         self.receiver.recv().await
     }

@@ -7,14 +7,14 @@
 //
 // /// Live feed for events.
 // #[allow(dead_code)]
-// pub struct LiveFeed<Event>
+// pub struct LiveFeed
 // {
-//     pub(crate) receiver: UnboundedReceiver<MarketEvent<Event>>,
+//     pub(crate) receiver: UnboundedReceiver<MarketEvent>,
 // }
 //
-// impl<Event> LiveFeed<Event> where Event: Clone + Send + Sync + Debug + 'static
+// impl LiveFeed
 // {
-//     pub async fn recv(&mut self) -> Option<MarketEvent<Event>>
+//     pub async fn recv(&mut self) -> Option<MarketEvent>
 //     {
 //         // 尝试从接收器中接收事件
 //         self.receiver.recv().await
@@ -22,8 +22,8 @@
 // }
 //
 //
-// impl<Event> LiveFeed<Event> {
-//     pub fn new(receiver: UnboundedReceiver<MarketEvent<Event>>) -> Self {
+// impl LiveFeed {
+//     pub fn new(receiver: UnboundedReceiver<MarketEvent>) -> Self {
 //         LiveFeed {
 //             receiver,
 //         }

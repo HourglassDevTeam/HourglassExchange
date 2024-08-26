@@ -18,16 +18,15 @@ pub mod ws_trade;
 
 
 #[derive(Debug)]
-pub struct SandBoxExchange<Event>
-    where Event: Clone + Send + Sync + Debug + 'static + Ord
+pub struct SandBoxExchange
 {
     pub event_sandbox_rx: UnboundedReceiver<SandBoxClientEvent>,
-    pub account: Account<Event>,
+    pub account: Account,
 }
 
-impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl SandBoxExchange
 {
-    pub fn initiator() -> ExchangeInitiator<Event>
+    pub fn initiator() -> ExchangeInitiator
     {
         ExchangeInitiator::new()
     }
@@ -100,7 +99,7 @@ impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 's
     }
 }
 
-impl<Event> Default for ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl Default for ExchangeInitiator
 {
     fn default() -> Self
     {
@@ -110,14 +109,13 @@ impl<Event> Default for ExchangeInitiator<Event> where Event: Clone + Send + Syn
     }
 }
 #[derive(Debug)]
-pub struct ExchangeInitiator<Event>
-    where Event: Clone + Send + Sync + Debug + 'static + Ord
+pub struct ExchangeInitiator
 {
     event_sandbox_rx: Option<UnboundedReceiver<SandBoxClientEvent>>,
-    account: Option<Account<Event>>,
+    account: Option<Account>,
 }
 
-impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 'static + Ord
+impl ExchangeInitiator
 {
     pub fn new() -> Self
     {
@@ -134,12 +132,12 @@ impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 
                ..self }
     }
 
-    pub fn account(self, value: Account<Event>) -> Self
+    pub fn account(self, value: Account) -> Self
     {
         Self { account: Some(value), ..self }
     }
 
-    pub fn initiate(self) -> Result<SandBoxExchange<Event>, ExecutionError>
+    pub fn initiate(self) -> Result<SandBoxExchange, ExecutionError>
     {
         Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
                              account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
@@ -156,17 +154,14 @@ mod tests {
     use tokio::sync::Mutex; // 确保使用 tokio 的 Mutex
 
     use tokio::sync::{mpsc, RwLock};
-    use crate::common_infrastructure::datafeed::public_event::PublicEvent;
     use crate::common_infrastructure::position::{AccountPositions, PositionDirectionMode, PositionMarginMode};
     use crate::sandbox::account::account_config::{AccountConfig, CommissionLevel, MarginMode};
     use crate::sandbox::account::account_latency::{AccountLatency, FluctuationMode};
     use crate::sandbox::account::account_orders::AccountOrders;
     use crate::sandbox::account::account_states::AccountState;
-    use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
 
-    async fn create_test_account<Event>() -> Account<Event>
-    where
-        Event: Clone + Send + Sync + Debug + 'static + Ord
+    async fn create_test_account() -> Account
+
     {
         let leverage_rate = 1.0;
 
@@ -228,7 +223,7 @@ mod tests {
 
     #[tokio::test]
     async fn initiator_should_create_exchange_initiator_with_default_values() {
-        let initiator = ExchangeInitiator::<PublicEvent<ClickhousePublicTrade>>::new();
+        let initiator = ExchangeInitiator::new();
         assert!(initiator.event_sandbox_rx.is_none());
         assert!(initiator.account.is_none());
     }
@@ -236,21 +231,21 @@ mod tests {
     #[tokio::test]
     async fn initiator_should_set_event_sandbox_rx() {
         let (_tx, rx) = mpsc::unbounded_channel();
-        let initiator = ExchangeInitiator::<PublicEvent<ClickhousePublicTrade>>::new().event_sandbox_rx(rx);
+        let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
         assert!(initiator.event_sandbox_rx.is_some());
     }
 
     #[tokio::test]
     async fn initiator_should_set_account() {
         let account = create_test_account().await;
-        let initiator = ExchangeInitiator::<PublicEvent<ClickhousePublicTrade>>::new().account(account);
+        let initiator = ExchangeInitiator::new().account(account);
         assert!(initiator.account.is_some());
     }
 
     #[tokio::test]
     async fn initiator_should_return_error_if_event_sandbox_rx_is_missing() {
         let account = create_test_account().await;
-        let initiator = ExchangeInitiator::<PublicEvent<ClickhousePublicTrade>>::new().account(account);
+        let initiator = ExchangeInitiator::new().account(account);
         let result = initiator.initiate();
         assert!(result.is_err());
     }
@@ -258,7 +253,7 @@ mod tests {
     #[tokio::test]
     async fn initiator_should_return_error_if_account_is_missing() {
         let (_tx, rx) = mpsc::unbounded_channel();
-        let initiator = ExchangeInitiator::<PublicEvent<ClickhousePublicTrade>>::new().event_sandbox_rx(rx);
+        let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
         let result = initiator.initiate();
         assert!(result.is_err());
     }
@@ -270,7 +265,7 @@ mod tests {
         let _listener = TcpListener::bind("127.0.0.1:3030").unwrap();
 
         let (_tx, rx) = mpsc::unbounded_channel();
-        let account: Account<PublicEvent<ClickhousePublicTrade>> = create_test_account().await;
+        let account: Account = create_test_account().await;
         let exchange = SandBoxExchange {
             event_sandbox_rx: rx,
             account,
