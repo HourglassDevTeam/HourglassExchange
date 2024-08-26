@@ -2,7 +2,6 @@ use account::Account;
 use mpsc::UnboundedReceiver;
 use std::fmt::Debug;
 use tokio::sync::mpsc;
-use tokio::sync::oneshot;
 use warp::Filter;
 
 use crate::network::event::NetworkEvent;
@@ -38,6 +37,8 @@ impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 's
         self.process_events().await;
     }
 
+
+
     /// 网络运行 [`SandBoxExchange`]，并从网络接收事件
     pub async fn run_online(mut self) {
         // 创建一个通道，用于内部事件传递
@@ -51,24 +52,15 @@ impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 's
 
                 // 异步处理网络事件并发送到通道
                 tokio::spawn(async move {
-                    let event = match network_event.event_type.as_str() {
-                        "FetchOrdersOpen" => {
-                            let (response_tx, _response_rx) = oneshot::channel();
-                            SandBoxClientEvent::FetchOrdersOpen(response_tx)
+                    match network_event.parse_payload() {
+                        Ok(event) => {
+                            // 发送事件到通道
+                            if let Err(e) = event_tx_clone.send(event) {
+                                eprintln!("Failed to send event: {:?}", e);
+                            }
                         }
-                        "FetchBalances" => {
-                            let (response_tx, _response_rx) = oneshot::channel();
-                            SandBoxClientEvent::FetchBalances(response_tx)
-                        }
-                        // 处理其他事件类型...
-                        _ => {
-                            eprintln!("Unknown event type");
-                            return;
-                        }
-                    };
-
-                    // 发送事件到通道
-                    event_tx_clone.send(event).expect("Failed to send event");
+                        Err(e) => eprintln!("Failed to parse event: {}", e),
+                    }
                 });
 
                 warp::reply::reply()

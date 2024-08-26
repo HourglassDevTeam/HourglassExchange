@@ -17,7 +17,7 @@ pub struct NetworkEvent {
 
 #[allow(dead_code)]
 impl NetworkEvent {
-    fn parse_payload(&self) -> Result<SandBoxClientEvent, String> {
+    pub(crate) fn parse_payload(&self) -> Result<SandBoxClientEvent, String> {
         match self.event_type.as_str() {
             "FetchOrdersOpen" => {
                 let (response_tx, _response_rx) = oneshot::channel();
