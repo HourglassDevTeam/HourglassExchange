@@ -40,7 +40,14 @@ impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 's
         ExchangeInitiator::new()
     }
 
-    pub async fn run(mut self) {
+
+    /// 本地运行 [`SandBoxExchange`] 并响应各种 [`SandBoxClientEvent`]。
+    pub async fn run_local(mut self) {
+        self.process_events().await;
+    }
+
+    /// 网络运行 [`SandBoxExchange`]，并从网络接收事件
+    pub async fn run_online(mut self) {
         // 创建一个通道，用于内部事件传递
         let (event_tx, _event_rx) = mpsc::unbounded_channel();
 
@@ -48,12 +55,10 @@ impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 's
         let route = warp::path("event")
             .and(warp::body::json())
             .map(move |network_event: NetworkEvent| {
-                // 这里不需要再次克隆 event_tx_clone，直接使用 event_tx.clone()
                 let event_tx_clone = event_tx.clone();
 
                 // 异步处理网络事件并发送到通道
                 tokio::spawn(async move {
-                    // 这里不需要可变借用，因为 send 方法不要求可变引用
                     let event = match network_event.event_type.as_str() {
                         "FetchOrdersOpen" => {
                             let (response_tx, _response_rx) = oneshot::channel();
@@ -74,7 +79,7 @@ impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 's
                     event_tx_clone.send(event).expect("Failed to send event");
                 });
 
-                warp::reply::reply() // 这里不需要调用 warp::reply()
+                warp::reply::reply()
             });
 
         // 启动 warp 服务器
@@ -82,9 +87,9 @@ impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 's
 
         // 同时运行 warp 服务器和事件处理逻辑
         tokio::select! {
-        _ = warp_server => {}, // 如果 warp 服务器完成，则这里结束
-        _ = self.process_events() => {}, // 处理接收到的事件
-    }
+            _ = warp_server => {},
+            _ = self.process_events() => {},
+        }
     }
 
     /// 处理接收到的内部事件
