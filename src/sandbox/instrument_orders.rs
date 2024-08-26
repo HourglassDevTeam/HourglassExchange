@@ -229,7 +229,7 @@ impl InstrumentOrders
                          side: order.side,
                          price: order.state.price,
                          size: trade_quantity,
-                         // count: 1, // NOTE 假设每笔交易计数为1，可以根据实际情况调整
+                         count: self.batch_id, // NOTE 假设每笔交易计数为1，可以根据实际情况调整
                          fees: fee })
     }
 
