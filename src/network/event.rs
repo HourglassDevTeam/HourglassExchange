@@ -48,10 +48,7 @@
 ///             source: "source_module".to_string(),
 ///             destination: "destination_module".to_string(),
 ///             event_id: uuid::Uuid::new_v4().to_string(),
-///             version: "1.0".to_string(),
-///             correlation_id: None,
-///             priority: Some(0),
-///             retry_count: 0,}
+/// }
 ///
 /// }
 /// ```
@@ -90,10 +87,9 @@ pub struct NetworkEvent {
     pub source: String, // 事件来源
     pub destination: String, // 事件目的地
     pub event_id: String, // 唯一事件 ID
-    pub version: String, // 事件版本号
-    pub correlation_id: Option<String>, // 关联 ID (可选)
-    pub priority: Option<u8>, // 优先级 (可选)
-    pub retry_count: u8, // 重试次数
+    // pub correlation_id: Option<String>, // 关联 ID (可选)
+    // pub priority: Option<u8>, // 优先级 (可选)
+    // pub retry_count: u8, // 重试次数
 }
 
 
