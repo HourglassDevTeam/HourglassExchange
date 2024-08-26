@@ -44,13 +44,13 @@ impl Display for OrderKind
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
-    pub kind: OrderKind,           // 订单种类
-    pub exchange: ExchangeVariant, // 交易所
-    pub instrument: Instrument,    // 交易工具
-    pub client_ts: i64,            // 客户端下单时间
-    pub client_order_id: ClientOrderId,        // 客户端订单ID
-    pub side: Side,                // 买卖方向
-    pub state: State,              // 订单状态
+    pub kind: OrderKind,                // 订单种类
+    pub exchange: ExchangeVariant,      // 交易所
+    pub instrument: Instrument,         // 交易工具
+    pub client_ts: i64,                 // 客户端下单时间
+    pub client_order_id: ClientOrderId, // 客户端订单ID
+    pub side: Side,                     // 买卖方向
+    pub state: State,                   // 订单状态
 }
 
 /// 订单初始状态。发送到client进行操作

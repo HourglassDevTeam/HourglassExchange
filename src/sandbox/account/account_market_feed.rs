@@ -44,7 +44,7 @@ impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync +
 
     // 将所有数据流合并到一个新的接收器中，并按时间戳排序。
     pub async fn join(self) -> UnboundedReceiver<Event>
-    where Event: Send + 'static
+        where Event: Send + 'static
     {
         let mut joined_rx = self.merge_streams().await;
 
@@ -97,7 +97,6 @@ impl<Event> AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync +
     }
 }
 
-
 // 为 AccountDataStreams 实现 Debug trait，方便调试。
 impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Send + Sync + 'static + Ord
 {
@@ -110,7 +109,8 @@ impl<Event> Debug for AccountDataStreams<Event> where Event: Debug + Clone + Sen
 }
 
 #[tokio::test]
-async fn add_stream_should_add_new_stream() {
+async fn add_stream_should_add_new_stream()
+{
     let mut streams: AccountDataStreams<i32> = AccountDataStreams::new(); // 明确指定 Event 类型为 i32
     let (_tx, rx) = mpsc::unbounded_channel();
     streams.add_stream("stream1".to_string(), rx);
@@ -118,7 +118,8 @@ async fn add_stream_should_add_new_stream() {
 }
 
 #[tokio::test]
-async fn remove_stream_should_remove_existing_stream() {
+async fn remove_stream_should_remove_existing_stream()
+{
     let mut streams: AccountDataStreams<i32> = AccountDataStreams::new(); // 明确指定 Event 类型为 i32
     let (_tx, rx) = mpsc::unbounded_channel();
     streams.add_stream("stream1".to_string(), rx);
@@ -127,7 +128,8 @@ async fn remove_stream_should_remove_existing_stream() {
 }
 
 #[tokio::test]
-async fn join_should_merge_and_sort_streams() {
+async fn join_should_merge_and_sort_streams()
+{
     let mut streams: AccountDataStreams<i32> = AccountDataStreams::new(); // 明确指定 Event 类型为 i32
     let (tx1, rx1) = mpsc::unbounded_channel();
     let (tx2, rx2) = mpsc::unbounded_channel();
@@ -147,7 +149,8 @@ async fn join_should_merge_and_sort_streams() {
 }
 
 #[tokio::test]
-async fn join_without_sort_should_merge_streams() {
+async fn join_without_sort_should_merge_streams()
+{
     let mut streams: AccountDataStreams<i32> = AccountDataStreams::new(); // 明确指定 Event 类型为 i32
     let (tx1, rx1) = mpsc::unbounded_channel();
     let (tx2, rx2) = mpsc::unbounded_channel();

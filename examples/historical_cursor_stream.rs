@@ -1,11 +1,11 @@
-use unilink_execution::sandbox::account::account_market_feed::AccountDataStreams;
-use std::{sync::Arc};
+use chrono::{Duration as ChronoDuration, NaiveDate};
+use std::sync::Arc;
 use tokio::sync::mpsc;
-use chrono::{NaiveDate, Duration as ChronoDuration};
-use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
+use unilink_execution::sandbox::{account::account_market_feed::AccountDataStreams, clickhouse_api::queries_operations::ClickHouseClient};
 
 #[tokio::main]
-async fn main() {
+async fn main()
+{
     // 创建 ClickHouse 客户端实例
     let client = Arc::new(ClickHouseClient::new());
 
@@ -29,7 +29,7 @@ async fn main() {
         let cursor_result = client.cursor_unioned_public_trades(exchange, instrument, &date_str).await;
 
         match cursor_result {
-            Ok(mut cursor) => {
+            | Ok(mut cursor) => {
                 // 创建通道
                 let (tx, rx) = mpsc::unbounded_channel();
 
@@ -40,7 +40,7 @@ async fn main() {
                 let cursor_task = tokio::spawn(async move {
                     loop {
                         match cursor.next().await {
-                            Ok(Some(trade)) => {
+                            | Ok(Some(trade)) => {
                                 // 打印每个交易数据
                                 // println!("[UniLinkExecution] : Received trade for date {}: {:?}", date_str_clone, trade);
 
@@ -50,11 +50,11 @@ async fn main() {
                                     break;
                                 }
                             }
-                            Ok(None) => {
+                            | Ok(None) => {
                                 println!("[UniLinkExecution] : Cursor data processing for date {} is complete.", date_str_clone);
                                 break;
                             }
-                            Err(_e) => {
+                            | Err(_e) => {
                                 eprintln!("[UniLinkExecution] : No data available for date {}. Skipping to next date.", date_str_clone);
                                 break;
                             }
@@ -69,9 +69,8 @@ async fn main() {
                 if let Err(e) = cursor_task.await {
                     eprintln!("[UniLinkExecution] : Cursor task for {} was aborted: {:?}", date_str, e);
                 }
-
             }
-            Err(e) => {
+            | Err(e) => {
                 eprintln!("[UniLinkExecution] : Error fetching trades for {}: {:?}", date_str, e);
             }
         }

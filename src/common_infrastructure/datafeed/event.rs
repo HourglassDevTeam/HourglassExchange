@@ -4,15 +4,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common_infrastructure::{
+        event::ClientOrderId,
         instrument::Instrument,
         order::{FullyFill, Order, PartialFill},
-        trade::ClientTrade,
+        trade::{ClientTrade, ClientTradeId},
     },
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade, ws_trade::WsTrade},
     ExchangeVariant,
 };
-use crate::common_infrastructure::event::ClientOrderId;
-use crate::common_infrastructure::trade::ClientTradeId;
 
 // 定义一个泛型结构体 MarketEvent，包含各种交易市场事件信息
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
@@ -65,47 +64,43 @@ impl From<MarketEvent<WsTrade>> for MarketEvent<DataKind>
     }
 }
 // 为 Order<FullyFill> 实现 From trait
-impl From<Order<FullyFill>> for MarketEvent<ClientTrade> {
-    fn from(order: Order<FullyFill>) -> Self {
-        let client_trade = ClientTrade {
-            trade_id: ClientTradeId(order.state.id.0.parse().unwrap_or_default()),
-            order_id: ClientOrderId(order.client_order_id.0),
-            instrument: order.instrument.clone(),
-            side: order.side,
-            price: order.state.price,
-            quantity: order.state.size,
-            fees: 0.0, // 根据你的逻辑调整 fees 计算
-        };
+impl From<Order<FullyFill>> for MarketEvent<ClientTrade>
+{
+    fn from(order: Order<FullyFill>) -> Self
+    {
+        let client_trade = ClientTrade { trade_id: ClientTradeId(order.state.id.0.parse().unwrap_or_default()),
+                                         order_id: ClientOrderId(order.client_order_id.0),
+                                         instrument: order.instrument.clone(),
+                                         side: order.side,
+                                         price: order.state.price,
+                                         quantity: order.state.size,
+                                         fees: 0.0 /* 根据你的逻辑调整 fees 计算 */ };
 
-        MarketEvent {
-            exchange_time: order.state.id.0.parse().unwrap_or_default(),
-            received_time: order.client_ts,
-            exchange: order.exchange,
-            instrument: order.instrument.clone(),
-            kind: client_trade,
-        }
+        MarketEvent { exchange_time: order.state.id.0.parse().unwrap_or_default(),
+                      received_time: order.client_ts,
+                      exchange: order.exchange,
+                      instrument: order.instrument.clone(),
+                      kind: client_trade }
     }
 }
 
 // 为 Order<PartialFill> 实现 From trait
-impl From<Order<PartialFill>> for MarketEvent<ClientTrade> {
-    fn from(order: Order<PartialFill>) -> Self {
-        let client_trade = ClientTrade {
-            trade_id: ClientTradeId(order.state.id.0.parse().unwrap_or_default()),
-            order_id: ClientOrderId(order.client_order_id.0),
-            instrument: order.instrument.clone(),
-            side: order.side,
-            price: order.state.price,
-            quantity: order.state.size,
-            fees: 0.0, // 根据你的逻辑调整 fees 计算
-        };
+impl From<Order<PartialFill>> for MarketEvent<ClientTrade>
+{
+    fn from(order: Order<PartialFill>) -> Self
+    {
+        let client_trade = ClientTrade { trade_id: ClientTradeId(order.state.id.0.parse().unwrap_or_default()),
+                                         order_id: ClientOrderId(order.client_order_id.0),
+                                         instrument: order.instrument.clone(),
+                                         side: order.side,
+                                         price: order.state.price,
+                                         quantity: order.state.size,
+                                         fees: 0.0 /* 根据你的逻辑调整 fees 计算 */ };
 
-        MarketEvent {
-            exchange_time: order.state.id.0.parse().unwrap_or_default(),
-            received_time: order.client_ts,
-            exchange: order.exchange,
-            instrument: order.instrument.clone(),
-            kind: client_trade,
-        }
+        MarketEvent { exchange_time: order.state.id.0.parse().unwrap_or_default(),
+                      received_time: order.client_ts,
+                      exchange: order.exchange,
+                      instrument: order.instrument.clone(),
+                      kind: client_trade }
     }
 }

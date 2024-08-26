@@ -2,8 +2,7 @@ use crate::common_infrastructure::event::ClientOrderId;
 use futures::{future::join_all, lock::Mutex};
 use mpsc::UnboundedSender;
 use oneshot::Sender;
-use rayon::iter::IndexedParallelIterator;
-use rayon::iter::IntoParallelRefIterator;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
 use std::{
     fmt::Debug,
     sync::{
@@ -220,7 +219,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError> {
+    pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
+    {
         Self::order_validity_check(order.kind)?;
 
         // 提前声明所需的变量
@@ -253,13 +253,12 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
-                exchange: ExchangeVariant::SandBox,
-                kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
+                                 exchange: ExchangeVariant::SandBox,
+                                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
 
         Ok(open_order)
     }
-
 
     pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
     {
@@ -298,7 +297,8 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhousePublicTrade>) {
+    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhousePublicTrade>)
+    {
         let current_price = market_event.kind.price;
 
         // 这里使用 `DashMap` 的 `iter()` 获取所有键值对，并提取键作为 `order_ids`
@@ -333,14 +333,15 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
                         // 匹配订单并生成交易
                         let trades = match orders_write.determine_matching_side(&market_event) {
-                            Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
-                            Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
-                            None => continue, // 跳过当前订单处理
+                            | Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
+                            | Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
+                            | None => continue, // 跳过当前订单处理
                         };
 
                         self.process_trades(trades).await;
                     }
-                } else if let Ok(OrderRole::Taker) = role {
+                }
+                else if let Ok(OrderRole::Taker) = role {
                     // 生成 open_order
                     let open_order = self.orders.write().await.build_order_open(order.clone(), OrderRole::Taker).await;
 
@@ -354,9 +355,9 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
 
                         // 匹配订单并生成交易
                         let trades = match orders_write.determine_matching_side(&market_event) {
-                            Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
-                            Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
-                            None => continue, // 跳过当前订单处理
+                            | Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
+                            | Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
+                            | None => continue, // 跳过当前订单处理
                         };
 
                         self.process_trades(trades).await;
@@ -365,7 +366,6 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
             }
         }
     }
-
 
     fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade>
     {
@@ -391,22 +391,23 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         }
     }
 
-    async fn get_orders_for_instrument(&self, instrument: &Instrument) -> Option<InstrumentOrders> {
+    async fn get_orders_for_instrument(&self, instrument: &Instrument) -> Option<InstrumentOrders>
+    {
         // 获取 orders_lock 并在 match 之前完成对它的操作
         let orders_result = {
             let mut orders_lock = self.orders.write().await;
-            orders_lock.ins_orders_mut(instrument)
-                .map(|orders| orders.to_owned())
+            orders_lock.ins_orders_mut(instrument).map(|orders| orders.to_owned())
         };
 
         match orders_result {
-            Ok(orders) => Some(orders),
-            Err(error) => {
+            | Ok(orders) => Some(orders),
+            | Err(error) => {
                 warn!(?error, %instrument, "Failed to match orders for unrecognized Instrument");
                 None
             }
         }
     }
+
     async fn process_trades(&self, trades: Vec<ClientTrade>)
     {
         if !trades.is_empty() {

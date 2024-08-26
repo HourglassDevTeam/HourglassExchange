@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // 引入相关模块和结构体。
-use crate::common_infrastructure::{instrument::Instrument, Side};
-use crate::common_infrastructure::event::ClientOrderId;
+use crate::common_infrastructure::{event::ClientOrderId, instrument::Instrument, Side};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct ClientTrade
@@ -19,8 +18,7 @@ pub struct ClientTrade
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct ClientTradeId(pub i64);
 
-impl<S> From<S> for ClientTradeId
-where S: Into<i64>
+impl<S> From<S> for ClientTradeId where S: Into<i64>
 {
     fn from(id: S) -> Self
     {

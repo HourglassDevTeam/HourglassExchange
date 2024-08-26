@@ -1,11 +1,3 @@
-use std::{
-    sync::{
-        atomic::{AtomicU64, Ordering},
-    },
-};
-use dashmap::DashMap;
-use dashmap::mapref::one::RefMut;
-use rand::Rng;
 use crate::{
     common_infrastructure::{
         event::ClientOrderId,
@@ -19,12 +11,15 @@ use crate::{
         instrument_orders::InstrumentOrders,
     },
 };
+use dashmap::{mapref::one::RefMut, DashMap};
+use rand::Rng;
+use std::sync::atomic::{AtomicU64, Ordering};
 #[derive(Debug)]
 pub struct AccountOrders
 {
     pub latency_generator: AccountLatency,
     pub selectable_latencies: [i64; 20],
-    pub request_counter: AtomicU64,            // 用来生成一个唯一的 [`OrderId`]。
+    pub request_counter: AtomicU64,                               // 用来生成一个唯一的 [`OrderId`]。
     pub pending_registry: DashMap<ClientOrderId, Order<Pending>>, // 使用 HashMap
     pub instrument_orders_map: DashMap<Instrument, InstrumentOrders>,
 }
@@ -81,32 +76,36 @@ impl AccountOrders
             .collect()
     }
 
-        // 从PendingRegistry中删除订单的函数
-    pub fn remove_order_from_pending_registry(&mut self, order_id: ClientOrderId) -> Result<(), ExecutionError> {
+    // 从PendingRegistry中删除订单的函数
+    pub fn remove_order_from_pending_registry(&mut self, order_id: ClientOrderId) -> Result<(), ExecutionError>
+    {
         if self.pending_registry.remove(&order_id).is_some() {
             Ok(())
-        } else {
+        }
+        else {
             Err(ExecutionError::OrderNotFound(order_id))
         }
     }
+
     pub async fn process_request_as_pending(&mut self, order: Order<RequestOpen>) -> Order<Pending>
     {
         // turn the request into an pending order with a predicted timestamp
         let latency = self.get_random_latency();
         let adjusted_client_ts = order.client_ts + latency;
-         Order { kind: order.kind,
-                              exchange: order.exchange,
-                              instrument: order.instrument,
-                              client_order_id: order.client_order_id,
-                              client_ts: order.client_ts,
-                              side: order.side,
-                              state: Pending { reduce_only: order.state.reduce_only,
-                                               price: order.state.price,
-                                               size: order.state.size,
-                                               predicted_ts: adjusted_client_ts }}
+        Order { kind: order.kind,
+                exchange: order.exchange,
+                instrument: order.instrument,
+                client_order_id: order.client_order_id,
+                client_ts: order.client_ts,
+                side: order.side,
+                state: Pending { reduce_only: order.state.reduce_only,
+                                 price: order.state.price,
+                                 size: order.state.size,
+                                 predicted_ts: adjusted_client_ts } }
     }
 
-    pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError> {
+    pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
+    {
         if self.pending_registry.contains_key(&request.client_order_id) {
             return Err(ExecutionError::OrderAlreadyExists(request.client_order_id));
         }
@@ -117,34 +116,38 @@ impl AccountOrders
 
     // 判断是Maker还是Taker单
     /// 确定订单是 Maker 还是 Taker
-    pub fn determine_maker_taker(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError> {
+    pub fn determine_maker_taker(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    {
         match order.kind {
-            OrderKind::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
+            | OrderKind::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
 
-            OrderKind::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
+            | OrderKind::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
 
-            OrderKind::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
+            | OrderKind::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
 
-            OrderKind::ImmediateOrCancel | OrderKind::FillOrKill => Ok(OrderRole::Taker), // 立即成交或取消的订单总是 Taker
+            | OrderKind::ImmediateOrCancel | OrderKind::FillOrKill => Ok(OrderRole::Taker), // 立即成交或取消的订单总是 Taker
 
-            OrderKind::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
+            | OrderKind::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
         }
     }
 
     /// 判断限价订单是 Maker 还是 Taker
-    fn determine_limit_order_role(&self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError> {
+    fn determine_limit_order_role(&self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    {
         match order.side {
-            Side::Buy => {
+            | Side::Buy => {
                 if order.state.price >= current_price {
                     Ok(OrderRole::Maker)
-                } else {
+                }
+                else {
                     Ok(OrderRole::Taker)
                 }
             }
-            Side::Sell => {
+            | Side::Sell => {
                 if order.state.price <= current_price {
                     Ok(OrderRole::Maker)
-                } else {
+                }
+                else {
                     Ok(OrderRole::Taker)
                 }
             }
@@ -152,19 +155,22 @@ impl AccountOrders
     }
 
     /// 判断 PostOnly 订单是否符合条件，如果不符合则删除并返回错误
-    fn determine_post_only_order_role(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError> {
+    fn determine_post_only_order_role(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    {
         match order.side {
-            Side::Buy => {
+            | Side::Buy => {
                 if order.state.price >= current_price {
                     Ok(OrderRole::Maker)
-                } else {
+                }
+                else {
                     self.reject_post_only_order(order)
                 }
             }
-            Side::Sell => {
+            | Side::Sell => {
                 if order.state.price <= current_price {
                     Ok(OrderRole::Maker)
-                } else {
+                }
+                else {
                     self.reject_post_only_order(order)
                 }
             }
@@ -172,7 +178,8 @@ impl AccountOrders
     }
 
     /// 拒绝不符合条件的 PostOnly 订单并移除
-    fn reject_post_only_order(&mut self, order: &Order<Pending>) -> Result<OrderRole, ExecutionError> {
+    fn reject_post_only_order(&mut self, order: &Order<Pending>) -> Result<OrderRole, ExecutionError>
+    {
         self.remove_order_from_pending_registry(order.client_order_id)?; // 移除订单
         Err(ExecutionError::OrderRejected("PostOnly order rejected".into())) // 返回拒绝错误
     }
@@ -209,7 +216,8 @@ impl AccountOrders
         OrderId(self.request_counter.load(Ordering::Acquire).to_string())
     }
 
-    pub fn update_latency(&mut self, current_time: i64) {
+    pub fn update_latency(&mut self, current_time: i64)
+    {
         fluctuate_latency(&mut self.latency_generator, current_time);
     }
 }
@@ -217,14 +225,14 @@ impl AccountOrders
 #[cfg(test)]
 mod tests
 {
-    use tokio::sync::RwLock;
-use std::sync::Arc;
-use super::*;
+    use super::*;
     use crate::{
         common_infrastructure::instrument::{kind::InstrumentKind, Instrument},
         sandbox::account::account_latency::{AccountLatency, FluctuationMode},
         ExchangeVariant,
     };
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
     use uuid::Uuid;
 
     #[tokio::test]
@@ -276,7 +284,8 @@ use super::*;
     }
 
     #[tokio::test]
-    async fn test_ins_orders_mut() {
+    async fn test_ins_orders_mut()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::LinearIncrease, 100, 10);
 
@@ -315,17 +324,17 @@ use super::*;
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
         let order = Order { kind: OrderKind::Limit,
-            exchange: ExchangeVariant::SandBox,
-            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            client_order_id: client_order_id,
-            client_ts: 0,
-            side: Side::Buy,
-            state: Pending { reduce_only: false,
-                price: 50.0,
-                size: 1.0,
-                predicted_ts: 0 } };
+                            exchange: ExchangeVariant::SandBox,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            client_order_id: client_order_id,
+                            client_ts: 0,
+                            side: Side::Buy,
+                            state: Pending { reduce_only: false,
+                                             price: 50.0,
+                                             size: 1.0,
+                                             predicted_ts: 0 } };
 
-        account_orders.pending_registry.insert(order.client_order_id, order.clone());  // 使用 insert 方法
+        account_orders.pending_registry.insert(order.client_order_id, order.clone()); // 使用 insert 方法
         let remove_result = account_orders.remove_order_from_pending_registry(order.client_order_id);
         assert!(remove_result.is_ok());
         assert!(account_orders.pending_registry.is_empty());

@@ -1,10 +1,11 @@
-use std::{cmp::Ordering, fmt::Debug};
 use rayon::prelude::ParallelSliceMut;
 use serde::{Deserialize, Serialize};
+use std::{cmp::Ordering, fmt::Debug};
 
 use crate::{
     common_infrastructure::{
         datafeed::event::MarketEvent,
+        event::ClientOrderId,
         friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees},
         instrument::kind::InstrumentKind,
         order::{Open, Order},
@@ -14,7 +15,6 @@ use crate::{
     error::ExecutionError,
     sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade,
 };
-use crate::common_infrastructure::event::ClientOrderId;
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
@@ -223,8 +223,8 @@ impl InstrumentOrders
         let fee = trade_quantity * order.state.price * fees_percent;
 
         Ok(ClientTrade { trade_id: self.batch_id.into(),
-            order_id: ClientOrderId(order.client_order_id.0),
-            instrument: order.instrument.clone(),
+                         order_id: ClientOrderId(order.client_order_id.0),
+                         instrument: order.instrument.clone(),
                          side: order.side,
                          price: order.state.price,
                          quantity: trade_quantity,
@@ -307,9 +307,8 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: ExchangeVariant::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: ClickhousePublicTrade {
-                                             // exchange: "binance".to_string(),
-                                             symbol: "BTCUSDT".to_string(),
+                                         kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
+                                                                       symbol: "BTCUSDT".to_string(),
                                                                        side: "buy".to_string(),
                                                                        price: 105.0,
                                                                        timestamp: 1625097600000,
@@ -323,9 +322,8 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: ExchangeVariant::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: ClickhousePublicTrade {
-                                             // exchange: "binance".to_string(),
-                                             symbol: "BTCUSDT".to_string(),
+                                         kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
+                                                                       symbol: "BTCUSDT".to_string(),
                                                                        side: "buy".to_string(),
                                                                        price: 100.0,
                                                                        timestamp: 1625097600000,
@@ -339,9 +337,8 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: ExchangeVariant::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: ClickhousePublicTrade {
-                                             // exchange: "binance".to_string(),
-                                             symbol: "BTCUSDT".to_string(),
+                                         kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
+                                                                       symbol: "BTCUSDT".to_string(),
                                                                        side: "sell".to_string(),
                                                                        price: 110.0,
                                                                        timestamp: 1625097600000,
@@ -366,9 +363,8 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: ExchangeVariant::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: ClickhousePublicTrade {
-                                             // exchange: "binance".to_string(),
-                                             symbol: "BTCUSDT".to_string(),
+                                         kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
+                                                                       symbol: "BTCUSDT".to_string(),
                                                                        side: "sell".to_string(),
                                                                        price: 95.0,
                                                                        timestamp: 1625097600000,
@@ -382,9 +378,8 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: ExchangeVariant::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: ClickhousePublicTrade {
-                                             // exchange: "binance".to_string(),
-                                             symbol: "BTCUSDT".to_string(),
+                                         kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
+                                                                       symbol: "BTCUSDT".to_string(),
                                                                        side: "sell".to_string(),
                                                                        price: 100.0,
                                                                        timestamp: 1625097600000,
@@ -402,9 +397,8 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: ExchangeVariant::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: ClickhousePublicTrade {
-                                             // exchange: "binance".to_string(),
-                                             symbol: "BTCUSDT".to_string(),
+                                         kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
+                                                                       symbol: "BTCUSDT".to_string(),
                                                                        side: "sell".to_string(),
                                                                        price: 100.0,
                                                                        timestamp: 1625097600000,
@@ -432,9 +426,8 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: ExchangeVariant::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: ClickhousePublicTrade {
-                                             // exchange: "binance".to_string(),
-                                             symbol: "BTCUSDT".to_string(),
+                                         kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
+                                                                       symbol: "BTCUSDT".to_string(),
                                                                        side: "buy".to_string(),
                                                                        price: 100.0,
                                                                        timestamp: 1625097600000,
@@ -448,9 +441,8 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: ExchangeVariant::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: ClickhousePublicTrade {
-                                             // exchange: "binance".to_string(),
-                                             symbol: "BTCUSDT".to_string(),
+                                         kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
+                                                                       symbol: "BTCUSDT".to_string(),
                                                                        side: "buy".to_string(),
                                                                        price: 105.0,
                                                                        timestamp: 1625097600000,
@@ -468,9 +460,8 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: ExchangeVariant::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: ClickhousePublicTrade {
-                                             // exchange: "binance".to_string(),
-                                             symbol: "BTCUSDT".to_string(),
+                                         kind: ClickhousePublicTrade { // exchange: "binance".to_string(),
+                                                                       symbol: "BTCUSDT".to_string(),
                                                                        side: "buy".to_string(),
                                                                        price: 100.0,
                                                                        timestamp: 1625097600000,
@@ -501,7 +492,7 @@ mod tests
                 assert_eq!(trade.price, 100.0);
                 assert_eq!(trade.quantity, 1.0);
                 assert_eq!(trade.fees, 1.0); // 100 * 1 * 0.01 = 1.0
-                // assert_eq!(trade.count, 1); // 确保 count 为 1
+                                             // assert_eq!(trade.count, 1); // 确保 count 为 1
             }
             | Err(e) => panic!("Test failed with error: {:?}", e),
         }
