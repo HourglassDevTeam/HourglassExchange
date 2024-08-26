@@ -5,13 +5,19 @@ use crate::sandbox::sandbox_client::SandBoxClientEvent;
 use serde::Deserialize;
 use tokio::sync::oneshot;
 
-// 定义网络事件结构体
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct NetworkEvent {
     pub(crate) event_type: String,
-    payload: String, // TODO 解析payload的方法未实现。
-    // TODO 根据实际需要添加其他字段
+    pub(crate) payload: String, // TODO 解析payload的方法未实现。
+    pub(crate) timestamp: i64, // UNIX 时间戳
+    pub(crate) source: String, // 事件来源
+    pub(crate) destination: String, // 事件目的地
+    pub(crate) event_id: String, // 唯一事件 ID
+    pub(crate) version: String, // 事件版本号
+    pub(crate) correlation_id: Option<String>, // 关联 ID (可选)
+    pub(crate) priority: Option<u8>, // 优先级 (可选)
+    pub(crate) retry_count: u8, // 重试次数
 }
 
 
