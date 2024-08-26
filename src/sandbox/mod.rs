@@ -6,6 +6,7 @@ use warp::Filter;
 
 use crate::network::event::NetworkEvent;
 use crate::{error::ExecutionError, sandbox::sandbox_client::SandBoxClientEvent};
+use crate::network::is_port_in_use;
 
 pub mod account;
 pub mod clickhouse_api;
@@ -41,6 +42,14 @@ impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 's
 
     /// 网络运行 [`SandBoxExchange`]，并从网络接收事件
     pub async fn run_online(mut self) {
+        let address = ([127, 0, 0, 1], 3030);
+
+        // 检查端口是否已经被占用
+        if is_port_in_use(address) {
+            eprintln!("Port {} is already in use. Please choose another port.", address.1);
+            return;
+        }
+
         // 创建一个通道，用于内部事件传递
         let (event_tx, _event_rx) = mpsc::unbounded_channel();
 
@@ -67,7 +76,7 @@ impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 's
             });
 
         // 启动 warp 服务器
-        let warp_server = warp::serve(route).run(([127, 0, 0, 1], 3030));
+        let warp_server = warp::serve(route).run(address);
 
         // 同时运行 warp 服务器和事件处理逻辑
         tokio::select! {
@@ -75,6 +84,7 @@ impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 's
             _ = self.process_events() => {},
         }
     }
+
 
     /// 处理接收到的内部事件
     async fn process_events(&mut self) {
