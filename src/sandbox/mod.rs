@@ -5,7 +5,7 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use warp::Filter;
 
-use crate::network::NetworkEvent;
+use crate::network::event::NetworkEvent;
 use crate::{error::ExecutionError, sandbox::sandbox_client::SandBoxClientEvent};
 
 pub mod account;
