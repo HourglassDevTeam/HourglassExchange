@@ -1,11 +1,11 @@
 use account::Account;
-use serde::Deserialize;
-use std::fmt::Debug;
 use mpsc::UnboundedReceiver;
+use std::fmt::Debug;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use warp::Filter;
 
+use crate::network::NetworkEvent;
 use crate::{error::ExecutionError, sandbox::sandbox_client::SandBoxClientEvent};
 
 pub mod account;
@@ -16,34 +16,6 @@ pub mod sandbox_orderbook;
 pub mod utils;
 pub mod ws_trade;
 
-
-// 定义网络事件结构体
-#[derive(Debug, Deserialize)]
-struct NetworkEvent {
-    event_type: String,
-    _payload: String, // TODO 解析payload的方法未实现。
-    // TODO 根据实际需要添加其他字段
-}
-
-
-#[allow(dead_code)]
-impl NetworkEvent {
-    pub fn parse_payload(&self) -> Result<SandBoxClientEvent, String> {
-        match self.event_type.as_str() {
-            "FetchOrdersOpen" => {
-                // 解析 payload 为对应的数据类型
-                let (response_tx, _response_rx) = oneshot::channel();
-                Ok(SandBoxClientEvent::FetchOrdersOpen(response_tx))
-            }
-            "FetchBalances" => {
-                let (response_tx, _response_rx) = oneshot::channel();
-                Ok(SandBoxClientEvent::FetchBalances(response_tx))
-            }
-            // 根据不同的事件类型解析不同的 payload
-            _ => Err("Unknown event type".to_string()),
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct SandBoxExchange<Event>

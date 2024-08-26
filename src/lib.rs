@@ -18,6 +18,7 @@ pub mod common_infrastructure;
 pub mod error;
 pub mod okex;
 pub mod sandbox;
+pub mod network;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
