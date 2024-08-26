@@ -58,11 +58,11 @@ impl AccountPositions
         let maker_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
         let taker_rate = config.get_taker_fee_rate(&trade.instrument.kind)?;
         // NOTE 计算初始保证金
-        let initial_margin = trade.price * trade.size / config.account_leverage_rate;
+        let initial_margin = trade.price * trade.quantity / config.account_leverage_rate;
         // 计算费用
-        let maker_fee = trade.size * trade.price * maker_rate;
-        let taker_fee = trade.size * trade.price * taker_rate;
-        let funding_fee = trade.size * trade.price * config.funding_rate;
+        let maker_fee = trade.quantity * trade.price * maker_rate;
+        let taker_fee = trade.quantity * trade.price * taker_rate;
+        let funding_fee = trade.quantity * trade.price * config.funding_rate;
 
         // 根据 Instrument 和 Side 动态生成 position_id
         let position_meta = PositionMetaBuilder::new().position_id(format!("{}_{}", trade.instrument, if trade.side == Side::Buy { "Long" } else { "Short" }))
@@ -71,12 +71,12 @@ impl AccountPositions
                                                       .exit_balance(TokenBalance { // 初始化为 exit_balance
                                                                                    token: trade.instrument.base.clone(),
                                                                                    balance: Balance { current_price: trade.price,
-                                                                                                      total: trade.size,
-                                                                                                      available: trade.size } })
+                                                                                                      total: trade.quantity,
+                                                                                                      available: trade.quantity } })
                                                       .exchange(ExchangeVariant::SandBox)
                                                       .instrument(trade.instrument.clone())
                                                       .side(trade.side)
-                                                      .current_size(trade.size)
+                                                      .current_size(trade.quantity)
                                                       .current_fees_total(Fees::Perpetual(PerpetualFees { maker_fee,
                                                                                                           taker_fee, // 假设平仓费率与开仓费率相同
                                                                                                           funding_fee }))
@@ -90,10 +90,10 @@ impl AccountPositions
 
         // 计算 liquidation_price
         let liquidation_price = if trade.side == Side::Buy {
-            trade.price * (1.0 - initial_margin / (trade.size * trade.price))
+            trade.price * (1.0 - initial_margin / (trade.quantity * trade.price))
         }
         else {
-            trade.price * (1.0 + initial_margin / (trade.size * trade.price))
+            trade.price * (1.0 + initial_margin / (trade.quantity * trade.price))
         };
         let pos_config = PerpetualPositionConfig { pos_margin_mode,
                                                    leverage: config.account_leverage_rate,

@@ -442,19 +442,19 @@ impl<Event> AccountState<Event> where Event: Clone + Send + Sync + Debug + 'stat
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let (base_delta, quote_delta) = match side {
                     | Side::Buy => {
-                        let base_increase = trade.size - fee;
+                        let base_increase = trade.quantity - fee;
                         // Note: available was already decreased by the opening of the Side::Buy order
                         let base_delta = BalanceDelta { total: base_increase,
                                                         available: base_increase };
-                        let quote_delta = BalanceDelta { total: -trade.size * trade.price,
+                        let quote_delta = BalanceDelta { total: -trade.quantity * trade.price,
                                                          available: 0.0 };
                         (base_delta, quote_delta)
                     }
                     | Side::Sell => {
                         // Note: available was already decreased by the opening of the Side::Sell order
-                        let base_delta = BalanceDelta { total: -trade.size,
+                        let base_delta = BalanceDelta { total: -trade.quantity,
                                                         available: 0.0 };
-                        let quote_increase = (trade.size * trade.price) - fee;
+                        let quote_increase = (trade.quantity * trade.price) - fee;
                         let quote_delta = BalanceDelta { total: quote_increase,
                                                          available: quote_increase };
                         (base_delta, quote_delta)

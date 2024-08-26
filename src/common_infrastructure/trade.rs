@@ -10,8 +10,7 @@ pub struct ClientTrade
     pub instrument: Instrument,
     pub side: Side,
     pub price: f64,
-    pub size: f64,
-    pub count: i64,
+    pub quantity: f64,
     pub fees: f64,
 }
 

@@ -221,15 +221,11 @@ impl InstrumentOrders
     {
         let fee = trade_quantity * order.state.price * fees_percent;
 
-        // 尝试将 OrderId 转换为 TradeId
-        let trade_id = order.state.id.0.parse::<i64>().map_err(|_| ExecutionError::InvalidID)?;
-
-        Ok(ClientTrade { id: ClientTradeId(trade_id),
+        Ok(ClientTrade { id: self.batch_id.into(),
                          instrument: order.instrument.clone(),
                          side: order.side,
                          price: order.state.price,
-                         size: trade_quantity,
-                         count: self.batch_id, // NOTE 假设每笔交易计数为1，可以根据实际情况调整
+                         quantity: trade_quantity,
                          fees: fee })
     }
 
@@ -489,7 +485,7 @@ mod tests
     #[test]
     fn test_generate_trade_event_success()
     {
-        let instrument_orders = InstrumentOrders { batch_id: 0,
+        let instrument_orders = InstrumentOrders { batch_id: 1234,
                                                    bids: Vec::new(),
                                                    asks: Vec::new() };
 
@@ -499,31 +495,14 @@ mod tests
 
         match trade_event {
             | Ok(trade) => {
-                assert_eq!(trade.id, ClientTradeId(12345));
+                assert_eq!(trade.id, ClientTradeId(1234));
                 assert_eq!(trade.price, 100.0);
-                assert_eq!(trade.size, 1.0);
+                assert_eq!(trade.quantity, 1.0);
                 assert_eq!(trade.fees, 1.0); // 100 * 1 * 0.01 = 1.0
                 // assert_eq!(trade.count, 1); // 确保 count 为 1
             }
             | Err(e) => panic!("Test failed with error: {:?}", e),
         }
-    }
-
-    // 测试 generate_trade_event 方法处理无效 OrderId 时是否正确返回 ExecutionError::InvalidID。
-    #[test]
-    fn test_generate_trade_event_invalid_order_id()
-    {
-        let instrument_orders = InstrumentOrders { batch_id: 0,
-                                                   bids: Vec::new(),
-                                                   asks: Vec::new() };
-
-        // 创建一个无效的 OrderId
-        let mut order = create_order(Side::Buy, 100.0, 1.0);
-        order.state.id = OrderId("invalid_id".into()); // 设置一个无法解析为 i64 的 ID
-
-        // 预期 generate_trade_event 返回 InvalidID 错误
-        let result = instrument_orders.generate_trade_event(&order, 1.0, 0.01);
-        assert!(matches!(result, Err(ExecutionError::InvalidID))); // 检查返回结果是否为 InvalidID 错误
     }
 
     #[test]
