@@ -102,6 +102,11 @@ pub struct Open
     // pub expired_ts:i64, /* 交易所订单过期时间 NOTE this might be only applicable in a sandbox exchange.*/
 }
 
+
+
+
+
+
 impl Open
 {
     pub fn remaining_quantity(&self) -> f64
