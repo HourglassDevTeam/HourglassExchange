@@ -466,7 +466,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 let index = orders.bids
                                   .par_iter()
                                   .position_any(|bid| bid.state.id == request.state.id)
-                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                                  .ok_or(ExecutionError::OrderNotFound(request.client_order_id))?;
                 orders.bids.remove(index)
             }
             | Side::Sell => {
@@ -474,7 +474,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                 let index = orders.asks
                                   .par_iter()
                                   .position_any(|ask| ask.state.id == request.state.id)
-                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                                  .ok_or(ExecutionError::OrderNotFound(request.client_order_id))?;
                 orders.asks.remove(index)
             }
         };
@@ -521,7 +521,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
                                                                                               instrument: order.instrument,
                                                                                               side: order.side,
                                                                                               kind: order.kind,
-                                                                                              cid: order.cid,
+                                                                                              client_order_id: order.client_order_id,
                                                                                               exchange: ExchangeVariant::SandBox,
                                                                                               client_ts: 0 })
                                                                          .collect();

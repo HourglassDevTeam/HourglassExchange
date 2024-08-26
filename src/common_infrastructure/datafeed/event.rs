@@ -11,7 +11,7 @@ use crate::{
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade, ws_trade::WsTrade},
     ExchangeVariant,
 };
-use crate::common_infrastructure::trade::TradeId;
+use crate::common_infrastructure::trade::ClientTradeId;
 
 // 定义一个泛型结构体 MarketEvent，包含各种交易市场事件信息
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
@@ -67,7 +67,7 @@ impl From<MarketEvent<WsTrade>> for MarketEvent<DataKind>
 impl From<Order<FullyFill>> for MarketEvent<ClientTrade> {
     fn from(order: Order<FullyFill>) -> Self {
         let client_trade = ClientTrade {
-            id: TradeId(order.state.id.0.parse().unwrap_or_default()),
+            id: ClientTradeId(order.state.id.0.parse().unwrap_or_default()),
             instrument: order.instrument.clone(),
             side: order.side,
             price: order.state.price,
@@ -90,7 +90,7 @@ impl From<Order<FullyFill>> for MarketEvent<ClientTrade> {
 impl From<Order<PartialFill>> for MarketEvent<ClientTrade> {
     fn from(order: Order<PartialFill>) -> Self {
         let client_trade = ClientTrade {
-            id: TradeId(order.state.id.0.parse().unwrap_or_default()),
+            id: ClientTradeId(order.state.id.0.parse().unwrap_or_default()),
             instrument: order.instrument.clone(),
             side: order.side,
             price: order.state.price,

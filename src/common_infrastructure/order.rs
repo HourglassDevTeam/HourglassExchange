@@ -48,7 +48,7 @@ pub struct Order<State>
     pub exchange: ExchangeVariant, // 交易所
     pub instrument: Instrument,    // 交易工具
     pub client_ts: i64,            // 客户端下单时间
-    pub cid: ClientOrderId,        // 客户端订单ID
+    pub client_order_id: ClientOrderId,        // 客户端订单ID
     pub side: Side,                // 买卖方向
     pub state: State,              // 订单状态
 }
@@ -192,7 +192,7 @@ impl From<Order<Open>> for Order<Cancelled>
         Self { kind: order.kind,
                exchange: order.exchange,
                instrument: order.instrument.clone(),
-               cid: order.cid,
+               client_order_id: order.client_order_id,
                client_ts: order.client_ts,
                side: order.side,
                state: Cancelled { id: order.state.id } }

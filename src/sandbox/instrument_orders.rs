@@ -8,7 +8,7 @@ use crate::{
         friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees},
         instrument::kind::InstrumentKind,
         order::{Open, Order},
-        trade::{ClientTrade, TradeId},
+        trade::{ClientTrade, ClientTradeId},
         Side,
     },
     error::ExecutionError,
@@ -164,10 +164,10 @@ impl InstrumentOrders
         trades
     }
 
-    /// NOTE 目前暂时的做法是使用 `batch_id` 值为此 [`Instrument`] 市场生成唯一的 [`TradeId`]。
-    pub fn trade_id(&self) -> TradeId
+    /// NOTE 目前暂时的做法是使用 `batch_id` 值为此 [`Instrument`] 市场生成唯一的 [`ClientTradeId`]。
+    pub fn trade_id(&self) -> ClientTradeId
     {
-        TradeId(self.batch_id)
+        ClientTradeId(self.batch_id)
     }
 
     pub fn match_asks(&mut self, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64) -> Vec<ClientTrade>
@@ -224,7 +224,7 @@ impl InstrumentOrders
         // 尝试将 OrderId 转换为 TradeId
         let trade_id = order.state.id.0.parse::<i64>().map_err(|_| ExecutionError::InvalidID)?;
 
-        Ok(ClientTrade { id: TradeId(trade_id),
+        Ok(ClientTrade { id: ClientTradeId(trade_id),
                          instrument: order.instrument.clone(),
                          side: order.side,
                          price: order.state.price,
@@ -264,7 +264,7 @@ mod tests
                                          quote: Token::from("USDT"),
                                          kind: Default::default() },
                 client_ts: 0,
-                cid: ClientOrderId(Uuid::new_v4()),
+                client_order_id: ClientOrderId(Uuid::new_v4()),
                 side,
                 state: Open { id: OrderId("12345".into()), // 使用一个有效的 OrderId
                               price,
@@ -499,7 +499,7 @@ mod tests
 
         match trade_event {
             | Ok(trade) => {
-                assert_eq!(trade.id, TradeId(12345));
+                assert_eq!(trade.id, ClientTradeId(12345));
                 assert_eq!(trade.price, 100.0);
                 assert_eq!(trade.size, 1.0);
                 assert_eq!(trade.fees, 1.0); // 100 * 1 * 0.01 = 1.0
