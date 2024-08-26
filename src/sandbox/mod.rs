@@ -1,8 +1,9 @@
-use std::fmt::Debug;
-
-use tokio::sync::mpsc;
-
 use account::Account;
+use serde::Deserialize;
+use std::fmt::Debug;
+use tokio::sync::mpsc;
+use tokio::sync::oneshot;
+use warp::Filter;
 
 use crate::{error::ExecutionError, sandbox::sandbox_client::SandBoxClientEvent};
 
@@ -13,6 +14,16 @@ pub mod sandbox_client;
 pub mod sandbox_orderbook;
 pub mod utils;
 pub mod ws_trade;
+
+
+// 定义网络事件结构体
+#[derive(Debug, Deserialize)]
+struct NetworkEvent {
+    event_type: String,
+    _payload: String,
+    // 根据实际需要添加其他字段
+}
+
 
 #[derive(Debug)]
 pub struct SandBoxExchange<Event>
@@ -29,18 +40,63 @@ impl<Event> SandBoxExchange<Event> where Event: Clone + Send + Sync + Debug + 's
         ExchangeInitiator::new()
     }
 
-    /// 运行 [`SandBoxExchange`] 并响应各种[`SandBoxClientEvent`]。
-    pub async fn run(mut self)
-    {
-        // 不断接收并处理模拟事件。
+    pub async fn run(mut self) {
+        // 创建一个通道，用于内部事件传递
+        let (event_tx, _event_rx) = mpsc::unbounded_channel();
+
+        // 创建 warp 路由
+        let route = warp::path("event")
+            .and(warp::body::json())
+            .map(move |network_event: NetworkEvent| {
+                // 这里不需要再次克隆 event_tx_clone，直接使用 event_tx.clone()
+                let event_tx_clone = event_tx.clone();
+
+                // 异步处理网络事件并发送到通道
+                tokio::spawn(async move {
+                    // 这里不需要可变借用，因为 send 方法不要求可变引用
+                    let event = match network_event.event_type.as_str() {
+                        "FetchOrdersOpen" => {
+                            let (response_tx, _response_rx) = oneshot::channel();
+                            SandBoxClientEvent::FetchOrdersOpen(response_tx)
+                        }
+                        "FetchBalances" => {
+                            let (response_tx, _response_rx) = oneshot::channel();
+                            SandBoxClientEvent::FetchBalances(response_tx)
+                        }
+                        // 处理其他事件类型...
+                        _ => {
+                            eprintln!("Unknown event type");
+                            return;
+                        }
+                    };
+
+                    // 发送事件到通道
+                    event_tx_clone.send(event).expect("Failed to send event");
+                });
+
+                warp::reply::reply() // 这里不需要调用 warp::reply()
+            });
+
+        // 启动 warp 服务器
+        let warp_server = warp::serve(route).run(([127, 0, 0, 1], 3030));
+
+        // 同时运行 warp 服务器和事件处理逻辑
+        tokio::select! {
+        _ = warp_server => {}, // 如果 warp 服务器完成，则这里结束
+        _ = self.process_events() => {}, // 处理接收到的事件
+    }
+    }
+
+    /// 处理接收到的内部事件
+    async fn process_events(&mut self) {
         while let Some(event) = self.event_sandbox_rx.recv().await {
             match event {
-                | SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx).await,
-                | SandBoxClientEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx).await,
-                | SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => self.account.open_requests_into_pendings(open_requests, response_tx).await,
-                | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.cancel_orders(cancel_requests, response_tx).await,
-                | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.cancel_orders_all(response_tx).await,
-                | SandBoxClientEvent::FetchMarketEvent(market_event) => self.account.match_orders(market_event).await,
+                SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx).await,
+                SandBoxClientEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx).await,
+                SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => self.account.open_requests_into_pendings(open_requests, response_tx).await,
+                SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.cancel_orders(cancel_requests, response_tx).await,
+                SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.cancel_orders_all(response_tx).await,
+                SandBoxClientEvent::FetchMarketEvent(market_event) => self.account.match_orders(market_event).await,
             }
         }
     }
