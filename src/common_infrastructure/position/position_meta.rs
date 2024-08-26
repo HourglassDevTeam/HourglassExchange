@@ -238,3 +238,43 @@ impl PositionMetaBuilder
 }
 
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common_infrastructure::{
+        balance::{Balance, TokenBalance},
+        friction::{Fees, SpotFees},
+        instrument::{kind::InstrumentKind, Instrument},
+        token::Token,
+        order::OrderRole,
+        Side,
+    };
+
+    #[test]
+    fn test_position_meta_update_avg_price_gross() {
+        let mut meta = PositionMeta {
+            position_id: "test_position".to_string(),
+            enter_ts: 1625247600,
+            update_ts: 1625247601,
+            exit_balance: TokenBalance::new(Token::from("BTC"), Balance::new(0.0, 0.0, 0.0)),
+            exchange: Exchange::SandBox,
+            instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
+            side: Side::Buy,
+            current_size: 1.0,
+            current_fees_total: Fees::Spot(SpotFees {
+                maker_fee: 9.0,
+                taker_fee: 7.8,
+            }),
+            current_avg_price_gross: 50_000.0,
+            current_symbol_price: 61_000.0,
+            current_avg_price: 50_000.0,
+            unrealised_pnl: 11_000.0,
+            realised_pnl: 0.0,
+        };
+
+        meta.update_avg_price_gross(60_000.0, 1.0, OrderRole::Taker);
+
+        assert_eq!(meta.current_avg_price_gross, 55_000.0);
+        assert_eq!(meta.current_size, 2.0);
+    }
+}
