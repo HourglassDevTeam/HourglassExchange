@@ -272,7 +272,7 @@ async fn test_cancel_orders_all() {
     });
 
     // 模拟从 SandBoxClientEvent 接收器获取 CancelOrdersAll 事件
-    if let Some(SandBoxClientEvent::CancelOrdersAll(tx)) = request_rx.recv().await {
+    if let Some(CancelOrdersAll(tx)) = request_rx.recv().await {
         println!("Received CancelOrdersAll event");
 
         // 发送一个空的取消订单列表作为响应
