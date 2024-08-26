@@ -302,7 +302,7 @@ impl<Event> Account<Event> where Event: Clone + Send + Sync + Debug + 'static + 
         let current_price = market_event.kind.price;
 
         // 这里使用 `DashMap` 的 `iter()` 获取所有键值对，并提取键作为 `order_ids`
-        let order_ids: Vec<ClientOrderId> = self.orders.read().await.pending_registry.iter().map(|entry| entry.key().clone()).collect();
+        let order_ids: Vec<ClientOrderId> = self.orders.read().await.pending_registry.iter().map(|entry| *entry.key()).collect();
 
         // 遍历订单 ID 来处理每个订单
         for order_id in order_ids {

@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use mpsc::UnboundedSender;
+use oneshot::Sender;
 use tokio::sync::{mpsc, mpsc::UnboundedReceiver, oneshot};
 
 use crate::{
@@ -21,25 +22,31 @@ pub struct SandBoxClient
 }
 
 // NOTE 模拟交易所客户端可向模拟交易所发送的命令
+// 定义类型别名以简化复杂的类型
+type OpenOrderResults = Vec<Result<Order<Pending>, ExecutionError>>;
+type CancelOrderResults = Vec<Result<Order<Cancelled>, ExecutionError>>;
+type RequestOpenOrders = (Vec<Order<RequestOpen>>, Sender<OpenOrderResults>);
+type RequestCancelOrders = (Vec<Order<RequestCancel>>, Sender<CancelOrderResults>);
+
+// 模拟交易所客户端可向模拟交易所发送的命令
 #[derive(Debug)]
-pub enum SandBoxClientEvent
-{
+pub enum SandBoxClientEvent {
     FetchMarketEvent(MarketEvent<ClickhousePublicTrade>),
-    FetchOrdersOpen(oneshot::Sender<Result<Vec<Order<Open>>, ExecutionError>>),
-    FetchBalances(oneshot::Sender<Result<Vec<TokenBalance>, ExecutionError>>),
-    OpenOrders((Vec<Order<RequestOpen>>, oneshot::Sender<Vec<Result<Order<Pending>, ExecutionError>>>)),
-    CancelOrders((Vec<Order<RequestCancel>>, oneshot::Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)),
-    CancelOrdersAll(oneshot::Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>),
+    FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExecutionError>>),
+    FetchBalances(Sender<Result<Vec<TokenBalance>, ExecutionError>>),
+    OpenOrders(RequestOpenOrders),
+    CancelOrders(RequestCancelOrders),
+    CancelOrdersAll(Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>),
 }
 
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    // in our case the 'optional' config parameter in the sandbox exchange is an UnboundedSender
-    type Config = (UnboundedSender<SandBoxClientEvent>, UnboundedReceiver<SandBoxClientEvent>);
-
     // very naturally, the client's kind is determined by and aligned the exchange.
     const CLIENT_KIND: ExchangeVariant = ExchangeVariant::SandBox;
+
+    // in our case the 'optional' config parameter in the sandbox exchange is an UnboundedSender
+    type Config = (UnboundedSender<SandBoxClientEvent>, UnboundedReceiver<SandBoxClientEvent>);
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>, local_timestamp: i64) -> Self
     {

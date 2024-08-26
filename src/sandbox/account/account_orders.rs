@@ -94,7 +94,7 @@ impl AccountOrders
         // turn the request into an pending order with a predicted timestamp
         let latency = self.get_random_latency();
         let adjusted_client_ts = order.client_ts + latency;
-        let pending = Order { kind: order.kind,
+         Order { kind: order.kind,
                               exchange: order.exchange,
                               instrument: order.instrument,
                               client_order_id: order.client_order_id,
@@ -103,8 +103,7 @@ impl AccountOrders
                               state: Pending { reduce_only: order.state.reduce_only,
                                                price: order.state.price,
                                                size: order.state.size,
-                                               predicted_ts: adjusted_client_ts } };
-        pending
+                                               predicted_ts: adjusted_client_ts }}
     }
 
     pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError> {

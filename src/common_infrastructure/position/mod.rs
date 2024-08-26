@@ -169,40 +169,41 @@ impl AccountPositions
     }
 
     /// 检查账户中是否持有指定交易工具的仓位
-    pub(crate) fn has_position(&self, instrument: &Instrument) -> bool
-    {
+    /// 检查账户中是否持有指定交易工具的仓位
+    pub(crate) fn has_position(&self, instrument: &Instrument) -> bool {
         match instrument.kind {
             // 对于现货，检查余额而不是仓位
-            | InstrumentKind::Spot => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of Spot as of yet."),
+            InstrumentKind::Spot => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of Spot as of yet."),
             // 商品期权
-            | InstrumentKind::CommodityOption => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of CommodityOption as of yet."),
+            InstrumentKind::CommodityOption => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of CommodityOption as of yet."),
             // 商品期货
-            | InstrumentKind::CommodityFuture => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
+            InstrumentKind::CommodityFuture => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
             // 永续合约
-            | InstrumentKind::Perpetual => self.perpetual_pos
-                                               .as_ref() // 如果存在仓位列表
-                                               .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
-                    positions.iter().position(|pos| pos.meta.instrument == *instrument).is_some()),
+            InstrumentKind::Perpetual => self.perpetual_pos
+                .as_ref() // 如果存在仓位列表
+                .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
+                    positions.iter().any(|pos| pos.meta.instrument == *instrument)),
 
             // 普通期货
-            | InstrumentKind::Future => self.futures_pos
-                                            .as_ref()
-                                            .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
-                                                positions.iter().position(|pos| pos.meta.instrument == *instrument).is_some()),
+            InstrumentKind::Future => self.futures_pos
+                .as_ref()
+                .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
+                    positions.iter().any(|pos| pos.meta.instrument == *instrument)),
 
             // 加密期权
-            | InstrumentKind::CryptoOption => self.option_pos
-                                                  .as_ref()
-                                                  .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
-                                                      positions.iter().position(|pos| pos.meta.instrument == *instrument).is_some()),
+            InstrumentKind::CryptoOption => self.option_pos
+                .as_ref()
+                .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
+                    positions.iter().any(|pos| pos.meta.instrument == *instrument)),
 
             // 加密杠杆代币
-            | InstrumentKind::CryptoLeveragedToken => self.margin_pos
-                                                          .as_ref()
-                                                          .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
-                                                              positions.iter().position(|pos| pos.meta.instrument == *instrument).is_some()),
+            InstrumentKind::CryptoLeveragedToken => self.margin_pos
+                .as_ref()
+                .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
+                    positions.iter().any(|pos| pos.meta.instrument == *instrument)),
         }
     }
+
 }
 
 /// NOTE : PositionMode 枚举定义了两种交易方向模式：

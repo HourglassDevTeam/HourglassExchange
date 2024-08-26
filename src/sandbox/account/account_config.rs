@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use crate::{
     common_infrastructure::{
         instrument::kind::InstrumentKind,
@@ -8,6 +6,8 @@ use crate::{
     error::ExecutionError,
     sandbox::utils::config_parser::read_config_file,
 };
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountConfig {
@@ -110,6 +110,11 @@ pub struct AccountConfigInitiator {
     position_margin_mode: Option<PositionMarginMode>,
     commission_level: Option<CommissionLevel>,
     fund_fee_rate: Option<f64>,
+}
+impl Default for AccountConfigInitiator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AccountConfigInitiator {
