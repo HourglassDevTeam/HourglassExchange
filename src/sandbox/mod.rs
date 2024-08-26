@@ -1,6 +1,7 @@
 use account::Account;
 use serde::Deserialize;
 use std::fmt::Debug;
+use mpsc::UnboundedReceiver;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use warp::Filter;
@@ -29,7 +30,7 @@ struct NetworkEvent {
 pub struct SandBoxExchange<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
-    pub event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
+    pub event_sandbox_rx: UnboundedReceiver<SandBoxClientEvent>,
     pub account: Account<Event>,
 }
 
@@ -120,7 +121,7 @@ impl<Event> Default for ExchangeInitiator<Event> where Event: Clone + Send + Syn
 pub struct ExchangeInitiator<Event>
     where Event: Clone + Send + Sync + Debug + 'static + Ord
 {
-    event_sandbox_rx: Option<mpsc::UnboundedReceiver<SandBoxClientEvent>>,
+    event_sandbox_rx: Option<UnboundedReceiver<SandBoxClientEvent>>,
     account: Option<Account<Event>>,
 }
 
@@ -131,7 +132,7 @@ impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 
         Self { ..Default::default() }
     }
 
-    pub fn event_sandbox_rx(self, value: mpsc::UnboundedReceiver<SandBoxClientEvent>) -> Self
+    pub fn event_sandbox_rx(self, value: UnboundedReceiver<SandBoxClientEvent>) -> Self
     {
         Self { event_sandbox_rx: Some(value),
                ..self }
