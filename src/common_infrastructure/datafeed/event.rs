@@ -72,7 +72,7 @@ impl From<Order<FullyFill>> for MarketEvent<ClientTrade> {
             side: order.side,
             price: order.state.price,
             size: order.state.size,
-            count: 1, // 假设 fully filled 的订单只有一个 trade
+            // count: 1, // 假设 fully filled 的订单只有一个 trade
             fees: 0.0, // 根据你的逻辑调整 fees 计算
         };
 
@@ -95,7 +95,7 @@ impl From<Order<PartialFill>> for MarketEvent<ClientTrade> {
             side: order.side,
             price: order.state.price,
             size: order.state.size,
-            count: 1, // 假设部分成交的订单也只有一个 trade
+            // count: 1, // 假设部分成交的订单也只有一个 trade
             fees: 0.0, // 根据你的逻辑调整 fees 计算
         };
 

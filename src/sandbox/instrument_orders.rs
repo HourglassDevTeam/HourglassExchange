@@ -229,7 +229,7 @@ impl InstrumentOrders
                          side: order.side,
                          price: order.state.price,
                          size: trade_quantity,
-                         count: 1, // NOTE 假设每笔交易计数为1，可以根据实际情况调整
+                         // count: 1, // NOTE 假设每笔交易计数为1，可以根据实际情况调整
                          fees: fee })
     }
 
@@ -503,7 +503,7 @@ mod tests
                 assert_eq!(trade.price, 100.0);
                 assert_eq!(trade.size, 1.0);
                 assert_eq!(trade.fees, 1.0); // 100 * 1 * 0.01 = 1.0
-                assert_eq!(trade.count, 1); // 确保 count 为 1
+                // assert_eq!(trade.count, 1); // 确保 count 为 1
             }
             | Err(e) => panic!("Test failed with error: {:?}", e),
         }

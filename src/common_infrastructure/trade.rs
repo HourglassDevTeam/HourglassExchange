@@ -11,7 +11,7 @@ pub struct ClientTrade
     pub side: Side,
     pub price: f64,
     pub size: f64,
-    pub count: i64,
+    // pub count: i64,
     pub fees: f64,
 }
 
