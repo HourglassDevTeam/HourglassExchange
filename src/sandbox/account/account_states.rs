@@ -522,7 +522,7 @@ mod tests
             Account,
         },
     };
-    use futures::lock::Mutex;
+    use tokio::sync::Mutex; // 确保使用 tokio 的 Mutex
     use std::{
         collections::HashMap,
         sync::{atomic::AtomicI64, Arc, Weak},

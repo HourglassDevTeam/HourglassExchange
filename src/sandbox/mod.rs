@@ -122,8 +122,12 @@ impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 
 {
     pub fn new() -> Self
     {
-        Self { ..Default::default() }
+        Self {
+            event_sandbox_rx: None,
+            account: None,
+        }
     }
+
 
     pub fn event_sandbox_rx(self, value: UnboundedReceiver<SandBoxClientEvent>) -> Self
     {
@@ -141,4 +145,143 @@ impl<Event> ExchangeInitiator<Event> where Event: Clone + Send + Sync + Debug + 
         Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
                              account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::net::TcpListener;
+    use std::sync::{Arc, Weak};
+    use std::sync::atomic::AtomicI64;
+    use super::*;
+    use tokio::sync::Mutex; // 确保使用 tokio 的 Mutex
+
+    use tokio::sync::{mpsc, RwLock};
+    use crate::common_infrastructure::datafeed::public_event::PublicEvent;
+    use crate::common_infrastructure::position::{AccountPositions, PositionDirectionMode, PositionMarginMode};
+    use crate::sandbox::account::account_config::{AccountConfig, CommissionLevel, MarginMode};
+    use crate::sandbox::account::account_latency::{AccountLatency, FluctuationMode};
+    use crate::sandbox::account::account_market_feed::AccountDataStreams;
+    use crate::sandbox::account::account_orders::AccountOrders;
+    use crate::sandbox::account::account_states::AccountState;
+    use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
+
+    async fn create_test_account<Event>() -> Account<Event>
+    where
+        Event: Clone + Send + Sync + Debug + 'static + Ord
+    {
+        let leverage_rate = 1.0;
+
+        // 创建账户配置
+        let account_config = AccountConfig {
+            margin_mode: MarginMode::SingleCurrencyMargin,
+            position_mode: PositionDirectionMode::NetMode,
+            position_margin_mode: PositionMarginMode::Isolated,
+            commission_level: CommissionLevel::Lv1,
+            funding_rate: 0.0,
+            account_leverage_rate: leverage_rate,
+            fees_book: HashMap::new(),
+        };
+
+        // 创建账户状态
+        let balances = HashMap::new();
+        let positions = AccountPositions {
+            margin_pos: None,
+            perpetual_pos: None,
+            futures_pos: None,
+            option_pos: None,
+        };
+
+        let account_state = AccountState {
+            balances: balances.clone(),
+            positions: positions.clone(),
+            account_ref: Weak::new(),
+        };
+
+        // 包装为 Arc<Mutex<...>>
+        let account_state_arc = Arc::new(Mutex::new(account_state.clone()));
+
+        // 创建 Account 实例
+        let account = Account {
+            exchange_timestamp: AtomicI64::new(0),
+            data: Arc::new(RwLock::new(AccountDataStreams::default())),
+            account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+            market_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+            config: Arc::new(account_config),
+            states: account_state_arc.clone(),
+            orders: Arc::new(RwLock::new(AccountOrders::new(
+                vec![],
+                AccountLatency {
+                    fluctuation_mode: FluctuationMode::Sine,
+                    maximum: 0,
+                    minimum: 0,
+                    current_value: 0,
+                }
+            ).await)),
+        };
+
+        // 更新 account_ref，使其指向 Account
+        {
+            let mut account_state_locked = account_state_arc.lock().await;
+            account_state_locked.account_ref = Arc::downgrade(&Arc::new(account.clone()));
+        }
+
+        account
+    }
+
+    #[tokio::test]
+    async fn initiator_should_create_exchange_initiator_with_default_values() {
+        let initiator = ExchangeInitiator::<PublicEvent<ClickhousePublicTrade>>::new();
+        assert!(initiator.event_sandbox_rx.is_none());
+        assert!(initiator.account.is_none());
+    }
+
+    #[tokio::test]
+    async fn initiator_should_set_event_sandbox_rx() {
+        let (_tx, rx) = mpsc::unbounded_channel();
+        let initiator = ExchangeInitiator::<PublicEvent<ClickhousePublicTrade>>::new().event_sandbox_rx(rx);
+        assert!(initiator.event_sandbox_rx.is_some());
+    }
+
+    #[tokio::test]
+    async fn initiator_should_set_account() {
+        let account = create_test_account().await;
+        let initiator = ExchangeInitiator::<PublicEvent<ClickhousePublicTrade>>::new().account(account);
+        assert!(initiator.account.is_some());
+    }
+
+    #[tokio::test]
+    async fn initiator_should_return_error_if_event_sandbox_rx_is_missing() {
+        let account = create_test_account().await;
+        let initiator = ExchangeInitiator::<PublicEvent<ClickhousePublicTrade>>::new().account(account);
+        let result = initiator.initiate();
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn initiator_should_return_error_if_account_is_missing() {
+        let (_tx, rx) = mpsc::unbounded_channel();
+        let initiator = ExchangeInitiator::<PublicEvent<ClickhousePublicTrade>>::new().event_sandbox_rx(rx);
+        let result = initiator.initiate();
+        assert!(result.is_err());
+    }
+
+
+    #[tokio::test]
+    async fn run_online_should_return_if_port_is_in_use() {
+        // 占用端口 3030
+        let _listener = TcpListener::bind("127.0.0.1:3030").unwrap();
+
+        let (_tx, rx) = mpsc::unbounded_channel();
+        let account: Account<PublicEvent<ClickhousePublicTrade>> = create_test_account().await;
+        let exchange = SandBoxExchange {
+            event_sandbox_rx: rx,
+            account,
+        };
+        let address = ([127, 0, 0, 1], 3030);
+        assert!(is_port_in_use(address));
+        exchange.run_online().await;
+    }
+
+
 }

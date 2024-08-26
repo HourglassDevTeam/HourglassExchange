@@ -77,16 +77,14 @@
 /// 客户端在构建 `NetworkEvent` 时，需要确保提供的 `event_type` 是有效的，并且 `payload` 是与该事件类型匹配的有效数据。
 
 
-
 use crate::common_infrastructure::datafeed::public_event::PublicEvent;
 use crate::common_infrastructure::order::{Order, RequestCancel, RequestOpen};
 use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
 use crate::sandbox::sandbox_client::SandBoxClientEvent;
 use serde::Deserialize;
 use tokio::sync::oneshot;
-
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize,Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct NetworkEvent {
     pub event_type: String,
     pub payload: String, // TODO 解析payload的方法未实现。

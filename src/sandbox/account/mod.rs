@@ -1,5 +1,5 @@
 use crate::common_infrastructure::event::ClientOrderId;
-use futures::{future::join_all, lock::Mutex};
+use futures::{future::join_all};
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
@@ -10,7 +10,7 @@ use std::{
         Arc,
     },
 };
-use tokio::sync::{mpsc, oneshot, RwLock};
+use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 
 use account_config::AccountConfig;
