@@ -1,4 +1,4 @@
-use crate::common_infrastructure::datafeed::public_event::PublicEvent;
+use crate::common_infrastructure::datafeed::market_event::MarketEvent;
 /// # NetworkEvent 结构体
 ///
 /// `NetworkEvent` 是一个用于在网络中传递事件的结构体，包含了事件的类型和相关的负载数据（payload）。
@@ -128,7 +128,7 @@ impl NetworkEvent {
             }
             "FetchMarketEvent" => {
                 // 解析 payload 为 MarketEvent<ClickhousePublicTrade> 类型
-                let market_event: PublicEvent<ClickhousePublicTrade> = serde_json::from_str(&self.payload)
+                let market_event: MarketEvent<ClickhousePublicTrade> = serde_json::from_str(&self.payload)
                     .map_err(|e| format!("Failed to parse FetchMarketEvent payload: {}", e))?;
                 Ok(SandBoxClientEvent::FetchMarketEvent(market_event))
             }

@@ -1,4 +1,4 @@
-use crate::common_infrastructure::datafeed::public_event::PublicEvent;
+use crate::common_infrastructure::datafeed::market_event::MarketEvent;
 use async_trait::async_trait;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
@@ -32,7 +32,7 @@ type RequestCancelOrders = (Vec<Order<RequestCancel>>, Sender<CancelOrderResults
 #[derive(Debug)]
 pub enum SandBoxClientEvent
 {
-    FetchMarketEvent(PublicEvent<ClickhousePublicTrade>),
+    FetchMarketEvent(MarketEvent<ClickhousePublicTrade>),
     FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExecutionError>>),
     FetchBalances(Sender<Result<Vec<TokenBalance>, ExecutionError>>),
     OpenOrders(RequestOpenOrders),

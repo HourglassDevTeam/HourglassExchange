@@ -1,4 +1,4 @@
-use crate::common_infrastructure::datafeed::public_event::PublicEvent;
+use crate::common_infrastructure::datafeed::market_event::MarketEvent;
 /// NOTE code below is to be merged later
 use serde::{Deserialize, Serialize};
 
@@ -31,7 +31,7 @@ pub struct WsTrade
 }
 
 // NOTE 这是按照Okex交易所API数据类型构建的 WebsocketTrade 数据结构，回测选用。
-impl PublicEvent<WsTrade>
+impl MarketEvent<WsTrade>
 {
     pub fn from_ws_trade(ws_trade: WsTrade, base: String, quote: String, instrument: InstrumentKind) -> Self
     {
@@ -42,7 +42,7 @@ impl PublicEvent<WsTrade>
                                       quote: Token::from(quote),
                                       kind: instrument };
 
-        PublicEvent { exchange_time,
+        MarketEvent { exchange_time,
                       received_time,
                       exchange: Exchange::SandBox,
 
@@ -52,7 +52,7 @@ impl PublicEvent<WsTrade>
 }
 
 // NOTE 这是按照Clickhouse中存储的数据类型构建的 WebsocketTrade 数据结构，回测选用。
-impl PublicEvent<ClickhousePublicTrade>
+impl MarketEvent<ClickhousePublicTrade>
 {
     pub fn from_swap_trade_clickhouse(trade: ClickhousePublicTrade, base: String, quote: String) -> Self
     {
@@ -63,7 +63,7 @@ impl PublicEvent<ClickhousePublicTrade>
                                       quote: Token::from(quote),
                                       kind: Perpetual };
 
-        PublicEvent { exchange_time,
+        MarketEvent { exchange_time,
                       received_time,
                       exchange: Exchange::SandBox,
                       instrument,

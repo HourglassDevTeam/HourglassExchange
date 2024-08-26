@@ -1,4 +1,4 @@
-use crate::common_infrastructure::datafeed::public_event::PublicEvent;
+use crate::common_infrastructure::datafeed::market_event::MarketEvent;
 use async_stream::stream;
 use chrono::NaiveDate;
 use clickhouse::query::RowCursor;
@@ -263,7 +263,7 @@ impl ClickHouseClient
                                                        channel: &'a str,
                                                        date: &'a str,
                                                        batch_size: usize)
-                                                       -> impl Stream<Item = PublicEvent<ClickhousePublicTrade>> + 'a
+                                                       -> impl Stream<Item = MarketEvent<ClickhousePublicTrade>> + 'a
     {
         stream! {
             let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
@@ -284,7 +284,7 @@ impl ClickHouseClient
                     Ok(trade_datas) => {
                         for trade_data in &trade_datas {
                             let (base, quote) = parse_base_and_quote(&trade_data.symbol);
-                            let market_event = PublicEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
+                            let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
                             yield market_event;
                         }
 
@@ -310,7 +310,7 @@ impl ClickHouseClient
                                                                  start_date: &str,
                                                                  end_date: &str,
                                                                  batch_size: usize)
-                                                                 -> Result<UnboundedReceiver<PublicEvent<ClickhousePublicTrade>>, ExecutionError>
+                                                                 -> Result<UnboundedReceiver<MarketEvent<ClickhousePublicTrade>>, ExecutionError>
     {
         let (tx, rx) = unbounded_channel();
         // 处理 start_date 解析，并映射到 ExecutionError
@@ -347,7 +347,7 @@ impl ClickHouseClient
                         | Ok(trade_datas) => {
                             for trade_data in &trade_datas {
                                 let (base, quote) = parse_base_and_quote(&trade_data.symbol);
-                                let market_event = PublicEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
+                                let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
                                 // println!("Sending market event: {:?}", market_event);
                                 if tx.send(market_event).is_err() {
                                     eprintln!("Failed to send market event");

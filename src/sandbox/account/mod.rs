@@ -1,4 +1,4 @@
-use crate::common_infrastructure::datafeed::public_event::PublicEvent;
+use crate::common_infrastructure::datafeed::market_event::MarketEvent;
 use crate::common_infrastructure::event::ClientOrderId;
 use futures::{future::join_all};
 use mpsc::UnboundedSender;
@@ -276,7 +276,7 @@ impl Account
         }
     }
 
-    pub async fn match_orders(&mut self, market_event: PublicEvent<ClickhousePublicTrade>)
+    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhousePublicTrade>)
     {
         let current_price = market_event.kind.price;
 
@@ -346,7 +346,7 @@ impl Account
         }
     }
 
-    fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &PublicEvent<ClickhousePublicTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade>
+    fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade>
     {
         match side {
             | Side::Buy => orders.match_bids(market_event, fees_percent),
