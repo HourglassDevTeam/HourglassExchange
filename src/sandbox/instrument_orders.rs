@@ -14,6 +14,7 @@ use crate::{
     error::ExecutionError,
     sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade,
 };
+use crate::common_infrastructure::event::ClientOrderId;
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
@@ -221,8 +222,9 @@ impl InstrumentOrders
     {
         let fee = trade_quantity * order.state.price * fees_percent;
 
-        Ok(ClientTrade { id: self.batch_id.into(),
-                         instrument: order.instrument.clone(),
+        Ok(ClientTrade { trade_id: self.batch_id.into(),
+            order_id: ClientOrderId(order.client_order_id.0),
+            instrument: order.instrument.clone(),
                          side: order.side,
                          price: order.state.price,
                          quantity: trade_quantity,
@@ -495,7 +497,7 @@ mod tests
 
         match trade_event {
             | Ok(trade) => {
-                assert_eq!(trade.id, ClientTradeId(1234));
+                assert_eq!(trade.trade_id, ClientTradeId(1234));
                 assert_eq!(trade.price, 100.0);
                 assert_eq!(trade.quantity, 1.0);
                 assert_eq!(trade.fees, 1.0); // 100 * 1 * 0.01 = 1.0
