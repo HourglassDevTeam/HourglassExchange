@@ -198,9 +198,9 @@ impl ClickHouseClient
 
         // 假设你要创建的表使用MergeTree引擎并按timestamp排序 NOTE this ought to be replaced with ReplacingMergeTree Engine in due course.
         let final_query = format!(
-                                  "CREATE TABLE {}.{} ENGINE = MergeTree() \
+                                  "CREATE TABLE {}.{} ENGINE = ReplacingMergeTree() \
         PARTITION BY toYYYYMMDD(toDate(timestamp)) \
-        ORDER BY timestamp AS {}",
+        ORDER BY (timestamp,symbol,side) AS {}",
                                   database, new_table_name, union_all_query
         );
 
