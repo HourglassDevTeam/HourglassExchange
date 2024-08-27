@@ -251,7 +251,7 @@ impl ClickHouseClient
     {
         let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
         let database = self.construct_database_name(exchange, instrument, "trades");
-        let query = format!("SELECT * FROM {}.{} ORDER BY timestamp", database, table_name);
+        let query = format!("SELECT * FROM {}.{} ORDER BY (timestamp,id)", database, table_name);
         println!("[UniLinkExecution] : Executing query: {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<MarketTrade>().await?;
         Ok(trade_datas)
@@ -336,7 +336,7 @@ impl ClickHouseClient
                 loop {
                     let query = ClickHouseQueryBuilder::new().select("*")
                                                              .from(&database, &table_name)
-                                                             .order("timestamp", Some("ASC"))
+                                                             .order("(timestamp,id)", Some("ASC"))
                                                              .limit(batch_size)
                                                              .offset(offset)
                                                              .build();
@@ -383,9 +383,9 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
 
         // 使用 ClickHouseQueryBuilder 构造查询语句
-        let query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount")
+        let query = ClickHouseQueryBuilder::new().select("symbol, id, side, price, timestamp, amount")
                                                  .from(&database_name, &table_name)
-                                                 .order("timestamp", Some("DESC"))
+                                                 .order("(timestamp,id)", Some("DESC"))
                                                  .build();
 
         // println!("[UniLinkExecution] : Constructed query {}", query);
