@@ -75,11 +75,13 @@ impl BalanceDelta
 }
 
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
 
     #[test]
-    fn token_balance_new_should_create_token_balance() {
+    fn token_balance_new_should_create_token_balance()
+    {
         let token = Token::from("BTC");
         let balance = Balance::new(100.0, 50.0, 20000.0);
         let token_balance = TokenBalance::new(token.clone(), balance);
@@ -88,7 +90,8 @@ mod tests {
     }
 
     #[test]
-    fn token_balance_update_current_price_should_update_price() {
+    fn token_balance_update_current_price_should_update_price()
+    {
         let token = Token::from("BTC");
         let balance = Balance::new(100.0, 50.0, 20000.0);
         let mut token_balance = TokenBalance::new(token, balance);
@@ -97,7 +100,8 @@ mod tests {
     }
 
     #[test]
-    fn balance_new_should_create_balance() {
+    fn balance_new_should_create_balance()
+    {
         let balance = Balance::new(100.0, 50.0, 20000.0);
         assert_eq!(balance.total, 100.0);
         assert_eq!(balance.available, 50.0);
@@ -105,13 +109,15 @@ mod tests {
     }
 
     #[test]
-    fn balance_used_should_return_used_balance() {
+    fn balance_used_should_return_used_balance()
+    {
         let balance = Balance::new(100.0, 50.0, 20000.0);
         assert_eq!(balance.used(), 50.0);
     }
 
     #[test]
-    fn balance_apply_should_apply_balance_delta() {
+    fn balance_apply_should_apply_balance_delta()
+    {
         let mut balance = Balance::new(100.0, 50.0, 20000.0);
         let delta = BalanceDelta::new(10.0, 5.0);
         balance.apply(delta);
@@ -120,7 +126,8 @@ mod tests {
     }
 
     #[test]
-    fn balance_delta_new_should_create_balance_delta() {
+    fn balance_delta_new_should_create_balance_delta()
+    {
         let delta = BalanceDelta::new(10.0, 5.0);
         assert_eq!(delta.total, 10.0);
         assert_eq!(delta.available, 5.0);

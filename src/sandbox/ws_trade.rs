@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common_infrastructure::{
-
         instrument::{
             kind::{InstrumentKind, InstrumentKind::Perpetual},
             Instrument,

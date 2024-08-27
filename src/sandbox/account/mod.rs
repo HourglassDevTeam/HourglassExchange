@@ -1,6 +1,5 @@
-use crate::common_infrastructure::datafeed::market_event::MarketEvent;
-use crate::common_infrastructure::event::ClientOrderId;
-use futures::{future::join_all};
+use crate::common_infrastructure::{datafeed::market_event::MarketEvent, event::ClientOrderId};
+use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
@@ -44,9 +43,9 @@ pub mod account_states;
 pub struct Account
 {
     pub exchange_timestamp: AtomicI64,
-    pub account_event_tx: UnboundedSender<AccountEvent>,      // 帐户事件发送器
-    pub config: Arc<AccountConfig>,                           // 帐户配置
-    pub states: Arc<Mutex<AccountState>>,              // 帐户余额
+    pub account_event_tx: UnboundedSender<AccountEvent>, // 帐户事件发送器
+    pub config: Arc<AccountConfig>,                      // 帐户配置
+    pub states: Arc<Mutex<AccountState>>,                // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
 }
 
@@ -84,8 +83,7 @@ impl AccountInitiator
 {
     pub fn new() -> Self
     {
-        AccountInitiator {
-                           account_event_tx: None,
+        AccountInitiator { account_event_tx: None,
                            config: None,
                            states: None,
                            orders: None }
@@ -96,7 +94,6 @@ impl AccountInitiator
         self.account_event_tx = Some(value);
         self
     }
-
 
     pub fn config(mut self, value: AccountConfig) -> Self
     {
@@ -120,7 +117,7 @@ impl AccountInitiator
     {
         Ok(Account { exchange_timestamp: 0.into(),
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
-            config: self.config.ok_or("config is required")?,                               // 检查并获取config
+                     config: self.config.ok_or("config is required")?,                               // 检查并获取config
                      states: self.states.ok_or("balances is required")?,                             // 检查并获取balances
                      orders: self.orders.ok_or("orders are required")? })
     }
@@ -271,8 +268,13 @@ impl Account
     pub fn order_validity_check(kind: OrderExecutionType) -> Result<(), ExecutionError>
     {
         match kind {
-            | OrderExecutionType::Market | OrderExecutionType::Limit | OrderExecutionType::ImmediateOrCancel | OrderExecutionType::FillOrKill | OrderExecutionType::PostOnly | OrderExecutionType::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
-                                                                                                                                                                          * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
+            | OrderExecutionType::Market
+            | OrderExecutionType::Limit
+            | OrderExecutionType::ImmediateOrCancel
+            | OrderExecutionType::FillOrKill
+            | OrderExecutionType::PostOnly
+            | OrderExecutionType::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
+                                                               * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
     }
 

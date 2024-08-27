@@ -2,7 +2,7 @@ use crate::{
     common_infrastructure::{
         event::ClientOrderId,
         instrument::Instrument,
-        order::{Open, Order, OrderId, OrderExecutionType, OrderRole, Pending, RequestOpen},
+        order::{Open, Order, OrderExecutionType, OrderId, OrderRole, Pending, RequestOpen},
         Side,
     },
     error::ExecutionError,

@@ -509,7 +509,7 @@ mod tests
             event::ClientOrderId,
             friction::{Fees, FutureFees, PerpetualFees},
             instrument::{kind::InstrumentKind, Instrument},
-            order::{OrderId, OrderExecutionType, OrderRole},
+            order::{OrderExecutionType, OrderId, OrderRole},
             position::{future::FuturePositionConfig, perpetual::PerpetualPositionConfig, position_meta::PositionMeta, AccountPositions},
             token::Token,
         },
@@ -520,11 +520,11 @@ mod tests
             Account,
         },
     };
-    use tokio::sync::Mutex; // 确保使用 tokio 的 Mutex
     use std::{
         collections::HashMap,
         sync::{atomic::AtomicI64, Arc, Weak},
     };
+    use tokio::sync::Mutex; // 确保使用 tokio 的 Mutex
     use tokio::sync::{mpsc, RwLock};
     use uuid::Uuid;
 

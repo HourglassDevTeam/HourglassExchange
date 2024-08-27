@@ -8,9 +8,9 @@ use crate::{common_infrastructure::instrument::Instrument, Exchange};
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Deserialize, Serialize)]
 pub struct MarketEvent<Data>
 {
-    pub exchange_time: i64,        // 交易所时间戳
-    pub received_time: i64,        // 接收到数据的时间戳
-    pub exchange: Exchange, // 交易所信息
-    pub instrument: Instrument,    // 交易工具信息
-    pub kind: Data,                // 事件的具体类型 `WsTrade` / `ClickhousePublicTrade` / `ClientTrade` 等
+    pub exchange_time: i64,     // 交易所时间戳
+    pub received_time: i64,     // 接收到数据的时间戳
+    pub exchange: Exchange,     // 交易所信息
+    pub instrument: Instrument, // 交易工具信息
+    pub kind: Data,             // 事件的具体类型 `WsTrade` / `ClickhousePublicTrade` / `ClientTrade` 等
 }

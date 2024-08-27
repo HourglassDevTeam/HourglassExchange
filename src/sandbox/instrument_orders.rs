@@ -245,7 +245,7 @@ mod tests
         common_infrastructure::{
             event::ClientOrderId,
             instrument::Instrument,
-            order::{OrderId, OrderExecutionType, OrderRole},
+            order::{OrderExecutionType, OrderId, OrderRole},
             token::Token,
             Side,
         },
@@ -306,12 +306,12 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { // exchange: "binance".to_string(),
-                                                                       symbol: "BTCUSDT".to_string(),
-                                                                       side: "buy".to_string(),
-                                                                       price: 105.0,
-                                                                       timestamp: 1625097600000,
-                                                                       amount: 1.0 } };
+                                         kind: MarketTrade { exchange: "binance".to_string(),
+                                                             symbol: "BTCUSDT".to_string(),
+                                                             side: "buy".to_string(),
+                                                             price: 105.0,
+                                                             timestamp: 1625097600000,
+                                                             amount: 1.0 } };
 
         let matching_side = instrument_orders.determine_matching_side(&market_event);
         assert_eq!(matching_side, None);
@@ -321,12 +321,12 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { // exchange: "binance".to_string(),
-                                                                       symbol: "BTCUSDT".to_string(),
-                                                                       side: "buy".to_string(),
-                                                                       price: 100.0,
-                                                                       timestamp: 1625097600000,
-                                                                       amount: 1.0 } };
+                                         kind: MarketTrade { exchange: "binance".to_string(),
+                                                             symbol: "BTCUSDT".to_string(),
+                                                             side: "buy".to_string(),
+                                                             price: 100.0,
+                                                             timestamp: 1625097600000,
+                                                             amount: 1.0 } };
 
         let matching_side = instrument_orders.determine_matching_side(&market_event);
         assert_eq!(matching_side, Some(Side::Buy));
@@ -336,12 +336,12 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { // exchange: "binance".to_string(),
-                                                                       symbol: "BTCUSDT".to_string(),
-                                                                       side: "sell".to_string(),
-                                                                       price: 110.0,
-                                                                       timestamp: 1625097600000,
-                                                                       amount: 1.0 } };
+                                         kind: MarketTrade { exchange: "binance".to_string(),
+                                                             symbol: "BTCUSDT".to_string(),
+                                                             side: "sell".to_string(),
+                                                             price: 110.0,
+                                                             timestamp: 1625097600000,
+                                                             amount: 1.0 } };
 
         let matching_side = instrument_orders.determine_matching_side(&market_event);
         assert_eq!(matching_side, Some(Side::Sell));
@@ -362,12 +362,12 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { // exchange: "binance".to_string(),
-                                                                       symbol: "BTCUSDT".to_string(),
-                                                                       side: "sell".to_string(),
-                                                                       price: 95.0,
-                                                                       timestamp: 1625097600000,
-                                                                       amount: 1.0 } };
+                                         kind: MarketTrade { exchange: "binance".to_string(),
+                                                             symbol: "BTCUSDT".to_string(),
+                                                             side: "sell".to_string(),
+                                                             price: 95.0,
+                                                             timestamp: 1625097600000,
+                                                             amount: 1.0 } };
 
         let trades = InstrumentOrders::match_bids(&mut instrument_orders, &market_event, 0.01);
         assert_eq!(trades.len(), 1); // 价格匹配
@@ -377,12 +377,12 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { // exchange: "binance".to_string(),
-                                                                       symbol: "BTCUSDT".to_string(),
-                                                                       side: "sell".to_string(),
-                                                                       price: 100.0,
-                                                                       timestamp: 1625097600000,
-                                                                       amount: 1.0 } };
+                                         kind: MarketTrade { exchange: "binance".to_string(),
+                                                             symbol: "BTCUSDT".to_string(),
+                                                             side: "sell".to_string(),
+                                                             price: 100.0,
+                                                             timestamp: 1625097600000,
+                                                             amount: 1.0 } };
 
         let trades = instrument_orders.match_bids(&market_event, 0.01);
         assert_eq!(trades.len(), 0); // 价格匹配，但是之前的订单已经完成了，所以现在bids长度是0.
@@ -396,12 +396,12 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { // exchange: "binance".to_string(),
-                                                                       symbol: "BTCUSDT".to_string(),
-                                                                       side: "sell".to_string(),
-                                                                       price: 100.0,
-                                                                       timestamp: 1625097600000,
-                                                                       amount: 1.0 } };
+                                         kind: MarketTrade { exchange: "binance".to_string(),
+                                                             symbol: "BTCUSDT".to_string(),
+                                                             side: "sell".to_string(),
+                                                             price: 100.0,
+                                                             timestamp: 1625097600000,
+                                                             amount: 1.0 } };
 
         let trades = instrument_orders.match_bids(&market_event, 0.01);
         assert_eq!(trades.len(), 1); // 部分匹配
@@ -425,12 +425,12 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { // exchange: "binance".to_string(),
-                                                                       symbol: "BTCUSDT".to_string(),
-                                                                       side: "buy".to_string(),
-                                                                       price: 100.0,
-                                                                       timestamp: 1625097600000,
-                                                                       amount: 1.0 } };
+                                         kind: MarketTrade { exchange: "binance".to_string(),
+                                                             symbol: "BTCUSDT".to_string(),
+                                                             side: "buy".to_string(),
+                                                             price: 100.0,
+                                                             timestamp: 1625097600000,
+                                                             amount: 1.0 } };
 
         let trades = instrument_orders.match_asks(&market_event, 0.01);
         assert_eq!(trades.len(), 1); // 价格匹配成功
@@ -440,12 +440,12 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { // exchange: "binance".to_string(),
-                                                                       symbol: "BTCUSDT".to_string(),
-                                                                       side: "buy".to_string(),
-                                                                       price: 105.0,
-                                                                       timestamp: 1625097600000,
-                                                                       amount: 1.0 } };
+                                         kind: MarketTrade { exchange: "binance".to_string(),
+                                                             symbol: "BTCUSDT".to_string(),
+                                                             side: "buy".to_string(),
+                                                             price: 105.0,
+                                                             timestamp: 1625097600000,
+                                                             amount: 1.0 } };
 
         let trades = instrument_orders.match_asks(&market_event, 0.01);
         assert_eq!(trades.len(), 0); // ，价格匹配，但是之前的订单已经完成了，所以现在asks长度是0
@@ -459,12 +459,12 @@ mod tests
                                          received_time: 1625097610000,
                                          exchange: Exchange::Binance,
                                          instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { // exchange: "binance".to_string(),
-                                                                       symbol: "BTCUSDT".to_string(),
-                                                                       side: "buy".to_string(),
-                                                                       price: 100.0,
-                                                                       timestamp: 1625097600000,
-                                                                       amount: 1.0 } };
+                                         kind: MarketTrade { exchange: "binance".to_string(),
+                                                             symbol: "BTCUSDT".to_string(),
+                                                             side: "buy".to_string(),
+                                                             price: 100.0,
+                                                             timestamp: 1625097600000,
+                                                             amount: 1.0 } };
 
         let trades = instrument_orders.match_asks(&market_event, 0.01);
         assert_eq!(trades.len(), 1); // 部分匹配

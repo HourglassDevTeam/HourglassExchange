@@ -1,7 +1,7 @@
 use chrono::{Duration as ChronoDuration, NaiveDate};
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use unilink_execution::sandbox::{ clickhouse_api::queries_operations::ClickHouseClient};
+use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 
 #[tokio::main]
 async fn main()
@@ -28,7 +28,7 @@ async fn main()
         match cursor_result {
             | Ok(mut cursor) => {
                 // 创建通道
-                let (tx,_rx) = mpsc::unbounded_channel();
+                let (tx, _rx) = mpsc::unbounded_channel();
 
                 // 克隆 Arc 以在异步任务中使用
                 let date_str_clone = Arc::clone(&date_str);

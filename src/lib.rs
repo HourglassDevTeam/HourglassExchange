@@ -16,9 +16,9 @@ use crate::{
 mod binance;
 pub mod common_infrastructure;
 pub mod error;
+pub mod network;
 pub mod okex;
 pub mod sandbox;
-pub mod network;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
@@ -35,7 +35,6 @@ pub trait ClientExecution
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>>;
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>;
 }
-
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub enum Exchange
@@ -65,19 +64,21 @@ impl Exchange
     }
 }
 
-
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
 
     #[test]
-    fn test_exchange_variant_display() {
+    fn test_exchange_variant_display()
+    {
         let variant = Exchange::Okex;
         assert_eq!(format!("{}", variant), "okex");
     }
 
     #[test]
-    fn test_exchange_variant_as_str() {
+    fn test_exchange_variant_as_str()
+    {
         assert_eq!(Exchange::SandBox.as_str(), "sandbox");
         assert_eq!(Exchange::Binance.as_str(), "binance");
         assert_eq!(Exchange::Okex.as_str(), "okex");

@@ -62,19 +62,21 @@ impl Side
     }
 }
 
-
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
 
     #[test]
-    fn side_display_should_format_correctly() {
+    fn side_display_should_format_correctly()
+    {
         assert_eq!(format!("{}", Side::Buy), "buy");
         assert_eq!(format!("{}", Side::Sell), "sell");
     }
 
     #[test]
-    fn side_from_str_should_convert_correctly() {
+    fn side_from_str_should_convert_correctly()
+    {
         assert_eq!(Side::from_str("buy").unwrap(), Side::Buy);
         assert_eq!(Side::from_str("BUY").unwrap(), Side::Buy);
         assert_eq!(Side::from_str("b").unwrap(), Side::Buy);
@@ -84,12 +86,14 @@ mod tests {
     }
 
     #[test]
-    fn side_from_str_should_return_error_for_invalid_input() {
+    fn side_from_str_should_return_error_for_invalid_input()
+    {
         assert!(Side::from_str("invalid").is_err());
     }
 
     #[test]
-    fn side_toggle_should_switch_side() {
+    fn side_toggle_should_switch_side()
+    {
         assert_eq!(Side::Buy.toggle(), Side::Sell);
         assert_eq!(Side::Sell.toggle(), Side::Buy);
     }

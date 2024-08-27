@@ -107,32 +107,34 @@ impl InstrumentInitiator
     }
 }
 
-
 #[cfg(test)]
-mod tests {
+mod tests
+{
+    use crate::sandbox::ExchangeInitiator;
     use tokio::sync::mpsc;
-    use crate::sandbox::{ExchangeInitiator};
 
     #[tokio::test]
-    async fn initiator_should_create_exchange_initiator_with_default_values() {
+    async fn initiator_should_create_exchange_initiator_with_default_values()
+    {
         let initiator = ExchangeInitiator::new();
         assert!(initiator.event_sandbox_rx.is_none());
         assert!(initiator.account.is_none());
     }
 
     #[tokio::test]
-    async fn initiator_should_set_event_sandbox_rx() {
+    async fn initiator_should_set_event_sandbox_rx()
+    {
         let (_tx, rx) = mpsc::unbounded_channel();
         let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
         assert!(initiator.event_sandbox_rx.is_some());
     }
 
     #[tokio::test]
-    async fn initiator_should_return_error_if_account_is_missing() {
+    async fn initiator_should_return_error_if_account_is_missing()
+    {
         let (_tx, rx) = mpsc::unbounded_channel();
         let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
         let result = initiator.initiate();
         assert!(result.is_err());
     }
-
 }

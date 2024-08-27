@@ -17,7 +17,7 @@ use tokio::sync::{
 };
 
 use crate::{
-    common_infrastructure::{ Side},
+    common_infrastructure::Side,
     error::ExecutionError,
     sandbox::{
         clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, query_builder::ClickHouseQueryBuilder},
@@ -376,13 +376,7 @@ impl ClickHouseClient
         Ok(rx)
     }
 
-    pub async fn cursor_public_trades<'a>(&'a self,
-                                          exchange: &'a str,
-                                          instrument: &'a str,
-                                          date: &'a str,
-                                          base: &'a str,
-                                          quote: &'a str)
-                                          -> Result<RowCursor<MarketTrade>>
+    pub async fn cursor_public_trades<'a>(&'a self, exchange: &'a str, instrument: &'a str, date: &'a str, base: &'a str, quote: &'a str) -> Result<RowCursor<MarketTrade>>
     {
         // 构造数据库名称和表名称
         let database_name = self.construct_database_name(exchange, instrument, "trades");
@@ -521,19 +515,21 @@ impl ClickHouseClient
     }
 }
 
-
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
     // use chrono::NaiveDate;
 
-    async fn setup_clickhouse_client() -> ClickHouseClient {
+    async fn setup_clickhouse_client() -> ClickHouseClient
+    {
         // 假设 ClickHouse 在本地运行，且使用默认设置
         ClickHouseClient::new()
     }
 
     #[tokio::test]
-    async fn test_construct_table_name() {
+    async fn test_construct_table_name()
+    {
         let client = setup_clickhouse_client().await;
         let table_name = client.construct_table_name("binance", "futures", "trades", "2024_08_24", "BTC", "USDT");
         assert_eq!(table_name, "binance_futures_trades_2024_08_24_BTCUSDT");

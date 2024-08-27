@@ -40,44 +40,50 @@ impl Token
     }
 }
 
-
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
 
     #[test]
-    fn token_display_should_format_correctly() {
+    fn token_display_should_format_correctly()
+    {
         let token = Token::from("btc");
         assert_eq!(format!("{}", token), "BTC");
     }
 
     #[test]
-    fn token_as_ref_should_return_inner_string() {
+    fn token_as_ref_should_return_inner_string()
+    {
         let token = Token::from("eth");
         assert_eq!(token.as_ref(), "ETH");
     }
 
     #[test]
-    fn token_from_should_create_token_from_string() {
+    fn token_from_should_create_token_from_string()
+    {
         let token = Token::from("usdt");
         assert_eq!(token, Token::new("usdt"));
     }
 
     #[test]
-    fn token_new_should_create_token_with_uppercase() {
+    fn token_new_should_create_token_with_uppercase()
+    {
         let token = Token::new("xrp");
         assert_eq!(token.as_ref(), "XRP");
     }
 
     #[test]
-    fn token_equality_should_work_correctly() {
+    fn token_equality_should_work_correctly()
+    {
         let token1 = Token::from("btc");
         let token2 = Token::from("BTC");
         assert_eq!(token1, token2);
     }
 
     #[test]
-    fn token_ordering_should_work_correctly() {
+    fn token_ordering_should_work_correctly()
+    {
         let token1 = Token::from("btc");
         let token2 = Token::from("eth");
         assert!(token1 < token2);

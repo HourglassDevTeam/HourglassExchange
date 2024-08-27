@@ -63,17 +63,19 @@ pub struct RequestOpen
 }
 
 /// FIXME this comparison is now only for the tests below but could be ill-logic.
-impl PartialOrd for RequestOpen {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+impl PartialOrd for RequestOpen
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering>
+    {
         // First compare by `price`
         match self.price.partial_cmp(&other.price) {
-            Some(Ordering::Equal) => {},
-            non_eq => return non_eq,
+            | Some(Ordering::Equal) => {}
+            | non_eq => return non_eq,
         }
         // Then compare by `size`
         match self.size.partial_cmp(&other.size) {
-            Some(Ordering::Equal) => {},
-            non_eq => return non_eq,
+            | Some(Ordering::Equal) => {}
+            | non_eq => return non_eq,
         }
         // Finally compare by `reduce_only`
         Some(self.reduce_only.cmp(&other.reduce_only))
@@ -90,30 +92,30 @@ pub struct Pending
     pub(crate) predicted_ts: i64,
 }
 
-
 /// FIXME this comparison is now only for the tests below but could be ill-logic.
-impl PartialOrd for Pending {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+impl PartialOrd for Pending
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering>
+    {
         // First compare by `price`
         match self.price.partial_cmp(&other.price) {
-            Some(Ordering::Equal) => {},
-            non_eq => return non_eq,
+            | Some(Ordering::Equal) => {}
+            | non_eq => return non_eq,
         }
         // Then compare by `size`
         match self.size.partial_cmp(&other.size) {
-            Some(Ordering::Equal) => {},
-            non_eq => return non_eq,
+            | Some(Ordering::Equal) => {}
+            | non_eq => return non_eq,
         }
         // Then compare by `predicted_ts`
         match self.predicted_ts.partial_cmp(&other.predicted_ts) {
-            Some(Ordering::Equal) => {},
-            non_eq => return non_eq,
+            | Some(Ordering::Equal) => {}
+            | non_eq => return non_eq,
         }
         // Finally compare by `reduce_only`
         Some(self.reduce_only.cmp(&other.reduce_only))
     }
 }
-
 
 /// 在RequestCancel结构体中只记录OrderId的原因主要是因为取消订单操作通常只需要知道哪个订单需要被取消。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -168,7 +170,6 @@ pub struct PartialFill
     pub price: f64,
     pub size: f64,
 }
-
 
 #[derive(Debug, Copy, Clone, PartialOrd, Serialize, Deserialize, PartialEq)]
 pub enum OrderRole
@@ -241,11 +242,13 @@ impl From<Order<Open>> for Order<Cancelled>
 }
 
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
 
     #[test]
-    fn order_execution_type_display_should_format_correctly() {
+    fn order_execution_type_display_should_format_correctly()
+    {
         assert_eq!(format!("{}", OrderExecutionType::Market), "market");
         assert_eq!(format!("{}", OrderExecutionType::Limit), "limit");
         assert_eq!(format!("{}", OrderExecutionType::PostOnly), "post_only");
@@ -255,51 +258,63 @@ mod tests {
     }
 
     #[test]
-    fn request_open_should_be_comparable() {
-        let req1 = RequestOpen { reduce_only: true, price: 50.0, size: 1.0 };
-        let req2 = RequestOpen { reduce_only: false, price: 60.0, size: 2.0 };
+    fn request_open_should_be_comparable()
+    {
+        let req1 = RequestOpen { reduce_only: true,
+                                 price: 50.0,
+                                 size: 1.0 };
+        let req2 = RequestOpen { reduce_only: false,
+                                 price: 60.0,
+                                 size: 2.0 };
         assert!(req1 < req2);
     }
 
     #[test]
-    fn pending_should_be_comparable() {
-        let pending1 = Pending { reduce_only: true, price: 50.0, size: 1.0, predicted_ts: 1000 };
-        let pending2 = Pending { reduce_only: false, price: 60.0, size: 2.0, predicted_ts: 2000 };
+    fn pending_should_be_comparable()
+    {
+        let pending1 = Pending { reduce_only: true,
+                                 price: 50.0,
+                                 size: 1.0,
+                                 predicted_ts: 1000 };
+        let pending2 = Pending { reduce_only: false,
+                                 price: 60.0,
+                                 size: 2.0,
+                                 predicted_ts: 2000 };
         assert!(pending1 < pending2);
     }
 
     #[test]
-    fn request_cancel_should_create_from_order_id() {
+    fn request_cancel_should_create_from_order_id()
+    {
         let order_id = OrderId("123".to_string());
         let cancel_request: RequestCancel = order_id.clone().into();
         assert_eq!(cancel_request.id, order_id);
     }
 
     #[test]
-    fn open_order_remaining_quantity_should_be_calculated_correctly() {
-        let open_order = Open {
-            id: OrderId("123".to_string()),
-            price: 50.0,
-            size: 10.0,
-            filled_quantity: 3.0,
-            order_role: OrderRole::Maker,
-            received_ts: 1000,
-        };
+    fn open_order_remaining_quantity_should_be_calculated_correctly()
+    {
+        let open_order = Open { id: OrderId("123".to_string()),
+                                price: 50.0,
+                                size: 10.0,
+                                filled_quantity: 3.0,
+                                order_role: OrderRole::Maker,
+                                received_ts: 1000 };
         assert_eq!(open_order.remaining_quantity(), 7.0);
     }
 
-
     #[test]
-    fn order_id_should_convert_from_string() {
+    fn order_id_should_convert_from_string()
+    {
         let order_id: OrderId = "123".to_string().into();
         assert_eq!(order_id.0, "123");
     }
 
     #[test]
-    fn order_id_should_convert_to_cancelled() {
+    fn order_id_should_convert_to_cancelled()
+    {
         let order_id: OrderId = "123".to_string().into();
         let cancelled_order: Cancelled = order_id.into();
         assert_eq!(cancelled_order.id.0, "123");
     }
-
 }

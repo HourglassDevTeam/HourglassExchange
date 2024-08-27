@@ -62,20 +62,19 @@ impl TryFrom<String> for InstrumentKind
             | "Future" => Ok(InstrumentKind::Future),
             | "Option" => Ok(InstrumentKind::CryptoOption),
             | "Margin" => Ok(InstrumentKind::CryptoLeveragedToken),
-            _ => {
-                Err(format!("Unknown instrument kind: {}", s))
-            }
+            | _ => Err(format!("Unknown instrument kind: {}", s)),
         }
     }
 }
 
-
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
 
     #[test]
-    fn instrument_kind_display_should_format_correctly() {
+    fn instrument_kind_display_should_format_correctly()
+    {
         assert_eq!(format!("{}", InstrumentKind::Spot), "spot");
         assert_eq!(format!("{}", InstrumentKind::Perpetual), "perpetual");
         assert_eq!(format!("{}", InstrumentKind::Future), "future");
@@ -86,12 +85,14 @@ mod tests {
     }
 
     #[test]
-    fn instrument_kind_default_should_return_spot() {
+    fn instrument_kind_default_should_return_spot()
+    {
         assert_eq!(InstrumentKind::default(), InstrumentKind::Spot);
     }
 
     #[test]
-    fn instrument_kind_from_string_should_convert_correctly() {
+    fn instrument_kind_from_string_should_convert_correctly()
+    {
         assert_eq!(InstrumentKind::try_from("Spot".to_string()), Ok(InstrumentKind::Spot));
         assert_eq!(InstrumentKind::try_from("Perpetual".to_string()), Ok(InstrumentKind::Perpetual));
         assert_eq!(InstrumentKind::try_from("Future".to_string()), Ok(InstrumentKind::Future));
@@ -100,7 +101,8 @@ mod tests {
     }
 
     #[test]
-    fn instrument_kind_from_string_should_return_err_on_unknown_kind() {
+    fn instrument_kind_from_string_should_return_err_on_unknown_kind()
+    {
         let result = InstrumentKind::try_from("Unknown".to_string());
         assert!(result.is_err(), "Expected an error for unknown instrument kind");
     }
