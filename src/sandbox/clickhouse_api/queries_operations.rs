@@ -178,7 +178,7 @@ impl ClickHouseClient
         let total_tables = table_names.len();
 
         table_names.par_iter().enumerate().for_each(|(i, table_name)| {
-                                              let select_query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount") // Select required fields
+                                              let select_query = ClickHouseQueryBuilder::new().select("symbol, id, side, price, timestamp, amount") // Select required fields
                                                                                               .from(database, table_name) // Format the table name with database
                                                                                               .build(); // Build the individual query
 
