@@ -142,45 +142,45 @@ impl AccountState
     }
 
     /// 获取指定 `Instrument` 的仓位
-    pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<Position>, ExecutionError> {
+    pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<Position>, ExecutionError>
+    {
         let positions = &self.positions; // 获取锁
 
         match instrument.kind {
-            InstrumentKind::Spot => {
+            | InstrumentKind::Spot => {
                 return Err(ExecutionError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)));
             }
-            InstrumentKind::Perpetual => {
+            | InstrumentKind::Perpetual => {
                 let perpetual_positions = &positions.perpetual_pos;
                 if let Some(position) = perpetual_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                     return Ok(Some(Position::Perpetual(position.clone())));
                 }
             }
-            InstrumentKind::Future => {
+            | InstrumentKind::Future => {
                 let futures_positions = &positions.futures_pos;
                 if let Some(position) = futures_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                     return Ok(Some(Position::Future(position.clone())));
                 }
             }
-            InstrumentKind::CryptoOption => {
+            | InstrumentKind::CryptoOption => {
                 let option_positions = &positions.option_pos;
                 if let Some(position) = option_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                     return Ok(Some(Position::Option(position.clone())));
                 }
             }
-            InstrumentKind::CryptoLeveragedToken => {
+            | InstrumentKind::CryptoLeveragedToken => {
                 let margin_positions = &positions.margin_pos;
                 if let Some(position) = margin_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                     return Ok(Some(Position::LeveragedToken(position.clone())));
                 }
             }
-            InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
+            | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
                 todo!("Commodity positions are not yet implemented");
             }
         }
 
         Ok(None) // 没有找到对应的仓位
     }
-
 
     /// 更新指定 `Instrument` 的仓位
     pub async fn set_position(&mut self, position: Position) -> Result<(), ExecutionError>
@@ -206,7 +206,8 @@ impl AccountState
     /// # 返回值
     ///
     /// 如果更新成功，返回 `Ok(())`，否则返回一个 `ExecutionError`。
-    async fn set_perpetual_position(&mut self, pos: PerpetualPosition) -> Result<(), ExecutionError> {
+    async fn set_perpetual_position(&mut self, pos: PerpetualPosition) -> Result<(), ExecutionError>
+    {
         // 获取账户的锁，确保在更新仓位信息时没有并发访问的问题
         let positions = &mut self.positions;
 
@@ -217,14 +218,14 @@ impl AccountState
         if let Some(existing_pos) = perpetual_positions.iter_mut().find(|p| p.meta.instrument == pos.meta.instrument) {
             // 如果找到了相同的 `instrument`，则更新现有仓位信息
             *existing_pos = pos;
-        } else {
+        }
+        else {
             // 如果没有找到相同的 `instrument`，将新的仓位添加到永续合约仓位列表中
             perpetual_positions.push(pos);
         }
 
         Ok(())
     }
-
 
     /// 更新 FuturePosition 的方法（占位符）
     async fn set_future_position(&mut self, _pos: FuturePosition) -> Result<(), ExecutionError>
@@ -263,16 +264,16 @@ impl AccountState
         let positions_lock = &self.positions;
 
         match instrument.kind {
-            InstrumentKind::Spot => {
+            | InstrumentKind::Spot => {
                 return Err(ExecutionError::NotImplemented("Spot position conflict check not implemented".into()));
             }
-            InstrumentKind::CommodityOption => {
+            | InstrumentKind::CommodityOption => {
                 return Err(ExecutionError::NotImplemented("CommodityOption position conflict check not implemented".into()));
             }
-            InstrumentKind::CommodityFuture => {
+            | InstrumentKind::CommodityFuture => {
                 return Err(ExecutionError::NotImplemented("CommodityFuture position conflict check not implemented".into()));
             }
-            InstrumentKind::Perpetual => {
+            | InstrumentKind::Perpetual => {
                 let perpetual_positions = &positions_lock.perpetual_pos;
                 for pos in perpetual_positions {
                     if pos.meta.instrument == *instrument && pos.meta.side != side {
@@ -280,7 +281,7 @@ impl AccountState
                     }
                 }
             }
-            InstrumentKind::Future => {
+            | InstrumentKind::Future => {
                 let futures_positions = &positions_lock.futures_pos;
                 for pos in futures_positions {
                     if pos.meta.instrument == *instrument && pos.meta.side != side {
@@ -288,7 +289,7 @@ impl AccountState
                     }
                 }
             }
-            InstrumentKind::CryptoOption => {
+            | InstrumentKind::CryptoOption => {
                 let option_positions = &positions_lock.option_pos;
                 for pos in option_positions {
                     if pos.meta.instrument == *instrument && pos.meta.side != side {
@@ -296,7 +297,7 @@ impl AccountState
                     }
                 }
             }
-            InstrumentKind::CryptoLeveragedToken => {
+            | InstrumentKind::CryptoLeveragedToken => {
                 let margin_positions = &positions_lock.margin_pos;
                 for pos in margin_positions {
                     if pos.meta.instrument == *instrument && pos.meta.side != side {
@@ -307,7 +308,6 @@ impl AccountState
         }
         Ok(())
     }
-
 
     /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
@@ -708,7 +708,7 @@ mod tests
         let positions = AccountPositions { margin_pos: Vec::new(),
                                            perpetual_pos: Vec::new(),
                                            futures_pos: Vec::new(),
-                                           option_pos: Vec::new(),};
+                                           option_pos: Vec::new() };
 
         // Instantiate the account state with the balances and positions
         let account_state = AccountState::new(balances, positions);
