@@ -12,12 +12,12 @@ pub struct TokenBalance
 
 impl TokenBalance
 {
-    pub fn new<S>(token: S, balance: Balance) -> Self
-        where S: Into<Token>
-    {
-        Self { token: token.into(), balance }
+    pub fn new(token: impl Into<Token>, balance: Balance) -> Self {
+        Self {
+            token: token.into(),
+            balance,
+        }
     }
-
     // update balance price's current price on a MarketEvent's new price
     pub fn update_current_price(&mut self, price: f64)
     {
