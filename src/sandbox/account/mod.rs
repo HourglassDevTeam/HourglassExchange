@@ -1,4 +1,4 @@
-use crate::common_infrastructure::{datafeed::market_event::MarketEvent, event::ClientOrderId};
+use crate::common::{datafeed::market_event::MarketEvent, event::ClientOrderId};
 use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
@@ -18,7 +18,7 @@ use account_orders::AccountOrders;
 use account_states::AccountState;
 
 use crate::{
-    common_infrastructure::{
+    common::{
         balance::TokenBalance,
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},

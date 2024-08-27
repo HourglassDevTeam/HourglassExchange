@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // 引入相关模块和结构体。
-use crate::common_infrastructure::{instrument::Instrument, order::OrderId, Side};
+use crate::common::{instrument::Instrument, order::OrderId, Side};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct ClientTrade
@@ -30,7 +30,7 @@ impl<S> From<S> for ClientTradeId where S: Into<i64>
 mod tests
 {
     use super::*;
-    use crate::common_infrastructure::{
+    use crate::common::{
         instrument::{kind::InstrumentKind, InstrumentInitiator},
         token::Token,
     };

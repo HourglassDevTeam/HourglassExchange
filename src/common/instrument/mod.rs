@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
-use crate::common_infrastructure::{instrument::kind::InstrumentKind, token::Token};
+use crate::common::{instrument::kind::InstrumentKind, token::Token};
 
 pub mod kind;
 

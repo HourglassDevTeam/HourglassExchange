@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common_infrastructure::position::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode};
+use crate::common::position::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct FuturePosition

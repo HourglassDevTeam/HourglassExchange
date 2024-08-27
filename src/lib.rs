@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display, Formatter};
 
 use crate::{
-    common_infrastructure::{
+    common::{
         balance::TokenBalance,
         event::AccountEvent,
         order::{
@@ -12,12 +12,12 @@ use crate::{
     error::ExecutionError,
 };
 use async_trait::async_trait;
-use common_infrastructure::order::states::open::Open;
+use common::order::states::open::Open;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
 mod binance;
-pub mod common_infrastructure;
+pub mod common;
 pub mod error;
 pub mod network;
 pub mod okex;

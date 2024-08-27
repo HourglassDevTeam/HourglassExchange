@@ -1,4 +1,4 @@
-use crate::common_infrastructure::order::OrderId;
+use crate::common::order::OrderId;
 use serde::{Deserialize, Serialize};
 
 /// 完全成交状态的订单, FullFill 以后在account层面 [AccountOrders] 删除对应open订单

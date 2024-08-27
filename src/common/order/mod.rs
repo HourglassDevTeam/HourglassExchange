@@ -6,7 +6,7 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_infrastructure::{event::ClientOrderId, instrument::Instrument, order::order_instructions::OrderInstruction, Side},
+    common::{event::ClientOrderId, instrument::Instrument, order::order_instructions::OrderInstruction, Side},
     Exchange,
 };
 
@@ -44,7 +44,7 @@ impl<Id> From<Id> for OrderId where Id: Display
 #[cfg(test)]
 mod tests
 {
-    use crate::common_infrastructure::order::states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen};
+    use crate::common::order::states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen};
 
     use super::*;
 

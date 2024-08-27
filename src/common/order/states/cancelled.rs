@@ -1,4 +1,4 @@
-use crate::common_infrastructure::order::{states::open::Open, Order, OrderId};
+use crate::common::order::{states::open::Open, Order, OrderId};
 use serde::{Deserialize, Serialize};
 
 /// 构建订单在被取消后的状态

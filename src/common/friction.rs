@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // NOTE 滑点和摩擦成本的设计放在这里
-use crate::common_infrastructure::instrument::kind::InstrumentKind;
+use crate::common::instrument::kind::InstrumentKind;
 
 #[allow(dead_code)]
 /// 以 [`Instrument`]（符号）表示的 [`Trade`]（交易）费用。

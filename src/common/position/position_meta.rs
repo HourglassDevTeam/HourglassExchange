@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_infrastructure::{balance::TokenBalance, friction::Fees, instrument::Instrument, order::OrderRole, Side},
+    common::{balance::TokenBalance, friction::Fees, instrument::Instrument, order::OrderRole, Side},
     Exchange,
 };
 
@@ -241,7 +241,7 @@ impl PositionMetaBuilder
 mod tests
 {
     use super::*;
-    use crate::common_infrastructure::{
+    use crate::common::{
         balance::{Balance, TokenBalance},
         friction::{Fees, SpotFees},
         instrument::{kind::InstrumentKind, Instrument},

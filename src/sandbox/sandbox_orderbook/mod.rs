@@ -1,4 +1,4 @@
-use crate::common_infrastructure::order::{states::open::Open, Order, OrderId};
+use crate::common::order::{states::open::Open, Order, OrderId};
 /// NOTE MODULE CODE BELOW IS UNDER CONSTRUCTION
 ///
 /// ### 1. **高级撮合逻辑**
@@ -31,7 +31,7 @@ use crate::common_infrastructure::order::{states::open::Open, Order, OrderId};
 ///
 /// ### 10. **多线程和并发处理**
 ///    - **多线程处理**: 如果你期望订单簿在高并发情况下运行，考虑使用多线程或异步处理订单的插入和撮合。这可以提升系统的性能，但需要小心处理数据竞争和同步问题。
-use crate::common_infrastructure::Side;
+use crate::common::Side;
 use rayon::{iter::IntoParallelRefIterator, prelude::IndexedParallelIterator};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};

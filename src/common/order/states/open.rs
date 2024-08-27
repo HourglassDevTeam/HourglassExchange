@@ -1,4 +1,4 @@
-use crate::common_infrastructure::order::{Order, OrderId, OrderRole};
+use crate::common::order::{Order, OrderId, OrderRole};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 

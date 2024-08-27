@@ -1,5 +1,5 @@
 use crate::{
-    common_infrastructure::{
+    common::{
         event::ClientOrderId,
         instrument::Instrument,
         order::{
@@ -51,7 +51,7 @@ impl AccountOrders
     ///
     /// ```rust
     /// use unilink_execution::{
-    ///     common_infrastructure::instrument::{kind::InstrumentKind, Instrument},
+    ///     common::instrument::{kind::InstrumentKind, Instrument},
     ///     sandbox::account::{
     ///         account_latency::{AccountLatency, FluctuationMode},
     ///         account_orders::AccountOrders,
@@ -407,7 +407,7 @@ mod tests
 {
     use super::*;
     use crate::{
-        common_infrastructure::instrument::{kind::InstrumentKind, Instrument},
+        common::instrument::{kind::InstrumentKind, Instrument},
         sandbox::account::account_latency::{AccountLatency, FluctuationMode},
         Exchange,
     };

@@ -151,7 +151,7 @@ mod tests
     use tokio::sync::Mutex; // 确保使用 tokio 的 Mutex
 
     use crate::{
-        common_infrastructure::position::{AccountPositions, PositionDirectionMode, PositionMarginMode},
+        common::position::{AccountPositions, PositionDirectionMode, PositionMarginMode},
         sandbox::account::{
             account_config::{AccountConfig, CommissionLevel, MarginMode},
             account_latency::{AccountLatency, FluctuationMode},

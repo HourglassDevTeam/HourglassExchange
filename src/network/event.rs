@@ -11,7 +11,7 @@
 /// use serde_json::json;
 /// use std::net::Ipv4Addr;
 /// use unilink_execution::{
-///     common_infrastructure::{
+///     common::{
 ///         event::ClientOrderId,
 ///         instrument::{kind::InstrumentKind, Instrument},
 ///         order::{Order},
@@ -21,10 +21,10 @@
 ///     Exchange,
 /// };
 /// use uuid::Uuid;
-/// use unilink_execution::common_infrastructure::order::order_instructions::OrderInstruction;
+/// use unilink_execution::common::order::order_instructions::OrderInstruction;
 ///
 ///
-/// use unilink_execution::common_infrastructure::order::states::request_open::RequestOpen;
+/// use unilink_execution::common::order::states::request_open::RequestOpen;
 ///
 /// fn create_open_orders_event() -> NetworkEvent
 /// {
@@ -74,9 +74,9 @@
 /// `NetworkEvent` 结构体旨在简化事件的创建和传递。使用 `NetworkEvent` 可以确保事件的数据格式统一，便于服务器端的解析和处理。
 ///
 /// 客户端在构建 `NetworkEvent` 时，需要确保提供的 `event_type` 是有效的，并且 `payload` 是与该事件类型匹配的有效数据。
-use crate::common_infrastructure::order::Order;
+use crate::common::order::Order;
 use crate::{
-    common_infrastructure::{
+    common::{
         datafeed::market_event::MarketEvent,
         order::states::{request_cancel::RequestCancel, request_open::RequestOpen},
     },
@@ -142,7 +142,7 @@ mod tests
 {
     use super::*;
     use crate::{
-        common_infrastructure::{
+        common::{
             event::ClientOrderId,
             instrument::{kind::InstrumentKind, Instrument},
             order::{order_instructions::OrderInstruction, Order},

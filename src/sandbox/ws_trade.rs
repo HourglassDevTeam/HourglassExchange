@@ -1,9 +1,9 @@
-use crate::common_infrastructure::datafeed::market_event::MarketEvent;
+use crate::common::datafeed::market_event::MarketEvent;
 /// NOTE code below is to be merged later
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common_infrastructure::{
+    common::{
         instrument::{
             kind::{InstrumentKind, InstrumentKind::Perpetual},
             Instrument,

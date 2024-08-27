@@ -1,5 +1,5 @@
 use crate::{
-    common_infrastructure::{
+    common::{
         balance::{Balance, TokenBalance},
         friction::{Fees, PerpetualFees},
         instrument::{kind::InstrumentKind, Instrument},
@@ -241,7 +241,7 @@ pub enum Position
 mod tests
 {
     use super::*;
-    use crate::common_infrastructure::token::Token;
+    use crate::common::token::Token;
 
     fn create_instrument(kind: InstrumentKind) -> Instrument
     {

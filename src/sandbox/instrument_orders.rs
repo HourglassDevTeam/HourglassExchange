@@ -1,10 +1,10 @@
-use crate::common_infrastructure::datafeed::market_event::MarketEvent;
+use crate::common::datafeed::market_event::MarketEvent;
 use rayon::prelude::ParallelSliceMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 use crate::{
-    common_infrastructure::{
+    common::{
         friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees},
         instrument::kind::InstrumentKind,
         order::{states::open::Open, Order},
@@ -223,7 +223,7 @@ mod tests
 {
     use super::*;
     use crate::{
-        common_infrastructure::{
+        common::{
             event::ClientOrderId,
             instrument::Instrument,
             order::{order_instructions::OrderInstruction, OrderId, OrderRole},

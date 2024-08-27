@@ -1,5 +1,5 @@
 use crate::{
-    common_infrastructure::{
+    common::{
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
@@ -504,7 +504,7 @@ mod tests
 {
     use super::*;
     use crate::{
-        common_infrastructure::{
+        common::{
             balance::Balance,
             event::ClientOrderId,
             friction::{Fees, FutureFees, PerpetualFees},

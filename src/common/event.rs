@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    common_infrastructure::{
+    common::{
         balance::TokenBalance,
         order::{
             states::{
@@ -69,7 +69,7 @@ impl std::fmt::Display for ClientOrderId
 mod tests
 {
     use super::*;
-    use crate::common_infrastructure::{balance::Balance, token::Token};
+    use crate::common::{balance::Balance, token::Token};
     use uuid::Uuid;
 
     #[test]

@@ -1,5 +1,5 @@
 use crate::{
-    common_infrastructure::{
+    common::{
         balance::TokenBalance,
         datafeed::market_event::MarketEvent,
         order::{
@@ -181,12 +181,12 @@ async fn test_open_orders()
 
     // 模拟一个订单请求
     let open_request =
-        Order { kind: crate::common_infrastructure::order::order_instructions::OrderInstruction::Limit,
+        Order { kind: crate::common::order::order_instructions::OrderInstruction::Limit,
                 exchange: Exchange::Binance,
-                instrument: crate::common_infrastructure::instrument::Instrument::new("BTC", "USDT", crate::common_infrastructure::instrument::kind::InstrumentKind::Perpetual),
+                instrument: crate::common::instrument::Instrument::new("BTC", "USDT", crate::common::instrument::kind::InstrumentKind::Perpetual),
                 client_ts: chrono::Utc::now().timestamp_millis(),
-                client_order_id: crate::common_infrastructure::event::ClientOrderId(uuid::Uuid::new_v4()),
-                side: crate::common_infrastructure::Side::Buy,
+                client_order_id: crate::common::event::ClientOrderId(uuid::Uuid::new_v4()),
+                side: crate::common::Side::Buy,
                 state: RequestOpen { reduce_only: false,
                                      price: 50000.0,
                                      size: 1.0 } };
