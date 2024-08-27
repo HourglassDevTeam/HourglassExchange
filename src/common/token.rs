@@ -1,7 +1,9 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::{
+    fmt::{Debug, Display, Formatter},
+    ops::Deref,
+};
 
 use serde::{Deserialize, Serialize};
-
 /// 表示加密货币或其他代币，例如 "btc", "eth", "usdt" 等
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct Token(String);
@@ -22,6 +24,16 @@ impl AsRef<str> for Token
     }
 }
 
+impl Deref for Token
+{
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target
+    {
+        &self.0
+    }
+}
+
 impl<S> From<S> for Token where S: Into<String>
 {
     fn from(input: S) -> Self
@@ -32,11 +44,29 @@ impl<S> From<S> for Token where S: Into<String>
 
 impl Token
 {
-    /// 使用提供的 `Into<String>` 值构造一个新的 [`Token`]。
+    /// 使用提供的 `Into<String>` 值构造一个新的 [`Token`]，并将其转换为大写。
     pub fn new<S>(input: S) -> Self
         where S: Into<String>
     {
         Self(input.into().to_uppercase())
+    }
+
+    /// 构造一个表示 "BTC" 的 [`Token`]。
+    pub fn btc() -> Self
+    {
+        Self("BTC".to_string())
+    }
+
+    /// 构造一个表示 "ETH" 的 [`Token`]。
+    pub fn eth() -> Self
+    {
+        Self("ETH".to_string())
+    }
+
+    /// 构造一个表示 "USDT" 的 [`Token`]。
+    pub fn usdt() -> Self
+    {
+        Self("USDT".to_string())
     }
 }
 

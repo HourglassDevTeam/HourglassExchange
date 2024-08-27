@@ -12,12 +12,11 @@ pub struct TokenBalance
 
 impl TokenBalance
 {
-    pub fn new(token: impl Into<Token>, balance: Balance) -> Self {
-        Self {
-            token: token.into(),
-            balance,
-        }
+    pub fn new(token: impl Into<Token>, balance: Balance) -> Self
+    {
+        Self { token: token.into(), balance }
     }
+
     // update balance price's current price on a MarketEvent's new price
     pub fn update_current_price(&mut self, price: f64)
     {
@@ -49,7 +48,8 @@ impl Balance
     }
 
     /// 对这个[`Balance`]应用一个[`BalanceDelta`]。
-    pub fn apply(&mut self, delta: BalanceDelta) -> Result<(), &'static str> {
+    pub fn apply(&mut self, delta: BalanceDelta) -> Result<(), &'static str>
+    {
         if self.total + delta.total < 0.0 || self.available + delta.available < 0.0 {
             return Err("[UniLinkExecution] : Insufficient balance to apply the delta.");
         }

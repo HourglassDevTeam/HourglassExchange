@@ -28,7 +28,8 @@ impl PositionMeta
 {
     // CONSIDER 是否应该吧close fees成本计算进去
     // TODO double check logic of initialisation.
-    fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64, include_fees: bool, order_role: OrderRole) {
+    fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64, include_fees: bool, order_role: OrderRole)
+    {
         let total_size = self.current_size + trade_size;
         if total_size > 0.0 {
             self.current_avg_price_gross = (self.current_avg_price_gross * self.current_size + trade_price * trade_size) / total_size;
@@ -37,31 +38,32 @@ impl PositionMeta
 
         let total_fees = if include_fees {
             match &self.current_fees_total {
-                Fees::Spot(fee) => match order_role {
-                    OrderRole::Maker => fee.maker_fee * self.current_size,
-                    OrderRole::Taker => fee.taker_fee * self.current_size,
+                | Fees::Spot(fee) => match order_role {
+                    | OrderRole::Maker => fee.maker_fee * self.current_size,
+                    | OrderRole::Taker => fee.taker_fee * self.current_size,
                 },
-                Fees::Future(fee) => match order_role {
-                    OrderRole::Maker => fee.maker_fee * self.current_size,
-                    OrderRole::Taker => fee.taker_fee * self.current_size,
+                | Fees::Future(fee) => match order_role {
+                    | OrderRole::Maker => fee.maker_fee * self.current_size,
+                    | OrderRole::Taker => fee.taker_fee * self.current_size,
                 },
-                Fees::Perpetual(fee) => match order_role {
-                    OrderRole::Maker => fee.maker_fee * self.current_size,
-                    OrderRole::Taker => fee.taker_fee * self.current_size,
+                | Fees::Perpetual(fee) => match order_role {
+                    | OrderRole::Maker => fee.maker_fee * self.current_size,
+                    | OrderRole::Taker => fee.taker_fee * self.current_size,
                 },
-                Fees::Option(fee) => fee.trade_fee * self.current_size,
+                | Fees::Option(fee) => fee.trade_fee * self.current_size,
             }
-        } else {
+        }
+        else {
             0.0
         };
 
         if self.current_size > 0.0 {
             self.current_avg_price = (self.current_avg_price_gross * self.current_size + total_fees) / self.current_size;
-        } else {
+        }
+        else {
             self.current_avg_price = self.current_avg_price_gross;
         }
     }
-
 
     /// 更新 current_avg_price_gross
     pub fn update_avg_price_gross(&mut self, trade_price: f64, trade_size: f64, transaction_type: OrderRole)
