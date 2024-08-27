@@ -79,37 +79,28 @@ impl InstrumentOrders
     //  - 如果Client在同一价格同时开了买单和卖单 [`Order<Open>`]，优先选择剩余数量较大的
     //    Order<Open> 进行匹配。
     pub fn determine_matching_side(&self, market_event: &MarketEvent<MarketTrade>) -> Option<Side> {
-        match (self.bids.last(), self.asks.last()) {
-            (Some(best_bid), Some(best_ask)) => {
-                if market_event.kind.price > best_bid.state.price {
-                    // 市场价格高于最高买单，不应该匹配买单
-                    None
-                } else if market_event.kind.price < best_ask.state.price {
-                    // 市场价格低于最低卖单，不应该匹配卖单
-                    return None;
-                } else if best_bid.state.price == market_event.kind.price {
-                    return Some(Side::Buy);
-                } else if best_ask.state.price == market_event.kind.price {
-                    return Some(Side::Sell);
-                } else {
-                    return None;
+        match market_event.kind.side.as_str() {
+            "buy" => {
+                // 如果市场方向是买单，检查卖单的最佳报价
+                if let Some(best_ask) = self.asks.last() {
+                    if market_event.kind.price >= best_ask.state.price {
+                        return Some(Side::Sell);
+                    }
                 }
             }
-            (Some(best_bid), None) => {
-                if market_event.kind.price <= best_bid.state.price {
-                    return Some(Side::Buy);
+            "sell" => {
+                // 如果市场方向是卖单，检查买单的最佳报价
+                if let Some(best_bid) = self.bids.last() {
+                    if market_event.kind.price <= best_bid.state.price {
+                        return Some(Side::Buy);
+                    }
                 }
-                None
             }
-            (None, Some(best_ask)) => {
-                if market_event.kind.price >= best_ask.state.price {
-                    return Some(Side::Sell);
-                }
-                None
-            }
-            _ => None,
+            _ => {}
         }
+        None
     }
+
 
     pub fn match_bids(&mut self, market_event: &MarketEvent<MarketTrade>, fees_percent: f64) -> Vec<ClientTrade>
     {
@@ -308,7 +299,7 @@ use super::*;
 
         let matching_side = instrument_orders.determine_matching_side(&market_event);
         // 假设你希望在价格相等时优先匹配买单
-        assert_eq!(matching_side, Some(Buy));
+        assert_eq!(matching_side, Some(Sell));
     }
 
     #[test]
@@ -520,8 +511,8 @@ use super::*;
     fn test_out_of_range_price() {
         let mut instrument_orders = InstrumentOrders::default();
 
-        let order_buy = create_order(Side::Buy, 90.0, 1.0); // 低价买单
-        let order_sell = create_order(Side::Sell, 110.0, 1.0); // 高价卖单
+        let order_buy = create_order(Buy, 90.0, 1.0); // 低价买单
+        let order_sell = create_order(Sell, 110.0, 1.0); // 高价卖单
 
         instrument_orders.add_order_open(order_buy);
         instrument_orders.add_order_open(order_sell);
@@ -536,7 +527,7 @@ use super::*;
                 exchange: "binance_futures".to_string(),
                 symbol: "BTCUSDT".to_string(),
                 side: "buy".to_string(),
-                price: 200.0,
+                price: 100.0,
                 timestamp: 1625097600000,
                 amount: 1.0,
             },
