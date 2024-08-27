@@ -30,10 +30,10 @@ pub(crate) mod position_meta;
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountPositions
 {
-    pub margin_pos: Option<Vec<LeveragedTokenPosition>>, // NOTE useless in backtest
-    pub perpetual_pos: Option<Vec<PerpetualPosition>>,
-    pub futures_pos: Option<Vec<FuturePosition>>,
-    pub option_pos: Option<Vec<OptionPosition>>,
+    pub margin_pos: Vec<LeveragedTokenPosition>, // NOTE useless in backtest
+    pub perpetual_pos: Vec<PerpetualPosition>,
+    pub futures_pos: Vec<FuturePosition>,
+    pub option_pos: Vec<OptionPosition>,
 }
 
 impl AccountPositions
@@ -41,10 +41,10 @@ impl AccountPositions
     /// 创建一个新的 AccountPositions 实例
     pub fn init() -> Self
     {
-        Self { margin_pos: None,
-               perpetual_pos: None,
-               futures_pos: None,
-               option_pos: None }
+        Self { margin_pos: Vec::new(),
+               perpetual_pos:  Vec::new(),
+               futures_pos:  Vec::new(),
+               option_pos:  Vec::new(),}
     }
 
     pub async fn build_new_perpetual_position(&self,
@@ -57,7 +57,7 @@ impl AccountPositions
     {
         let maker_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
         let taker_rate = config.get_taker_fee_rate(&trade.instrument.kind)?;
-        // NOTE 计算初始保证金
+        // 计算初始保证金
         let initial_margin = trade.price * trade.quantity / config.account_leverage_rate;
         // 计算费用
         let maker_fee = trade.quantity * trade.price * maker_rate;
@@ -114,7 +114,7 @@ impl AccountPositions
     {
         match new_position {
             | Position::Perpetual(p) => {
-                if let Some(ref mut positions) = self.perpetual_pos {
+                let ref mut positions = self.perpetual_pos;
                     if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                         *existing_position = p;
                     }
@@ -122,12 +122,9 @@ impl AccountPositions
                         positions.push(p);
                     }
                 }
-                else {
-                    self.perpetual_pos = Some(vec![p]);
-                }
-            }
+
             | Position::LeveragedToken(p) => {
-                if let Some(ref mut positions) = self.margin_pos {
+                 let ref mut positions = self.margin_pos;
                     if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                         *existing_position = p;
                     }
@@ -135,12 +132,9 @@ impl AccountPositions
                         positions.push(p);
                     }
                 }
-                else {
-                    self.margin_pos = Some(vec![p]);
-                }
-            }
+
             | Position::Future(p) => {
-                if let Some(ref mut positions) = self.futures_pos {
+                 let ref mut positions = self.futures_pos;
                     if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                         *existing_position = p;
                     }
@@ -148,25 +142,19 @@ impl AccountPositions
                         positions.push(p);
                     }
                 }
-                else {
-                    self.futures_pos = Some(vec![p]);
-                }
-            }
+
             | Position::Option(p) => {
-                if let Some(ref mut positions) = self.option_pos {
+                 let ref mut positions = self.option_pos;
                     if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                         *existing_position = p;
                     }
                     else {
                         positions.push(p);
                     }
-                }
-                else {
-                    self.option_pos = Some(vec![p]);
                 }
             }
         }
-    }
+
 
     /// 检查账户中是否持有指定交易工具的仓位
     /// 检查账户中是否持有指定交易工具的仓位
@@ -180,28 +168,24 @@ impl AccountPositions
             // 商品期货
             | InstrumentKind::CommodityFuture => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
             // 永续合约
-            | InstrumentKind::Perpetual => self.perpetual_pos
-                                               .as_ref() // 如果存在仓位列表
-                                               .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
-                    positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+            |  InstrumentKind::Perpetual => self.perpetual_pos
+                .iter() // 直接迭代 Vec<PerpetualPosition>
+                .any(|pos| pos.meta.instrument == *instrument),
 
             // 普通期货
-            | InstrumentKind::Future => self.futures_pos
-                                            .as_ref()
-                                            .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
-                    positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+            |  InstrumentKind::Future => self.futures_pos
+                .iter() // 直接迭代 Vec<FuturePosition>
+                .any(|pos| pos.meta.instrument == *instrument),
 
             // 加密期权
             | InstrumentKind::CryptoOption => self.option_pos
-                                                  .as_ref()
-                                                  .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
-                    positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                .iter() // 直接迭代 Vec<OptionPosition>
+                .any(|pos| pos.meta.instrument == *instrument),
 
             // 加密杠杆代币
             | InstrumentKind::CryptoLeveragedToken => self.margin_pos
-                                                          .as_ref()
-                                                          .map_or(false, |positions| // 如果有任何一个 pos 满足条件，any 返回 true，否则返回 false。
-                    positions.iter().any(|pos| pos.meta.instrument == *instrument)),
+                .iter() // 直接迭代 Vec<LeveragedTokenPosition>
+                .any(|pos| pos.meta.instrument == *instrument),
         }
     }
 }
@@ -321,8 +305,7 @@ mod tests
     }
 
     #[test]
-    fn test_update_existing_position()
-    {
+    fn test_update_existing_position() {
         let mut account_positions = AccountPositions::init();
 
         let perpetual_instrument = create_instrument(InstrumentKind::Perpetual);
@@ -333,7 +316,7 @@ mod tests
 
         // 确保初始 PerpetualPosition 已正确添加
         assert!(account_positions.has_position(&perpetual_instrument));
-        assert_eq!(account_positions.perpetual_pos.as_ref().unwrap().len(), 1);
+        assert_eq!(account_positions.perpetual_pos.len(), 1);
 
         // 更新相同的 PerpetualPosition，修改 `margin`
         let mut updated_position = perpetual_position.clone();
@@ -342,29 +325,31 @@ mod tests
         account_positions.update_position(Position::Perpetual(updated_position.clone()));
 
         // 确保仓位已更新而不是新添加
-        if let Some(positions) = &account_positions.perpetual_pos {
-            assert_eq!(positions.len(), 1); // 确保仓位数量未增加
-            let pos = &positions[0];
+        if !account_positions.perpetual_pos.is_empty() {
+            assert_eq!(account_positions.perpetual_pos.len(), 1); // 确保仓位数量未增加
+            let pos = &account_positions.perpetual_pos[0];
             assert_eq!(pos.margin, 2000.0); // 检查仓位是否已正确更新
-        }
-        else {
+        } else {
             panic!("PerpetualPosition should exist but was not found.");
         }
     }
 
     #[test]
-    fn test_add_new_position()
-    {
+    fn test_add_new_position() {
         let mut account_positions = AccountPositions::init();
 
         // 创建两个不同的 Instrument
-        let perpetual_instrument_1 = Instrument { base: Token::from("BTC"),
-                                                  quote: Token::from("USDT"),
-                                                  kind: InstrumentKind::Perpetual };
+        let perpetual_instrument_1 = Instrument {
+            base: Token::from("BTC"),
+            quote: Token::from("USDT"),
+            kind: InstrumentKind::Perpetual,
+        };
 
-        let perpetual_instrument_2 = Instrument { base: Token::from("ETH"),
-                                                  quote: Token::from("USDT"),
-                                                  kind: InstrumentKind::Perpetual };
+        let perpetual_instrument_2 = Instrument {
+            base: Token::from("ETH"),
+            quote: Token::from("USDT"),
+            kind: InstrumentKind::Perpetual,
+        };
 
         // 添加初始的 PerpetualPosition
         let perpetual_position_1 = create_perpetual_position(&perpetual_instrument_1);
@@ -377,6 +362,6 @@ mod tests
         // 确保新仓位已正确添加
         assert!(account_positions.has_position(&perpetual_instrument_1));
         assert!(account_positions.has_position(&perpetual_instrument_2));
-        assert_eq!(account_positions.perpetual_pos.as_ref().unwrap().len(), 2);
+        assert_eq!(account_positions.perpetual_pos.len(), 2);
     }
 }

@@ -176,10 +176,10 @@ mod tests
 
         // 创建账户状态
         let balances = HashMap::new();
-        let positions = AccountPositions { margin_pos: None,
-                                           perpetual_pos: None,
-                                           futures_pos: None,
-                                           option_pos: None };
+        let positions = AccountPositions { margin_pos: Vec::new(),
+                                           perpetual_pos: Vec::new(),
+                                           futures_pos: Vec::new(),
+                                           option_pos: Vec::new() };
 
         let account_state = AccountState { balances: balances.clone(),
                                            positions: positions.clone(),

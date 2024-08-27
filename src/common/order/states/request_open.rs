@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
-
 /// 订单初始状态。发送到client进行操作
 ///
 /// `RequestOpen` 用于表示一个初始订单状态。这个状态包含了订单的价格、大小，以及是否为 `reduce_only` 订单。
@@ -23,13 +22,13 @@ impl PartialOrd for RequestOpen
     {
         // 首先比较 `price`
         match self.price.partial_cmp(&other.price) {
-            Some(Ordering::Equal) => {},
-            non_eq => return non_eq,
+            | Some(Ordering::Equal) => {}
+            | non_eq => return non_eq,
         }
         // 然后比较 `size`
         match self.size.partial_cmp(&other.size) {
-            Some(Ordering::Equal) => {},
-            non_eq => return non_eq,
+            | Some(Ordering::Equal) => {}
+            | non_eq => return non_eq,
         }
         // 最后比较 `reduce_only`
         Some(self.reduce_only.cmp(&other.reduce_only))

@@ -180,16 +180,15 @@ async fn test_open_orders()
                                  strategy_signal_rx: mpsc::unbounded_channel().1 /* 虚拟的接收通道 */ };
 
     // 模拟一个订单请求
-    let open_request =
-        Order { kind: crate::common::order::order_instructions::OrderInstruction::Limit,
-                exchange: Exchange::Binance,
-                instrument: crate::common::instrument::Instrument::new("BTC", "USDT", crate::common::instrument::kind::InstrumentKind::Perpetual),
-                client_ts: chrono::Utc::now().timestamp_millis(),
-                client_order_id: crate::common::event::ClientOrderId(uuid::Uuid::new_v4()),
-                side: crate::common::Side::Buy,
-                state: RequestOpen { reduce_only: false,
-                                     price: 50000.0,
-                                     size: 1.0 } };
+    let open_request = Order { kind: crate::common::order::order_instructions::OrderInstruction::Limit,
+                               exchange: Exchange::Binance,
+                               instrument: crate::common::instrument::Instrument::new("BTC", "USDT", crate::common::instrument::kind::InstrumentKind::Perpetual),
+                               client_ts: chrono::Utc::now().timestamp_millis(),
+                               client_order_id: crate::common::event::ClientOrderId(uuid::Uuid::new_v4()),
+                               side: crate::common::Side::Buy,
+                               state: RequestOpen { reduce_only: false,
+                                                    price: 50000.0,
+                                                    size: 1.0 } };
 
     // 启动一个异步任务来调用客户端的 open_orders 方法
     let client_task = tokio::spawn(async move {

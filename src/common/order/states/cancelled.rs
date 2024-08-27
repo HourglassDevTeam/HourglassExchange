@@ -26,11 +26,11 @@ impl From<Order<Open>> for Order<Cancelled>
     fn from(order: Order<Open>) -> Self
     {
         Self { kind: order.kind,
-            exchange: order.exchange,
-            instrument: order.instrument.clone(),
-            client_order_id: order.client_order_id,
-            client_ts: order.client_ts,
-            side: order.side,
-            state: Cancelled { id: order.state.id } }
+               exchange: order.exchange,
+               instrument: order.instrument.clone(),
+               client_order_id: order.client_order_id,
+               client_ts: order.client_ts,
+               side: order.side,
+               state: Cancelled { id: order.state.id } }
     }
 }
