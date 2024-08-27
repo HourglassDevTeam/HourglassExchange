@@ -73,11 +73,7 @@ impl InstrumentOrders
         }
     }
 
-    // 检查传入的 [`ClickhousePublicTrade`] 与当前客户 [`Order<Open>`] 匹配的是买单还是卖单
-    //
-    // NOTE:
-    //  - 如果Client在同一价格同时开了买单和卖单 [`Order<Open>`]，优先选择剩余数量较大的
-    //    Order<Open> 进行匹配。
+    // 检查传入的 [`MarketTrade`] 与当前客户 [`Order<Open>`] 匹配的是买单还是卖单
     pub fn determine_matching_side(&self, market_event: &MarketEvent<MarketTrade>) -> Option<Side> {
         match market_event.kind.side.as_str() {
             "buy" => {
@@ -96,7 +92,7 @@ impl InstrumentOrders
                     }
                 }
             }
-            _ => {}
+            _ => {println!("Input MarketTrade is likely to have mistaken 'side' info.")}
         }
         None
     }
