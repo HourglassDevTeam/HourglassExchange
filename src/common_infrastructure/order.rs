@@ -33,10 +33,6 @@ impl Display for OrderExecutionType
             | OrderExecutionType::FillOrKill => "fill_or_kill",
             | OrderExecutionType::GoodTilCancelled => "good_til_cancelled",
             | OrderExecutionType::PostOnly => "post_only",
-            // | OrderKind::Stop => "stop",
-            // | OrderKind::StopLimit => "stop_limit",
-            // | OrderKind::TrailingStop => "trailing_stop",
-            // | OrderKind::Iceberg => "iceberg",
         })
     }
 }
