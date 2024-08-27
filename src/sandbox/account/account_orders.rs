@@ -2,7 +2,7 @@ use crate::{
     common_infrastructure::{
         event::ClientOrderId,
         instrument::Instrument,
-        order::{Open, Order, OrderExecutionType, OrderId, OrderRole, Pending, RequestOpen},
+        order::{Order, OrderId, OrderRole},
         Side,
     },
     error::ExecutionError,
@@ -14,6 +14,11 @@ use crate::{
 use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
+use crate::common_infrastructure::order::order_instructions::OrderInstruction;
+use crate::common_infrastructure::order::states::open::Open;
+use crate::common_infrastructure::order::states::pending::Pending;
+use crate::common_infrastructure::order::states::request_open::RequestOpen;
+
 #[derive(Debug)]
 pub struct  AccountOrders
 {
@@ -232,15 +237,15 @@ impl AccountOrders
     pub fn determine_maker_taker(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
     {
         match order.kind {
-            | OrderExecutionType::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
+            | OrderInstruction::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
 
-            | OrderExecutionType::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
+            | OrderInstruction::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
 
-            | OrderExecutionType::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
+            | OrderInstruction::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
 
-            | OrderExecutionType::ImmediateOrCancel | OrderExecutionType::FillOrKill => Ok(OrderRole::Taker), // 立即成交或取消的订单总是 Taker
+            | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => Ok(OrderRole::Taker), // 立即成交或取消的订单总是 Taker
 
-            | OrderExecutionType::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
+            | OrderInstruction::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
         }
     }
 
@@ -504,7 +509,7 @@ mod tests
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let order = Order { kind: OrderExecutionType::Limit,
+        let order = Order { kind: OrderInstruction::Limit,
                             exchange: Exchange::SandBox,
                             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                             client_order_id,
@@ -533,7 +538,7 @@ mod tests
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let request_order = Order { kind: OrderExecutionType::Limit,
+        let request_order = Order { kind: OrderInstruction::Limit,
                                     exchange: Exchange::SandBox,
                                     instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                                     client_order_id,
@@ -557,7 +562,7 @@ mod tests
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let request_order = Order { kind: OrderExecutionType::Limit,
+        let request_order = Order { kind: OrderInstruction::Limit,
                                     exchange: Exchange::SandBox,
                                     instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                                     client_order_id,
@@ -582,7 +587,7 @@ mod tests
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let order = Order { kind: OrderExecutionType::Limit,
+        let order = Order { kind: OrderInstruction::Limit,
                             exchange: Exchange::SandBox,
                             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                             client_order_id: ClientOrderId(Uuid::new_v4()),

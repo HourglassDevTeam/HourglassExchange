@@ -2,16 +2,20 @@ use crate::{
     common_infrastructure::{
         balance::TokenBalance,
         datafeed::market_event::MarketEvent,
-        order::{Cancelled, Open, Order, Pending},
+        order::{ Order},
     },
     sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
-    AccountEvent, ClientExecution, Exchange, ExecutionError, RequestCancel, RequestOpen,
+    AccountEvent, ClientExecution, Exchange, ExecutionError, RequestOpen,
 };
 use async_trait::async_trait;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use tokio::sync::{mpsc, mpsc::UnboundedReceiver, oneshot};
 use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrdersOpen, OpenOrders};
+use crate::common_infrastructure::order::states::cancelled::Cancelled;
+use crate::common_infrastructure::order::states::open::Open;
+use crate::common_infrastructure::order::states::pending::Pending;
+use crate::common_infrastructure::order::states::request_cancel::RequestCancel;
 
 #[derive(Debug)]
 pub struct SandBoxClient
@@ -178,7 +182,7 @@ async fn test_open_orders()
 
     // 模拟一个订单请求
     let open_request =
-        Order { kind: crate::common_infrastructure::order::OrderExecutionType::Limit,
+        Order { kind: crate::common_infrastructure::order::order_instructions::OrderInstruction::Limit,
                 exchange: Exchange::Binance,
                 instrument: crate::common_infrastructure::instrument::Instrument::new("BTC", "USDT", crate::common_infrastructure::instrument::kind::InstrumentKind::Perpetual),
                 client_ts: chrono::Utc::now().timestamp_millis(),

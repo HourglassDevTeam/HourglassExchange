@@ -6,13 +6,16 @@ use uuid::Uuid;
 use crate::{
     common_infrastructure::{
         balance::TokenBalance,
-        order::{Cancelled, FullyFill, Open, Order, PartialFill},
+        order::{ Order},
         position::AccountPositions,
         trade::ClientTrade,
     },
     sandbox::account::account_config::AccountConfig,
     Exchange,
 };
+use crate::common_infrastructure::order::states::cancelled::Cancelled;
+use crate::common_infrastructure::order::states::fills::{FullyFill, PartialFill};
+use crate::common_infrastructure::order::states::open::Open;
 
 /// NOTE: 如果需要记录交易所的时间戳，可以再添加一个专门的字段来表示交易所的时间，例如：    pub exchange_ts: DateTime<Utc> or i64
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

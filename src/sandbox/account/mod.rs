@@ -22,7 +22,7 @@ use crate::{
         balance::TokenBalance,
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
-        order::{Cancelled, Open, Order, OrderExecutionType, OrderRole, Pending, RequestCancel, RequestOpen},
+        order::{Order, OrderRole},
         position::AccountPositions,
         token::Token,
         trade::ClientTrade,
@@ -32,6 +32,12 @@ use crate::{
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
+use crate::common_infrastructure::order::order_instructions::OrderInstruction;
+use crate::common_infrastructure::order::states::cancelled::Cancelled;
+use crate::common_infrastructure::order::states::open::Open;
+use crate::common_infrastructure::order::states::pending::Pending;
+use crate::common_infrastructure::order::states::request_cancel::RequestCancel;
+use crate::common_infrastructure::order::states::request_open::RequestOpen;
 
 pub mod account_config;
 pub mod account_latency;
@@ -265,15 +271,15 @@ impl Account
     /// `match_orders_by_side` 根据订单的买卖方向（Side）匹配订单并生成交易事件。
     /// `determine_fees_percent` 根据金融工具类型和订单方向确定适用的费用百分比。
 
-    pub fn order_validity_check(kind: OrderExecutionType) -> Result<(), ExecutionError>
+    pub fn order_validity_check(kind: OrderInstruction) -> Result<(), ExecutionError>
     {
         match kind {
-            | OrderExecutionType::Market
-            | OrderExecutionType::Limit
-            | OrderExecutionType::ImmediateOrCancel
-            | OrderExecutionType::FillOrKill
-            | OrderExecutionType::PostOnly
-            | OrderExecutionType::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
+            | OrderInstruction::Market
+            | OrderInstruction::Limit
+            | OrderInstruction::ImmediateOrCancel
+            | OrderInstruction::FillOrKill
+            | OrderInstruction::PostOnly
+            | OrderInstruction::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
                                                                * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
     }

@@ -14,13 +14,17 @@
 ///     common_infrastructure::{
 ///         event::ClientOrderId,
 ///         instrument::{kind::InstrumentKind, Instrument},
-///         order::{Order, OrderExecutionType, RequestOpen},
+///         order::{Order},
 ///         Side,
 ///     },
 ///     network::event::NetworkEvent,
 ///     Exchange,
 /// };
 /// use uuid::Uuid;
+/// use unilink_execution::common_infrastructure::order::order_instructions::OrderInstruction;
+///
+///
+/// use unilink_execution::common_infrastructure::order::states::request_open::RequestOpen;
 ///
 /// fn create_open_orders_event() -> NetworkEvent
 /// {
@@ -28,7 +32,7 @@
 ///     let event_type = "OpenOrders";
 ///
 ///     // 2. 构建 payload
-///     let orders = vec![Order { kind: OrderExecutionType::Limit,                                       // 订单类型，例如限价单
+///     let orders = vec![Order { kind: OrderInstruction::Limit,                                       // 订单类型，例如限价单
 ///                               exchange: Exchange::Binance,                                           // 交易所名称
 ///                               instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual), // 交易对
 ///                               client_ts: chrono::Utc::now().timestamp_millis(),                      // 客户端下单时间戳
@@ -70,13 +74,16 @@
 /// `NetworkEvent` 结构体旨在简化事件的创建和传递。使用 `NetworkEvent` 可以确保事件的数据格式统一，便于服务器端的解析和处理。
 ///
 /// 客户端在构建 `NetworkEvent` 时，需要确保提供的 `event_type` 是有效的，并且 `payload` 是与该事件类型匹配的有效数据。
-use crate::common_infrastructure::order::{Order, RequestCancel, RequestOpen};
+use crate::common_infrastructure::order::{Order};
 use crate::{
     common_infrastructure::datafeed::market_event::MarketEvent,
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, sandbox_client::SandBoxClientEvent},
 };
 use serde::Deserialize;
 use tokio::sync::oneshot;
+use crate::common_infrastructure::order::states::request_cancel::RequestCancel;
+use crate::common_infrastructure::order::states::request_open::RequestOpen;
+
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct NetworkEvent
@@ -137,13 +144,14 @@ mod tests
         common_infrastructure::{
             event::ClientOrderId,
             instrument::{kind::InstrumentKind, Instrument},
-            order::{Order, OrderExecutionType, RequestOpen},
+            order::{Order},
             Side,
         },
         Exchange,
     };
     use std::net::Ipv4Addr;
     use uuid::Uuid;
+    use crate::common_infrastructure::order::order_instructions::OrderInstruction;
 
     /// 测试 `NetworkEvent` 的创建和有效性
     #[test]
@@ -153,7 +161,7 @@ mod tests
         let event_type = "OpenOrders";
 
         // 2. 构建 payload
-        let orders = vec![Order { kind: OrderExecutionType::Limit,                                       // 订单类型，例如限价单
+        let orders = vec![Order { kind: OrderInstruction::Limit,                                       // 订单类型，例如限价单
                                   exchange: Exchange::Binance,                                           // 交易所名称
                                   instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual), // 交易对
                                   client_ts: chrono::Utc::now().timestamp_millis(),                      // 客户端下单时间戳
@@ -190,7 +198,7 @@ mod tests
 
         if let Ok(SandBoxClientEvent::OpenOrders((parsed_orders, _))) = parsed_event {
             assert_eq!(parsed_orders.len(), 1);
-            assert_eq!(parsed_orders[0].kind, OrderExecutionType::Limit);
+            assert_eq!(parsed_orders[0].kind, OrderInstruction::Limit);
             assert_eq!(parsed_orders[0].exchange, Exchange::Binance);
             assert_eq!(parsed_orders[0].instrument.base, "BTC".into());
             assert_eq!(parsed_orders[0].instrument.quote, "USDT".into());

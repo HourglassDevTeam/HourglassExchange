@@ -3,7 +3,7 @@ use crate::{
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
-        order::{Open, Order, OrderRole},
+        order::{Order, OrderRole},
         position,
         position::{leveraged_token, option, perpetual::PerpetualPosition, AccountPositions, Position, PositionDirectionMode, PositionMarginMode},
         token::Token,
@@ -24,6 +24,7 @@ use std::{
     ops::{Deref, DerefMut},
     sync::{atomic::Ordering, Weak},
 };
+use crate::common_infrastructure::order::states::open::Open;
 
 #[derive(Clone, Debug)]
 pub struct AccountState
@@ -509,7 +510,7 @@ mod tests
             event::ClientOrderId,
             friction::{Fees, FutureFees, PerpetualFees},
             instrument::{kind::InstrumentKind, Instrument},
-            order::{OrderExecutionType, OrderId, OrderRole},
+            order::{OrderId, OrderRole},
             position::{future::FuturePositionConfig, perpetual::PerpetualPositionConfig, position_meta::PositionMeta, AccountPositions},
             token::Token,
         },
@@ -527,6 +528,7 @@ mod tests
     use tokio::sync::Mutex; // 确保使用 tokio 的 Mutex
     use tokio::sync::{mpsc, RwLock};
     use uuid::Uuid;
+    use crate::common_infrastructure::order::order_instructions::OrderInstruction;
 
     fn create_test_instrument(kind: InstrumentKind) -> Instrument
     {
@@ -957,7 +959,7 @@ mod tests
         let client_order_id = ClientOrderId(Uuid::new_v4());
 
         // 模拟一个 Open 订单
-        let open_order = Order::<Open> { kind: OrderExecutionType::Market,
+        let open_order = Order::<Open> { kind: OrderInstruction::Market,
                                          exchange: Exchange::SandBox,
                                          instrument: instrument.clone(),
                                          client_ts: 123456789,

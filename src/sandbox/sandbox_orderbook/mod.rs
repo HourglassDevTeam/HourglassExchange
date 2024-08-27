@@ -1,4 +1,4 @@
-use crate::common_infrastructure::order::{Open, Order, OrderId};
+use crate::common_infrastructure::order::{Order, OrderId};
 /// NOTE MODULE CODE BELOW IS UNDER CONSTRUCTION
 ///
 /// ### 1. **高级撮合逻辑**
@@ -35,6 +35,7 @@ use crate::common_infrastructure::Side;
 use rayon::{iter::IntoParallelRefIterator, prelude::IndexedParallelIterator};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
+use crate::common_infrastructure::order::states::open::Open;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceLevel

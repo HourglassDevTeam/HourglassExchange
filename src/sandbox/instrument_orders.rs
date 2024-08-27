@@ -1,19 +1,20 @@
 use crate::common_infrastructure::datafeed::market_event::MarketEvent;
 use rayon::prelude::ParallelSliceMut;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Debug};
+use std::fmt::Debug;
 
 use crate::{
     common_infrastructure::{
         friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees},
         instrument::kind::InstrumentKind,
-        order::{Open, Order},
+        order::Order,
         trade::{ClientTrade, ClientTradeId},
         Side,
     },
     error::ExecutionError,
     sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
 };
+use crate::common_infrastructure::order::states::open::Open;
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
@@ -225,7 +226,7 @@ use super::*;
         common_infrastructure::{
             event::ClientOrderId,
             instrument::Instrument,
-            order::{OrderExecutionType, OrderId, OrderRole},
+            order::{OrderId, OrderRole},
             token::Token,
             Side,
         },
@@ -233,10 +234,11 @@ use super::*;
     };
     use uuid::Uuid;
     use Side::Sell;
+    use crate::common_infrastructure::order::order_instructions::OrderInstruction;
 
     fn create_order(side: Side, price: f64, size: f64) -> Order<Open>
     {
-        Order { kind: OrderExecutionType::Limit,
+        Order { kind: OrderInstruction::Limit,
                 exchange: Exchange::Binance,
                 instrument: Instrument { base: Token::from("SOL"),
                                          quote: Token::from("USDT"),

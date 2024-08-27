@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::common_infrastructure::{event::ClientOrderId, order::OrderExecutionType, token::Token};
+use crate::common_infrastructure::{event::ClientOrderId, token::Token};
+use crate::common_infrastructure::order::order_instructions::OrderInstruction;
 
 /// 执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, Eq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
@@ -25,7 +26,7 @@ pub enum ExecutionError
 
     /// 由于不支持的订单类型，无法开设订单。
     #[error("[UniLinkExecution] : Unsupported order type, unable to place order: {0}")]
-    UnsupportedOrderKind(OrderExecutionType),
+    UnsupportedOrderKind(OrderInstruction),
 
     /// 网络错误，无法连接到交易所。
     #[error("[UniLinkExecution] : Network error, unable to connect to exchange: {0}")]
