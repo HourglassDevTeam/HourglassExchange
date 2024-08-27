@@ -193,13 +193,13 @@ impl ClickHouseClient
                                           });
 
         let queries = Arc::try_unwrap(queries).expect("Failed to unwrap Arc").into_inner().unwrap();
-        let union_all_query = queries.join(" UNION DISTINCT ");
+        let union_all_query = queries.join(" UNION ALL");
 
         // 假设你要创建的表使用MergeTree引擎并按timestamp排序 NOTE this ought to be replaced with ReplacingMergeTree Engine in due course.
         let final_query = format!(
                                   "CREATE TABLE {}.{} ENGINE = ReplacingMergeTree() \
         PARTITION BY toYYYYMMDD(toDate(timestamp)) \
-        ORDER BY  (timestamp,symbol,side, price,amount) AS {}",
+        ORDER BY  (timestamp,id,symbol,side) AS {}",
                                   database, new_table_name, union_all_query
         );
 
