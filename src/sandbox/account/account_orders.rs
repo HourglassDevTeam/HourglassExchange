@@ -15,7 +15,7 @@ use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
 #[derive(Debug)]
-pub struct AccountOrders
+pub struct  AccountOrders
 {
     pub latency_generator: AccountLatency,
     pub selectable_latencies: [i64; 20],
@@ -57,7 +57,7 @@ impl AccountOrders
 
     /// 返回指定 [`Instrument`] 的客户端 [`InstrumentOrders`] 的可变引用。
 
-    pub fn ins_orders_mut(&mut self, instrument: &Instrument) -> Result<RefMut<Instrument, InstrumentOrders>, ExecutionError>
+    pub fn get_ins_orders_mut(&mut self, instrument: &Instrument) -> Result<RefMut<Instrument, InstrumentOrders>, ExecutionError>
     {
         self.instrument_orders_map
             .get_mut(instrument)
@@ -293,12 +293,12 @@ mod tests
 
         {
             // 创建一个作用域，使用完 `result` 后自动释放它
-            let result = account_orders.ins_orders_mut(&instruments[0]);
+            let result = account_orders.get_ins_orders_mut(&instruments[0]);
             assert!(result.is_ok());
         } // `result` 在这里被释放
 
         let invalid_instrument = Instrument::new("INVALID", "USD", InstrumentKind::Spot);
-        let invalid_result = account_orders.ins_orders_mut(&invalid_instrument);
+        let invalid_result = account_orders.get_ins_orders_mut(&invalid_instrument);
         assert!(invalid_result.is_err());
     }
 

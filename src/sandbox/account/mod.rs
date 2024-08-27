@@ -217,7 +217,7 @@ impl Account
 
             open_order = orders_guard.build_order_open(order, order_role).await;
 
-            orders_guard.ins_orders_mut(&open_order.instrument)?.add_order_open(open_order.clone());
+            orders_guard.get_ins_orders_mut(&open_order.instrument)?.add_order_open(open_order.clone());
         }
 
         let balance_event = self.states.lock().await.apply_open_order_changes(&open_order, required_balance).await.unwrap();
@@ -305,7 +305,7 @@ impl Account
                     let open_order = self.orders.write().await.build_order_open(order.clone(), OrderRole::Maker).await;
 
                     // 处理 instrument_orders
-                    if let Ok(mut orders_write) = self.orders.write().await.ins_orders_mut(&order.instrument) {
+                    if let Ok(mut orders_write) = self.orders.write().await.get_ins_orders_mut(&order.instrument) {
                         // 将订单加入到相应的订单簿
                         orders_write.add_order_open(open_order.clone());
 
@@ -327,7 +327,7 @@ impl Account
                     let open_order = self.orders.write().await.build_order_open(order.clone(), OrderRole::Taker).await;
 
                     // 处理 instrument_orders
-                    if let Ok(mut orders_write) = self.orders.write().await.ins_orders_mut(&order.instrument) {
+                    if let Ok(mut orders_write) = self.orders.write().await.get_ins_orders_mut(&order.instrument) {
                         // 将订单加入到相应的订单簿
                         orders_write.add_order_open(open_order.clone());
 
@@ -377,7 +377,7 @@ impl Account
         // 获取 orders_lock 并在 match 之前完成对它的操作
         let orders_result = {
             let mut orders_lock = self.orders.write().await;
-            orders_lock.ins_orders_mut(instrument).map(|orders| orders.to_owned())
+            orders_lock.get_ins_orders_mut(instrument).map(|orders| orders.to_owned())
         };
 
         match orders_result {
@@ -439,7 +439,7 @@ impl Account
     {
         // 获取写锁并查找到对应的Instrument Orders，以便修改订单
         let mut orders_guard = self.orders.write().await;
-        let mut orders = orders_guard.ins_orders_mut(&request.instrument)?;
+        let mut orders = orders_guard.get_ins_orders_mut(&request.instrument)?;
 
         // 找到并移除与 Order<RequestCancel> 关联的 Order<Open>
         let removed = match request.side {
