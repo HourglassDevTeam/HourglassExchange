@@ -178,7 +178,7 @@ impl ClickHouseClient
         let total_tables = table_names.len();
 
         table_names.par_iter().enumerate().for_each(|(i, table_name)| {
-                                              let select_query = ClickHouseQueryBuilder::new().select("symbol, id, side, price, timestamp, amount") // Select required fields
+                                              let select_query = ClickHouseQueryBuilder::new().select("exchange, symbol, id, side, price, timestamp, amount") // Select required fields
                                                                                               .from(database, table_name) // Format the table name with database
                                                                                               .build(); // Build the individual query
 
@@ -193,7 +193,7 @@ impl ClickHouseClient
                                           });
 
         let queries = Arc::try_unwrap(queries).expect("Failed to unwrap Arc").into_inner().unwrap();
-        let union_all_query = queries.join(" UNION ALL");
+        let union_all_query = queries.join(" UNION ALL ");
 
         // 假设你要创建的表使用MergeTree引擎并按timestamp排序 NOTE this ought to be replaced with ReplacingMergeTree Engine in due course.
         let final_query = format!(
@@ -404,12 +404,12 @@ impl ClickHouseClient
         let table_name = self.construct_union_table_name(exchange, instrument, "trades", date);
 
         // 使用 ClickHouseQueryBuilder 构造查询语句
-        let query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount")
+        let query = ClickHouseQueryBuilder::new().select("exchange, symbol, side, price, timestamp, amount")
                                                  .from(&database_name, &table_name)
                                                  .order("timestamp", Some("DESC"))
                                                  .build();
 
-        // println!("[UniLinkExecution] : Constructed query {}", query);
+        println!("[UniLinkExecution] : Constructed query {}", query);
 
         // 获取 ClickHouse 客户端的只读引用
         let client_ref = self.client.read().await;
