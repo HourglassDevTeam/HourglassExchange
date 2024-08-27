@@ -52,7 +52,7 @@ impl FromStr for Side
 
 impl Side
 {
-    // 定义一个方法来切换交易方向
+    /// 如果你在某个逻辑中需要反转订单的方向，比如在进行某种对冲交易时，需要根据当前订单方向生成相反方向的订单，那么可以使用 toggle 方法。
     pub fn toggle(&self) -> Self
     {
         match self {

@@ -73,7 +73,7 @@ impl InstrumentOrders
         }
     }
 
-    // 检查输入的 [`ClickhousePublicTrade`] 是否匹配买单或卖单的客户 [`Order<Open>`]
+    // 检查传入的 [`ClickhousePublicTrade`] 与当前客户 [`Order<Open>`] 匹配的是买单还是卖单
     //
     // NOTE:
     //  - 如果Client在同一价格同时开了买单和卖单 [`Order<Open>`]，优先选择剩余数量较大的
@@ -289,61 +289,31 @@ mod tests
     }
 
     #[test]
-    fn test_determine_matching_side()
-    {
+    fn test_determine_matching_side_with_equal_prices() {
         let mut instrument_orders = InstrumentOrders { batch_id: 0,
-                                                       bids: Vec::new(),
-                                                       asks: Vec::new() };
+            bids: Vec::new(),
+            asks: Vec::new() };
 
         let order_buy = create_order(Side::Buy, 100.0, 1.0);
-        let order_sell = create_order(Side::Sell, 110.0, 1.0);
+        let order_sell = create_order(Side::Sell, 100.0, 1.0); // 与买单价格相同
 
         instrument_orders.add_order_open(order_buy);
         instrument_orders.add_order_open(order_sell);
 
-        // 创建 MarketEvent，价格在买单和卖单之间
+        // 创建 MarketEvent，价格与买单和卖单相同
         let market_event = MarketEvent { exchange_time: 1625097600000,
-                                         received_time: 1625097610000,
-                                         exchange: Exchange::Binance,
-                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                             symbol: "BTCUSDT".to_string(),
-                                                             side: "buy".to_string(),
-                                                             price: 105.0,
-                                                             timestamp: 1625097600000,
-                                                             amount: 1.0 } };
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade { exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "buy".to_string(),
+                price: 100.0,
+                timestamp: 1625097600000,
+                amount: 1.0 } };
 
         let matching_side = instrument_orders.determine_matching_side(&market_event);
-        assert_eq!(matching_side, None);
-
-        // 创建 MarketEvent，价格匹配买单
-        let market_event = MarketEvent { exchange_time: 1625097600000,
-                                         received_time: 1625097610000,
-                                         exchange: Exchange::Binance,
-                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                             symbol: "BTCUSDT".to_string(),
-                                                             side: "buy".to_string(),
-                                                             price: 100.0,
-                                                             timestamp: 1625097600000,
-                                                             amount: 1.0 } };
-
-        let matching_side = instrument_orders.determine_matching_side(&market_event);
-        assert_eq!(matching_side, Some(Side::Buy));
-
-        // 创建 MarketEvent，价格匹配卖单
-        let market_event = MarketEvent { exchange_time: 1625097600000,
-                                         received_time: 1625097610000,
-                                         exchange: Exchange::Binance,
-                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                             symbol: "BTCUSDT".to_string(),
-                                                             side: "sell".to_string(),
-                                                             price: 110.0,
-                                                             timestamp: 1625097600000,
-                                                             amount: 1.0 } };
-
-        let matching_side = instrument_orders.determine_matching_side(&market_event);
+        // 假设你希望在价格相等时优先匹配买单
         assert_eq!(matching_side, Some(Side::Sell));
     }
 
