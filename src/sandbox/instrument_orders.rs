@@ -1,7 +1,7 @@
 use crate::common_infrastructure::datafeed::market_event::MarketEvent;
 use rayon::prelude::ParallelSliceMut;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt::Debug};
+use std::{fmt::Debug};
 
 use crate::{
     common_infrastructure::{
@@ -78,44 +78,36 @@ impl InstrumentOrders
     // NOTE:
     //  - 如果Client在同一价格同时开了买单和卖单 [`Order<Open>`]，优先选择剩余数量较大的
     //    Order<Open> 进行匹配。
-    pub fn determine_matching_side(&self, market_event: &MarketEvent<MarketTrade>) -> Option<Side>
-    {
+    pub fn determine_matching_side(&self, market_event: &MarketEvent<MarketTrade>) -> Option<Side> {
         match (self.bids.last(), self.asks.last()) {
-            // 检查最佳买单和卖单的 Order<Open> 是否匹配
-            | (Some(best_bid), Some(best_ask)) => {
-                // 注意:
-                //      在极少数情况下: best_bid.price == best_ask.price == trade.price
-                //      优先选择剩余数量较大的 Order<Open> 进行匹配
-                if best_bid.state.price == market_event.kind.price && best_ask.state.price == market_event.kind.price {
-                    let best_bid_quantity = best_bid.state.remaining_quantity();
-                    let best_ask_quantity = best_ask.state.remaining_quantity();
-                    match best_bid_quantity.partial_cmp(&best_ask_quantity) {
-                        | Some(Ordering::Greater) => Some(Side::Buy),
-                        | _ => Some(Side::Sell),
-                    }
-                }
-                // 最佳买单匹配
-                else if best_bid.state.price >= market_event.kind.price {
-                    Some(Side::Buy)
-                }
-                // 最佳卖单匹配
-                else if best_ask.state.price <= market_event.kind.price {
-                    Some(Side::Sell)
-                }
-                // 无匹配
-                else {
+            (Some(best_bid), Some(best_ask)) => {
+                if market_event.kind.price > best_bid.state.price {
+                    // 市场价格高于最高买单，不应该匹配买单
                     None
+                } else if market_event.kind.price < best_ask.state.price {
+                    // 市场价格低于最低卖单，不应该匹配卖单
+                    return None;
+                } else if best_bid.state.price == market_event.kind.price {
+                    return Some(Side::Buy);
+                } else if best_ask.state.price == market_event.kind.price {
+                    return Some(Side::Sell);
+                } else {
+                    return None;
                 }
             }
-
-            // 最佳买单 Order<Open> 匹配输入的 ClickhousePublicTrade
-            | (Some(best_bid), None) if best_bid.state.price >= market_event.kind.price => Some(Side::Buy),
-
-            // 最佳卖单 Order<Open> 匹配输入的 ClickhousePublicTrade
-            | (None, Some(best_ask)) if best_ask.state.price <= market_event.kind.price => Some(Side::Sell),
-
-            // 要么没有买单或卖单 Order<Open>，要么没有匹配
-            | _ => None,
+            (Some(best_bid), None) => {
+                if market_event.kind.price <= best_bid.state.price {
+                    return Some(Side::Buy);
+                }
+                None
+            }
+            (None, Some(best_ask)) => {
+                if market_event.kind.price >= best_ask.state.price {
+                    return Some(Side::Sell);
+                }
+                None
+            }
+            _ => None,
         }
     }
 
@@ -240,7 +232,8 @@ impl InstrumentOrders
 #[cfg(test)]
 mod tests
 {
-    use super::*;
+    use crate::sandbox::instrument_orders::Side::Buy;
+use super::*;
     use crate::{
         common_infrastructure::{
             event::ClientOrderId,
@@ -252,6 +245,7 @@ mod tests
         Exchange,
     };
     use uuid::Uuid;
+    use Side::Sell;
 
     fn create_order(side: Side, price: f64, size: f64) -> Order<Open>
     {
@@ -277,7 +271,7 @@ mod tests
         let mut instrument_orders = InstrumentOrders::default();
 
         let order_buy = create_order(Side::Buy, 100.0, 1.0);
-        let order_sell = create_order(Side::Sell, 110.0, 1.0);
+        let order_sell = create_order(Sell, 110.0, 1.0);
 
         instrument_orders.add_order_open(order_buy.clone());
         instrument_orders.add_order_open(order_sell.clone());
@@ -295,7 +289,7 @@ mod tests
             asks: Vec::new() };
 
         let order_buy = create_order(Side::Buy, 100.0, 1.0);
-        let order_sell = create_order(Side::Sell, 100.0, 1.0); // 与买单价格相同
+        let order_sell = create_order(Sell, 100.0, 1.0); // 与买单价格相同
 
         instrument_orders.add_order_open(order_buy);
         instrument_orders.add_order_open(order_sell);
@@ -314,7 +308,7 @@ mod tests
 
         let matching_side = instrument_orders.determine_matching_side(&market_event);
         // 假设你希望在价格相等时优先匹配买单
-        assert_eq!(matching_side, Some(Side::Sell));
+        assert_eq!(matching_side, Some(Buy));
     }
 
     #[test]
@@ -387,7 +381,7 @@ mod tests
                                                        bids: Vec::new(),
                                                        asks: Vec::new() };
 
-        let order_sell = create_order(Side::Sell, 100.0, 1.0);
+        let order_sell = create_order(Sell, 100.0, 1.0);
         instrument_orders.add_order_open(order_sell);
 
         // 创建 MarketEvent，价格刚好达到卖单
@@ -422,7 +416,7 @@ mod tests
         assert_eq!(instrument_orders.num_orders(), 0); // 所有卖单已匹配完成
 
         // 创建 MarketEvent，部分匹配卖单
-        let order_sell_partial = create_order(Side::Sell, 100.0, 2.0);
+        let order_sell_partial = create_order(Sell, 100.0, 2.0);
         instrument_orders.add_order_open(order_sell_partial);
 
         let market_event = MarketEvent { exchange_time: 1625097600000,
@@ -483,8 +477,8 @@ mod tests
         assert_eq!(instrument_orders.num_orders(), 1);
 
         // 添加一个卖单
-        let order_sell = create_order(Side::Sell, 110.0, 1.0);
-        let order_sell_2 = create_order(Side::Sell, 115.0, 1.0);
+        let order_sell = create_order(Sell, 110.0, 1.0);
+        let order_sell_2 = create_order(Sell, 115.0, 1.0);
         instrument_orders.add_order_open(order_sell);
         assert_eq!(instrument_orders.num_orders(), 2);
 
@@ -497,5 +491,77 @@ mod tests
         instrument_orders.add_order_open(order_sell_2);
         //
         assert_eq!(instrument_orders.num_orders(), 5); // 3 个买单和 2 个卖单
+    }
+
+    #[test]
+    fn test_no_orders() {
+        let instrument_orders = InstrumentOrders::default();
+
+        let market_event = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "buy".to_string(),
+                price: 100.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
+
+        let matching_side = instrument_orders.determine_matching_side(&market_event);
+        assert_eq!(matching_side, None); // 没有订单时应该返回None
+    }
+
+    #[test]
+    fn test_out_of_range_price() {
+        let mut instrument_orders = InstrumentOrders::default();
+
+        let order_buy = create_order(Side::Buy, 90.0, 1.0); // 低价买单
+        let order_sell = create_order(Side::Sell, 110.0, 1.0); // 高价卖单
+
+        instrument_orders.add_order_open(order_buy);
+        instrument_orders.add_order_open(order_sell);
+
+        // 市场价格远高于卖单，应该没有匹配
+        let market_event_low = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "buy".to_string(),
+                price: 200.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
+
+        let matching_side_low = instrument_orders.determine_matching_side(&market_event_low);
+        assert_eq!(matching_side_low, None); // 应该没有匹配
+
+        // 市场价格高于买单，应该没有匹配
+        let market_event_high = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "sell".to_string(),
+                price: 115.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
+
+        let matching_side_high = instrument_orders.determine_matching_side(&market_event_high);
+        assert_eq!(matching_side_high, None); // 应该没有匹配
     }
 }
