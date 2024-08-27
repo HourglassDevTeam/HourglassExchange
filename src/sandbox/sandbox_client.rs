@@ -9,7 +9,7 @@ use crate::{
         balance::TokenBalance,
         order::{Cancelled, Open, Order, Pending},
     },
-    sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade,
+    sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
     AccountEvent, ClientExecution, Exchange, ExecutionError, RequestCancel, RequestOpen,
 };
 
@@ -32,7 +32,7 @@ type RequestCancelOrders = (Vec<Order<RequestCancel>>, Sender<CancelOrderResults
 #[derive(Debug)]
 pub enum SandBoxClientEvent
 {
-    FetchMarketEvent(MarketEvent<ClickhousePublicTrade>),
+    FetchMarketEvent(MarketEvent<MarketTrade>),
     FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExecutionError>>),
     FetchBalances(Sender<Result<Vec<TokenBalance>, ExecutionError>>),
     OpenOrders(RequestOpenOrders),

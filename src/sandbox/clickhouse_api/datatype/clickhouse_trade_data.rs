@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
-pub struct ClickhousePublicTrade
+pub struct MarketTrade
 {
     // pub exchange: String, // NOTE this field and relevant data is stored in database. but currently not applicable as of August 2024.
     pub symbol: String, // NOTE : symbol = basequote

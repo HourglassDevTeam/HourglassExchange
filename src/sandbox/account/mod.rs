@@ -30,7 +30,7 @@ use crate::{
         Side,
     },
     error::ExecutionError,
-    sandbox::{ clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade, instrument_orders::InstrumentOrders},
+    sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
 
@@ -276,7 +276,7 @@ impl Account
         }
     }
 
-    pub async fn match_orders(&mut self, market_event: MarketEvent<ClickhousePublicTrade>)
+    pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>)
     {
         let current_price = market_event.kind.price;
 
@@ -346,7 +346,7 @@ impl Account
         }
     }
 
-    fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &MarketEvent<ClickhousePublicTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade>
+    fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &MarketEvent<MarketTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade>
     {
         match side {
             | Side::Buy => orders.match_bids(market_event, fees_percent),

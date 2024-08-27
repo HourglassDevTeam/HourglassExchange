@@ -79,7 +79,7 @@ use crate::common_infrastructure::datafeed::market_event::MarketEvent;
 
 
 use crate::common_infrastructure::order::{Order, RequestCancel, RequestOpen};
-use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::ClickhousePublicTrade;
+use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 use crate::sandbox::sandbox_client::SandBoxClientEvent;
 use serde::Deserialize;
 use tokio::sync::oneshot;
@@ -128,7 +128,7 @@ impl NetworkEvent {
             }
             "FetchMarketEvent" => {
                 // 解析 payload 为 MarketEvent<ClickhousePublicTrade> 类型
-                let market_event: MarketEvent<ClickhousePublicTrade> = serde_json::from_str(&self.payload)
+                let market_event: MarketEvent<MarketTrade> = serde_json::from_str(&self.payload)
                     .map_err(|e| format!("Failed to parse FetchMarketEvent payload: {}", e))?;
                 Ok(SandBoxClientEvent::FetchMarketEvent(market_event))
             }
