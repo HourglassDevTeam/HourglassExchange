@@ -199,7 +199,7 @@ impl ClickHouseClient
         let final_query = format!(
                                   "CREATE TABLE {}.{} ENGINE = ReplacingMergeTree() \
         PARTITION BY toYYYYMMDD(toDate(timestamp)) \
-        ORDER BY  (timestamp,id,symbol,side) AS {}",
+        ORDER BY  (timestamp,id) AS {}",
                                   database, new_table_name, union_all_query
         );
 
