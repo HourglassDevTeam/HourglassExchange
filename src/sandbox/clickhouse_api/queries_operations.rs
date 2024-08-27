@@ -1,5 +1,3 @@
-use crate::common_infrastructure::datafeed::market_event::MarketEvent;
-use async_stream::stream;
 use chrono::NaiveDate;
 use clickhouse::query::RowCursor;
 pub use clickhouse::{
@@ -11,18 +9,15 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 /// NOTE 目前表名的构建方式都以`Tardis API`的`Binance`数据为基础。可能并不适用于其他交易所。日后**必须**扩展。
 use rayon::prelude::*;
 use std::sync::{Arc, Mutex};
-use tokio::sync::{
-    mpsc::{unbounded_channel, UnboundedReceiver},
-    RwLock,
-};
+use tokio::sync::RwLock;
 
 use crate::{
-    common_infrastructure::Side,
-    error::ExecutionError,
+    common_infrastructure::Side
+    ,
     sandbox::{
         clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, query_builder::ClickHouseQueryBuilder},
-        utils::chrono_operations::extract_date,
-        ws_trade::parse_base_and_quote,
+        utils::chrono_operations::extract_date
+        ,
     },
 };
 
@@ -251,129 +246,10 @@ impl ClickHouseClient
     {
         let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
         let database = self.construct_database_name(exchange, instrument, "trades");
-        let query = format!("SELECT * FROM {}.{} ORDER BY timestamp", database, table_name);
+        let query = format!("SELECT exchange, symbol, side, price, timestamp, amount FROM {}.{} ORDER BY timestamp", database, table_name);
         println!("[UniLinkExecution] : Executing query: {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<MarketTrade>().await?;
         Ok(trade_datas)
-    }
-
-    pub async fn query_unioned_trade_table_batched<'a>(&'a self,
-                                                       exchange: &'a str,
-                                                       instrument: &'a str,
-                                                       channel: &'a str,
-                                                       date: &'a str,
-                                                       batch_size: usize)
-                                                       -> impl Stream<Item = MarketEvent<MarketTrade>> + 'a
-    {
-        stream! {
-            let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
-            let database = self.construct_database_name(exchange, instrument, "trades");
-            let mut offset = 0;
-
-            loop {
-                 let query = ClickHouseQueryBuilder::new()
-                        .select("*")
-                        .from(&database, &table_name)
-                        .limit(batch_size)
-                        .offset(offset)
-                .order("timestamp",Some("DESC"))
-                        .build();
-                println!("[UniLinkExecution] : Executing query: {}", query);
-
-                match self.client.read().await.query(&query).fetch_all::<MarketTrade>().await {
-                    Ok(trade_datas) => {
-                        for trade_data in &trade_datas {
-                            let (base, quote) = parse_base_and_quote(&trade_data.symbol);
-                            let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
-                            yield market_event;
-                        }
-
-                        if trade_datas.len() < batch_size {
-                            break;
-                        }
-
-                        offset += batch_size;
-                    },
-                    Err(e) => {
-                        eprintln!("Failed query: {}", e);
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    pub async fn query_unioned_trade_table_batched_between_dates(self: Arc<Self>,
-                                                                 exchange: &str,
-                                                                 instrument: &str,
-                                                                 channel: &str,
-                                                                 start_date: &str,
-                                                                 end_date: &str,
-                                                                 batch_size: usize)
-                                                                 -> Result<UnboundedReceiver<MarketEvent<MarketTrade>>, ExecutionError>
-    {
-        let (tx, rx) = unbounded_channel();
-        // 处理 start_date 解析，并映射到 ExecutionError
-        let start_date = NaiveDate::parse_from_str(start_date, "%Y_%m_%d").map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid start date format: {}", e)))?;
-
-        // 处理 end_date 解析，并映射到 ExecutionError
-        let end_date = NaiveDate::parse_from_str(end_date, "%Y_%m_%d").map_err(|e| ExecutionError::InvalidTradingPair(format!("Invalid end date format: {}", e)))?;
-
-        let mut current_date = start_date;
-
-        let client = Arc::clone(&self.client);
-        let exchange = exchange.to_owned();
-        let instrument = instrument.to_owned();
-        let channel = channel.to_owned();
-
-        tokio::spawn(async move {
-            while current_date <= end_date {
-                let date = current_date.format("%Y_%m_%d").to_string();
-                let table_name = self.construct_union_table_name(&exchange, &instrument, &channel, &date);
-                let database = self.construct_database_name(&exchange, &instrument, &channel);
-                let mut offset = 0;
-
-                loop {
-                    let query = ClickHouseQueryBuilder::new().select("*")
-                                                             .from(&database, &table_name)
-                                                             .order("timestamp", Some("ASC"))
-                                                             .limit(batch_size)
-                                                             .offset(offset)
-                                                             .build();
-                    println!("[UniLinkExecution] : Executing query: {}", query);
-
-                    let client = client.read().await;
-                    match client.query(&query).fetch_all::<MarketTrade>().await {
-                        | Ok(trade_datas) => {
-                            for trade_data in &trade_datas {
-                                let (base, quote) = parse_base_and_quote(&trade_data.symbol);
-                                let market_event = MarketEvent::from_swap_trade_clickhouse(trade_data.clone(), base, quote);
-                                // println!("Sending market event: {:?}", market_event);
-                                if tx.send(market_event).is_err() {
-                                    eprintln!("Failed to send market event");
-                                    return;
-                                }
-                            }
-
-                            if trade_datas.len() < batch_size {
-                                break;
-                            }
-
-                            offset += batch_size;
-                        }
-                        | Err(e) => {
-                            eprintln!("Failed query: {}", e);
-                            eprintln!("Query: {}", query);
-                            return;
-                        }
-                    }
-                }
-
-                current_date += chrono::Duration::days(1);
-            }
-        });
-
-        Ok(rx)
     }
 
     pub async fn cursor_public_trades<'a>(&'a self, exchange: &'a str, instrument: &'a str, date: &'a str, base: &'a str, quote: &'a str) -> Result<RowCursor<MarketTrade>>
@@ -383,7 +259,7 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
 
         // 使用 ClickHouseQueryBuilder 构造查询语句
-        let query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount")
+        let query = ClickHouseQueryBuilder::new().select("exchange, symbol, side, price, timestamp, amount")
                                                  .from(&database_name, &table_name)
                                                  .order("timestamp", Some("DESC"))
                                                  .build();
