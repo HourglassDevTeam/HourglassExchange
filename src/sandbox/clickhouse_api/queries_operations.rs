@@ -4,7 +4,6 @@ pub use clickhouse::{
     error::{Error, Result},
     Client, Row,
 };
-use futures_core::Stream;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 /// NOTE 目前表名的构建方式都以`Tardis API`的`Binance`数据为基础。可能并不适用于其他交易所。日后**必须**扩展。
 use rayon::prelude::*;
