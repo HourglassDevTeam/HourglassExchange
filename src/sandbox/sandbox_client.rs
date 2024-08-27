@@ -2,7 +2,10 @@ use crate::{
     common_infrastructure::{
         balance::TokenBalance,
         datafeed::market_event::MarketEvent,
-        order::{ Order},
+        order::{
+            states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel},
+            Order,
+        },
     },
     sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
     AccountEvent, ClientExecution, Exchange, ExecutionError, RequestOpen,
@@ -12,10 +15,6 @@ use mpsc::UnboundedSender;
 use oneshot::Sender;
 use tokio::sync::{mpsc, mpsc::UnboundedReceiver, oneshot};
 use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrdersOpen, OpenOrders};
-use crate::common_infrastructure::order::states::cancelled::Cancelled;
-use crate::common_infrastructure::order::states::open::Open;
-use crate::common_infrastructure::order::states::pending::Pending;
-use crate::common_infrastructure::order::states::request_cancel::RequestCancel;
 
 #[derive(Debug)]
 pub struct SandBoxClient

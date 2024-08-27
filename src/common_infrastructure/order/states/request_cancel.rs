@@ -9,9 +9,7 @@ pub struct RequestCancel
 }
 
 // 从Id直接生成RequestCancel
-impl<Id> From<Id> for RequestCancel
-where
-    Id: Into<OrderId>,
+impl<Id> From<Id> for RequestCancel where Id: Into<OrderId>
 {
     fn from(id: Id) -> Self
     {

@@ -74,15 +74,16 @@
 /// `NetworkEvent` 结构体旨在简化事件的创建和传递。使用 `NetworkEvent` 可以确保事件的数据格式统一，便于服务器端的解析和处理。
 ///
 /// 客户端在构建 `NetworkEvent` 时，需要确保提供的 `event_type` 是有效的，并且 `payload` 是与该事件类型匹配的有效数据。
-use crate::common_infrastructure::order::{Order};
+use crate::common_infrastructure::order::Order;
 use crate::{
-    common_infrastructure::datafeed::market_event::MarketEvent,
+    common_infrastructure::{
+        datafeed::market_event::MarketEvent,
+        order::states::{request_cancel::RequestCancel, request_open::RequestOpen},
+    },
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, sandbox_client::SandBoxClientEvent},
 };
 use serde::Deserialize;
 use tokio::sync::oneshot;
-use crate::common_infrastructure::order::states::request_cancel::RequestCancel;
-use crate::common_infrastructure::order::states::request_open::RequestOpen;
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone, Eq, Ord, PartialEq, PartialOrd)]
@@ -144,14 +145,13 @@ mod tests
         common_infrastructure::{
             event::ClientOrderId,
             instrument::{kind::InstrumentKind, Instrument},
-            order::{Order},
+            order::{order_instructions::OrderInstruction, Order},
             Side,
         },
         Exchange,
     };
     use std::net::Ipv4Addr;
     use uuid::Uuid;
-    use crate::common_infrastructure::order::order_instructions::OrderInstruction;
 
     /// 测试 `NetworkEvent` 的创建和有效性
     #[test]
@@ -161,7 +161,7 @@ mod tests
         let event_type = "OpenOrders";
 
         // 2. 构建 payload
-        let orders = vec![Order { kind: OrderInstruction::Limit,                                       // 订单类型，例如限价单
+        let orders = vec![Order { kind: OrderInstruction::Limit,                                         // 订单类型，例如限价单
                                   exchange: Exchange::Binance,                                           // 交易所名称
                                   instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual), // 交易对
                                   client_ts: chrono::Utc::now().timestamp_millis(),                      // 客户端下单时间戳

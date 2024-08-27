@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::common_infrastructure::order::OrderId;
+use serde::{Deserialize, Serialize};
 
 /// 完全成交状态的订单, FullFill 以后在account层面 [AccountOrders] 删除对应open订单
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]

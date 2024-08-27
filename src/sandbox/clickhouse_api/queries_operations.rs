@@ -11,12 +11,10 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 
 use crate::{
-    common_infrastructure::Side
-    ,
+    common_infrastructure::Side,
     sandbox::{
         clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, query_builder::ClickHouseQueryBuilder},
-        utils::chrono_operations::extract_date
-        ,
+        utils::chrono_operations::extract_date,
     },
 };
 
@@ -245,7 +243,8 @@ impl ClickHouseClient
     {
         let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
         let database = self.construct_database_name(exchange, instrument, "trades");
-        let query = format!("SELECT exchange, symbol, side, price, timestamp, amount FROM {}.{} ORDER BY timestamp", database, table_name);
+        let query = format!("SELECT exchange, symbol, side, price, timestamp, amount FROM {}.{} ORDER BY timestamp",
+                            database, table_name);
         println!("[UniLinkExecution] : Executing query: {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<MarketTrade>().await?;
         Ok(trade_datas)

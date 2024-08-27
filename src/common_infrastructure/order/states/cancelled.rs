@@ -1,5 +1,4 @@
-use crate::common_infrastructure::order::states::open::Open;
-use crate::common_infrastructure::order::{Order, OrderId};
+use crate::common_infrastructure::order::{states::open::Open, Order, OrderId};
 use serde::{Deserialize, Serialize};
 
 /// 构建订单在被取消后的状态
@@ -9,9 +8,7 @@ pub struct Cancelled
     pub id: OrderId,
 }
 
-impl<Id> From<Id> for Cancelled
-where
-    Id: Into<OrderId>,
+impl<Id> From<Id> for Cancelled where Id: Into<OrderId>
 {
     fn from(id: Id) -> Self
     {
@@ -23,14 +20,12 @@ impl From<Order<Open>> for Order<Cancelled>
 {
     fn from(order: Order<Open>) -> Self
     {
-        Self {
-            kind: order.kind,
-            exchange: order.exchange,
-            instrument: order.instrument.clone(),
-            client_order_id: order.client_order_id,
-            client_ts: order.client_ts,
-            side: order.side,
-            state: Cancelled { id: order.state.id },
-        }
+        Self { kind: order.kind,
+               exchange: order.exchange,
+               instrument: order.instrument.clone(),
+               client_order_id: order.client_order_id,
+               client_ts: order.client_ts,
+               side: order.side,
+               state: Cancelled { id: order.state.id } }
     }
 }

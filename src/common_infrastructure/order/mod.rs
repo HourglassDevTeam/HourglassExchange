@@ -1,20 +1,19 @@
-pub mod states;
 pub mod order_instructions;
+pub mod states;
 
 use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common_infrastructure::order::order_instructions::OrderInstruction;
 use crate::{
-    common_infrastructure::{event::ClientOrderId, instrument::Instrument, Side},
+    common_infrastructure::{event::ClientOrderId, instrument::Instrument, order::order_instructions::OrderInstruction, Side},
     Exchange,
 };
 
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
-    pub kind: OrderInstruction,       // 订单指令
+    pub kind: OrderInstruction,         // 订单指令
     pub exchange: Exchange,             // 交易所
     pub instrument: Instrument,         // 交易工具
     pub client_ts: i64,                 // 客户端下单时间
@@ -23,14 +22,12 @@ pub struct Order<State>
     pub state: State,                   // 订单状态
 }
 
-
 #[derive(Debug, Copy, Clone, PartialOrd, Serialize, Deserialize, PartialEq)]
 pub enum OrderRole
 {
     Maker,
     Taker,
 }
-
 
 /// 订单ID / OrderId，应当由交易所生成。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
@@ -44,16 +41,10 @@ impl<Id> From<Id> for OrderId where Id: Display
     }
 }
 
-
-
 #[cfg(test)]
 mod tests
 {
-    use crate::common_infrastructure::order::states::cancelled::Cancelled;
-    use crate::common_infrastructure::order::states::open::Open;
-    use crate::common_infrastructure::order::states::pending::Pending;
-    use crate::common_infrastructure::order::states::request_cancel::RequestCancel;
-    use crate::common_infrastructure::order::states::request_open::RequestOpen;
+    use crate::common_infrastructure::order::states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen};
 
     use super::*;
 

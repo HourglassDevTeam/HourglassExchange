@@ -3,7 +3,7 @@ use crate::{
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
-        order::{Order, OrderRole},
+        order::{states::open::Open, Order, OrderRole},
         position,
         position::{leveraged_token, option, perpetual::PerpetualPosition, AccountPositions, Position, PositionDirectionMode, PositionMarginMode},
         token::Token,
@@ -24,7 +24,6 @@ use std::{
     ops::{Deref, DerefMut},
     sync::{atomic::Ordering, Weak},
 };
-use crate::common_infrastructure::order::states::open::Open;
 
 #[derive(Clone, Debug)]
 pub struct AccountState
@@ -510,7 +509,7 @@ mod tests
             event::ClientOrderId,
             friction::{Fees, FutureFees, PerpetualFees},
             instrument::{kind::InstrumentKind, Instrument},
-            order::{OrderId, OrderRole},
+            order::{order_instructions::OrderInstruction, OrderId, OrderRole},
             position::{future::FuturePositionConfig, perpetual::PerpetualPositionConfig, position_meta::PositionMeta, AccountPositions},
             token::Token,
         },
@@ -528,7 +527,6 @@ mod tests
     use tokio::sync::Mutex; // 确保使用 tokio 的 Mutex
     use tokio::sync::{mpsc, RwLock};
     use uuid::Uuid;
-    use crate::common_infrastructure::order::order_instructions::OrderInstruction;
 
     fn create_test_instrument(kind: InstrumentKind) -> Instrument
     {

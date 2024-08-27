@@ -2,7 +2,11 @@ use crate::{
     common_infrastructure::{
         event::ClientOrderId,
         instrument::Instrument,
-        order::{Order, OrderId, OrderRole},
+        order::{
+            order_instructions::OrderInstruction,
+            states::{open::Open, pending::Pending, request_open::RequestOpen},
+            Order, OrderId, OrderRole,
+        },
         Side,
     },
     error::ExecutionError,
@@ -14,13 +18,9 @@ use crate::{
 use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
-use crate::common_infrastructure::order::order_instructions::OrderInstruction;
-use crate::common_infrastructure::order::states::open::Open;
-use crate::common_infrastructure::order::states::pending::Pending;
-use crate::common_infrastructure::order::states::request_open::RequestOpen;
 
 #[derive(Debug)]
-pub struct  AccountOrders
+pub struct AccountOrders
 {
     pub latency_generator: AccountLatency,
     pub selectable_latencies: [i64; 20],
@@ -50,13 +50,17 @@ impl AccountOrders
     /// # 示例
     ///
     /// ```rust
-    /// use unilink_execution::common_infrastructure::instrument::Instrument;
-    /// use unilink_execution::common_infrastructure::instrument::kind::InstrumentKind;
-    /// use unilink_execution::sandbox::account::account_latency::{AccountLatency, FluctuationMode};
-    /// use unilink_execution::sandbox::account::account_orders::AccountOrders;
+    /// use unilink_execution::{
+    ///     common_infrastructure::instrument::{kind::InstrumentKind, Instrument},
+    ///     sandbox::account::{
+    ///         account_latency::{AccountLatency, FluctuationMode},
+    ///         account_orders::AccountOrders,
+    ///     },
+    /// };
     ///
     /// #[tokio::main]
-    /// async fn main() {
+    /// async fn main()
+    /// {
     ///     let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
     ///     let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
     ///     let account_orders = AccountOrders::new(instruments, account_latency).await;
@@ -73,7 +77,6 @@ impl AccountOrders
                latency_generator: account_latency,
                selectable_latencies }
     }
-
 
     /// 生成一组预定义的延迟值数组，用于模拟订单延迟。
     ///
@@ -104,7 +107,6 @@ impl AccountOrders
     /// # 返回值
     ///
     /// 返回一个随机选择的延迟值 `i64`。
-    ///
     fn get_random_latency(&self) -> i64
     {
         let mut rng = rand::thread_rng();
@@ -134,7 +136,6 @@ impl AccountOrders
     /// # 返回值
     ///
     /// 返回一个包含所有未完成订单的 `Vec<Order<Open>>`。
-    ///
     pub fn fetch_all(&self) -> Vec<Order<Open>>
     {
         self.instrument_orders_map
@@ -166,7 +167,6 @@ impl AccountOrders
         }
     }
 
-
     /// 将请求转换为一个待处理的订单 (`Pending`)。
     ///
     /// # 参数
@@ -176,7 +176,6 @@ impl AccountOrders
     /// # 返回值
     ///
     /// - 返回一个包含预测时间戳的待处理订单 (`Order<Pending>`)。
-    ///
     pub async fn process_request_as_pending(&mut self, order: Order<RequestOpen>) -> Order<Pending>
     {
         // turn the request into an pending order with a predicted timestamp
@@ -204,7 +203,6 @@ impl AccountOrders
     ///
     /// - 如果订单成功注册，返回 `Ok(())`。
     /// - 如果订单已存在，返回 `Err(ExecutionError::OrderAlreadyExists)`。
-    ///
     pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
     {
         if self.pending_registry.contains_key(&request.client_order_id) {
@@ -270,7 +268,6 @@ impl AccountOrders
     /// - 对于卖单 (`Side::Sell`):
     ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
     ///   - 否则，返回 `OrderRole::Taker`。
-    ///
     fn determine_limit_order_role(&self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
     {
         match order.side {
@@ -319,7 +316,6 @@ impl AccountOrders
     /// - 对于卖单 (`Side::Sell`):
     ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
     ///   - 否则，调用 `self.reject_post_only_order(order)` 拒绝订单，并返回错误。
-    ///
     fn determine_post_only_order_role(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
     {
         match order.side {
@@ -352,7 +348,6 @@ impl AccountOrders
     /// - `order`: 待拒绝的 PostOnly 订单 (`Order<Pending>`)。
     ///
     /// # 返回值
-    ///
     fn reject_post_only_order(&mut self, order: &Order<Pending>) -> Result<OrderRole, ExecutionError>
     {
         self.remove_order_from_pending_registry(order.client_order_id)?; // 移除订单
@@ -379,7 +374,6 @@ impl AccountOrders
                               received_ts: request.state.predicted_ts,
                               order_role: role } }
     }
-
 
     /// 增加请求计数器的值。
     ///

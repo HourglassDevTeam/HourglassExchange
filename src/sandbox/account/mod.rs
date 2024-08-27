@@ -22,7 +22,11 @@ use crate::{
         balance::TokenBalance,
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
-        order::{Order, OrderRole},
+        order::{
+            order_instructions::OrderInstruction,
+            states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
+            Order, OrderRole,
+        },
         position::AccountPositions,
         token::Token,
         trade::ClientTrade,
@@ -32,12 +36,6 @@ use crate::{
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
-use crate::common_infrastructure::order::order_instructions::OrderInstruction;
-use crate::common_infrastructure::order::states::cancelled::Cancelled;
-use crate::common_infrastructure::order::states::open::Open;
-use crate::common_infrastructure::order::states::pending::Pending;
-use crate::common_infrastructure::order::states::request_cancel::RequestCancel;
-use crate::common_infrastructure::order::states::request_open::RequestOpen;
 
 pub mod account_config;
 pub mod account_latency;
@@ -280,7 +278,7 @@ impl Account
             | OrderInstruction::FillOrKill
             | OrderInstruction::PostOnly
             | OrderInstruction::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
-                                                               * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
+                                                             * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
     }
 
