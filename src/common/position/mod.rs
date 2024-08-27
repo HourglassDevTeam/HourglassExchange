@@ -47,6 +47,7 @@ impl AccountPositions
                option_pos: Vec::new() }
     }
 
+    /// TODO check init logic
     pub async fn build_new_perpetual_position(&self,
                                               config: &AccountConfig,
                                               trade: &ClientTrade, // 使用 ClientTrade 作为输入参数
