@@ -15,6 +15,7 @@ pub struct ClientTrade
     pub fees: f64,
 }
 
+/// CONSIDER : type of ClientTradeId appropriate?
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct ClientTradeId(pub i64);
 
