@@ -460,7 +460,7 @@ impl AccountState
     {
         let base_balance = self.balance_mut(token).unwrap();
 
-        base_balance.apply(delta);
+        let _ = base_balance.apply(delta);
 
         *base_balance
     }

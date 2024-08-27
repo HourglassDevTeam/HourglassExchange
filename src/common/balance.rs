@@ -49,10 +49,13 @@ impl Balance
     }
 
     /// 对这个[`Balance`]应用一个[`BalanceDelta`]。
-    pub fn apply(&mut self, delta: BalanceDelta)
-    {
+    pub fn apply(&mut self, delta: BalanceDelta) -> Result<(), &'static str> {
+        if self.total + delta.total < 0.0 || self.available + delta.available < 0.0 {
+            return Err("Insufficient balance to apply the delta.");
+        }
         self.total += delta.total;
         self.available += delta.available;
+        Ok(())
     }
 }
 
@@ -120,7 +123,7 @@ mod tests
     {
         let mut balance = Balance::new(100.0, 50.0, 20000.0);
         let delta = BalanceDelta::new(10.0, 5.0);
-        balance.apply(delta);
+        let _ = balance.apply(delta);
         assert_eq!(balance.total, 110.0);
         assert_eq!(balance.available, 55.0);
     }
