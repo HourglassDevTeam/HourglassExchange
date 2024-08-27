@@ -7,7 +7,7 @@ use crate::common::token::Token;
 pub struct TokenBalance
 {
     pub token: Token,     // 符号
-    pub balance: Balance, // 平衡
+    pub balance: Balance, // 账单
 }
 
 impl TokenBalance
