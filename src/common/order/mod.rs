@@ -1,15 +1,15 @@
 pub mod order_instructions;
 pub mod states;
 
-use std::fmt;
-use std::fmt::{Display};
-use std::sync::LazyLock;
-use regex::Regex;
 use crate::{
     common::{instrument::Instrument, order::order_instructions::OrderInstruction, Side},
     Exchange,
 };
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::fmt::Display;
+use std::sync::LazyLock;
 
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
@@ -60,7 +60,6 @@ impl Display for ClientOrderId {
     }
 }
 
-
 // Initialize a static variable with LazyLock
 static ID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[a-zA-Z0-9_-]{6,20}$").unwrap()
@@ -84,8 +83,7 @@ impl ClientOrderId {
 
     // 验证 ID 格式
     fn validate_id_format(id: &str) -> bool {
-        let re = Regex::new(r"^[a-zA-Z0-9_-]{6,20}$").unwrap(); // 允许的格式：6-20个字符，只允许字母、数字、下划线和短划线
-        re.is_match(id)
+        ID_REGEX.is_match(id)
     }
 
     // 自动生成唯一的 ID
