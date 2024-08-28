@@ -241,17 +241,14 @@ impl AccountOrders
     /// - 如果订单成功注册，返回 `Ok(())`。
     /// - 如果订单已存在，返回 `Err(ExecutionError::OrderAlreadyExists)`。
     pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError> {
-        // Generate a new RequestId
-        let request_id = self.generate_request_id();
-
-        // Check if an entry with this RequestId already exists
-        if self.pending_order_registry.contains_key(&request_id) {
+        // Check if an entry with this ClientOrderId already exists
+        if self.pending_order_registry.iter().any(|entry| entry.value().cid == request.cid) {
             return Err(ExecutionError::OrderAlreadyExists(request.cid));
         }
 
         // Process the request to create a pending order
         let pending_order = self.process_request_as_pending(request.clone()).await;
-        self.pending_order_registry.insert(request_id, pending_order);
+        self.pending_order_registry.insert(pending_order.state.request_id, pending_order);
         Ok(())
     }
 

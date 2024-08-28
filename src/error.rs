@@ -44,6 +44,12 @@ pub enum ExecutionError
     #[error("[UniLinkExecution] : Operation timed out: {0}")]
     Timeout(String),
 
+
+    /// 订单已存在。
+    #[error("[UniLinkExecution] : Order already exists: {0}")]
+    RequestAlreadyExists(RequestId),
+
+
     /// 订单已存在。
     #[error("[UniLinkExecution] : Order already exists: {0}")]
     OrderAlreadyExists(ClientOrderId),
