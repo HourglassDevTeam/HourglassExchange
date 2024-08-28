@@ -488,13 +488,12 @@ impl DerefMut for AccountState
 mod tests
 {
     use super::*;
-    use crate::common::order::ClientOrderId;
     use crate::{
         common::{
             balance::Balance,
             friction::{Fees, FutureFees, PerpetualFees},
             instrument::{kind::InstrumentKind, Instrument},
-            order::{order_instructions::OrderInstruction, OrderId, OrderRole},
+            order::{order_instructions::OrderInstruction, OrderRole},
             position::{future::FuturePositionConfig, perpetual::PerpetualPositionConfig, position_meta::PositionMeta, AccountPositions},
             token::Token,
         },
@@ -513,6 +512,7 @@ mod tests
     // 确保使用 tokio 的 Mutex
     use tokio::sync::{mpsc, RwLock};
     use uuid::Uuid;
+    use crate::common::order::id::{ClientOrderId, OrderId};
 
     fn create_test_instrument(kind: InstrumentKind) -> Instrument
     {

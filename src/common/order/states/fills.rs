@@ -14,8 +14,8 @@
 /// - **扩展系统功能**：如果未来需要更加详细的订单执行状态管理，`OrderFills` 可以作为基础结构被扩展和利用。
 
 
-use crate::common::order::OrderId;
 use serde::{Deserialize, Serialize};
+use crate::common::order::id::OrderId;
 
 /// `FullyFill` 结构体表示订单完全成交的状态。
 /// 完全成交状态意味着订单的所有数量已经被匹配和执行。

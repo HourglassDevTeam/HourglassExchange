@@ -1,4 +1,3 @@
-use crate::common::order::ClientOrderId;
 use crate::common::datafeed::market_event::MarketEvent;
 use futures::future::join_all;
 use mpsc::UnboundedSender;
@@ -37,6 +36,7 @@ use crate::{
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
+use crate::common::order::id::ClientOrderId;
 
 pub mod account_config;
 pub mod account_latency;
@@ -288,14 +288,14 @@ impl Account
         let current_price = market_event.kind.price;
 
         // 这里使用 `DashMap` 的 `iter()` 获取所有键值对，并提取键作为 `order_ids`
-        let order_ids: Vec<ClientOrderId> = self.orders.read().await.pending_registry.iter().map(|entry| entry.key().clone()).collect();
+        let order_ids: Vec<ClientOrderId> = self.orders.read().await.pending_order_registry.iter().map(|entry| entry.key().clone()).collect();
 
         // 遍历订单 ID 来处理每个订单
         for order_id in order_ids {
             let order = {
                 // 只在获取订单时持有锁
                 let orders_read = self.orders.read().await;
-                orders_read.pending_registry.get(&order_id).map(|entry| entry.value().clone())
+                orders_read.pending_order_registry.get(&order_id).map(|entry| entry.value().clone())
             };
 
             if let Some(order) = order {

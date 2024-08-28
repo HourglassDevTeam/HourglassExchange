@@ -1,5 +1,6 @@
-use crate::common::order::{states::open::Open, Order, OrderId};
+use crate::common::order::{states::open::Open, Order};
 use serde::{Deserialize, Serialize};
+use crate::common::order::id::OrderId;
 
 /// 表示订单被取消后的状态。`Cancelled` 结构体通常用于标识一个订单已经从活动状态转变为取消状态。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]

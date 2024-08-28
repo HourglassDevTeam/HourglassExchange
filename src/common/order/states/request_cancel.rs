@@ -1,5 +1,5 @@
-use crate::common::order::OrderId;
 use serde::{Deserialize, Serialize};
+use crate::common::order::id::OrderId;
 
 /// `RequestCancel` 结构体表示一个取消订单的请求。
 ///

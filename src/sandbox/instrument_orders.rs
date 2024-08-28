@@ -223,11 +223,10 @@ impl InstrumentOrders
 mod tests
 {
     use super::*;
-    use crate::common::order::ClientOrderId;
     use crate::{
         common::{
             instrument::Instrument,
-            order::{order_instructions::OrderInstruction, OrderId, OrderRole},
+            order::{order_instructions::OrderInstruction, OrderRole},
             token::Token,
             Side,
         },
@@ -235,6 +234,7 @@ mod tests
         Exchange,
     };
     use Side::Sell;
+    use crate::common::order::id::{ClientOrderId, OrderId};
 
     fn create_order(side: Side, price: f64, size: f64) -> Order<Open>
     {

@@ -1,11 +1,10 @@
-use crate::common::order::ClientOrderId;
 use crate::{
     common::{
         instrument::Instrument,
         order::{
             order_instructions::OrderInstruction,
             states::{open::Open, pending::Pending, request_open::RequestOpen},
-            Order, OrderId, OrderRole,
+            Order, OrderRole,
         },
         Side,
     },
@@ -18,6 +17,7 @@ use crate::{
 use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
+use crate::common::order::id::{ClientOrderId, OrderId};
 
 #[derive(Debug)]
 pub struct AccountOrders
@@ -25,7 +25,7 @@ pub struct AccountOrders
     pub latency_generator: AccountLatency,
     pub selectable_latencies: [i64; 20],
     pub request_counter: AtomicU64,                               // 用来生成一个唯一的 [`OrderId`]。
-    pub pending_registry: DashMap<ClientOrderId, Order<Pending>>, // 使用 HashMap
+    pub pending_order_registry: DashMap<ClientOrderId, Order<Pending>>, // 使用 HashMap
     pub instrument_orders_map: DashMap<Instrument, InstrumentOrders>,
 }
 
@@ -72,7 +72,7 @@ impl AccountOrders
         let selectable_latencies = Self::generate_latencies(&mut account_latency).await;
 
         Self { request_counter: AtomicU64::new(0),
-               pending_registry: DashMap::new(),
+               pending_order_registry: DashMap::new(),
                instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
                latency_generator: account_latency,
                selectable_latencies }
@@ -159,7 +159,7 @@ impl AccountOrders
     /// - 如果未找到订单，返回 `Err(ExecutionError::OrderNotFound)`。
     pub fn remove_order_from_pending_registry(&mut self, cid: ClientOrderId) -> Result<(), ExecutionError>
     {
-        if self.pending_registry.remove(&cid).is_some() {
+        if self.pending_order_registry.remove(&cid).is_some() {
             Ok(())
         }
         else {
@@ -205,11 +205,11 @@ impl AccountOrders
     /// - 如果订单已存在，返回 `Err(ExecutionError::OrderAlreadyExists)`。
     pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
     {
-        if self.pending_registry.contains_key(&request.cid) {
+        if self.pending_order_registry.contains_key(&request.cid) {
             return Err(ExecutionError::OrderAlreadyExists(request.cid));
         }
         let pending_order = self.process_request_as_pending(request.clone()).await;
-        self.pending_registry.insert(request.cid, pending_order);
+        self.pending_order_registry.insert(request.cid, pending_order);
         Ok(())
     }
 
@@ -428,7 +428,7 @@ mod tests
 
         assert_eq!(account_orders.request_counter.load(Ordering::Acquire), 0);
         assert_eq!(account_orders.instrument_orders_map.len(), instruments.len());
-        assert!(account_orders.pending_registry.is_empty());
+        assert!(account_orders.pending_order_registry.is_empty());
     }
 
     #[tokio::test]
@@ -514,10 +514,10 @@ mod tests
             },
         };
 
-        account_orders.pending_registry.insert(order.cid.clone(), order.clone()); // Clone here as well
+        account_orders.pending_order_registry.insert(order.cid.clone(), order.clone()); // Clone here as well
         let remove_result = account_orders.remove_order_from_pending_registry(order.cid);
         assert!(remove_result.is_ok());
-        assert!(account_orders.pending_registry.is_empty());
+        assert!(account_orders.pending_order_registry.is_empty());
 
         let remove_invalid_result = account_orders.remove_order_from_pending_registry(client_order_id);
         assert!(remove_invalid_result.is_err());
@@ -569,7 +569,7 @@ mod tests
 
         let result = account_orders.register_pending_order(request_order.clone()).await;
         assert!(result.is_ok());
-        assert_eq!(account_orders.pending_registry.len(), 1);
+        assert_eq!(account_orders.pending_order_registry.len(), 1);
 
         let duplicate_result = account_orders.register_pending_order(request_order).await;
         assert!(duplicate_result.is_err());

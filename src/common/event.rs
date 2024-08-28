@@ -55,9 +55,9 @@ pub enum AccountEventKind
 mod tests
 {
     use super::*;
-    use crate::common::order::ClientOrderId;
     use crate::common::{balance::Balance, token::Token};
     use uuid::Uuid;
+    use crate::common::order::id::ClientOrderId;
 
     #[test]
     fn account_event_should_serialize_and_deserialize_correctly()

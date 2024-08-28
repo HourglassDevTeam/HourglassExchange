@@ -20,11 +20,12 @@
 ///     Exchange,
 /// };
 /// use uuid::Uuid;
-/// use unilink_execution::common::order::ClientOrderId;
 /// use unilink_execution::common::order::order_instructions::OrderInstruction;
 ///
 ///
-/// use unilink_execution::common::order::states::request_open::RequestOpen;
+/// use unilink_execution::common::order::states::request_open::RequestOpen;///
+///
+/// use unilink_execution::common::order::id::ClientOrderId;
 ///
 /// fn create_open_orders_event() -> NetworkEvent
 /// {
@@ -142,7 +143,6 @@ impl NetworkEvent
 mod tests
 {
     use super::*;
-    use crate::common::order::ClientOrderId;
     use crate::{
         common::{
             instrument::{kind::InstrumentKind, Instrument},
@@ -153,6 +153,7 @@ mod tests
     };
     use std::net::Ipv4Addr;
     use uuid::Uuid;
+    use crate::common::order::id::ClientOrderId;
 
     /// 测试 `NetworkEvent` 的创建和有效性
     #[test]
