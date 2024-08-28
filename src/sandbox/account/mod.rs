@@ -10,6 +10,7 @@ use std::{
         Arc,
     },
 };
+use std::sync::atomic::AtomicU64;
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 
@@ -52,6 +53,7 @@ pub struct Account
     pub config: Arc<AccountConfig>,                      // 帐户配置
     pub states: Arc<Mutex<AccountState>>,                // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
+    pub counter: AtomicU64,                              // 请求计数器
 }
 
 // 手动实现 Clone trait
@@ -64,7 +66,9 @@ impl Clone for Account
                   account_event_tx: self.account_event_tx.clone(),
                   config: Arc::clone(&self.config),
                   states: Arc::clone(&self.states),
-                  orders: Arc::clone(&self.orders) }
+                  orders: Arc::clone(&self.orders),
+            counter: AtomicU64::new(self.counter.load(Ordering::SeqCst)),
+        }
     }
 }
 #[derive(Clone, Debug)]
@@ -124,7 +128,9 @@ impl AccountInitiator
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
                      config: self.config.ok_or("config is required")?,                               // 检查并获取config
                      states: self.states.ok_or("balances is required")?,                             // 检查并获取balances
-                     orders: self.orders.ok_or("orders are required")? })
+                     orders: self.orders.ok_or("orders are required")?,
+                     counter: 0.into(),
+        })
     }
 }
 

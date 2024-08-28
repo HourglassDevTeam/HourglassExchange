@@ -1,4 +1,5 @@
 pub mod client_order_id;
+mod request_order_id;
 
 use std::fmt::Display;
 use serde::{Deserialize, Serialize};
