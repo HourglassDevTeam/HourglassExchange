@@ -11,6 +11,7 @@ impl Display for RequestId {
         write!(f, "{}", self.0)
     }
 }
+
 impl RequestId
 {
     /// 生成一个新的 `RequestId`，采用雪花算法的变种。
