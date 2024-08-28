@@ -453,7 +453,7 @@ impl Account
                 let index = orders.bids
                                   .par_iter()
                                   .position_any(|bid| bid.state.id == request.state.id)
-                                  .ok_or(ExecutionError::OrderNotFound(request.client_order_id))?;
+                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                 orders.bids.remove(index)
             }
             | Side::Sell => {
@@ -461,7 +461,7 @@ impl Account
                 let index = orders.asks
                                   .par_iter()
                                   .position_any(|ask| ask.state.id == request.state.id)
-                                  .ok_or(ExecutionError::OrderNotFound(request.client_order_id))?;
+                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                 orders.asks.remove(index)
             }
         };
@@ -508,7 +508,7 @@ impl Account
                                                                                               instrument: order.instrument,
                                                                                               side: order.side,
                                                                                               kind: order.kind,
-                                                                                              client_order_id: order.client_order_id,
+                                                                                              cid: order.cid,
                                                                                               exchange: Exchange::SandBox,
                                                                                               client_ts: 0 })
                                                                          .collect();

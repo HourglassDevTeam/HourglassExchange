@@ -28,7 +28,7 @@ impl From<Order<Open>> for Order<Cancelled>
         Self { kind: order.kind,
                exchange: order.exchange,
                instrument: order.instrument.clone(),
-               client_order_id: order.client_order_id,
+               cid: order.cid,
                client_ts: order.client_ts,
                side: order.side,
                state: Cancelled { id: order.state.id } }

@@ -244,7 +244,7 @@ mod tests
                                          quote: Token::from("USDT"),
                                          kind: Default::default() },
                 client_ts: 0,
-                client_order_id: ClientOrderId(Option::from("OJBK".to_string())),
+                cid: ClientOrderId(Option::from("OJBK".to_string())),
                 side,
                 state: Open { id: OrderId("12345".into()), // 使用一个有效的 OrderId
                               price,

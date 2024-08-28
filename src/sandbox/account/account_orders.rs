@@ -184,7 +184,7 @@ impl AccountOrders
         Order { kind: order.kind,
                 exchange: order.exchange,
                 instrument: order.instrument,
-                client_order_id: order.client_order_id,
+                cid: order.cid,
                 client_ts: order.client_ts,
                 side: order.side,
                 state: Pending { reduce_only: order.state.reduce_only,
@@ -205,11 +205,11 @@ impl AccountOrders
     /// - 如果订单已存在，返回 `Err(ExecutionError::OrderAlreadyExists)`。
     pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
     {
-        if self.pending_registry.contains_key(&request.client_order_id) {
-            return Err(ExecutionError::OrderAlreadyExists(request.client_order_id));
+        if self.pending_registry.contains_key(&request.cid) {
+            return Err(ExecutionError::OrderAlreadyExists(request.cid));
         }
         let pending_order = self.process_request_as_pending(request.clone()).await;
-        self.pending_registry.insert(request.client_order_id, pending_order);
+        self.pending_registry.insert(request.cid, pending_order);
         Ok(())
     }
 
@@ -350,7 +350,7 @@ impl AccountOrders
     /// # 返回值
     fn reject_post_only_order(&mut self, order: &Order<Pending>) -> Result<OrderRole, ExecutionError>
     {
-        self.remove_order_from_pending_registry(order.client_order_id.clone())?; // 移除订单
+        self.remove_order_from_pending_registry(order.cid.clone())?; // 移除订单
         Err(ExecutionError::OrderRejected("PostOnly order rejected".into())) // 返回拒绝错误
     }
 
@@ -364,7 +364,7 @@ impl AccountOrders
         Order { kind: request.kind,
                 exchange: request.exchange,
                 instrument: request.instrument,
-                client_order_id: request.client_order_id,
+                cid: request.cid,
                 client_ts: request.client_ts,
                 side: request.side,
                 state: Open { id: self.order_id(),
@@ -503,7 +503,7 @@ mod tests
             kind: OrderInstruction::Limit,
             exchange: Exchange::SandBox,
             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            client_order_id: client_order_id.clone(), // Clone here to retain ownership
+            cid: client_order_id.clone(), // Clone here to retain ownership
             client_ts: 0,
             side: Side::Buy,
             state: Pending {
@@ -514,8 +514,8 @@ mod tests
             },
         };
 
-        account_orders.pending_registry.insert(order.client_order_id.clone(), order.clone()); // Clone here as well
-        let remove_result = account_orders.remove_order_from_pending_registry(order.client_order_id);
+        account_orders.pending_registry.insert(order.cid.clone(), order.clone()); // Clone here as well
+        let remove_result = account_orders.remove_order_from_pending_registry(order.cid);
         assert!(remove_result.is_ok());
         assert!(account_orders.pending_registry.is_empty());
 
@@ -536,7 +536,7 @@ mod tests
         let request_order = Order { kind: OrderInstruction::Limit,
                                     exchange: Exchange::SandBox,
                                     instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                                    client_order_id: client_order_id.clone(),
+                                    cid: client_order_id.clone(),
                                     client_ts: 1000,
                                     side: Side::Buy,
                                     state: RequestOpen { reduce_only: false,
@@ -544,7 +544,7 @@ mod tests
                                                          size: 1.0 } };
 
         let pending_order = account_orders.process_request_as_pending(request_order).await;
-        assert_eq!(pending_order.client_order_id, client_order_id);
+        assert_eq!(pending_order.cid, client_order_id);
         assert!(pending_order.state.predicted_ts > 1000);
     }
 
@@ -560,7 +560,7 @@ mod tests
         let request_order = Order { kind: OrderInstruction::Limit,
                                     exchange: Exchange::SandBox,
                                     instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                                    client_order_id,
+            cid: client_order_id,
                                     client_ts: 1000,
                                     side: Side::Buy,
                                     state: RequestOpen { reduce_only: false,
@@ -585,7 +585,7 @@ mod tests
         let order = Order { kind: OrderInstruction::Limit,
                             exchange: Exchange::SandBox,
                             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                            client_order_id: ClientOrderId(Option::from("OJBK".to_string())),
+                            cid: ClientOrderId(Option::from("OJBK".to_string())),
                             client_ts: 1000,
                             side: Side::Buy,
                             state: Pending { reduce_only: false,

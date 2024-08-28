@@ -947,7 +947,7 @@ mod tests
                                          exchange: Exchange::SandBox,
                                          instrument: instrument.clone(),
                                          client_ts: 123456789,
-                                         client_order_id: client_order_id,
+                                         cid: client_order_id,
                                          side: Side::Buy,
                                          state: Open { id: OrderId::from("test_order"),
                                                        price: 100.0,
