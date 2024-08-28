@@ -11,7 +11,7 @@ pub struct Pending
     pub price: f64,
     pub size: f64,
     pub(crate) predicted_ts: i64,
-    pub request_id: RequestId
+    pub(crate)  request_id: RequestId
 }
 
 /// 为 `Pending` 结构体实现 `PartialOrd` trait，允许对 `Pending` 结构体实例进行排序。
