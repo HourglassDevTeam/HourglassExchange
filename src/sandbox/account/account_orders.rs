@@ -115,7 +115,7 @@ impl AccountOrders
     {
         let mut latencies = [0; 20];
         for latency in &mut latencies {
-            fluctuate_latency(latency_generator, 0); // 这里0只是一个占位，可以根据需求调整
+            fluctuate_latency(latency_generator, 0); // NOTE 这里的占位符 0 可能需要调整。
             *latency = latency_generator.current_value;
         }
         latencies

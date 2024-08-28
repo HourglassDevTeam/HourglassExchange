@@ -40,16 +40,16 @@ impl AccountLatency
     }
 }
 
-pub fn fluctuate_latency(latency: &mut AccountLatency, current_time: i64)
+pub fn fluctuate_latency(latency: &mut AccountLatency, seed: i64)
 {
     let range = (latency.maximum - latency.minimum) as f64;
     let half_range = range / 2.0;
     match latency.fluctuation_mode {
         | FluctuationMode::Sine => {
-            latency.current_value = (half_range * ((current_time as f64).sin() + 1.0)) as i64 + latency.minimum;
+            latency.current_value = (half_range * ((seed as f64).sin() + 1.0)) as i64 + latency.minimum;
         }
         | FluctuationMode::Cosine => {
-            latency.current_value = (half_range * ((current_time as f64).cos() + 1.0)) as i64 + latency.minimum;
+            latency.current_value = (half_range * ((seed as f64).cos() + 1.0)) as i64 + latency.minimum;
         }
         | FluctuationMode::NormalDistribution => {
             // 使用正态分布波动
@@ -63,28 +63,28 @@ pub fn fluctuate_latency(latency: &mut AccountLatency, current_time: i64)
         }
         | FluctuationMode::Exponential => {
             // 使用指数函数波动
-            let exp_value = (((current_time as f64).exp() % range) + latency.minimum as f64) as i64;
+            let exp_value = (((seed as f64).exp() % range) + latency.minimum as f64) as i64;
             latency.current_value = exp_value.clamp(latency.minimum, latency.maximum);
         }
         | FluctuationMode::Logarithmic => {
             // 使用对数函数波动
-            let log_value = (((current_time as f64).ln().abs() % (latency.maximum - latency.minimum) as f64) + latency.minimum as f64) as i64;
+            let log_value = (((seed as f64).ln().abs() % (latency.maximum - latency.minimum) as f64) + latency.minimum as f64) as i64;
             latency.current_value = log_value.clamp(latency.minimum, latency.maximum);
         }
         | FluctuationMode::LinearIncrease => {
             // 线性增加
-            let linear_value = latency.minimum + (current_time % (latency.maximum - latency.minimum));
+            let linear_value = latency.minimum + (seed % (latency.maximum - latency.minimum));
             latency.current_value = linear_value.clamp(latency.minimum, latency.maximum);
         }
         | FluctuationMode::LinearDecrease => {
             // 线性减少
-            let linear_value = latency.maximum - (current_time % (latency.maximum - latency.minimum));
+            let linear_value = latency.maximum - (seed % (latency.maximum - latency.minimum));
             latency.current_value = linear_value.clamp(latency.minimum, latency.maximum);
         }
         | FluctuationMode::StepFunction => {
             // 使用阶跃函数波动
             let step_size = (latency.maximum - latency.minimum) / 10;
-            let step_value = latency.minimum + ((current_time / step_size) % 10) * step_size;
+            let step_value = latency.minimum + ((seed / step_size) % 10) * step_size;
             latency.current_value = step_value.clamp(latency.minimum, latency.maximum);
         }
         | FluctuationMode::RandomWalk => {
