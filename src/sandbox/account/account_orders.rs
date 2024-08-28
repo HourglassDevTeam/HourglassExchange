@@ -19,7 +19,6 @@ use crate::{
 use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
-use crate::common::order::identification::machine_id::generate_machine_id;
 use crate::common::order::identification::request_order_id::RequestId;
 
 #[derive(Debug)]
@@ -101,9 +100,8 @@ impl AccountOrders
     /// NOTE that the client's login PC might change frequently. This method is not web-compatible now.
     pub fn generate_request_id(&self) -> RequestId
     {
-        let machine_id = generate_machine_id().unwrap();
         let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
-        RequestId::new(machine_id, counter)
+        RequestId::new(self.machine_id, counter)
     }
 
     /// 更新 `RequestId` 的计数器
