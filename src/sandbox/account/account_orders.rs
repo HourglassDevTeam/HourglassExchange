@@ -397,7 +397,7 @@ impl AccountOrders
     /// 在 increment_request_counter 方法中，使用 Ordering::Relaxed 进行递增。
     pub async fn build_order_open(&mut self, request: Order<Pending>, role: OrderRole) -> Order<Open>
     {
-        self.increment_request_counter();
+        self.increment_order_counter();
 
         // 直接构建 Order<Open>
         Order { kind: request.kind,
@@ -424,15 +424,15 @@ impl AccountOrders
     ///
     /// - 此函数的主要用途是在每次接收到新的订单请求时递增计数器，以确保订单 ID 的唯一性。
     /// - 由于使用了 `Relaxed` 顺序，这种递增操作的结果可能对其他线程不可见。
-    pub fn increment_request_counter(&self)
+    pub fn increment_order_counter(&self)
     {
         self.order_counter.fetch_add(1, Ordering::Relaxed);
     }
 
     /// 在 order_id 方法中，使用 [Ordering::Acquire] 确保读取到最新的计数器值。
-    pub fn order_id(&self) -> OrderId
-    {
-        OrderId(self.order_counter.load(Ordering::Acquire))
+    pub fn order_id(&self) -> OrderId {
+        let counter = self.order_counter.fetch_add(1, Ordering::SeqCst);
+        OrderId::new(self.machine_id, counter)
     }
 
     pub fn update_latency(&mut self, current_time: i64)
@@ -648,23 +648,28 @@ mod tests
         let account_orders = AccountOrders::new(09890, instruments, account_latency).await;
 
         assert_eq!(account_orders.order_counter.load(Ordering::Acquire), 0);
-        account_orders.increment_request_counter();
+        account_orders.increment_order_counter();
         assert_eq!(account_orders.order_counter.load(Ordering::Acquire), 1);
     }
 
     #[tokio::test]
-    async fn test_order_id()
-    {
+    async fn test_order_id() {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
         let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
         let first_order_id = account_orders.order_id();
-        assert_eq!(first_order_id, OrderId(0));
+        let second_order_id = {
+            account_orders.increment_order_counter();
+            account_orders.order_id()
+        };
 
-        account_orders.increment_request_counter();
-        let second_order_id = account_orders.order_id();
-        assert_eq!(second_order_id, OrderId(1));
+        // 获取前 51 位 (即 [timestamp:41 bits] [machine_id:10 bits]) 的值
+        let first_order_id_prefix = first_order_id.value() >> 13;
+        let second_order_id_prefix = second_order_id.value() >> 13;
+
+        assert_eq!(first_order_id_prefix, second_order_id_prefix);
+        assert!(second_order_id > first_order_id);
     }
 
     #[tokio::test]
