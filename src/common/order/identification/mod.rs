@@ -27,10 +27,11 @@ impl OrderId {
     ///
     /// # 参数
     /// - `machine_id`: 用于生成ID的机器唯一标识符，最大值为1023。
+    /// - `counter`: 当前的计数器值，用于确保ID的唯一性。
     ///
     /// # 返回值
     /// - 返回一个唯一且安全的 `OrderId`。
-    pub fn new(machine_id: u64) -> Self {
+    pub fn new(machine_id: u64, counter: u64) -> Self {
         // 获取当前时间的毫秒数，并确保时间是从 UNIX_EPOCH 之后的。
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -40,10 +41,11 @@ impl OrderId {
         // 生成一个随机组件，用于增加ID的唯一性和不可预测性。
         let random_component: u64 = rand::thread_rng().gen_range(0..8192);
 
-        // 构建 OrderId: [timestamp:41 bits] [machine_id:10 bits] [random:13 bits]
+        // 构建 OrderId: [timestamp:41 bits] [machine_id:10 bits] [random:3 bits] [counter:10 bits]
         let id = ((now & 0x1FFFFFFFFFF) << 23)
             | ((machine_id & 0x3FF) << 13)
-            | (random_component & 0x1FFF);
+            | ((random_component & 0x7) << 10)
+            | (counter & 0x3FF);
 
         OrderId(id)
     }
