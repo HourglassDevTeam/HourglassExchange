@@ -50,14 +50,12 @@ pub enum AccountEventKind
     // Withdrawal(Withdrawal),
 }
 
-
 #[cfg(test)]
 mod tests
 {
     use super::*;
-    use crate::common::{balance::Balance, token::Token};
+    use crate::common::{balance::Balance, order::identification::client_order_id::ClientOrderId, token::Token};
     use uuid::Uuid;
-    use crate::common::order::identification::client_order_id::ClientOrderId;
 
     #[test]
     fn account_event_should_serialize_and_deserialize_correctly()
@@ -80,7 +78,8 @@ mod tests
     }
 
     #[test]
-    fn client_order_id_should_format_correctly() {
+    fn client_order_id_should_format_correctly()
+    {
         let client_order_id = ClientOrderId(Some(Uuid::new_v4().to_string())); // 直接生成一个字符串
         assert_eq!(format!("{}", client_order_id), client_order_id.0.clone().unwrap());
     }

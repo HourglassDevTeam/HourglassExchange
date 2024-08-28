@@ -1,9 +1,9 @@
 pub mod client_order_id;
-pub mod request_order_id;
 pub mod machine_id;
+pub mod request_order_id;
 
-use std::fmt::Display;
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 /// **OrderID**
 ///    - **定义和作用**：`OrderID` 通常由交易所生成，用于唯一标识某个订单。它是系统级的[标识符]，不同的[交易所]、不同的[订单类型]，都会生成不同的 `OrderID`。

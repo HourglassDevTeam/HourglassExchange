@@ -24,15 +24,13 @@ impl ClickHouseQueryBuilder
     // 初始化构造器
     pub fn new() -> Self
     {
-        Self {
-            select_clause: String::new(),
-            from_clause: String::new(),
-            where_clause: None,
-            order_by_clause: None,
-            order_direction: None,
-            limit_clause: None,
-            offset_clause: None,
-        }
+        Self { select_clause: String::new(),
+               from_clause: String::new(),
+               where_clause: None,
+               order_by_clause: None,
+               order_direction: None,
+               limit_clause: None,
+               offset_clause: None }
     }
 
     // 设置SELECT子句
@@ -122,7 +120,10 @@ mod tests
     #[test]
     fn test_where_query()
     {
-        let query = ClickHouseQueryBuilder::new().select("*").from("default_db", "users").where_clause("identification = 1").build();
+        let query = ClickHouseQueryBuilder::new().select("*")
+                                                 .from("default_db", "users")
+                                                 .where_clause("identification = 1")
+                                                 .build();
         assert_eq!(query, "SELECT * FROM default_db.users WHERE identification = 1");
     }
 
@@ -130,9 +131,9 @@ mod tests
     fn test_like_query()
     {
         let query = ClickHouseQueryBuilder::new().select("*")
-            .from("default_db", "users")
-            .like_clause("name", "%example%")
-            .build();
+                                                 .from("default_db", "users")
+                                                 .like_clause("name", "%example%")
+                                                 .build();
         assert_eq!(query, "SELECT * FROM default_db.users WHERE name LIKE '%example%'");
     }
 
@@ -140,9 +141,9 @@ mod tests
     fn test_not_like_query()
     {
         let query = ClickHouseQueryBuilder::new().select("*")
-            .from("default_db", "products")
-            .not_like_clause("description", "%old%")
-            .build();
+                                                 .from("default_db", "products")
+                                                 .not_like_clause("description", "%old%")
+                                                 .build();
         assert_eq!(query, "SELECT * FROM default_db.products WHERE description NOT LIKE '%old%'");
     }
 
@@ -150,12 +151,12 @@ mod tests
     fn test_combined_query()
     {
         let query = ClickHouseQueryBuilder::new().select("identification, name")
-            .from("default_db", "users") // 添加数据库名参数
-            .where_clause("age > 18")
-            .like_clause("email", "%@mail.com")
-            .order("created_at", Some("DESC")) // 修改order_by的调用
-            .limit(10)
-            .build();
+                                                 .from("default_db", "users") // 添加数据库名参数
+                                                 .where_clause("age > 18")
+                                                 .like_clause("email", "%@mail.com")
+                                                 .order("created_at", Some("DESC")) // 修改order_by的调用
+                                                 .limit(10)
+                                                 .build();
         assert_eq!(query,
                    "SELECT identification, name FROM default_db.users WHERE age > 18 AND email LIKE '%@mail.com' ORDER BY created_at DESC LIMIT 10");
     }
@@ -164,11 +165,11 @@ mod tests
     fn test_query_with_multiple_conditions()
     {
         let query = ClickHouseQueryBuilder::new().select("*")
-            .from("default_db", "users") // 添加数据库名参数
-            .where_clause("identification = 1")
-            .like_clause("username", "%user%")
-            .not_like_clause("password", "%weak%")
-            .build();
+                                                 .from("default_db", "users") // 添加数据库名参数
+                                                 .where_clause("identification = 1")
+                                                 .like_clause("username", "%user%")
+                                                 .not_like_clause("password", "%weak%")
+                                                 .build();
         assert_eq!(query,
                    "SELECT * FROM default_db.users WHERE identification = 1 AND username LIKE '%user%' AND password NOT LIKE '%weak%'");
     }

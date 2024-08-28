@@ -1,24 +1,27 @@
+pub mod identification;
 pub mod order_instructions;
 pub mod states;
-pub mod identification;
 
 use crate::{
-    common::{instrument::Instrument, order::order_instructions::OrderInstruction, Side},
+    common::{
+        instrument::Instrument,
+        order::{identification::client_order_id::ClientOrderId, order_instructions::OrderInstruction},
+        Side,
+    },
     Exchange,
 };
 use serde::{Deserialize, Serialize};
-use crate::common::order::identification::client_order_id::ClientOrderId;
 
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
-    pub kind: OrderInstruction,         // 订单指令
-    pub exchange: Exchange,             // 交易所
-    pub instrument: Instrument,         // 交易工具
-    pub client_ts: i64,                 // 客户端下单时间
-    pub cid: ClientOrderId, // 客户端订单ID
-    pub side: Side,                     // 买卖方向
-    pub state: State,                   // 订单状态
+    pub kind: OrderInstruction, // 订单指令
+    pub exchange: Exchange,     // 交易所
+    pub instrument: Instrument, // 交易工具
+    pub client_ts: i64,         // 客户端下单时间
+    pub cid: ClientOrderId,     // 客户端订单ID
+    pub side: Side,             // 买卖方向
+    pub state: State,           // 订单状态
 }
 
 #[derive(Debug, Copy, Clone, PartialOrd, Serialize, Deserialize, PartialEq)]
@@ -31,9 +34,11 @@ pub enum OrderRole
 #[cfg(test)]
 mod tests
 {
-    use crate::common::order::states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen};
-    use crate::common::order::identification::OrderId;
     use super::*;
+    use crate::common::order::{
+        identification::OrderId,
+        states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
+    };
 
     #[test]
     fn order_execution_type_display_should_format_correctly()

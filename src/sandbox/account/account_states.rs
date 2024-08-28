@@ -45,11 +45,9 @@ impl AccountState
 {
     pub fn new(balances: HashMap<Token, Balance>, positions: AccountPositions) -> Self
     {
-        Self {
-            balances,
-            positions,
-            account_ref: Weak::new(),
-        }
+        Self { balances,
+               positions,
+               account_ref: Weak::new() }
     }
 
     /// 返回指定[`Token`]的[`Balance`]的引用。
@@ -73,16 +71,17 @@ impl AccountState
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account;
             let commission_rates = account_read.config
-                .fees_book
-                .get(instrument_kind)
-                .cloned()
-                .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
+                                               .fees_book
+                                               .get(instrument_kind)
+                                               .cloned()
+                                               .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
 
             match role {
                 | OrderRole::Maker => Ok(commission_rates.maker_fees),
                 | OrderRole::Taker => Ok(commission_rates.taker_fees),
             }
-        } else {
+        }
+        else {
             Err(ExecutionError::SandBox("Account reference is not set".to_string()))
         }
     }
@@ -92,7 +91,8 @@ impl AccountState
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account;
             Ok(account_read.exchange_timestamp.load(Ordering::SeqCst))
-        } else {
+        }
+        else {
             Err(ExecutionError::SandBox("Account reference is not set".to_string()))
         }
     }
@@ -109,7 +109,8 @@ impl AccountState
         let available = self.balance(token)?.available;
         if available >= required_balance {
             Ok(())
-        } else {
+        }
+        else {
             Err(ExecutionError::InsufficientBalance(token.clone()))
         }
     }
@@ -121,7 +122,8 @@ impl AccountState
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account;
             Ok(account_read.config.position_mode.clone())
-        } else {
+        }
+        else {
             Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
@@ -133,7 +135,8 @@ impl AccountState
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account;
             Ok(account_read.config.margin_mode.clone())
-        } else {
+        }
+        else {
             Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
@@ -215,7 +218,8 @@ impl AccountState
         if let Some(existing_pos) = perpetual_positions.iter_mut().find(|p| p.meta.instrument == pos.meta.instrument) {
             // 如果找到了相同的 `instrument`，则更新现有仓位信息
             *existing_pos = pos;
-        } else {
+        }
+        else {
             // 如果没有找到相同的 `instrument`，将新的仓位添加到永续合约仓位列表中
             perpetual_positions.push(pos);
         }
@@ -345,17 +349,13 @@ impl AccountState
                     // Isolated margin: apply changes to the specific position's margin
                     match open.side {
                         | Side::Buy => {
-                            let delta = BalanceDelta {
-                                total: 0.0,
-                                available: -required_balance,
-                            };
+                            let delta = BalanceDelta { total: 0.0,
+                                                       available: -required_balance };
                             self.apply_balance_delta(&open.instrument.quote, delta);
                         }
                         | Side::Sell => {
-                            let delta = BalanceDelta {
-                                total: 0.0,
-                                available: -required_balance,
-                            };
+                            let delta = BalanceDelta { total: 0.0,
+                                                       available: -required_balance };
                             self.apply_balance_delta(&open.instrument.base, delta);
                         }
                     }
@@ -374,12 +374,11 @@ impl AccountState
                 | Side::Sell => *self.balance(&open.instrument.base)?,
             };
 
-            Ok(AccountEvent {
-                exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
-                exchange: Exchange::SandBox,
-                kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)),
-            })
-        } else {
+            Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
+                              exchange: Exchange::SandBox,
+                              kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)) })
+        }
+        else {
             Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
@@ -391,13 +390,13 @@ impl AccountState
         match cancelled.side {
             | Side::Buy => {
                 let balance = self.balance_mut(&cancelled.instrument.quote)
-                    .expect("[UniLink_Execution] : Balance existence checked when opening Order");
+                                  .expect("[UniLink_Execution] : Balance existence checked when opening Order");
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
                 TokenBalance::new(cancelled.instrument.quote.clone(), *balance)
             }
             | Side::Sell => {
                 let balance = self.balance_mut(&cancelled.instrument.base)
-                    .expect("[UniLink_Execution] : Balance existence checked when opening Order");
+                                  .expect("[UniLink_Execution] : Balance existence checked when opening Order");
                 balance.available += cancelled.state.remaining_quantity();
                 TokenBalance::new(cancelled.instrument.base.clone(), *balance)
             }
@@ -429,27 +428,19 @@ impl AccountState
                     | Side::Buy => {
                         let base_increase = trade.quantity - fee;
                         // Note: available was already decreased by the opening of the Side::Buy order
-                        let base_delta = BalanceDelta {
-                            total: base_increase,
-                            available: base_increase,
-                        };
-                        let quote_delta = BalanceDelta {
-                            total: -trade.quantity * trade.price,
-                            available: 0.0,
-                        };
+                        let base_delta = BalanceDelta { total: base_increase,
+                                                        available: base_increase };
+                        let quote_delta = BalanceDelta { total: -trade.quantity * trade.price,
+                                                         available: 0.0 };
                         (base_delta, quote_delta)
                     }
                     | Side::Sell => {
                         // Note: available was already decreased by the opening of the Side::Sell order
-                        let base_delta = BalanceDelta {
-                            total: -trade.quantity,
-                            available: 0.0,
-                        };
+                        let base_delta = BalanceDelta { total: -trade.quantity,
+                                                        available: 0.0 };
                         let quote_increase = (trade.quantity * trade.price) - fee;
-                        let quote_delta = BalanceDelta {
-                            total: quote_increase,
-                            available: quote_increase,
-                        };
+                        let quote_delta = BalanceDelta { total: quote_increase,
+                                                         available: quote_increase };
                         (base_delta, quote_delta)
                     }
                 };
@@ -457,11 +448,9 @@ impl AccountState
                 let base_balance = self.apply_balance_delta(base, base_delta);
                 let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
-                Ok(AccountEvent {
-                    exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
-                    exchange: Exchange::SandBox,
-                    kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance), ]),
-                })
+                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
+                                  exchange: Exchange::SandBox,
+                                  kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) })
             }
         }
     }
@@ -499,13 +488,16 @@ impl DerefMut for AccountState
 mod tests
 {
     use super::*;
-    use crate::common::order::identification::{client_order_id::ClientOrderId, OrderId};
     use crate::{
         common::{
             balance::Balance,
             friction::{Fees, FutureFees, PerpetualFees},
             instrument::{kind::InstrumentKind, Instrument},
-            order::{order_instructions::OrderInstruction, OrderRole},
+            order::{
+                identification::{client_order_id::ClientOrderId, OrderId},
+                order_instructions::OrderInstruction,
+                OrderRole,
+            },
             position::{future::FuturePositionConfig, perpetual::PerpetualPositionConfig, position_meta::PositionMeta, AccountPositions},
             token::Token,
         },
@@ -527,67 +519,52 @@ mod tests
 
     fn create_test_instrument(kind: InstrumentKind) -> Instrument
     {
-        Instrument {
-            base: Token::from("BTC"),
-            quote: Token::from("USDT"),
-            kind,
-        }
+        Instrument { base: Token::from("BTC"),
+                     quote: Token::from("USDT"),
+                     kind }
     }
     fn create_test_account_config() -> AccountConfig
     {
         let leverage_rate = 1.0;
 
-        AccountConfig {
-            margin_mode: MarginMode::SingleCurrencyMargin,
-            position_mode: PositionDirectionMode::NetMode,
-            position_margin_mode: PositionMarginMode::Isolated,
-            commission_level: CommissionLevel::Lv1,
-            // current_commission_rate: CommissionRates { maker_fees: 0.001,
-            //                                            taker_fees: 0.0015 },
-            funding_rate: 0.0,
-            account_leverage_rate: leverage_rate,
-            fees_book: HashMap::new(),
-        }
+        AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
+                        position_mode: PositionDirectionMode::NetMode,
+                        position_margin_mode: PositionMarginMode::Isolated,
+                        commission_level: CommissionLevel::Lv1,
+                        // current_commission_rate: CommissionRates { maker_fees: 0.001,
+                        //                                            taker_fees: 0.0015 },
+                        funding_rate: 0.0,
+                        account_leverage_rate: leverage_rate,
+                        fees_book: HashMap::new() }
     }
     async fn create_test_account_state() -> Arc<Mutex<AccountState>>
     {
         let balances = HashMap::new();
-        let positions = AccountPositions {
-            margin_pos: Vec::new(),
-            perpetual_pos: Vec::new(),
-            futures_pos: Vec::new(),
-            option_pos: Vec::new(),
-        };
+        let positions = AccountPositions { margin_pos: Vec::new(),
+                                           perpetual_pos: Vec::new(),
+                                           futures_pos: Vec::new(),
+                                           option_pos: Vec::new() };
 
         let account_config = create_test_account_config();
 
         // 初始化 AccountState，但不要立即设置 account_ref
-        let account_state = AccountState {
-            balances: balances.clone(),
-            positions: positions.clone(),
-            account_ref: Weak::new(),
-        };
+        let account_state = AccountState { balances: balances.clone(),
+                                           positions: positions.clone(),
+                                           account_ref: Weak::new() };
 
         // 创建 Account 实例
         let account_state_arc = Arc::new(Mutex::new(account_state.clone()));
 
-        let account = Arc::new(Account {
-            machine_id: 0,
-            exchange_timestamp: AtomicI64::new(0),
-            // data: Arc::new(RwLock::new(AccountDataStreams::default())),
-            account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-            config: Arc::new(account_config),
-            states: account_state_arc.clone(), // 使用克隆后的 Arc<Mutex<...>>
-            orders: Arc::new(RwLock::new(AccountOrders::new(
-                0,
-                vec![], AccountLatency {
-                fluctuation_mode: FluctuationMode::Sine,
-                maximum: 0,
-                minimum: 0,
-                current_value: 0,
-            }).await)),
-
-        });
+        let account = Arc::new(Account { machine_id: 0,
+                                         exchange_timestamp: AtomicI64::new(0),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+                                         config: Arc::new(account_config),
+                                         states: account_state_arc.clone(), // 使用克隆后的 Arc<Mutex<...>>
+                                         orders: Arc::new(RwLock::new(AccountOrders::new(0, vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
+                                                                                                                     maximum: 0,
+                                                                                                                     minimum: 0,
+                                                                                                                     current_value: 0 }).await)) });
 
         // 更新 account_ref，使其指向 Account
         {
@@ -601,83 +578,59 @@ mod tests
 
     fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPosition
     {
-        PerpetualPosition {
-            meta: PositionMeta {
-                position_id: "test_position".to_string(),
-                enter_ts: 0,
-                update_ts: 0,
-                exit_balance: TokenBalance {
-                    token: instrument.base.clone(),
-                    balance: Balance {
-                        current_price: 0.0,
-                        total: 0.0,
-                        available: 0.0,
-                    },
-                },
-                exchange: Exchange::SandBox,
-                instrument,
-                side: Side::Buy,
-                current_size: 1.0,
-                current_fees_total: Fees::Perpetual(PerpetualFees {
-                    maker_fee: 0.0,
-                    taker_fee: 0.0,
-                    funding_fee: 0.0,
-                }),
-                current_avg_price_gross: 0.0,
-                current_symbol_price: 0.0,
-                current_avg_price: 0.0,
-                unrealised_pnl: 0.0,
-                realised_pnl: 0.0,
-            },
-            pos_config: PerpetualPositionConfig {
-                pos_margin_mode: PositionMarginMode::Isolated,
-                leverage: 1.0,
-                position_mode: PositionDirectionMode::LongShortMode,
-            },
-            liquidation_price: 0.0,
-            margin: 0.0,
-        }
+        PerpetualPosition { meta: PositionMeta { position_id: "test_position".to_string(),
+                                                 enter_ts: 0,
+                                                 update_ts: 0,
+                                                 exit_balance: TokenBalance { token: instrument.base.clone(),
+                                                                              balance: Balance { current_price: 0.0,
+                                                                                                 total: 0.0,
+                                                                                                 available: 0.0 } },
+                                                 exchange: Exchange::SandBox,
+                                                 instrument,
+                                                 side: Side::Buy,
+                                                 current_size: 1.0,
+                                                 current_fees_total: Fees::Perpetual(PerpetualFees { maker_fee: 0.0,
+                                                                                                     taker_fee: 0.0,
+                                                                                                     funding_fee: 0.0 }),
+                                                 current_avg_price_gross: 0.0,
+                                                 current_symbol_price: 0.0,
+                                                 current_avg_price: 0.0,
+                                                 unrealised_pnl: 0.0,
+                                                 realised_pnl: 0.0 },
+                            pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
+                                                                  leverage: 1.0,
+                                                                  position_mode: PositionDirectionMode::LongShortMode },
+                            liquidation_price: 0.0,
+                            margin: 0.0 }
     }
 
     fn create_test_future_position_with_side(instrument: Instrument, side: Side) -> FuturePosition
     {
-        FuturePosition {
-            meta: PositionMeta {
-                position_id: Uuid::new_v4().to_string(),
-                enter_ts: 0,
-                update_ts: 0,
-                exit_balance: TokenBalance {
-                    token: instrument.base.clone(),
-                    balance: Balance {
-                        current_price: 0.0,
-                        total: 0.0,
-                        available: 0.0,
-                    },
-                },
-                exchange: Exchange::SandBox,
-                instrument: instrument.clone(),
-                side,
-                current_size: 0.0,
-                current_fees_total: Fees::Future(FutureFees {
-                    maker_fee: 0.0,
-                    taker_fee: 0.0,
-                    funding_fee: 0.0,
-                }),
-                current_avg_price_gross: 0.0,
-                current_symbol_price: 0.0,
-                current_avg_price: 0.0,
-                unrealised_pnl: 0.0,
-                realised_pnl: 0.0,
-            },
-            pos_config: FuturePositionConfig {
-                pos_margin_mode: PositionMarginMode::Isolated,
-                leverage: 1.0,
-                position_mode: PositionDirectionMode::LongShortMode,
-            },
-            liquidation_price: 0.0,
-            margin: 0.0,
-            funding_fee: 0.0,
-        }
+        FuturePosition { meta: PositionMeta { position_id: Uuid::new_v4().to_string(),
+                                              enter_ts: 0,
+                                              update_ts: 0,
+                                              exit_balance: TokenBalance { token: instrument.base.clone(),
+                                                                           balance: Balance { current_price: 0.0,
+                                                                                              total: 0.0,
+                                                                                              available: 0.0 } },
+                                              exchange: Exchange::SandBox,
+                                              instrument: instrument.clone(),
+                                              side,
+                                              current_size: 0.0,
+                                              current_fees_total: Fees::Future(FutureFees { maker_fee: 0.0,
+                                                                                            taker_fee: 0.0,
+                                                                                            funding_fee: 0.0 }),
+                                              current_avg_price_gross: 0.0,
+                                              current_symbol_price: 0.0,
+                                              current_avg_price: 0.0,
+                                              unrealised_pnl: 0.0,
+                                              realised_pnl: 0.0 },
+                         pos_config: FuturePositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
+                                                            leverage: 1.0,
+                                                            position_mode: PositionDirectionMode::LongShortMode },
+                         liquidation_price: 0.0,
+                         margin: 0.0,
+                         funding_fee: 0.0 }
     }
 
     #[tokio::test]
@@ -757,12 +710,10 @@ mod tests
         balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
 
         // Create a mock positions structure with all positions set to None
-        let positions = AccountPositions {
-            margin_pos: Vec::new(),
-            perpetual_pos: Vec::new(),
-            futures_pos: Vec::new(),
-            option_pos: Vec::new(),
-        };
+        let positions = AccountPositions { margin_pos: Vec::new(),
+                                           perpetual_pos: Vec::new(),
+                                           futures_pos: Vec::new(),
+                                           option_pos: Vec::new() };
 
         // Instantiate the account state with the balances and positions
         let account_state = AccountState::new(balances, positions);
@@ -786,28 +737,21 @@ mod tests
         let mut config = create_test_account_config();
 
         // 设置 CommissionRates 并插入到 fees_book 中
-        let commission_rates = CommissionRates {
-            maker_fees: 0.001,
-            taker_fees: 0.002,
-        };
+        let commission_rates = CommissionRates { maker_fees: 0.001,
+                                                 taker_fees: 0.002 };
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
-        let account = Arc::new(Account {
-            machine_id: 0,
-            exchange_timestamp: AtomicI64::new(0),
-            // data: Arc::new(RwLock::new(AccountDataStreams::default())),
-            account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-            config: Arc::new(config),
-            states: account_state.clone(),
-            orders: Arc::new(RwLock::new(AccountOrders::new(12312,vec![], AccountLatency {
-                fluctuation_mode: FluctuationMode::Sine,
-                maximum: 0,
-                minimum: 0,
-                current_value: 0,
-            }).await)),
-
-        });
+        let account = Arc::new(Account { machine_id: 0,
+                                         exchange_timestamp: AtomicI64::new(0),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+                                         config: Arc::new(config),
+                                         states: account_state.clone(),
+                                         orders: Arc::new(RwLock::new(AccountOrders::new(12312, vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
+                                                                                                                         maximum: 0,
+                                                                                                                         minimum: 0,
+                                                                                                                         current_value: 0 }).await)) });
 
         // 更新 account_state 的 account_ref
         {
@@ -839,19 +783,15 @@ mod tests
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
-        let account = Arc::new(Account {
-            machine_id: 0,
-            exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
-            account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-            config: Arc::new(config),
-            states: account_state.clone(),
-            orders: Arc::new(RwLock::new(AccountOrders::new(12312,vec![], AccountLatency {
-                fluctuation_mode: FluctuationMode::Sine,
-                maximum: 0,
-                minimum: 0,
-                current_value: 0,
-            }).await)),
-        });
+        let account = Arc::new(Account { machine_id: 0,
+                                         exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
+                                         account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+                                         config: Arc::new(config),
+                                         states: account_state.clone(),
+                                         orders: Arc::new(RwLock::new(AccountOrders::new(12312, vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
+                                                                                                                         maximum: 0,
+                                                                                                                         minimum: 0,
+                                                                                                                         current_value: 0 }).await)) });
 
         // 更新 account_state 的 account_ref
         {
@@ -880,20 +820,16 @@ mod tests
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
-        let account = Arc::new(Account {
-            machine_id: 0,
-            exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
-            // data: Arc::new(RwLock::new(AccountDataStreams::default())),
-            account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-            config: Arc::new(config),
-            states: account_state.clone(),
-            orders: Arc::new(RwLock::new(AccountOrders::new(234,vec![], AccountLatency {
-                fluctuation_mode: FluctuationMode::Sine,
-                maximum: 0,
-                minimum: 0,
-                current_value: 0,
-            }).await)),
-        });
+        let account = Arc::new(Account { machine_id: 0,
+                                         exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+                                         config: Arc::new(config),
+                                         states: account_state.clone(),
+                                         orders: Arc::new(RwLock::new(AccountOrders::new(234, vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
+                                                                                                                       maximum: 0,
+                                                                                                                       minimum: 0,
+                                                                                                                       current_value: 0 }).await)) });
 
         // 更新 account_state 的 account_ref
         {
@@ -920,20 +856,16 @@ mod tests
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
-        let account = Arc::new(Account {
-            machine_id: 0,
-            exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
-            // data: Arc::new(RwLock::new(AccountDataStreams::default())),
-            account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-            config: Arc::new(config),
-            states: account_state.clone(),
-            orders: Arc::new(RwLock::new(AccountOrders::new(123124,vec![], AccountLatency {
-                fluctuation_mode: FluctuationMode::Sine,
-                maximum: 0,
-                minimum: 0,
-                current_value: 0,
-            }).await)),
-        });
+        let account = Arc::new(Account { machine_id: 0,
+                                         exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+                                         config: Arc::new(config),
+                                         states: account_state.clone(),
+                                         orders: Arc::new(RwLock::new(AccountOrders::new(123124, vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
+                                                                                                                          maximum: 0,
+                                                                                                                          minimum: 0,
+                                                                                                                          current_value: 0 }).await)) });
         // 更新 account_state 的 account_ref
         {
             let mut account_state_locked = account_state.lock().await;
@@ -953,58 +885,41 @@ mod tests
 
         let config = create_test_account_config();
 
-        let perpetual_position = PerpetualPosition {
-            meta: PositionMeta {
-                position_id: "".to_string(),
-                enter_ts: 0,
-                update_ts: 0,
-                exit_balance: TokenBalance {
-                    token: "SOL".into(),
-                    balance: Balance {
-                        current_price: 0.0,
-                        total: 0.0,
-                        available: 0.0,
-                    },
-                },
-                exchange: Exchange::SandBox,
-                instrument: create_test_instrument(InstrumentKind::Perpetual),
-                side: Side::Buy,
-                current_size: 0.0,
-                current_fees_total: Fees::Perpetual(PerpetualFees {
-                    maker_fee: 0.0,
-                    taker_fee: 0.0,
-                    funding_fee: 0.0,
-                }),
-                current_avg_price_gross: 0.0,
-                current_symbol_price: 0.0,
-                current_avg_price: 0.0,
-                unrealised_pnl: 0.0,
-                realised_pnl: 0.0,
-            },
-            pos_config: PerpetualPositionConfig {
-                pos_margin_mode: PositionMarginMode::Isolated,
-                leverage: 0.0,
-                position_mode: PositionDirectionMode::LongShortMode,
-            },
-            liquidation_price: 0.0,
-            margin: 0.0,
-        };
+        let perpetual_position = PerpetualPosition { meta: PositionMeta { position_id: "".to_string(),
+                                                                          enter_ts: 0,
+                                                                          update_ts: 0,
+                                                                          exit_balance: TokenBalance { token: "SOL".into(),
+                                                                                                       balance: Balance { current_price: 0.0,
+                                                                                                                          total: 0.0,
+                                                                                                                          available: 0.0 } },
+                                                                          exchange: Exchange::SandBox,
+                                                                          instrument: create_test_instrument(InstrumentKind::Perpetual),
+                                                                          side: Side::Buy,
+                                                                          current_size: 0.0,
+                                                                          current_fees_total: Fees::Perpetual(PerpetualFees { maker_fee: 0.0,
+                                                                                                                              taker_fee: 0.0,
+                                                                                                                              funding_fee: 0.0 }),
+                                                                          current_avg_price_gross: 0.0,
+                                                                          current_symbol_price: 0.0,
+                                                                          current_avg_price: 0.0,
+                                                                          unrealised_pnl: 0.0,
+                                                                          realised_pnl: 0.0 },
+                                                     pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
+                                                                                           leverage: 0.0,
+                                                                                           position_mode: PositionDirectionMode::LongShortMode },
+                                                     liquidation_price: 0.0,
+                                                     margin: 0.0 };
 
-        let account = Arc::new(Account {
-            machine_id: 0,
-            exchange_timestamp: AtomicI64::new(123456789),
-            // data: Arc::new(RwLock::new(AccountDataStreams::default())),
-            account_event_tx: mpsc::unbounded_channel().0,
-            config: Arc::new(config),
-            states: account_state.clone(),
-            orders: Arc::new(RwLock::new(AccountOrders::new(1234124,vec![], AccountLatency {
-                fluctuation_mode: FluctuationMode::Sine,
-                maximum: 0,
-                minimum: 0,
-                current_value: 0,
-            }).await)),
-
-        });
+        let account = Arc::new(Account { machine_id: 0,
+                                         exchange_timestamp: AtomicI64::new(123456789),
+                                         // data: Arc::new(RwLock::new(AccountDataStreams::default())),
+                                         account_event_tx: mpsc::unbounded_channel().0,
+                                         config: Arc::new(config),
+                                         states: account_state.clone(),
+                                         orders: Arc::new(RwLock::new(AccountOrders::new(1234124, vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
+                                                                                                                           maximum: 0,
+                                                                                                                           minimum: 0,
+                                                                                                                           current_value: 0 }).await)) });
 
         {
             let mut account_state_locked = account_state.lock().await;
@@ -1037,22 +952,18 @@ mod tests
         let client_order_id = ClientOrderId(Option::from("OJBK".to_string()));
 
         // 模拟一个 Open 订单
-        let open_order = Order::<Open> {
-            kind: OrderInstruction::Market,
-            exchange: Exchange::SandBox,
-            instrument: instrument.clone(),
-            client_ts: 123456789,
-            cid: client_order_id,
-            side: Side::Buy,
-            state: Open {
-                id: OrderId::from("test_order"),
-                price: 100.0,
-                size: 1.0,
-                filled_quantity: 0.0,
-                order_role: OrderRole::Maker,
-                received_ts: 123456789,
-            },
-        };
+        let open_order = Order::<Open> { kind: OrderInstruction::Market,
+                                         exchange: Exchange::SandBox,
+                                         instrument: instrument.clone(),
+                                         client_ts: 123456789,
+                                         cid: client_order_id,
+                                         side: Side::Buy,
+                                         state: Open { id: OrderId::from("test_order"),
+                                                       price: 100.0,
+                                                       size: 1.0,
+                                                       filled_quantity: 0.0,
+                                                       order_role: OrderRole::Maker,
+                                                       received_ts: 123456789 } };
 
         // 在没有任何仓位的情况下调用
         let result = account_state.lock().await.any_position_open(&open_order).await;
@@ -1078,7 +989,7 @@ mod tests
         assert!(result.is_ok());
 
         // 情况2：模拟存在冲突的Perpetual仓位，注意这里 `side` 是 `Sell`
-        account_state.lock().await.positions.perpetual_pos = vec![create_test_perpetual_position(instrument.clone()), ];
+        account_state.lock().await.positions.perpetual_pos = vec![create_test_perpetual_position(instrument.clone()),];
 
         let result = account_state.lock().await.check_position_direction_conflict(&instrument, Side::Sell).await;
         assert!(result.is_err());
@@ -1090,7 +1001,7 @@ mod tests
         assert!(result.is_ok());
 
         // 情况4：模拟存在冲突的Future仓位，注意这里 `side` 是 `Sell`
-        account_state.lock().await.positions.futures_pos = vec![create_test_future_position_with_side(instrument_future.clone(), Side::Sell), ];
+        account_state.lock().await.positions.futures_pos = vec![create_test_future_position_with_side(instrument_future.clone(), Side::Sell),];
 
         let result = account_state.lock().await.check_position_direction_conflict(&instrument_future, Side::Buy).await;
         assert!(result.is_err());

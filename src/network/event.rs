@@ -86,7 +86,6 @@ use crate::{
 use serde::Deserialize;
 use tokio::sync::oneshot;
 
-
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct NetworkEvent
@@ -146,14 +145,13 @@ mod tests
     use crate::{
         common::{
             instrument::{kind::InstrumentKind, Instrument},
-            order::{order_instructions::OrderInstruction, Order},
+            order::{identification::client_order_id::ClientOrderId, order_instructions::OrderInstruction, Order},
             Side,
         },
         Exchange,
     };
     use std::net::Ipv4Addr;
     use uuid::Uuid;
-    use crate::common::order::identification::client_order_id::ClientOrderId;
 
     /// 测试 `NetworkEvent` 的创建和有效性
     #[test]
@@ -167,7 +165,7 @@ mod tests
                                   exchange: Exchange::Binance,                                           // 交易所名称
                                   instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual), // 交易对
                                   client_ts: chrono::Utc::now().timestamp_millis(),                      // 客户端下单时间戳
-                                  cid: ClientOrderId(Option::from("OJBK".to_string())),                        // 客户端订单 ID
+                                  cid: ClientOrderId(Option::from("OJBK".to_string())),                  // 客户端订单 ID
                                   side: Side::Buy,                                                       // 买卖方向
                                   state: RequestOpen { reduce_only: false, // 非减仓订单
                                                        price: 50000.0,     // 下单价格
