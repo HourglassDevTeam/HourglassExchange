@@ -170,7 +170,7 @@ impl ClickHouseClient
         let total_tables = table_names.len();
 
         table_names.par_iter().enumerate().for_each(|(i, table_name)| {
-                                              let select_query = ClickHouseQueryBuilder::new().select("exchange, symbol, identification, side, price, timestamp, amount") // Select required fields
+                                              let select_query = ClickHouseQueryBuilder::new().select("exchange, symbol, id, side, price, timestamp, amount") // Select required fields
                                                                                               .from(database, table_name) // Format the table name with database
                                                                                               .build(); // Build the individual query
 
@@ -191,7 +191,7 @@ impl ClickHouseClient
         let final_query = format!(
                                   "CREATE TABLE {}.{} ENGINE = ReplacingMergeTree() \
         PARTITION BY toYYYYMMDD(toDate(timestamp)) \
-        ORDER BY  (timestamp,identification) AS {}",
+        ORDER BY  (timestamp,id) AS {}",
                                   database, new_table_name, union_all_query
         );
 
