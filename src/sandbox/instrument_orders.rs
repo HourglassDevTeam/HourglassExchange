@@ -19,6 +19,7 @@ use crate::{
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct InstrumentOrders
 {
+    /// 在当前的代码设计中，batch_id 的递增仅在成功匹配订单并生成交易事件时发生
     pub batch_id: i64, // NOTE might be redundant
     pub bids: Vec<Order<Open>>,
     pub asks: Vec<Order<Open>>,
@@ -196,7 +197,6 @@ impl InstrumentOrders
         trades
     }
 
-    // FIXME count和 tradeid 还有 orderid 的关系是错误的。
     // 辅助函数：生成 TradeEvent
     pub fn generate_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> Result<ClientTrade, ExecutionError>
     {
