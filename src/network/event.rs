@@ -36,7 +36,7 @@
 ///                               exchange: Exchange::Binance,                                           // 交易所名称
 ///                               instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual), // 交易对
 ///                               client_ts: chrono::Utc::now().timestamp_millis(),                      // 客户端下单时间戳
-///                               client_order_id: ClientOrderId(Uuid::new_v4()),                        // 客户端订单 ID
+///                               client_order_id:  ClientOrderId(Option::from("OJBK".to_string())),     // 客户端订单 ID
 ///                               side: Side::Buy,                                                       // 买卖方向
 ///                               state: RequestOpen { reduce_only: false, // 非减仓订单
 ///                                                    price: 50000.0,     // 下单价格
