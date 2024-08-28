@@ -583,7 +583,7 @@ mod tests
                 minimum: 0,
                 current_value: 0,
             }).await)),
-            request_counter: 0.into(),
+
         });
 
         // 更新 account_ref，使其指向 Account
@@ -802,7 +802,7 @@ mod tests
                 minimum: 0,
                 current_value: 0,
             }).await)),
-            request_counter: 0.into(),
+
         });
 
         // 更新 account_state 的 account_ref
@@ -846,7 +846,6 @@ mod tests
                 minimum: 0,
                 current_value: 0,
             }).await)),
-            request_counter: 0.into(),
         });
 
         // 更新 account_state 的 account_ref
@@ -888,7 +887,6 @@ mod tests
                 minimum: 0,
                 current_value: 0,
             }).await)),
-            request_counter: 0.into(),
         });
 
         // 更新 account_state 的 account_ref
@@ -928,7 +926,6 @@ mod tests
                 minimum: 0,
                 current_value: 0,
             }).await)),
-            request_counter: 0.into(),
         });
         // 更新 account_state 的 account_ref
         {
@@ -998,7 +995,7 @@ mod tests
                 minimum: 0,
                 current_value: 0,
             }).await)),
-            request_counter: 0.into(),
+
         });
 
         {

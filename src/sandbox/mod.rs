@@ -216,7 +216,7 @@ mod tests
                 minimum: 0,
                 current_value: 0,
             }).await)),
-            request_counter: 0.into(),
+
         };
 
         // 更新 account_ref，使其指向 Account

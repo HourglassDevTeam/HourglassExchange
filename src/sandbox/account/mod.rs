@@ -55,7 +55,6 @@ pub struct Account
     pub config: Arc<AccountConfig>,                      // 帐户配置
     pub states: Arc<Mutex<AccountState>>,                // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
-    pub request_counter: AtomicU64,                      // 请求计数器
 }
 
 // 手动实现 Clone trait
@@ -69,7 +68,6 @@ impl Clone for Account
             config: Arc::clone(&self.config),
             states: Arc::clone(&self.states),
             orders: Arc::clone(&self.orders),
-            request_counter: AtomicU64::new(self.request_counter.load(Ordering::SeqCst)),
         }
     }
 }
@@ -80,7 +78,6 @@ pub struct AccountInitiator
     config: Option<Arc<AccountConfig>>,
     states: Option<Arc<Mutex<AccountState>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
-    request_counter: Option<AtomicU64>, // New field for request counter
 }
 
 
@@ -101,7 +98,6 @@ impl AccountInitiator
             config: None,
             states: None,
             orders: None,
-            request_counter: None,
         }
     }
 
@@ -129,11 +125,6 @@ impl AccountInitiator
         self
     }
 
-    pub fn request_counter(mut self, value: AtomicU64) -> Self
-    {
-        self.request_counter = Some(value);
-        self
-    }
 
     pub fn build(self) -> Result<Account, String>
     {
@@ -143,7 +134,7 @@ impl AccountInitiator
             config: self.config.ok_or("config is required")?,                               // 检查并获取config
             states: self.states.ok_or("balances is required")?,                             // 检查并获取balances
             orders: self.orders.ok_or("orders are required")?,
-            request_counter: 0.into(),
+
         })
     }
 }
@@ -170,30 +161,6 @@ impl Account
     }
 
 
-    /// 生成一个新的 `RequestId`
-    ///
-    /// # 参数
-    ///
-    /// - `machine_id`: 用于标识生成 ID 的机器，最大值为 1023。
-    /// - If the machine ID is represented as a 64-bit unsigned integer (u64).
-    /// - This number equals 18,446,744,073,709,551,616, which is over 18 quintillion unique machine IDs.
-    ///
-    /// # 返回值
-    ///
-    /// 返回一个唯一的 `RequestId`。
-    /// NOTE that the client's login PC might change frequently. This method is not web-compatible now.
-    pub fn generate_request_id(&self) -> RequestId
-    {
-        let machine_id = generate_machine_id();
-        let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
-        RequestId::new(machine_id, counter)
-    }
-
-    /// 更新 `RequestId` 的计数器
-    pub fn update_request_counter(&self, value: u64)
-    {
-        self.request_counter.store(value, Ordering::SeqCst);
-    }
 
     pub async fn fetch_orders_open(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>)
     {

@@ -19,6 +19,8 @@ use crate::{
 use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
+use crate::common::order::identification::machine_id::generate_machine_id;
+use crate::common::order::identification::request_order_id::RequestId;
 
 #[derive(Debug)]
 pub struct AccountOrders
@@ -81,6 +83,30 @@ impl AccountOrders
         }
     }
 
+    /// 生成一个新的 `RequestId`
+    ///
+    /// # 参数
+    ///
+    /// - `machine_id`: 用于标识生成 ID 的机器，最大值为 1023。
+    /// - If the machine ID is represented as a 64-bit unsigned integer (u64).
+    /// - This number equals 18,446,744,073,709,551,616, which is over 18 quintillion unique machine IDs.
+    ///
+    /// # 返回值
+    ///
+    /// 返回一个唯一的 `RequestId`。
+    /// NOTE that the client's login PC might change frequently. This method is not web-compatible now.
+    pub fn generate_request_id(&self) -> RequestId
+    {
+        let machine_id = generate_machine_id();
+        let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
+        RequestId::new(machine_id, counter)
+    }
+
+    /// 更新 `RequestId` 的计数器
+    pub fn update_request_counter(&self, value: u64)
+    {
+        self.request_counter.store(value, Ordering::SeqCst);
+    }
     /// 生成一组预定义的延迟值数组，用于模拟订单延迟。
     ///
     /// 该函数通过调用 `fluctuate_latency` 函数来动态调整延迟值，并将结果存储在一个数组中。
