@@ -53,7 +53,7 @@ pub struct Account
     pub config: Arc<AccountConfig>,                      // 帐户配置
     pub states: Arc<Mutex<AccountState>>,                // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
-    pub counter: AtomicU64,                              // 请求计数器
+    pub request_counter: AtomicU64,                              // 请求计数器
 }
 
 // 手动实现 Clone trait
@@ -67,7 +67,7 @@ impl Clone for Account
                   config: Arc::clone(&self.config),
                   states: Arc::clone(&self.states),
                   orders: Arc::clone(&self.orders),
-            counter: AtomicU64::new(self.counter.load(Ordering::SeqCst)),
+            request_counter: AtomicU64::new(self.request_counter.load(Ordering::SeqCst)),
         }
     }
 }
@@ -129,7 +129,7 @@ impl AccountInitiator
                      config: self.config.ok_or("config is required")?,                               // 检查并获取config
                      states: self.states.ok_or("balances is required")?,                             // 检查并获取balances
                      orders: self.orders.ok_or("orders are required")?,
-                     counter: 0.into(),
+                     request_counter: 0.into(),
         })
     }
 }

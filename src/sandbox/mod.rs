@@ -198,7 +198,7 @@ mod tests
                                                                                                          maximum: 0,
                                                                                                          minimum: 0,
                                                                                                          current_value: 0 }).await)),
-        counter:0.into()};
+        request_counter:0.into()};
 
         // 更新 account_ref，使其指向 Account
         {
