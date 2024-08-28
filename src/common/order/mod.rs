@@ -93,8 +93,6 @@ static ID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[a-zA-Z0-9_-]{6,20}$").unwrap()
 });
 
-
-
 impl ClientOrderId {
     // 用户自定义或生成唯一的字符串ID
     pub fn new(custom_id: Option<String>) -> Result<Self, String> {
