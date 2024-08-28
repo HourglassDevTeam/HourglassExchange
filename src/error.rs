@@ -5,6 +5,7 @@ use crate::common::{
     order::{identification::client_order_id::ClientOrderId, order_instructions::OrderInstruction},
     token::Token,
 };
+use crate::common::order::identification::request_order_id::RequestId;
 
 /// 执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, Eq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
@@ -21,6 +22,11 @@ pub enum ExecutionError
     /// 余额不足，无法开单。
     #[error("[UniLinkExecution] : Insufficient balance for symbol {0}, unable to place order")]
     InsufficientBalance(Token),
+
+
+    /// 找不到特定客户端订单ID的订单。
+    #[error("[UniLinkExecution] : Order with ClientOrderId not found: {0}")]
+    RequestNotFound(RequestId),
 
     /// 找不到特定客户端订单ID的订单。
     #[error("[UniLinkExecution] : Order with ClientOrderId not found: {0}")]

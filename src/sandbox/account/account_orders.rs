@@ -2,7 +2,7 @@ use crate::{
     common::{
         instrument::Instrument,
         order::{
-            identification::{client_order_id::ClientOrderId, request_order_id::RequestId, OrderId},
+            identification::{ request_order_id::RequestId, OrderId},
             order_instructions::OrderInstruction,
             states::{open::Open, pending::Pending, request_open::RequestOpen},
             Order, OrderRole,
@@ -27,7 +27,7 @@ pub struct AccountOrders
     pub selectable_latencies: [i64; 20],
     pub request_counter: AtomicU64,
     pub order_counter: AtomicU64,                                       // 用来生成一个唯一的 [`OrderId`]。
-    pub pending_order_registry: DashMap<ClientOrderId, Order<Pending>>, // 使用 HashMap
+    pub pending_order_registry: DashMap<RequestId, Order<Pending>>, // 使用 HashMap
     pub instrument_orders_map: DashMap<Instrument, InstrumentOrders>,
 }
 
@@ -185,13 +185,13 @@ impl AccountOrders
     ///
     /// - 如果删除成功，返回 `Ok(())`。
     /// - 如果未找到订单，返回 `Err(ExecutionError::OrderNotFound)`。
-    pub fn remove_order_from_pending_registry(&mut self, cid: ClientOrderId) -> Result<(), ExecutionError>
+    pub fn remove_order_from_pending_registry(&mut self, request_id: RequestId) -> Result<(), ExecutionError>
     {
-        if self.pending_order_registry.remove(&cid).is_some() {
+        if self.pending_order_registry.remove(&request_id).is_some() {
             Ok(())
         }
         else {
-            Err(ExecutionError::OrderNotFound(cid))
+            Err(ExecutionError::RequestNotFound(request_id))
         }
     }
 
@@ -240,13 +240,18 @@ impl AccountOrders
     ///
     /// - 如果订单成功注册，返回 `Ok(())`。
     /// - 如果订单已存在，返回 `Err(ExecutionError::OrderAlreadyExists)`。
-    pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
-    {
-        if self.pending_order_registry.contains_key(&request.cid) {
+    pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError> {
+        // Generate a new RequestId
+        let request_id = self.generate_request_id();
+
+        // Check if an entry with this RequestId already exists
+        if self.pending_order_registry.contains_key(&request_id) {
             return Err(ExecutionError::OrderAlreadyExists(request.cid));
         }
+
+        // Process the request to create a pending order
         let pending_order = self.process_request_as_pending(request.clone()).await;
-        self.pending_order_registry.insert(request.cid, pending_order);
+        self.pending_order_registry.insert(request_id, pending_order);
         Ok(())
     }
 
@@ -387,7 +392,7 @@ impl AccountOrders
     /// # 返回值
     fn reject_post_only_order(&mut self, order: &Order<Pending>) -> Result<OrderRole, ExecutionError>
     {
-        self.remove_order_from_pending_registry(order.cid.clone())?; // 移除订单
+        self.remove_order_from_pending_registry(order.state.request_id)?; // 移除订单
         Err(ExecutionError::OrderRejected("PostOnly order rejected".into())) // 返回拒绝错误
     }
 
@@ -534,7 +539,7 @@ mod tests
     {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::StepFunction, 100, 10);
-        let client_order_id = ClientOrderId(Option::from("OJBK".to_string()));
+        let client_order_id = crate::common::order::identification::client_order_id::ClientOrderId(Option::from("OJBK".to_string()));
         let mut account_orders = AccountOrders::new(12341234, instruments, account_latency).await;
 
         let order = Order { kind: OrderInstruction::Limit,
@@ -550,12 +555,12 @@ mod tests
                                 request_id: RequestId(34534),
                             } };
 
-        account_orders.pending_order_registry.insert(order.cid.clone(), order.clone()); // Clone here as well
-        let remove_result = account_orders.remove_order_from_pending_registry(order.cid);
+        account_orders.pending_order_registry.insert(order.state.request_id.clone(), order.clone()); // Clone here as well
+        let remove_result = account_orders.remove_order_from_pending_registry(order.state.request_id);
         assert!(remove_result.is_ok());
         assert!(account_orders.pending_order_registry.is_empty());
 
-        let remove_invalid_result = account_orders.remove_order_from_pending_registry(client_order_id);
+        let remove_invalid_result = account_orders.remove_order_from_pending_registry(order.state.request_id);
         assert!(remove_invalid_result.is_err());
     }
 
@@ -565,7 +570,7 @@ mod tests
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::RandomWalk, 100, 10);
 
-        let client_order_id = ClientOrderId(Option::from("OJBK".to_string()));
+        let client_order_id = crate::common::order::identification::client_order_id::ClientOrderId(Option::from("OJBK".to_string()));
 
         let mut account_orders = AccountOrders::new(123124, instruments, account_latency).await;
 
@@ -589,7 +594,7 @@ mod tests
     {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
-        let client_order_id = ClientOrderId(Option::from("OJBK".to_string()));
+        let client_order_id = crate::common::order::identification::client_order_id::ClientOrderId(Option::from("OJBK".to_string()));
 
         let mut account_orders = AccountOrders::new(234523, instruments, account_latency).await;
 
@@ -621,7 +626,7 @@ mod tests
         let order = Order { kind: OrderInstruction::Limit,
                             exchange: Exchange::SandBox,
                             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                            cid: ClientOrderId(Option::from("OJBK".to_string())),
+                            cid: crate::common::order::identification::client_order_id::ClientOrderId(Option::from("OJBK".to_string())),
                             client_ts: 1000,
                             side: Side::Buy,
                             state: Pending { reduce_only: false,

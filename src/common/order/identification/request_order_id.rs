@@ -1,9 +1,16 @@
+use fmt::{Display, Formatter};
+use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize, PartialOrd)]
 pub struct RequestId(pub u64);
 
+impl Display for RequestId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 impl RequestId
 {
     /// 生成一个新的 `RequestId`，采用雪花算法的变种。
