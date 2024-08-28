@@ -60,7 +60,35 @@ impl Display for ClientOrderId {
     }
 }
 
-// Initialize a static variable with LazyLock
+/// 用于验证 `ClientOrderId` 格式的静态正则表达式。
+///
+/// 此 `LazyLock` 变量初始化了一个 `Regex` 模式，用于强制执行以下规则:
+///
+/// - **允许的字符:** `ClientOrderId` 只能包含字母（A-Z, a-z）、数字（0-9）、
+///   下划线 (`_`) 和连字符 (`-`)。
+///
+/// - **长度:** `ClientOrderId` 的长度必须在 6 到 20 个字符之间。这确保了 ID 既不会太短而无意义，
+///   也不会太长而繁琐。
+///
+/// ### 示例
+///
+/// ```rust
+/// use regex::Regex;
+/// use std::sync::LazyLock;
+///
+/// static ID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+///     Regex::new(r"^[a-zA-Z0-9_-]{6,20}$").unwrap()
+/// });
+///
+/// assert!(ID_REGEX.is_match("abc123"));      // 有效的 ID
+/// assert!(ID_REGEX.is_match("A1_B2-C3"));    // 包含下划线和连字符的有效 ID
+/// assert!(!ID_REGEX.is_match("ab"));         // 太短
+/// assert!(!ID_REGEX.is_match("abc!@#"));     // 包含无效字符
+/// assert!(!ID_REGEX.is_match("a".repeat(21).as_str())); // 太长
+/// ```
+///
+/// 此正则表达式特别适用于确保用户生成的 `ClientOrderId` 值符合预期格式，
+/// 从而减少因格式错误的 ID 导致的错误概率。
 static ID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[a-zA-Z0-9_-]{6,20}$").unwrap()
 });
