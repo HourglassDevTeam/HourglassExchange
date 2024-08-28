@@ -88,12 +88,18 @@ mod tests
         let config_path = Path::new("test_config.toml");
         let mut file = fs::File::create(&config_path).expect("Failed to create test config file");
         file.write_all(toml_content.as_bytes()).expect("Failed to write to test config file");
+        file.sync_all().expect("Failed to sync test config file");
+        std::thread::sleep(std::time::Duration::from_millis(10));
 
         // 执行`read_config_file`函数
         let result = read_config_file();
 
         // 清理临时文件
-        fs::remove_file(config_path).expect("Failed to remove test config file");
+        if config_path.exists() {
+            fs::remove_file(config_path).expect("Failed to remove test config file");
+        } else {
+            eprintln!("File not found: {:?}", config_path);
+        }
 
         // 断言结果
         assert!(result.is_ok(), "Expected Ok, got {:?}", result);

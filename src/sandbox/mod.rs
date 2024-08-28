@@ -197,7 +197,8 @@ mod tests
                                 orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
                                                                                                          maximum: 0,
                                                                                                          minimum: 0,
-                                                                                                         current_value: 0 }).await)) };
+                                                                                                         current_value: 0 }).await)),
+        counter:0.into()};
 
         // 更新 account_ref，使其指向 Account
         {

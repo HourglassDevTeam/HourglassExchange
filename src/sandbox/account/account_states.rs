@@ -560,7 +560,9 @@ mod tests
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
                                                                                                                   maximum: 0,
                                                                                                                   minimum: 0,
-                                                                                                                  current_value: 0 }).await)) });
+                                                                                                                  current_value: 0 }).await)),
+            counter: 0.into(),
+        });
 
         // 更新 account_ref，使其指向 Account
         {
@@ -746,7 +748,9 @@ mod tests
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
                                                                                                                   maximum: 0,
                                                                                                                   minimum: 0,
-                                                                                                                  current_value: 0 }).await)) });
+                                                                                                                  current_value: 0 }).await)),
+            counter: 0.into(),
+        });
 
         // 更新 account_state 的 account_ref
         {
@@ -785,7 +789,9 @@ mod tests
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
                                                                                                                   maximum: 0,
                                                                                                                   minimum: 0,
-                                                                                                                  current_value: 0 }).await)) });
+                                                                                                                  current_value: 0 }).await)),
+            counter: 0.into(),
+        });
 
         // 更新 account_state 的 account_ref
         {
@@ -822,7 +828,9 @@ mod tests
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
                                                                                                                   maximum: 0,
                                                                                                                   minimum: 0,
-                                                                                                                  current_value: 0 }).await)) });
+                                                                                                                  current_value: 0 }).await)),
+            counter: 0.into(),
+        });
 
         // 更新 account_state 的 account_ref
         {
@@ -857,7 +865,9 @@ mod tests
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
                                                                                                                   maximum: 0,
                                                                                                                   minimum: 0,
-                                                                                                                  current_value: 0 }).await)) });
+                                                                                                                  current_value: 0 }).await)),
+            counter: 0.into(),
+        });
         // 更新 account_state 的 account_ref
         {
             let mut account_state_locked = account_state.lock().await;
@@ -910,7 +920,9 @@ mod tests
                                          orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
                                                                                                                   maximum: 0,
                                                                                                                   minimum: 0,
-                                                                                                                  current_value: 0 }).await)) });
+                                                                                                                  current_value: 0 }).await)),
+            counter: 0.into(),
+        });
 
         {
             let mut account_state_locked = account_state.lock().await;
