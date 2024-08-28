@@ -15,12 +15,14 @@ fn get_mac_address() -> Option<String> {
     let interfaces = datalink::interfaces(); // Correctly refer to pnet::datalink::interfaces
     for iface in interfaces {
         if let Some(mac) = iface.mac {
-            return Some(mac.to_string());
+            let mac_str = mac.to_string();
+            if mac_str != "00:00:00:00:00:00" {
+                return Some(mac_str);
+            }
         }
     }
     None
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -30,6 +32,8 @@ mod tests {
     fn test_generate_machine_id() {
         // Generate a machine ID
         let machine_id = generate_machine_id();
+        // println!("machine_id for this client is {}",machine_id);
+
         // Ensure the machine ID is non-zero
         assert_ne!(machine_id, 0, "Machine ID should not be zero.");
 
@@ -42,6 +46,8 @@ mod tests {
     fn test_get_mac_address() {
         // Ensure that a MAC address is retrieved successfully
         let mac_address = get_mac_address();
+        println!("mac_address for this client is {:?}",mac_address);
+
         assert!(mac_address.is_some(), "MAC address should be retrieved.");
     }
 }
