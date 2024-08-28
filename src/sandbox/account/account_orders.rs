@@ -25,6 +25,7 @@ use crate::common::order::identification::request_order_id::RequestId;
 #[derive(Debug)]
 pub struct AccountOrders
 {
+    pub machine_id : u64,
     pub latency_generator: AccountLatency,
     pub selectable_latencies: [i64; 20],
     pub request_counter: AtomicU64,
@@ -67,15 +68,16 @@ impl AccountOrders
     /// {
     ///     let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
     ///     let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
-    ///     let account_orders = AccountOrders::new(instruments, account_latency).await;
+    ///     let account_orders = AccountOrders::new(123124124124,instruments, account_latency).await;
     ///     println!("新建的 AccountOrders 实例: {:?}", account_orders);
     /// }
     /// ```
-    pub async fn new(instruments: Vec<Instrument>, mut account_latency: AccountLatency) -> Self
+    pub async fn new(machine_id:u64,instruments: Vec<Instrument>, mut account_latency: AccountLatency) -> Self
     {
         let selectable_latencies = Self::generate_latencies(&mut account_latency).await;
 
         Self {
+            machine_id,
             order_counter: AtomicU64::new(0),
             request_counter: AtomicU64::new(0),
             pending_order_registry: DashMap::new(),
@@ -99,7 +101,7 @@ impl AccountOrders
     /// NOTE that the client's login PC might change frequently. This method is not web-compatible now.
     pub fn generate_request_id(&self) -> RequestId
     {
-        let machine_id = generate_machine_id();
+        let machine_id = generate_machine_id().unwrap();
         let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
         RequestId::new(machine_id, counter)
     }
@@ -458,7 +460,7 @@ mod tests
                                                   100,                   // 设置最大延迟
                                                   10                     /* 设置最小延迟 */);
 
-        let account_orders = AccountOrders::new(instruments.clone(), account_latency).await;
+        let account_orders = AccountOrders::new(999,instruments.clone(), account_latency).await;
 
         assert_eq!(account_orders.order_counter.load(Ordering::Acquire), 0);
         assert_eq!(account_orders.instrument_orders_map.len(), instruments.len());
@@ -490,7 +492,7 @@ mod tests
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::Uniform, 100, 10);
 
-        let account_orders = AccountOrders::new(instruments, account_latency).await;
+        let account_orders = AccountOrders::new(123,instruments, account_latency).await;
 
         let latency = account_orders.get_random_latency();
         assert!(latency >= 10 && latency <= 100);
@@ -502,7 +504,7 @@ mod tests
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::LinearIncrease, 100, 10);
 
-        let mut account_orders = AccountOrders::new(instruments.clone(), account_latency).await;
+        let mut account_orders = AccountOrders::new(123124,instruments.clone(), account_latency).await;
 
         {
             // 创建一个作用域，使用完 `result` 后自动释放它
@@ -521,7 +523,7 @@ mod tests
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::LinearDecrease, 100, 10);
 
-        let account_orders = AccountOrders::new(instruments, account_latency).await;
+        let account_orders = AccountOrders::new(1231,instruments, account_latency).await;
 
         let orders = account_orders.fetch_all();
         assert!(orders.is_empty());
@@ -531,7 +533,7 @@ mod tests
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::StepFunction, 100, 10);
         let client_order_id = ClientOrderId(Option::from("OJBK".to_string()));
-        let mut account_orders = AccountOrders::new(instruments, account_latency).await;
+        let mut account_orders = AccountOrders::new(12341234,instruments, account_latency).await;
 
         let order = Order {
             kind: OrderInstruction::Limit,
@@ -565,7 +567,7 @@ mod tests
 
         let client_order_id = ClientOrderId(Option::from("OJBK".to_string()));
 
-        let mut account_orders = AccountOrders::new(instruments, account_latency).await;
+        let mut account_orders = AccountOrders::new(123124,instruments, account_latency).await;
 
         let request_order = Order {
             kind: OrderInstruction::Limit,
@@ -593,7 +595,7 @@ mod tests
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let client_order_id = ClientOrderId(Option::from("OJBK".to_string()));
 
-        let mut account_orders = AccountOrders::new(instruments, account_latency).await;
+        let mut account_orders = AccountOrders::new(234523,instruments, account_latency).await;
 
         let request_order = Order {
             kind: OrderInstruction::Limit,
@@ -622,7 +624,7 @@ mod tests
     {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
-        let mut account_orders = AccountOrders::new(instruments, account_latency).await;
+        let mut account_orders = AccountOrders::new(2351235,instruments, account_latency).await;
 
         let order = Order {
             kind: OrderInstruction::Limit,
@@ -651,7 +653,7 @@ mod tests
     {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
-        let account_orders = AccountOrders::new(instruments, account_latency).await;
+        let account_orders = AccountOrders::new(09890,instruments, account_latency).await;
 
         assert_eq!(account_orders.order_counter.load(Ordering::Acquire), 0);
         account_orders.increment_request_counter();
@@ -663,7 +665,7 @@ mod tests
     {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
-        let account_orders = AccountOrders::new(instruments, account_latency).await;
+        let account_orders = AccountOrders::new(123123,instruments, account_latency).await;
 
         let first_order_id = account_orders.order_id();
         assert_eq!(first_order_id, OrderId("0".to_string()));
@@ -678,7 +680,7 @@ mod tests
     {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
-        let mut account_orders = AccountOrders::new(instruments, account_latency).await;
+        let mut account_orders = AccountOrders::new(123123,instruments, account_latency).await;
 
         account_orders.update_latency(1000);
 

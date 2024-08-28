@@ -577,7 +577,9 @@ mod tests
             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
             config: Arc::new(account_config),
             states: account_state_arc.clone(), // 使用克隆后的 Arc<Mutex<...>>
-            orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency {
+            orders: Arc::new(RwLock::new(AccountOrders::new(
+                0,
+                vec![], AccountLatency {
                 fluctuation_mode: FluctuationMode::Sine,
                 maximum: 0,
                 minimum: 0,
@@ -796,7 +798,7 @@ mod tests
             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
             config: Arc::new(config),
             states: account_state.clone(),
-            orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency {
+            orders: Arc::new(RwLock::new(AccountOrders::new(12312,vec![], AccountLatency {
                 fluctuation_mode: FluctuationMode::Sine,
                 maximum: 0,
                 minimum: 0,
@@ -840,7 +842,7 @@ mod tests
             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
             config: Arc::new(config),
             states: account_state.clone(),
-            orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency {
+            orders: Arc::new(RwLock::new(AccountOrders::new(12312,vec![], AccountLatency {
                 fluctuation_mode: FluctuationMode::Sine,
                 maximum: 0,
                 minimum: 0,
@@ -881,7 +883,7 @@ mod tests
             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
             config: Arc::new(config),
             states: account_state.clone(),
-            orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency {
+            orders: Arc::new(RwLock::new(AccountOrders::new(234,vec![], AccountLatency {
                 fluctuation_mode: FluctuationMode::Sine,
                 maximum: 0,
                 minimum: 0,
@@ -920,7 +922,7 @@ mod tests
             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
             config: Arc::new(config),
             states: account_state.clone(),
-            orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency {
+            orders: Arc::new(RwLock::new(AccountOrders::new(123124,vec![], AccountLatency {
                 fluctuation_mode: FluctuationMode::Sine,
                 maximum: 0,
                 minimum: 0,
@@ -989,7 +991,7 @@ mod tests
             account_event_tx: mpsc::unbounded_channel().0,
             config: Arc::new(config),
             states: account_state.clone(),
-            orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency {
+            orders: Arc::new(RwLock::new(AccountOrders::new(1234124,vec![], AccountLatency {
                 fluctuation_mode: FluctuationMode::Sine,
                 maximum: 0,
                 minimum: 0,
