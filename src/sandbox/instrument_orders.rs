@@ -202,7 +202,7 @@ impl InstrumentOrders
     {
         let fee = trade_quantity * order.state.price * fees_percent;
 
-        Ok(ClientTrade { trade_id: self.batch_id.into(),
+        Ok(ClientTrade { trade_id: self.batch_id.into(), // NOTE trade_id 现在本质上是InstrumentOrders的一个counter生成的
                          client_order_id: order.state.id.clone(),
                          instrument: order.instrument.clone(),
                          side: order.side,
