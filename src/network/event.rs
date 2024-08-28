@@ -25,7 +25,7 @@
 ///
 /// use unilink_execution::common::order::states::request_open::RequestOpen;///
 ///
-/// use unilink_execution::common::order::id::cid::ClientOrderId;
+/// use unilink_execution::common::order::identification::client_order_id::ClientOrderId;
 ///
 /// fn create_open_orders_event() -> NetworkEvent
 /// {
@@ -153,7 +153,7 @@ mod tests
     };
     use std::net::Ipv4Addr;
     use uuid::Uuid;
-    use crate::common::order::id::cid::ClientOrderId;
+    use crate::common::order::identification::client_order_id::ClientOrderId;
 
     /// 测试 `NetworkEvent` 的创建和有效性
     #[test]

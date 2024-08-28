@@ -57,7 +57,7 @@ mod tests
     use super::*;
     use crate::common::{balance::Balance, token::Token};
     use uuid::Uuid;
-    use crate::common::order::id::cid::ClientOrderId;
+    use crate::common::order::identification::client_order_id::ClientOrderId;
 
     #[test]
     fn account_event_should_serialize_and_deserialize_correctly()

@@ -28,15 +28,15 @@
 //     }
 //
 //     // 向AccountDataStreams中添加一个新的数据流。
-//     pub fn add_stream(&mut self, id: StreamID, receiver: UnboundedReceiver)
+//     pub fn add_stream(&mut self, identification: StreamID, receiver: UnboundedReceiver)
 //     {
-//         self.streams.insert(id, receiver);
+//         self.streams.insert(identification, receiver);
 //     }
 //
 //     // 从AccountDataStreams中移除一个数据流。
-//     pub fn remove_stream(&mut self, id: StreamID)
+//     pub fn remove_stream(&mut self, identification: StreamID)
 //     {
-//         self.streams.remove(&id);
+//         self.streams.remove(&identification);
 //     }
 //
 //     // 将所有数据流合并到一个新的接收器中，并按时间戳排序。

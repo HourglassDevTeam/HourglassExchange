@@ -1,7 +1,7 @@
 use crate::common::order::{Order, OrderRole};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-use crate::common::order::id::OrderId;
+use crate::common::order::identification::OrderId;
 
 /// `Open` 结构体表示订单在开放状态下的详细信息。
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]

@@ -15,7 +15,7 @@
 
 
 use serde::{Deserialize, Serialize};
-use crate::common::order::id::OrderId;
+use crate::common::order::identification::OrderId;
 
 /// `FullyFill` 结构体表示订单完全成交的状态。
 /// 完全成交状态意味着订单的所有数量已经被匹配和执行。

@@ -1,4 +1,4 @@
-pub mod cid;
+pub mod client_order_id;
 
 use std::fmt::Display;
 use serde::{Deserialize, Serialize};

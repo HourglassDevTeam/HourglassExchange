@@ -1,13 +1,13 @@
 pub mod order_instructions;
 pub mod states;
-pub mod id;
+pub mod identification;
 
 use crate::{
     common::{instrument::Instrument, order::order_instructions::OrderInstruction, Side},
     Exchange,
 };
 use serde::{Deserialize, Serialize};
-use crate::common::order::id::cid::ClientOrderId;
+use crate::common::order::identification::client_order_id::ClientOrderId;
 
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
@@ -32,7 +32,7 @@ pub enum OrderRole
 mod tests
 {
     use crate::common::order::states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen};
-    use crate::common::order::id::OrderId;
+    use crate::common::order::identification::OrderId;
     use super::*;
 
     #[test]
@@ -75,7 +75,7 @@ mod tests
     #[test]
     fn request_cancel_should_create_from_order_id()
     {
-        let order_id = crate::common::order::id::OrderId("123".to_string());
+        let order_id = crate::common::order::identification::OrderId("123".to_string());
         let cancel_request: RequestCancel = order_id.clone().into();
         assert_eq!(cancel_request.id, order_id);
     }
@@ -83,7 +83,7 @@ mod tests
     #[test]
     fn open_order_remaining_quantity_should_be_calculated_correctly()
     {
-        let open_order = Open { id: crate::common::order::id::OrderId("123".to_string()),
+        let open_order = Open { id: crate::common::order::identification::OrderId("123".to_string()),
                                 price: 50.0,
                                 size: 10.0,
                                 filled_quantity: 3.0,
