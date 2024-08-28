@@ -467,7 +467,7 @@ mod tests
     #[tokio::test]
     async fn test_generate_latencies()
     {
-        let account_latency = AccountLatency::new(FluctuationMode::NormalDistribution, 100, 10);
+        let account_latency = AccountLatency::new(FluctuationMode::Cosine, 100, 10);
 
         let latency_generator = Arc::new(RwLock::new(account_latency));
 
@@ -477,6 +477,7 @@ mod tests
         // 传递给 generate_latencies 函数
         let latencies = AccountOrders::generate_latencies(&mut latency_generator).await;
 
+        println!("{:?}", latencies);
         assert_eq!(latencies.len(), 20);
         for latency in &latencies {
             assert!(*latency >= 10 && *latency <= 100);

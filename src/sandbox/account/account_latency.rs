@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH};
 use rand::Rng;
 // 引入随机数生成器
 use rand_distr::{Distribution, Normal};
@@ -44,12 +45,13 @@ pub fn fluctuate_latency(latency: &mut AccountLatency, seed: i64)
 {
     let range = (latency.maximum - latency.minimum) as f64;
     let half_range = range / 2.0;
+    let dynamic_seed = seed + (SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64 % 1000);
     match latency.fluctuation_mode {
-        | FluctuationMode::Sine => {
-            latency.current_value = (half_range * ((seed as f64).sin() + 1.0)) as i64 + latency.minimum;
+        FluctuationMode::Sine => {
+            latency.current_value = (half_range * ((dynamic_seed as f64 / 10.0).sin() + 1.0)) as i64 + latency.minimum;
         }
-        | FluctuationMode::Cosine => {
-            latency.current_value = (half_range * ((seed as f64).cos() + 1.0)) as i64 + latency.minimum;
+        FluctuationMode::Cosine => {
+            latency.current_value = (half_range * ((dynamic_seed as f64 / 10.0).cos() + 1.0)) as i64 + latency.minimum;
         }
         | FluctuationMode::NormalDistribution => {
             // 使用正态分布波动
@@ -66,9 +68,8 @@ pub fn fluctuate_latency(latency: &mut AccountLatency, seed: i64)
             let exp_value = (((seed as f64).exp() % range) + latency.minimum as f64) as i64;
             latency.current_value = exp_value.clamp(latency.minimum, latency.maximum);
         }
-        | FluctuationMode::Logarithmic => {
-            // 使用对数函数波动
-            let log_value = (((seed as f64).ln().abs() % (latency.maximum - latency.minimum) as f64) + latency.minimum as f64) as i64;
+        FluctuationMode::Logarithmic => {
+            let log_value = (((dynamic_seed as f64).ln().abs().rem_euclid(range)) + latency.minimum as f64) as i64;
             latency.current_value = log_value.clamp(latency.minimum, latency.maximum);
         }
         | FluctuationMode::LinearIncrease => {
@@ -105,92 +106,116 @@ pub fn fluctuate_latency(latency: &mut AccountLatency, seed: i64)
 mod tests
 {
     use super::*;
+    use crate::common::order::identification::machine_id::generate_machine_id;
+
 
     #[test]
     fn test_fluctuate_latency_sine()
     {
+        let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::Sine, 100, 0);
-        fluctuate_latency(&mut latency, 0);
+        fluctuate_latency(&mut latency, machine_id as i64);
+        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
     fn test_fluctuate_latency_cosine()
     {
+        let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::Cosine, 100, 0);
-        fluctuate_latency(&mut latency, 0);
+        fluctuate_latency(&mut latency, machine_id as i64);
+        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
     fn test_fluctuate_latency_normal_distribution()
     {
+        let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::NormalDistribution, 100, 0);
-        fluctuate_latency(&mut latency, 0);
+        fluctuate_latency(&mut latency, machine_id as i64);
+        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
     fn test_fluctuate_latency_uniform()
     {
+        let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::Uniform, 100, 0);
-        fluctuate_latency(&mut latency, 0);
+        fluctuate_latency(&mut latency, machine_id as i64);
+        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
     fn test_fluctuate_latency_exponential()
     {
+        let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::Exponential, 100, 0);
-        fluctuate_latency(&mut latency, 1);
+        fluctuate_latency(&mut latency, machine_id as i64);
+        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
     fn test_fluctuate_latency_logarithmic()
     {
+        let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::Logarithmic, 100, 0);
-        fluctuate_latency(&mut latency, 1);
+        fluctuate_latency(&mut latency, machine_id as i64);
+        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
     fn test_fluctuate_latency_linear_increase()
     {
+        let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::LinearIncrease, 100, 0);
-        fluctuate_latency(&mut latency, 1);
+        fluctuate_latency(&mut latency, machine_id as i64);
+        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
     fn test_fluctuate_latency_linear_decrease()
     {
+        let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::LinearDecrease, 100, 0);
-        fluctuate_latency(&mut latency, 1);
+        fluctuate_latency(&mut latency, machine_id as i64);
+        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
     fn test_fluctuate_latency_step_function()
     {
+        let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::StepFunction, 100, 0);
-        fluctuate_latency(&mut latency, 1);
+        fluctuate_latency(&mut latency, machine_id as i64);
+        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
     fn test_fluctuate_latency_random_walk()
     {
+        let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::RandomWalk, 100, 0);
-        fluctuate_latency(&mut latency, 1);
+        fluctuate_latency(&mut latency, machine_id as i64);
+        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
     #[test]
     fn test_fluctuate_latency_none()
     {
+        let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::None, 100, 0);
-        fluctuate_latency(&mut latency, 1);
+        fluctuate_latency(&mut latency, machine_id as i64);
+        println!("{:?}", latency);
         assert_eq!(latency.current_value, latency.minimum);
     }
 }
