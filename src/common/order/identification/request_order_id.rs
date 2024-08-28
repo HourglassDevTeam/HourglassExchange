@@ -1,7 +1,8 @@
 use std::time::{SystemTime, UNIX_EPOCH};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct RequestId(u64);
+#[derive(Copy, Clone, PartialEq, Debug, Deserialize, Serialize)]
+pub struct RequestId(pub u64);
 
 impl RequestId
 {

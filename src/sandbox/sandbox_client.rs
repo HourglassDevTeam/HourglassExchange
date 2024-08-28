@@ -215,7 +215,9 @@ async fn test_open_orders()
                                             state: Pending { reduce_only: order.state.reduce_only,
                                                              price: order.state.price,
                                                              size: order.state.size,
-                                                             predicted_ts: chrono::Utc::now().timestamp_millis() } })
+                                                             predicted_ts: chrono::Utc::now().timestamp_millis(),
+                                                request_id: crate::common::order::identification::request_order_id::RequestId(1241241241),
+                                            } })
                              })
                              .collect::<Vec<_>>();
 

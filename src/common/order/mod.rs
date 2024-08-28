@@ -39,6 +39,7 @@ mod tests
         identification::OrderId,
         states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
     };
+    use crate::common::order::identification::request_order_id::RequestId;
 
     #[test]
     fn order_execution_type_display_should_format_correctly()
@@ -69,11 +70,15 @@ mod tests
         let pending1 = Pending { reduce_only: true,
                                  price: 50.0,
                                  size: 1.0,
-                                 predicted_ts: 1000 };
+                                 predicted_ts: 1000,
+            request_id: RequestId(123123123),
+        };
         let pending2 = Pending { reduce_only: false,
                                  price: 60.0,
                                  size: 2.0,
-                                 predicted_ts: 2000 };
+                                 predicted_ts: 2000,
+            request_id: RequestId(123123123),
+        };
         assert!(pending1 < pending2);
     }
 

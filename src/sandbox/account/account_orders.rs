@@ -204,21 +204,30 @@ impl AccountOrders
     /// # 返回值
     ///
     /// - 返回一个包含预测时间戳的待处理订单 (`Order<Pending>`)。
-    pub async fn process_request_as_pending(&mut self, order: Order<RequestOpen>) -> Order<Pending>
-    {
-        // turn the request into an pending order with a predicted timestamp
+    pub async fn process_request_as_pending(&mut self, order: Order<RequestOpen>) -> Order<Pending> {
+        // 生成一个新的 RequestId
+        let request_id = self.generate_request_id();
+
+        // 从预定义的延迟值数组中选择一个延迟值
         let latency = self.get_random_latency();
         let adjusted_client_ts = order.client_ts + latency;
-        Order { kind: order.kind,
-                exchange: order.exchange,
-                instrument: order.instrument,
-                cid: order.cid,
-                client_ts: order.client_ts,
-                side: order.side,
-                state: Pending { reduce_only: order.state.reduce_only,
-                                 price: order.state.price,
-                                 size: order.state.size,
-                                 predicted_ts: adjusted_client_ts } }
+
+        // 创建并返回新的 Pending 订单
+        Order {
+            kind: order.kind,
+            exchange: order.exchange,
+            instrument: order.instrument,
+            cid: order.cid,
+            client_ts: order.client_ts,
+            side: order.side,
+            state: Pending {
+                reduce_only: order.state.reduce_only,
+                price: order.state.price,
+                size: order.state.size,
+                predicted_ts: adjusted_client_ts,
+                request_id, // 分配生成的 RequestId
+            },
+        }
     }
 
     /// 将请求注册为待处理订单。
@@ -537,7 +546,9 @@ mod tests
                             state: Pending { reduce_only: false,
                                              price: 50.0,
                                              size: 1.0,
-                                             predicted_ts: 0 } };
+                                             predicted_ts: 0,
+                                request_id: RequestId(34534),
+                            } };
 
         account_orders.pending_order_registry.insert(order.cid.clone(), order.clone()); // Clone here as well
         let remove_result = account_orders.remove_order_from_pending_registry(order.cid);
@@ -616,7 +627,9 @@ mod tests
                             state: Pending { reduce_only: false,
                                              price: 50.0,
                                              size: 1.0,
-                                             predicted_ts: 1000 } };
+                                             predicted_ts: 1000,
+                                request_id: RequestId(435),
+                            } };
 
         let role_maker = account_orders.determine_maker_taker(&order, 50.0).unwrap();
         assert_eq!(role_maker, OrderRole::Maker);

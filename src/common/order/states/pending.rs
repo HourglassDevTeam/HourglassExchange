@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use crate::common::order::identification::request_order_id::RequestId;
 
 /// `Pending` 结构体表示订单在发送到客户端后尚未收到确认响应时的状态。
 #[derive(Copy, Clone, PartialEq, Debug, Deserialize, Serialize)]
@@ -10,7 +11,7 @@ pub struct Pending
     pub price: f64,
     pub size: f64,
     pub(crate) predicted_ts: i64,
-    // pub request_id: RequestId
+    pub request_id: RequestId
 }
 
 /// 为 `Pending` 结构体实现 `PartialOrd` trait，允许对 `Pending` 结构体实例进行排序。
