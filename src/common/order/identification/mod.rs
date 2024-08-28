@@ -28,7 +28,6 @@
 /// - `counter` 被移动到靠右的位置。
 /// - `random_component` 被放在最右边的最低位。
 /// 
-/// 这个设计使得 `now` 和 `machine_id` 对 `OrderId` 有最大的影响，因为它们在高位，而 `counter` 和 `random_component` 位于低位，因此它们的变化不会像高位那样显著影响 `OrderId` 的大小。这就是“高低”的含义——它指的是二进制数字的位置，以及这些位置对最终数字的影响。
 
 pub mod client_order_id;
 pub mod machine_id;
@@ -73,7 +72,9 @@ impl OrderId {
         let random_component: u64 = rand::thread_rng().gen_range(0..8192);
 
         // 调整 counter 的位移位置
-        // 构建 OrderId: [timestamp:41 bits] [machine_id:10 bits] [counter:10 bits] [random:3 bits]
+        // /// 这个设计使得 `now` 和 `machine_id` 对 `OrderId` 有最大的影响，
+        // 因为它们在高位，而 `counter` 和 `random_component` 位于低位，
+        // 因此它们的变化不会像高位那样显著影响 `OrderId` 的大小。
         let id = ((now & 0x1FFFFFFFFFF) << 23)
             | ((machine_id & 0x3FF) << 13)
             | ((counter & 0x3FF) << 3)
