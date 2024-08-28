@@ -179,7 +179,7 @@ impl AccountOrders
     ///
     /// # 参数
     ///
-    /// - `order_id`: 要删除的订单的 `ClientOrderId`。
+    /// - `request_id`: 要删除的订单的 `RequestId`。
     ///
     /// # 返回值
     ///
@@ -432,7 +432,7 @@ impl AccountOrders
     /// 在 order_id 方法中，使用 [Ordering::Acquire] 确保读取到最新的计数器值。
     pub fn order_id(&self) -> OrderId
     {
-        OrderId(self.order_counter.load(Ordering::Acquire).to_string())
+        OrderId(self.order_counter.load(Ordering::Acquire))
     }
 
     pub fn update_latency(&mut self, current_time: i64)
@@ -660,11 +660,11 @@ mod tests
         let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
         let first_order_id = account_orders.order_id();
-        assert_eq!(first_order_id, OrderId("0".to_string()));
+        assert_eq!(first_order_id, OrderId(0));
 
         account_orders.increment_request_counter();
         let second_order_id = account_orders.order_id();
-        assert_eq!(second_order_id, OrderId("1".to_string()));
+        assert_eq!(second_order_id, OrderId(1));
     }
 
     #[tokio::test]

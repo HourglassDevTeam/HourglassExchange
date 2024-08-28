@@ -36,8 +36,7 @@ mod tests
 {
     use super::*;
     use crate::common::order::{
-        identification::OrderId,
-        states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
+        states::{ open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
     };
     use crate::common::order::identification::request_order_id::RequestId;
 
@@ -85,7 +84,7 @@ mod tests
     #[test]
     fn request_cancel_should_create_from_order_id()
     {
-        let order_id = crate::common::order::identification::OrderId("123".to_string());
+        let order_id = crate::common::order::identification::OrderId(123);
         let cancel_request: RequestCancel = order_id.clone().into();
         assert_eq!(cancel_request.id, order_id);
     }
@@ -93,27 +92,12 @@ mod tests
     #[test]
     fn open_order_remaining_quantity_should_be_calculated_correctly()
     {
-        let open_order = Open { id: crate::common::order::identification::OrderId("123".to_string()),
+        let open_order = Open { id: crate::common::order::identification::OrderId(123),
                                 price: 50.0,
                                 size: 10.0,
                                 filled_quantity: 3.0,
                                 order_role: OrderRole::Maker,
                                 received_ts: 1000 };
         assert_eq!(open_order.remaining_quantity(), 7.0);
-    }
-
-    #[test]
-    fn order_id_should_convert_from_string()
-    {
-        let order_id: OrderId = "123".to_string().into();
-        assert_eq!(order_id.0, "123");
-    }
-
-    #[test]
-    fn order_id_should_convert_to_cancelled()
-    {
-        let order_id: OrderId = "123".to_string().into();
-        let cancelled_order: Cancelled = order_id.into();
-        assert_eq!(cancelled_order.id.0, "123");
     }
 }

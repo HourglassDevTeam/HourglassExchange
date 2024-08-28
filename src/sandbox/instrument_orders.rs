@@ -249,7 +249,7 @@ mod tests
                 client_ts: 0,
                 cid: ClientOrderId(Option::from("OJBK".to_string())),
                 side,
-                state: Open { id: OrderId("12345".into()), // 使用一个有效的 OrderId
+                state: Open { id: OrderId(123123), // 使用一个有效的 OrderId
                               price,
                               size,
                               filled_quantity: 0.0,

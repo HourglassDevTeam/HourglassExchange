@@ -958,7 +958,7 @@ mod tests
                                          client_ts: 123456789,
                                          cid: client_order_id,
                                          side: Side::Buy,
-                                         state: Open { id: OrderId::from("test_order"),
+                                         state: Open { id: OrderId(123),
                                                        price: 100.0,
                                                        size: 1.0,
                                                        filled_quantity: 0.0,
