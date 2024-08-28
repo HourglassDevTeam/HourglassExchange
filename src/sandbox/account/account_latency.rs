@@ -47,11 +47,15 @@ pub fn fluctuate_latency(latency: &mut AccountLatency, seed: i64)
     let half_range = range / 2.0;
     let dynamic_seed = seed + (SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64 % 1000);
     match latency.fluctuation_mode {
+        // FIXME : not sparse enough.
         FluctuationMode::Sine => {
-            latency.current_value = (half_range * ((dynamic_seed as f64 / 10.0).sin() + 1.0)) as i64 + latency.minimum;
+            let adjusted_seed = (dynamic_seed as f64 / 100.0).sin() + (rand::random::<f64>() * 0.1);
+            latency.current_value = (half_range * (adjusted_seed + 1.0)) as i64 + latency.minimum;
         }
+        // FIXME : not sparse enough.
         FluctuationMode::Cosine => {
-            latency.current_value = (half_range * ((dynamic_seed as f64 / 10.0).cos() + 1.0)) as i64 + latency.minimum;
+            let adjusted_seed = (dynamic_seed as f64 / 100.0).cos() + (rand::random::<f64>() * 0.1);
+            latency.current_value = (half_range * (adjusted_seed + 1.0)) as i64 + latency.minimum;
         }
         | FluctuationMode::NormalDistribution => {
             // 使用正态分布波动

@@ -18,6 +18,7 @@ use crate::{
 use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
+use crate::common::order::identification::machine_id::generate_machine_id;
 
 #[derive(Debug)]
 pub struct AccountOrders
@@ -113,9 +114,10 @@ impl AccountOrders
     /// 返回一个包含 20 个延迟值的数组 `[i64; 20]`，每个延迟值是通过 `AccountLatency` 计算得到的。
     async fn generate_latencies(latency_generator: &mut AccountLatency) -> [i64; 20]
     {
+        let machine_id = generate_machine_id().unwrap();
         let mut latencies = [0; 20];
         for latency in &mut latencies {
-            fluctuate_latency(latency_generator, 0); // NOTE 这里的占位符 0 可能需要调整。
+            fluctuate_latency(latency_generator, machine_id as i64); // NOTE 这里的占位符 0 可能需要调整。
             *latency = latency_generator.current_value;
         }
         latencies
@@ -467,7 +469,7 @@ mod tests
     #[tokio::test]
     async fn test_generate_latencies()
     {
-        let account_latency = AccountLatency::new(FluctuationMode::Cosine, 100, 10);
+        let account_latency = AccountLatency::new(FluctuationMode::Logarithmic, 100, 10);
 
         let latency_generator = Arc::new(RwLock::new(account_latency));
 
