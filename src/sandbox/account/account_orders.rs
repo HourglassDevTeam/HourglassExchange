@@ -17,7 +17,8 @@ use crate::{
 use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
-use crate::common::order::id::{ClientOrderId, OrderId};
+use crate::common::order::id::{OrderId};
+use crate::common::order::id::cid::ClientOrderId;
 
 #[derive(Debug)]
 pub struct AccountOrders

@@ -36,7 +36,7 @@ use crate::{
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
-use crate::common::order::id::ClientOrderId;
+use crate::common::order::id::cid::ClientOrderId;
 
 pub mod account_config;
 pub mod account_latency;

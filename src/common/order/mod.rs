@@ -7,7 +7,7 @@ use crate::{
     Exchange,
 };
 use serde::{Deserialize, Serialize};
-use id::ClientOrderId;
+use crate::common::order::id::cid::ClientOrderId;
 
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>

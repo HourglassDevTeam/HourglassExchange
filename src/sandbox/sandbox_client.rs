@@ -184,7 +184,7 @@ async fn test_open_orders()
                                exchange: Exchange::Binance,
                                instrument: crate::common::instrument::Instrument::new("BTC", "USDT", crate::common::instrument::kind::InstrumentKind::Perpetual),
                                client_ts: chrono::Utc::now().timestamp_millis(),
-        cid: crate::common::order::id::ClientOrderId(Option::from("OJBK".to_string())),
+        cid: crate::common::order::id::cid::ClientOrderId(Option::from("OJBK".to_string())),
                                side: crate::common::Side::Buy,
                                state: RequestOpen { reduce_only: false,
                                                     price: 50000.0,

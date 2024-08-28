@@ -234,7 +234,7 @@ mod tests
         Exchange,
     };
     use Side::Sell;
-    use crate::common::order::id::{ClientOrderId, OrderId};
+    use crate::common::order::id::{cid::ClientOrderId, OrderId};
 
     fn create_order(side: Side, price: f64, size: f64) -> Order<Open>
     {

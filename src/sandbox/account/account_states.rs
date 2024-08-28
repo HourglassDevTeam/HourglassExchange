@@ -512,7 +512,7 @@ mod tests
     // 确保使用 tokio 的 Mutex
     use tokio::sync::{mpsc, RwLock};
     use uuid::Uuid;
-    use crate::common::order::id::{ClientOrderId, OrderId};
+    use crate::common::order::id::{cid::ClientOrderId, OrderId};
 
     fn create_test_instrument(kind: InstrumentKind) -> Instrument
     {
