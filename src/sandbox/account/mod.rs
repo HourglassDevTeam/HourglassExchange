@@ -38,6 +38,7 @@ use crate::{
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
+use crate::common::order::identification::request_order_id::RequestId;
 
 pub mod account_config;
 pub mod account_latency;
@@ -63,7 +64,6 @@ impl Clone for Account
     {
         Account {
             exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
-            // data: Arc::clone(&self.data),
             account_event_tx: self.account_event_tx.clone(),
             config: Arc::clone(&self.config),
             states: Arc::clone(&self.states),
@@ -72,14 +72,16 @@ impl Clone for Account
         }
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct AccountInitiator
 {
     account_event_tx: Option<UnboundedSender<AccountEvent>>,
     config: Option<Arc<AccountConfig>>,
     states: Option<Arc<Mutex<AccountState>>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
+    request_counter: Option<AtomicU64>, // New field for request counter
 }
+
 
 impl Default for AccountInitiator
 {
@@ -98,6 +100,7 @@ impl AccountInitiator
             config: None,
             states: None,
             orders: None,
+            request_counter: None,
         }
     }
 
@@ -122,6 +125,12 @@ impl AccountInitiator
     pub fn orders(mut self, value: AccountOrders) -> Self
     {
         self.orders = Some(Arc::new(RwLock::new(value)));
+        self
+    }
+
+    pub fn request_counter(mut self, value: AtomicU64) -> Self
+    {
+        self.request_counter = Some(value);
         self
     }
 
@@ -152,9 +161,25 @@ impl Account
     /// `fetch_orders_open` 发送当前所有开放的订单给调用者，用于获取所有未完成的订单。
     /// `fetch_balances` 发送当前所有代币的余额信息，用于获取账户中所有代币的账本数据。
     /// `fetch_positions` 发送当前所有代币的持仓信息，用于获取账户中所有代币的仓位数据。
+    /// `generate_request_id` 生成请求id。
+    /// `update_request_counter`更新请求计数器。
     pub fn update_exchange_timestamp(&self, timestamp: i64)
     {
         self.exchange_timestamp.store(timestamp, Ordering::SeqCst);
+    }
+
+
+    /// 生成一个新的 `RequestId`
+    pub fn generate_request_id(&self, machine_id: u16) -> RequestId
+    {
+        let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
+        RequestId::new(machine_id, counter)
+    }
+
+    /// 更新 `RequestId` 的计数器
+    pub fn update_request_counter(&self, value: u64)
+    {
+        self.request_counter.store(value, Ordering::SeqCst);
     }
 
     pub async fn fetch_orders_open(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>)
