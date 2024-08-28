@@ -1,3 +1,5 @@
+use crate::common::order::identification::client_order_id::ClientOrderId;
+use crate::common::order::identification::OrderId;
 use crate::{
     common::{
         instrument::Instrument,
@@ -17,8 +19,6 @@ use crate::{
 use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
-use crate::common::order::identification::{OrderId};
-use crate::common::order::identification::client_order_id::ClientOrderId;
 
 #[derive(Debug)]
 pub struct AccountOrders
@@ -72,11 +72,13 @@ impl AccountOrders
     {
         let selectable_latencies = Self::generate_latencies(&mut account_latency).await;
 
-        Self { request_counter: AtomicU64::new(0),
-               pending_order_registry: DashMap::new(),
-               instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
-               latency_generator: account_latency,
-               selectable_latencies }
+        Self {
+            request_counter: AtomicU64::new(0),
+            pending_order_registry: DashMap::new(),
+            instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
+            latency_generator: account_latency,
+            selectable_latencies,
+        }
     }
 
     /// 生成一组预定义的延迟值数组，用于模拟订单延迟。
@@ -162,8 +164,7 @@ impl AccountOrders
     {
         if self.pending_order_registry.remove(&cid).is_some() {
             Ok(())
-        }
-        else {
+        } else {
             Err(ExecutionError::OrderNotFound(cid))
         }
     }
@@ -182,16 +183,20 @@ impl AccountOrders
         // turn the request into an pending order with a predicted timestamp
         let latency = self.get_random_latency();
         let adjusted_client_ts = order.client_ts + latency;
-        Order { kind: order.kind,
-                exchange: order.exchange,
-                instrument: order.instrument,
-                cid: order.cid,
-                client_ts: order.client_ts,
-                side: order.side,
-                state: Pending { reduce_only: order.state.reduce_only,
-                                 price: order.state.price,
-                                 size: order.state.size,
-                                 predicted_ts: adjusted_client_ts } }
+        Order {
+            kind: order.kind,
+            exchange: order.exchange,
+            instrument: order.instrument,
+            cid: order.cid,
+            client_ts: order.client_ts,
+            side: order.side,
+            state: Pending {
+                reduce_only: order.state.reduce_only,
+                price: order.state.price,
+                size: order.state.size,
+                predicted_ts: adjusted_client_ts,
+            },
+        }
     }
 
     /// 将请求注册为待处理订单。
@@ -275,16 +280,14 @@ impl AccountOrders
             | Side::Buy => {
                 if order.state.price >= current_price {
                     Ok(OrderRole::Maker)
-                }
-                else {
+                } else {
                     Ok(OrderRole::Taker)
                 }
             }
             | Side::Sell => {
                 if order.state.price <= current_price {
                     Ok(OrderRole::Maker)
-                }
-                else {
+                } else {
                     Ok(OrderRole::Taker)
                 }
             }
@@ -323,16 +326,14 @@ impl AccountOrders
             | Side::Buy => {
                 if order.state.price >= current_price {
                     Ok(OrderRole::Maker)
-                }
-                else {
+                } else {
                     self.reject_post_only_order(order)
                 }
             }
             | Side::Sell => {
                 if order.state.price <= current_price {
                     Ok(OrderRole::Maker)
-                }
-                else {
+                } else {
                     self.reject_post_only_order(order)
                 }
             }
@@ -362,18 +363,22 @@ impl AccountOrders
         self.increment_request_counter();
 
         // 直接构建 Order<Open>
-        Order { kind: request.kind,
-                exchange: request.exchange,
-                instrument: request.instrument,
-                cid: request.cid,
-                client_ts: request.client_ts,
-                side: request.side,
-                state: Open { id: self.order_id(),
-                              price: request.state.price,
-                              size: request.state.size,
-                              filled_quantity: 0.0,
-                              received_ts: request.state.predicted_ts,
-                              order_role: role } }
+        Order {
+            kind: request.kind,
+            exchange: request.exchange,
+            instrument: request.instrument,
+            cid: request.cid,
+            client_ts: request.client_ts,
+            side: request.side,
+            state: Open {
+                id: self.order_id(),
+                price: request.state.price,
+                size: request.state.size,
+                filled_quantity: 0.0,
+                received_ts: request.state.predicted_ts,
+                order_role: role,
+            },
+        }
     }
 
     /// 增加请求计数器的值。
@@ -418,7 +423,7 @@ mod tests
     #[tokio::test]
     async fn test_new_account_orders()
     {
-        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot), Instrument::new("ETH", "USD", InstrumentKind::Spot),];
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot), Instrument::new("ETH", "USD", InstrumentKind::Spot), ];
 
         // 手动创建一个 AccountLatency 实例
         let account_latency = AccountLatency::new(FluctuationMode::Sine, // 设置波动模式
@@ -530,19 +535,23 @@ mod tests
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::RandomWalk, 100, 10);
 
-        let client_order_id= ClientOrderId(Option::from("OJBK".to_string()));
+        let client_order_id = ClientOrderId(Option::from("OJBK".to_string()));
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let request_order = Order { kind: OrderInstruction::Limit,
-                                    exchange: Exchange::SandBox,
-                                    instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                                    cid: client_order_id.clone(),
-                                    client_ts: 1000,
-                                    side: Side::Buy,
-                                    state: RequestOpen { reduce_only: false,
-                                                         price: 50.0,
-                                                         size: 1.0 } };
+        let request_order = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            cid: client_order_id.clone(),
+            client_ts: 1000,
+            side: Side::Buy,
+            state: RequestOpen {
+                reduce_only: false,
+                price: 50.0,
+                size: 1.0,
+            },
+        };
 
         let pending_order = account_orders.process_request_as_pending(request_order).await;
         assert_eq!(pending_order.cid, client_order_id);
@@ -554,19 +563,23 @@ mod tests
     {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
-        let client_order_id= ClientOrderId(Option::from("OJBK".to_string()));
+        let client_order_id = ClientOrderId(Option::from("OJBK".to_string()));
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let request_order = Order { kind: OrderInstruction::Limit,
-                                    exchange: Exchange::SandBox,
-                                    instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+        let request_order = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
             cid: client_order_id,
-                                    client_ts: 1000,
-                                    side: Side::Buy,
-                                    state: RequestOpen { reduce_only: false,
-                                                         price: 50.0,
-                                                         size: 1.0 } };
+            client_ts: 1000,
+            side: Side::Buy,
+            state: RequestOpen {
+                reduce_only: false,
+                price: 50.0,
+                size: 1.0,
+            },
+        };
 
         let result = account_orders.register_pending_order(request_order.clone()).await;
         assert!(result.is_ok());
@@ -583,16 +596,20 @@ mod tests
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let order = Order { kind: OrderInstruction::Limit,
-                            exchange: Exchange::SandBox,
-                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                            cid: ClientOrderId(Option::from("OJBK".to_string())),
-                            client_ts: 1000,
-                            side: Side::Buy,
-                            state: Pending { reduce_only: false,
-                                             price: 50.0,
-                                             size: 1.0,
-                                             predicted_ts: 1000 } };
+        let order = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            cid: ClientOrderId(Option::from("OJBK".to_string())),
+            client_ts: 1000,
+            side: Side::Buy,
+            state: Pending {
+                reduce_only: false,
+                price: 50.0,
+                size: 1.0,
+                predicted_ts: 1000,
+            },
+        };
 
         let role_maker = account_orders.determine_maker_taker(&order, 50.0).unwrap();
         assert_eq!(role_maker, OrderRole::Maker);

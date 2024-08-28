@@ -31,16 +31,20 @@ pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f6
     match order.instrument.kind {
         // 针对现货交易的费用计算
         | InstrumentKind::Spot => {
-            let spot_fees = SpotFees { maker_fee: fees_percent * trade_quantity, // 制造流动性的费率计算
-                                       taker_fee: fees_percent * trade_quantity  /* 消耗流动性的费率计算 */ };
+            let spot_fees = SpotFees {
+                maker_fee: fees_percent * trade_quantity, // 制造流动性的费率计算
+                taker_fee: fees_percent * trade_quantity, /* 消耗流动性的费率计算 */
+            };
             InstrumentFees::new(order.instrument.kind, Fees::Spot(spot_fees))
         }
 
         // 针对永续合约的费用计算
         | InstrumentKind::Perpetual => {
-            let perpetual_fees = PerpetualFees { maker_fee: fees_percent * trade_quantity,   // 开仓费率计算
-                                                 taker_fee: fees_percent * trade_quantity,   // 平仓费率计算
-                                                 funding_fee: fees_percent * trade_quantity  /* 资金费率计算 */ };
+            let perpetual_fees = PerpetualFees {
+                maker_fee: fees_percent * trade_quantity,   // 开仓费率计算
+                taker_fee: fees_percent * trade_quantity,   // 平仓费率计算
+                funding_fee: fees_percent * trade_quantity, /* 资金费率计算 */
+            };
             InstrumentFees::new(order.instrument.kind, Fees::Perpetual(perpetual_fees))
         }
 
@@ -132,8 +136,7 @@ impl InstrumentOrders
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            }
-            else {
+            } else {
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_bid.state.filled_quantity += trade_quantity;
@@ -183,8 +186,7 @@ impl InstrumentOrders
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            }
-            else {
+            } else {
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_ask.state.filled_quantity += trade_quantity;
@@ -203,13 +205,15 @@ impl InstrumentOrders
     {
         let fee = trade_quantity * order.state.price * fees_percent;
 
-        Ok(ClientTrade { trade_id: self.batch_id.into(), // NOTE trade_id 现在本质上是InstrumentOrders的一个counter生成的
-                         client_order_id: order.state.id.clone(),
-                         instrument: order.instrument.clone(),
-                         side: order.side,
-                         price: order.state.price,
-                         quantity: trade_quantity,
-                         fees: fee })
+        Ok(ClientTrade {
+            trade_id: self.batch_id.into(), // NOTE trade_id 现在本质上是InstrumentOrders的一个counter生成的
+            client_order_id: order.state.id.clone(),
+            instrument: order.instrument.clone(),
+            side: order.side,
+            price: order.state.price,
+            quantity: trade_quantity,
+            fees: fee,
+        })
     }
 
     /// 计算所有未成交买单和卖单的总数。
@@ -223,6 +227,7 @@ impl InstrumentOrders
 mod tests
 {
     use super::*;
+    use crate::common::order::identification::{client_order_id::ClientOrderId, OrderId};
     use crate::{
         common::{
             instrument::Instrument,
@@ -234,24 +239,29 @@ mod tests
         Exchange,
     };
     use Side::Sell;
-    use crate::common::order::identification::{client_order_id::ClientOrderId, OrderId};
 
     fn create_order(side: Side, price: f64, size: f64) -> Order<Open>
     {
-        Order { kind: OrderInstruction::Limit,
-                exchange: Exchange::Binance,
-                instrument: Instrument { base: Token::from("SOL"),
-                                         quote: Token::from("USDT"),
-                                         kind: Default::default() },
-                client_ts: 0,
-                cid: ClientOrderId(Option::from("OJBK".to_string())),
-                side,
-                state: Open { id: OrderId("12345".into()), // 使用一个有效的 OrderId
-                              price,
-                              size,
-                              filled_quantity: 0.0,
-                              order_role: OrderRole::Maker,
-                              received_ts: 0 } }
+        Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::Binance,
+            instrument: Instrument {
+                base: Token::from("SOL"),
+                quote: Token::from("USDT"),
+                kind: Default::default(),
+            },
+            client_ts: 0,
+            cid: ClientOrderId(Option::from("OJBK".to_string())),
+            side,
+            state: Open {
+                id: OrderId("12345".into()), // 使用一个有效的 OrderId
+                price,
+                size,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Maker,
+                received_ts: 0,
+            },
+        }
     }
 
     #[test]
@@ -274,9 +284,11 @@ mod tests
     #[test]
     fn test_determine_matching_side_with_equal_prices()
     {
-        let mut instrument_orders = InstrumentOrders { batch_id: 0,
-                                                       bids: Vec::new(),
-                                                       asks: Vec::new() };
+        let mut instrument_orders = InstrumentOrders {
+            batch_id: 0,
+            bids: Vec::new(),
+            asks: Vec::new(),
+        };
 
         let order_buy = create_order(Side::Buy, 100.0, 1.0);
         let order_sell = create_order(Sell, 100.0, 1.0); // 与买单价格相同
@@ -285,16 +297,20 @@ mod tests
         instrument_orders.add_order_open(order_sell);
 
         // 创建 MarketEvent，价格与买单和卖单相同
-        let market_event = MarketEvent { exchange_time: 1625097600000,
-                                         received_time: 1625097610000,
-                                         exchange: Exchange::Binance,
-                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                             symbol: "BTCUSDT".to_string(),
-                                                             side: "buy".to_string(),
-                                                             price: 100.0,
-                                                             timestamp: 1625097600000,
-                                                             amount: 1.0 } };
+        let market_event = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "buy".to_string(),
+                price: 100.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
 
         let matching_side = instrument_orders.determine_matching_side(&market_event);
         // 假设你希望在价格相等时优先匹配买单
@@ -304,39 +320,49 @@ mod tests
     #[test]
     fn test_match_bids()
     {
-        let mut instrument_orders = InstrumentOrders { batch_id: 0,
-                                                       bids: Vec::new(),
-                                                       asks: Vec::new() };
+        let mut instrument_orders = InstrumentOrders {
+            batch_id: 0,
+            bids: Vec::new(),
+            asks: Vec::new(),
+        };
 
         let order_buy = create_order(Side::Buy, 100.0, 1.0);
         instrument_orders.add_order_open(order_buy);
 
         // 创建 MarketEvent，价格便宜
-        let market_event = MarketEvent { exchange_time: 1625097600000,
-                                         received_time: 1625097610000,
-                                         exchange: Exchange::Binance,
-                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                             symbol: "BTCUSDT".to_string(),
-                                                             side: "sell".to_string(),
-                                                             price: 95.0,
-                                                             timestamp: 1625097600000,
-                                                             amount: 1.0 } };
+        let market_event = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "sell".to_string(),
+                price: 95.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
 
         let trades = InstrumentOrders::match_bids(&mut instrument_orders, &market_event, 0.01);
         assert_eq!(trades.len(), 1); // 价格匹配
 
         // 创建 MarketEvent，价格刚好达到买单
-        let market_event = MarketEvent { exchange_time: 1625097600000,
-                                         received_time: 1625097610000,
-                                         exchange: Exchange::Binance,
-                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                             symbol: "BTCUSDT".to_string(),
-                                                             side: "sell".to_string(),
-                                                             price: 100.0,
-                                                             timestamp: 1625097600000,
-                                                             amount: 1.0 } };
+        let market_event = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "sell".to_string(),
+                price: 100.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
 
         let trades = instrument_orders.match_bids(&market_event, 0.01);
         assert_eq!(trades.len(), 0); // 价格匹配，但是之前的订单已经完成了，所以现在bids长度是0.
@@ -346,16 +372,20 @@ mod tests
         let order_buy_partial = create_order(Side::Buy, 100.0, 2.0);
         instrument_orders.add_order_open(order_buy_partial);
 
-        let market_event = MarketEvent { exchange_time: 1625097600000,
-                                         received_time: 1625097610000,
-                                         exchange: Exchange::Binance,
-                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                             symbol: "BTCUSDT".to_string(),
-                                                             side: "sell".to_string(),
-                                                             price: 100.0,
-                                                             timestamp: 1625097600000,
-                                                             amount: 1.0 } };
+        let market_event = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "sell".to_string(),
+                price: 100.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
 
         let trades = instrument_orders.match_bids(&market_event, 0.01);
         assert_eq!(trades.len(), 1); // 部分匹配
@@ -367,39 +397,49 @@ mod tests
     #[test]
     fn test_match_asks()
     {
-        let mut instrument_orders = InstrumentOrders { batch_id: 0,
-                                                       bids: Vec::new(),
-                                                       asks: Vec::new() };
+        let mut instrument_orders = InstrumentOrders {
+            batch_id: 0,
+            bids: Vec::new(),
+            asks: Vec::new(),
+        };
 
         let order_sell = create_order(Sell, 100.0, 1.0);
         instrument_orders.add_order_open(order_sell);
 
         // 创建 MarketEvent，价格刚好达到卖单
-        let market_event = MarketEvent { exchange_time: 1625097600000,
-                                         received_time: 1625097610000,
-                                         exchange: Exchange::Binance,
-                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                             symbol: "BTCUSDT".to_string(),
-                                                             side: "buy".to_string(),
-                                                             price: 100.0,
-                                                             timestamp: 1625097600000,
-                                                             amount: 1.0 } };
+        let market_event = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "buy".to_string(),
+                price: 100.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
 
         let trades = instrument_orders.match_asks(&market_event, 0.01);
         assert_eq!(trades.len(), 1); // 价格匹配成功
 
         // 创建 MarketEvent，价格更高
-        let market_event = MarketEvent { exchange_time: 1625097600000,
-                                         received_time: 1625097610000,
-                                         exchange: Exchange::Binance,
-                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                             symbol: "BTCUSDT".to_string(),
-                                                             side: "buy".to_string(),
-                                                             price: 105.0,
-                                                             timestamp: 1625097600000,
-                                                             amount: 1.0 } };
+        let market_event = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "buy".to_string(),
+                price: 105.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
 
         let trades = instrument_orders.match_asks(&market_event, 0.01);
         assert_eq!(trades.len(), 0); // ，价格匹配，但是之前的订单已经完成了，所以现在asks长度是0
@@ -409,16 +449,20 @@ mod tests
         let order_sell_partial = create_order(Sell, 100.0, 2.0);
         instrument_orders.add_order_open(order_sell_partial);
 
-        let market_event = MarketEvent { exchange_time: 1625097600000,
-                                         received_time: 1625097610000,
-                                         exchange: Exchange::Binance,
-                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                             symbol: "BTCUSDT".to_string(),
-                                                             side: "buy".to_string(),
-                                                             price: 100.0,
-                                                             timestamp: 1625097600000,
-                                                             amount: 1.0 } };
+        let market_event = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "buy".to_string(),
+                price: 100.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
 
         let trades = instrument_orders.match_asks(&market_event, 0.01);
         assert_eq!(trades.len(), 1); // 部分匹配
@@ -431,9 +475,11 @@ mod tests
     #[test]
     fn test_generate_trade_event_success()
     {
-        let instrument_orders = InstrumentOrders { batch_id: 1234,
-                                                   bids: Vec::new(),
-                                                   asks: Vec::new() };
+        let instrument_orders = InstrumentOrders {
+            batch_id: 1234,
+            bids: Vec::new(),
+            asks: Vec::new(),
+        };
 
         // 创建一个有效的 OrderId
         let order = create_order(Side::Buy, 100.0, 1.0);
@@ -445,7 +491,7 @@ mod tests
                 assert_eq!(trade.price, 100.0);
                 assert_eq!(trade.quantity, 1.0);
                 assert_eq!(trade.fees, 1.0); // 100 * 1 * 0.01 = 1.0
-                                             // assert_eq!(trade.count, 1); // 确保 count 为 1
+                // assert_eq!(trade.count, 1); // 确保 count 为 1
             }
             | Err(e) => panic!("Test failed with error: {:?}", e),
         }
@@ -454,9 +500,11 @@ mod tests
     #[test]
     fn test_num_orders()
     {
-        let mut instrument_orders = InstrumentOrders { batch_id: 0,
-                                                       bids: Vec::new(),
-                                                       asks: Vec::new() };
+        let mut instrument_orders = InstrumentOrders {
+            batch_id: 0,
+            bids: Vec::new(),
+            asks: Vec::new(),
+        };
 
         // 测试无订单的情况
         assert_eq!(instrument_orders.num_orders(), 0);
@@ -488,16 +536,20 @@ mod tests
     {
         let instrument_orders = InstrumentOrders::default();
 
-        let market_event = MarketEvent { exchange_time: 1625097600000,
-                                         received_time: 1625097610000,
-                                         exchange: Exchange::Binance,
-                                         instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                         kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                             symbol: "BTCUSDT".to_string(),
-                                                             side: "buy".to_string(),
-                                                             price: 100.0,
-                                                             timestamp: 1625097600000,
-                                                             amount: 1.0 } };
+        let market_event = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "buy".to_string(),
+                price: 100.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
 
         let matching_side = instrument_orders.determine_matching_side(&market_event);
         assert_eq!(matching_side, None); // 没有订单时应该返回None
@@ -515,31 +567,39 @@ mod tests
         instrument_orders.add_order_open(order_sell);
 
         // 市场价格远高于卖单，应该没有匹配
-        let market_event_low = MarketEvent { exchange_time: 1625097600000,
-                                             received_time: 1625097610000,
-                                             exchange: Exchange::Binance,
-                                             instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                             kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                                 symbol: "BTCUSDT".to_string(),
-                                                                 side: "buy".to_string(),
-                                                                 price: 100.0,
-                                                                 timestamp: 1625097600000,
-                                                                 amount: 1.0 } };
+        let market_event_low = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "buy".to_string(),
+                price: 100.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
 
         let matching_side_low = instrument_orders.determine_matching_side(&market_event_low);
         assert_eq!(matching_side_low, None); // 应该没有匹配
 
         // 市场价格高于买单，应该没有匹配
-        let market_event_high = MarketEvent { exchange_time: 1625097600000,
-                                              received_time: 1625097610000,
-                                              exchange: Exchange::Binance,
-                                              instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
-                                              kind: MarketTrade { exchange: "binance_futures".to_string(),
-                                                                  symbol: "BTCUSDT".to_string(),
-                                                                  side: "sell".to_string(),
-                                                                  price: 115.0,
-                                                                  timestamp: 1625097600000,
-                                                                  amount: 1.0 } };
+        let market_event_high = MarketEvent {
+            exchange_time: 1625097600000,
+            received_time: 1625097610000,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC".to_string(), "USDT".to_string(), InstrumentKind::Spot),
+            kind: MarketTrade {
+                exchange: "binance_futures".to_string(),
+                symbol: "BTCUSDT".to_string(),
+                side: "sell".to_string(),
+                price: 115.0,
+                timestamp: 1625097600000,
+                amount: 1.0,
+            },
+        };
 
         let matching_side_high = instrument_orders.determine_matching_side(&market_event_high);
         assert_eq!(matching_side_high, None); // 应该没有匹配

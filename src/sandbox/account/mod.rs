@@ -3,6 +3,7 @@ use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
+use std::sync::atomic::AtomicU64;
 use std::{
     fmt::Debug,
     sync::{
@@ -10,7 +11,6 @@ use std::{
         Arc,
     },
 };
-use std::sync::atomic::AtomicU64;
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 
@@ -18,6 +18,7 @@ use account_config::AccountConfig;
 use account_orders::AccountOrders;
 use account_states::AccountState;
 
+use crate::common::order::identification::client_order_id::ClientOrderId;
 use crate::{
     common::{
         balance::TokenBalance,
@@ -37,7 +38,6 @@ use crate::{
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
-use crate::common::order::identification::client_order_id::ClientOrderId;
 
 pub mod account_config;
 pub mod account_latency;
@@ -53,7 +53,7 @@ pub struct Account
     pub config: Arc<AccountConfig>,                      // 帐户配置
     pub states: Arc<Mutex<AccountState>>,                // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,
-    pub request_counter: AtomicU64,                              // 请求计数器
+    pub request_counter: AtomicU64,                      // 请求计数器
 }
 
 // 手动实现 Clone trait
@@ -61,12 +61,13 @@ impl Clone for Account
 {
     fn clone(&self) -> Self
     {
-        Account { exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
-                  // data: Arc::clone(&self.data),
-                  account_event_tx: self.account_event_tx.clone(),
-                  config: Arc::clone(&self.config),
-                  states: Arc::clone(&self.states),
-                  orders: Arc::clone(&self.orders),
+        Account {
+            exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
+            // data: Arc::clone(&self.data),
+            account_event_tx: self.account_event_tx.clone(),
+            config: Arc::clone(&self.config),
+            states: Arc::clone(&self.states),
+            orders: Arc::clone(&self.orders),
             request_counter: AtomicU64::new(self.request_counter.load(Ordering::SeqCst)),
         }
     }
@@ -92,10 +93,12 @@ impl AccountInitiator
 {
     pub fn new() -> Self
     {
-        AccountInitiator { account_event_tx: None,
-                           config: None,
-                           states: None,
-                           orders: None }
+        AccountInitiator {
+            account_event_tx: None,
+            config: None,
+            states: None,
+            orders: None,
+        }
     }
 
     pub fn account_event_tx(mut self, value: UnboundedSender<AccountEvent>) -> Self
@@ -124,12 +127,13 @@ impl AccountInitiator
 
     pub fn build(self) -> Result<Account, String>
     {
-        Ok(Account { exchange_timestamp: 0.into(),
-                     account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
-                     config: self.config.ok_or("config is required")?,                               // 检查并获取config
-                     states: self.states.ok_or("balances is required")?,                             // 检查并获取balances
-                     orders: self.orders.ok_or("orders are required")?,
-                     request_counter: 0.into(),
+        Ok(Account {
+            exchange_timestamp: 0.into(),
+            account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
+            config: self.config.ok_or("config is required")?,                               // 检查并获取config
+            states: self.states.ok_or("balances is required")?,                             // 检查并获取balances
+            orders: self.orders.ok_or("orders are required")?,
+            request_counter: 0.into(),
         })
     }
 }
@@ -239,9 +243,11 @@ impl Account
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Balance");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
+            .send(AccountEvent {
+                exchange_timestamp,
+                exchange: Exchange::SandBox,
+                kind: AccountEventKind::OrdersNew(vec![open_order.clone()]),
+            })
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
 
         Ok(open_order)
@@ -332,8 +338,7 @@ impl Account
 
                         self.process_trades(trades).await;
                     }
-                }
-                else if let Ok(OrderRole::Taker) = role {
+                } else if let Ok(OrderRole::Taker) = role {
                     // 生成 open_order
                     let open_order = self.orders.write().await.build_order_open(order.clone(), OrderRole::Taker).await;
 
@@ -414,9 +419,11 @@ impl Account
                     }
                 };
 
-                if let Err(err) = self.account_event_tx.send(AccountEvent { exchange_timestamp,
-                                                                            exchange: Exchange::SandBox,
-                                                                            kind: AccountEventKind::Trade(trade) })
+                if let Err(err) = self.account_event_tx.send(AccountEvent {
+                    exchange_timestamp,
+                    exchange: Exchange::SandBox,
+                    kind: AccountEventKind::Trade(trade),
+                })
                 {
                     // 如果发送交易事件失败，记录警告日志
                     warn!("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade: {:?}", err);
@@ -437,9 +444,9 @@ impl Account
     pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
-                                                            let mut this = self.clone();
-                                                            async move { this.try_cancel_order_atomic(request).await }
-                                                        });
+            let mut this = self.clone();
+            async move { this.try_cancel_order_atomic(request).await }
+        });
 
         // 等待所有的取消操作完成
         let cancel_results = join_all(cancel_futures).await;
@@ -457,17 +464,17 @@ impl Account
             | Side::Buy => {
                 // 使用 OrderId 查找 Order<Open>
                 let index = orders.bids
-                                  .par_iter()
-                                  .position_any(|bid| bid.state.id == request.state.id)
-                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                    .par_iter()
+                    .position_any(|bid| bid.state.id == request.state.id)
+                    .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                 orders.bids.remove(index)
             }
             | Side::Sell => {
                 // 使用 OrderId 查找 Order<Open>
                 let index = orders.asks
-                                  .par_iter()
-                                  .position_any(|ask| ask.state.id == request.state.id)
-                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                    .par_iter()
+                    .position_any(|ask| ask.state.id == request.state.id)
+                    .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                 orders.asks.remove(index)
             }
         };
@@ -486,15 +493,19 @@ impl Account
 
         // 发送 AccountEvents 给客户端
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
+            .send(AccountEvent {
+                exchange_timestamp,
+                exchange: Exchange::SandBox,
+                kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
+            })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::Balance(balance_event) })
+            .send(AccountEvent {
+                exchange_timestamp,
+                exchange: Exchange::SandBox,
+                kind: AccountEventKind::Balance(balance_event),
+            })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
 
         Ok(cancelled)
@@ -510,14 +521,16 @@ impl Account
 
         // 将所有打开的订单转换为取消请求
         let cancel_requests: Vec<Order<RequestCancel>> = orders_to_cancel.into_iter()
-                                                                         .map(|order| Order { state: RequestCancel { id: order.state.id },
-                                                                                              instrument: order.instrument,
-                                                                                              side: order.side,
-                                                                                              kind: order.kind,
-                                                                                              cid: order.cid,
-                                                                                              exchange: Exchange::SandBox,
-                                                                                              client_ts: 0 })
-                                                                         .collect();
+            .map(|order| Order {
+                state: RequestCancel { id: order.state.id },
+                instrument: order.instrument,
+                side: order.side,
+                kind: order.kind,
+                cid: order.cid,
+                exchange: Exchange::SandBox,
+                client_ts: 0,
+            })
+            .collect();
 
         // 调用现有的 cancel_orders 方法
         let (tx, rx) = oneshot::channel();
@@ -528,14 +541,14 @@ impl Account
             | Ok(results) => {
                 let cancelled_orders: Vec<_> = results.into_iter().collect::<Result<Vec<_>, _>>().expect("Failed to collect cancel results");
                 response_tx.send(Ok(cancelled_orders)).unwrap_or_else(|_| {
-                                                          eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all response");
-                                                      });
+                    eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all response");
+                });
             }
             | Err(_) => {
                 response_tx.send(Err(ExecutionError::InternalError("Failed to receive cancel results".to_string())))
-                           .unwrap_or_else(|_| {
-                               eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all error response");
-                           });
+                    .unwrap_or_else(|_| {
+                        eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all error response");
+                    });
             }
         }
     }
@@ -544,10 +557,11 @@ impl Account
 /// [PART5]
 /// `respond` 函数:响应处理。
 pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
-    where Response: Debug + Send + 'static
+where
+    Response: Debug + Send + 'static,
 {
     tokio::spawn(async move {
         response_tx.send(response)
-                   .expect("[UniLink_Execution] : SandBoxExchange failed to send oneshot response to execution request")
+            .expect("[UniLink_Execution] : SandBoxExchange failed to send oneshot response to execution request")
     });
 }

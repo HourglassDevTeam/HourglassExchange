@@ -53,23 +53,23 @@ impl SandBoxExchange
 
         // 创建 warp 路由
         let route = warp::path("event").and(warp::body::json()).map(move |network_event: NetworkEvent| {
-                                                                   let event_tx_clone = event_tx.clone();
+            let event_tx_clone = event_tx.clone();
 
-                                                                   // 异步处理网络事件并发送到通道
-                                                                   tokio::spawn(async move {
-                                                                       match network_event.parse_payload() {
-                                                                           | Ok(event) => {
-                                                                               // 发送事件到通道
-                                                                               if let Err(e) = event_tx_clone.send(event) {
-                                                                                   eprintln!("Failed to send event: {:?}", e);
-                                                                               }
-                                                                           }
-                                                                           | Err(e) => eprintln!("Failed to parse event: {}", e),
-                                                                       }
-                                                                   });
+            // 异步处理网络事件并发送到通道
+            tokio::spawn(async move {
+                match network_event.parse_payload() {
+                    | Ok(event) => {
+                        // 发送事件到通道
+                        if let Err(e) = event_tx_clone.send(event) {
+                            eprintln!("Failed to send event: {:?}", e);
+                        }
+                    }
+                    | Err(e) => eprintln!("Failed to parse event: {}", e),
+                }
+            });
 
-                                                                   warp::reply::reply()
-                                                               });
+            warp::reply::reply()
+        });
 
         // 启动 warp 服务器
         let warp_server = warp::serve(route).run(address);
@@ -102,8 +102,10 @@ impl Default for ExchangeInitiator
     fn default() -> Self
     {
         let (_tx, rx) = mpsc::unbounded_channel();
-        Self { event_sandbox_rx: Some(rx),
-               account: None }
+        Self {
+            event_sandbox_rx: Some(rx),
+            account: None,
+        }
     }
 }
 #[derive(Debug)]
@@ -117,14 +119,18 @@ impl ExchangeInitiator
 {
     pub fn new() -> Self
     {
-        Self { event_sandbox_rx: None,
-               account: None }
+        Self {
+            event_sandbox_rx: None,
+            account: None,
+        }
     }
 
     pub fn event_sandbox_rx(self, value: UnboundedReceiver<SandBoxClientEvent>) -> Self
     {
-        Self { event_sandbox_rx: Some(value),
-               ..self }
+        Self {
+            event_sandbox_rx: Some(value),
+            ..self
+        }
     }
 
     pub fn account(self, value: Account) -> Self
@@ -134,8 +140,10 @@ impl ExchangeInitiator
 
     pub fn initiate(self) -> Result<SandBoxExchange, ExecutionError>
     {
-        Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
-                             account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
+        Ok(SandBoxExchange {
+            event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
+            account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))?,
+        })
     }
 }
 
@@ -148,7 +156,8 @@ mod tests
         net::TcpListener,
         sync::{atomic::AtomicI64, Arc, Weak},
     };
-    use tokio::sync::Mutex; // 确保使用 tokio 的 Mutex
+    use tokio::sync::Mutex;
+    // 确保使用 tokio 的 Mutex
 
     use crate::{
         common::position::{AccountPositions, PositionDirectionMode, PositionMarginMode},
@@ -166,39 +175,49 @@ mod tests
         let leverage_rate = 1.0;
 
         // 创建账户配置
-        let account_config = AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
-                                             position_mode: PositionDirectionMode::NetMode,
-                                             position_margin_mode: PositionMarginMode::Isolated,
-                                             commission_level: CommissionLevel::Lv1,
-                                             funding_rate: 0.0,
-                                             account_leverage_rate: leverage_rate,
-                                             fees_book: HashMap::new() };
+        let account_config = AccountConfig {
+            margin_mode: MarginMode::SingleCurrencyMargin,
+            position_mode: PositionDirectionMode::NetMode,
+            position_margin_mode: PositionMarginMode::Isolated,
+            commission_level: CommissionLevel::Lv1,
+            funding_rate: 0.0,
+            account_leverage_rate: leverage_rate,
+            fees_book: HashMap::new(),
+        };
 
         // 创建账户状态
         let balances = HashMap::new();
-        let positions = AccountPositions { margin_pos: Vec::new(),
-                                           perpetual_pos: Vec::new(),
-                                           futures_pos: Vec::new(),
-                                           option_pos: Vec::new() };
+        let positions = AccountPositions {
+            margin_pos: Vec::new(),
+            perpetual_pos: Vec::new(),
+            futures_pos: Vec::new(),
+            option_pos: Vec::new(),
+        };
 
-        let account_state = AccountState { balances: balances.clone(),
-                                           positions: positions.clone(),
-                                           account_ref: Weak::new() };
+        let account_state = AccountState {
+            balances: balances.clone(),
+            positions: positions.clone(),
+            account_ref: Weak::new(),
+        };
 
         // 包装为 Arc<Mutex<...>>
         let account_state_arc = Arc::new(Mutex::new(account_state.clone()));
 
         // 创建 Account 实例
-        let account = Account { exchange_timestamp: AtomicI64::new(0),
-                                // data: Arc::new(RwLock::new(AccountDataStreams::default())),
-                                account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                                config: Arc::new(account_config),
-                                states: account_state_arc.clone(),
-                                orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
-                                                                                                         maximum: 0,
-                                                                                                         minimum: 0,
-                                                                                                         current_value: 0 }).await)),
-        request_counter:0.into()};
+        let account = Account {
+            exchange_timestamp: AtomicI64::new(0),
+            // data: Arc::new(RwLock::new(AccountDataStreams::default())),
+            account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+            config: Arc::new(account_config),
+            states: account_state_arc.clone(),
+            orders: Arc::new(RwLock::new(AccountOrders::new(vec![], AccountLatency {
+                fluctuation_mode: FluctuationMode::Sine,
+                maximum: 0,
+                minimum: 0,
+                current_value: 0,
+            }).await)),
+            request_counter: 0.into(),
+        };
 
         // 更新 account_ref，使其指向 Account
         {
