@@ -36,7 +36,7 @@ impl AccountLatency
         Self { fluctuation_mode,
                maximum,
                minimum,
-               current_value: minimum /* 初始值设为最小值 */ }
+               current_value: minimum}
     }
 }
 
