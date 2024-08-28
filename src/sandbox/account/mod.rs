@@ -170,7 +170,17 @@ impl Account
 
 
     /// 生成一个新的 `RequestId`
-    pub fn generate_request_id(&self, machine_id: u16) -> RequestId
+    ///
+    /// # 参数
+    ///
+    /// - `machine_id`: 用于标识生成 ID 的机器，最大值为 1023。
+    /// - If the machine ID is represented as a 64-bit unsigned integer (u64).
+    /// - This number equals 18,446,744,073,709,551,616, which is over 18 quintillion unique machine IDs.
+    ///
+    /// # 返回值
+    ///
+    /// 返回一个唯一的 `RequestId`。
+    pub fn generate_request_id(&self, machine_id: u64) -> RequestId
     {
         let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
         RequestId::new(machine_id, counter)

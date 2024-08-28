@@ -14,7 +14,7 @@ impl RequestId {
     /// # 返回
     ///
     /// 返回一个唯一的 `RequestId`。
-    pub fn new(machine_id: u16, counter: u64) -> Self {
+    pub fn new(machine_id: u64, counter: u64) -> Self {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("Time went backwards")
