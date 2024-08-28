@@ -80,11 +80,9 @@ mod tests
     }
 
     #[test]
-    fn client_order_id_should_format_correctly()
-    {
-        let uuid = Uuid::new_v4();
-        let client_order_id = ClientOrderId(uuid);
-        assert_eq!(format!("{}", client_order_id), uuid.to_string());
+    fn client_order_id_should_format_correctly() {
+        let client_order_id = ClientOrderId(Some(Uuid::new_v4().to_string())); // 直接生成一个字符串
+        assert_eq!(format!("{}", client_order_id), client_order_id.0.clone().unwrap());
     }
 
     #[test]

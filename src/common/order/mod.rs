@@ -1,14 +1,15 @@
 pub mod order_instructions;
 pub mod states;
 
-use std::fmt::{Display, Formatter};
-
+use std::fmt;
+use std::fmt::{Display};
+use std::sync::LazyLock;
+use regex::Regex;
 use crate::{
     common::{instrument::Instrument, order::order_instructions::OrderInstruction, Side},
     Exchange,
 };
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
@@ -49,18 +50,53 @@ impl<Id> From<Id> for OrderId where Id: Display
 // **ClientOrderId**
 // - **定义和作用**：`ClientOrderId` 是由客户端生成的，主要用于客户端内部的订单管理和跟踪。它在客户端内唯一，可以帮助用户追踪订单状态，而不需要等待交易所生成的 `OrderID`。
 // - **设计合理性**：`ClientOrderId` 的设计对于提高用户体验非常有用，特别是在订单提交后用户可以立即获取订单状态信息。对于未来扩展成的Web或手机App，这种设计能够提供更好的响应速度和用户交互体验。然而，需要注意的是，`ClientOrderId` 在系统中应该保持唯一性，并与 `OrderID` 关联，以防止冲突。
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub struct ClientOrderId(pub Uuid); // 客户端订单ID结构
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
+pub struct ClientOrderId(pub Option<String>); // 可选的字符串类型辅助标识符
 
-// 为ClientOrderId实现格式化显示
-impl std::fmt::Display for ClientOrderId
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
-        write!(f, "{}", self.0)
+// 为 ClientOrderId 实现格式化显示
+impl Display for ClientOrderId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0.as_deref().unwrap_or("None"))
     }
 }
 
+
+// Initialize a static variable with LazyLock
+static ID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[a-zA-Z0-9_-]{6,20}$").unwrap()
+});
+
+
+impl ClientOrderId {
+    // 用户自定义或生成唯一的字符串ID
+    pub fn new(custom_id: Option<String>) -> Result<Self, String> {
+        if let Some(ref id) = custom_id {
+            if Self::validate_id_format(id) {
+                Ok(ClientOrderId(Some(id.clone())))
+            } else {
+                Err("Invalid ClientOrderId format".into())
+            }
+        } else {
+            // 如果没有提供自定义ID，则生成一个唯一的字符串
+            Ok(ClientOrderId(Some(Self::generate_unique_id())))
+        }
+    }
+
+    // 验证 ID 格式
+    fn validate_id_format(id: &str) -> bool {
+        let re = Regex::new(r"^[a-zA-Z0-9_-]{6,20}$").unwrap(); // 允许的格式：6-20个字符，只允许字母、数字、下划线和短划线
+        re.is_match(id)
+    }
+
+    // 自动生成唯一的 ID
+    fn generate_unique_id() -> String {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let timestamp = chrono::Utc::now().timestamp_millis();
+        let random_number: u64 = rng.gen_range(100000..999999);
+        format!("{}-{}", timestamp, random_number)
+    }
+}
 #[cfg(test)]
 mod tests
 {

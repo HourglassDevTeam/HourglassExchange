@@ -350,7 +350,7 @@ impl AccountOrders
     /// # 返回值
     fn reject_post_only_order(&mut self, order: &Order<Pending>) -> Result<OrderRole, ExecutionError>
     {
-        self.remove_order_from_pending_registry(order.client_order_id)?; // 移除订单
+        self.remove_order_from_pending_registry(order.client_order_id.clone())?; // 移除订单
         Err(ExecutionError::OrderRejected("PostOnly order rejected".into())) // 返回拒绝错误
     }
 
@@ -413,7 +413,6 @@ mod tests
     };
     use std::sync::Arc;
     use tokio::sync::RwLock;
-    use uuid::Uuid;
 
     #[tokio::test]
     async fn test_new_account_orders()
@@ -494,27 +493,28 @@ mod tests
         assert!(orders.is_empty());
     }
     #[tokio::test]
-    async fn test_remove_order_from_pending_registry()
-    {
+    async fn test_remove_order_from_pending_registry() {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::StepFunction, 100, 10);
-        // 使用特定的UUID来创建一个ClientOrderId实例，模拟一个不存在的订单
-        let client_order_id = ClientOrderId(Uuid::from_u128(999));
-
+        let client_order_id = ClientOrderId(Option::from("OJBK".to_string()));
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        let order = Order { kind: OrderInstruction::Limit,
-                            exchange: Exchange::SandBox,
-                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                            client_order_id,
-                            client_ts: 0,
-                            side: Side::Buy,
-                            state: Pending { reduce_only: false,
-                                             price: 50.0,
-                                             size: 1.0,
-                                             predicted_ts: 0 } };
+        let order = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            client_order_id: client_order_id.clone(), // Clone here to retain ownership
+            client_ts: 0,
+            side: Side::Buy,
+            state: Pending {
+                reduce_only: false,
+                price: 50.0,
+                size: 1.0,
+                predicted_ts: 0,
+            },
+        };
 
-        account_orders.pending_registry.insert(order.client_order_id, order.clone()); // 使用 insert 方法
+        account_orders.pending_registry.insert(order.client_order_id.clone(), order.clone()); // Clone here as well
         let remove_result = account_orders.remove_order_from_pending_registry(order.client_order_id);
         assert!(remove_result.is_ok());
         assert!(account_orders.pending_registry.is_empty());
@@ -522,20 +522,21 @@ mod tests
         let remove_invalid_result = account_orders.remove_order_from_pending_registry(client_order_id);
         assert!(remove_invalid_result.is_err());
     }
+
     #[tokio::test]
     async fn test_process_request_as_pending()
     {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::RandomWalk, 100, 10);
 
-        let client_order_id = ClientOrderId(Uuid::from_u128(999));
+        let client_order_id= ClientOrderId(Option::from("OJBK".to_string()));
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
         let request_order = Order { kind: OrderInstruction::Limit,
                                     exchange: Exchange::SandBox,
                                     instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                                    client_order_id,
+                                    client_order_id: client_order_id.clone(),
                                     client_ts: 1000,
                                     side: Side::Buy,
                                     state: RequestOpen { reduce_only: false,
@@ -552,7 +553,7 @@ mod tests
     {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
-        let client_order_id = ClientOrderId(Uuid::from_u128(999));
+        let client_order_id= ClientOrderId(Option::from("OJBK".to_string()));
 
         let mut account_orders = AccountOrders::new(instruments, account_latency).await;
 
@@ -584,7 +585,7 @@ mod tests
         let order = Order { kind: OrderInstruction::Limit,
                             exchange: Exchange::SandBox,
                             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                            client_order_id: ClientOrderId(Uuid::new_v4()),
+                            client_order_id: ClientOrderId(Option::from("OJBK".to_string())),
                             client_ts: 1000,
                             side: Side::Buy,
                             state: Pending { reduce_only: false,

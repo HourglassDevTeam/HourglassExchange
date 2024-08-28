@@ -940,7 +940,7 @@ mod tests
         let instrument = create_test_instrument(InstrumentKind::Perpetual);
 
         // 正确地创建一个 ClientOrderId
-        let client_order_id = ClientOrderId(Uuid::new_v4());
+        let client_order_id = ClientOrderId(Option::from("OJBK".to_string()));
 
         // 模拟一个 Open 订单
         let open_order = Order::<Open> { kind: OrderInstruction::Market,
