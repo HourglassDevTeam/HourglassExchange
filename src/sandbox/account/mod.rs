@@ -3,7 +3,6 @@ use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
-use std::sync::atomic::AtomicU64;
 use std::{
     fmt::Debug,
     sync::{
@@ -38,8 +37,6 @@ use crate::{
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
-use crate::common::order::identification::machine_id::generate_machine_id;
-use crate::common::order::identification::request_order_id::RequestId;
 
 pub mod account_config;
 pub mod account_latency;
