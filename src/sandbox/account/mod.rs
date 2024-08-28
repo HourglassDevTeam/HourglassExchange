@@ -38,6 +38,7 @@ use crate::{
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
+use crate::common::order::identification::machine_id::generate_machine_id;
 use crate::common::order::identification::request_order_id::RequestId;
 
 pub mod account_config;
@@ -180,8 +181,10 @@ impl Account
     /// # 返回值
     ///
     /// 返回一个唯一的 `RequestId`。
-    pub fn generate_request_id(&self, machine_id: u64) -> RequestId
+    /// NOTE that the client's login PC might change frequently. This method is not web-compatible now.
+    pub fn generate_request_id(&self) -> RequestId
     {
+        let machine_id = generate_machine_id();
         let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
         RequestId::new(machine_id, counter)
     }
