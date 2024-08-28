@@ -66,6 +66,7 @@ static ID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 
+
 impl ClientOrderId {
     // 用户自定义或生成唯一的字符串ID
     pub fn new(custom_id: Option<String>) -> Result<Self, String> {
@@ -76,24 +77,17 @@ impl ClientOrderId {
                 Err("Invalid ClientOrderId format".into())
             }
         } else {
-            // 如果没有提供自定义ID，则生成一个唯一的字符串
-            Ok(ClientOrderId(Some(Self::generate_unique_id())))
+            // If no custom ID is provided, return `None`.
+            Ok(ClientOrderId(None))
         }
     }
+
 
     // 验证 ID 格式
     fn validate_id_format(id: &str) -> bool {
         ID_REGEX.is_match(id)
     }
 
-    // 自动生成唯一的 ID
-    fn generate_unique_id() -> String {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-        let timestamp = chrono::Utc::now().timestamp_millis();
-        let random_number: u64 = rng.gen_range(100000..999999);
-        format!("{}-{}", timestamp, random_number)
-    }
 }
 #[cfg(test)]
 mod tests

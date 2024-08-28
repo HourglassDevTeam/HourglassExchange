@@ -157,13 +157,13 @@ impl AccountOrders
     ///
     /// - 如果删除成功，返回 `Ok(())`。
     /// - 如果未找到订单，返回 `Err(ExecutionError::OrderNotFound)`。
-    pub fn remove_order_from_pending_registry(&mut self, order_id: ClientOrderId) -> Result<(), ExecutionError>
+    pub fn remove_order_from_pending_registry(&mut self, cid: ClientOrderId) -> Result<(), ExecutionError>
     {
-        if self.pending_registry.remove(&order_id).is_some() {
+        if self.pending_registry.remove(&cid).is_some() {
             Ok(())
         }
         else {
-            Err(ExecutionError::OrderNotFound(order_id))
+            Err(ExecutionError::OrderNotFound(cid))
         }
     }
 
