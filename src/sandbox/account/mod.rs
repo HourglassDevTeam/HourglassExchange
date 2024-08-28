@@ -130,7 +130,7 @@ impl AccountInitiator
     {
         Ok(Account {
             machine_id: generate_machine_id()?,
-            exchange_timestamp: 0.into(),
+            exchange_timestamp: 0.into(), /// NOTE initialisation to 0 might be problematic.
             account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
             config: self.config.ok_or("config is required")?,                               // 检查并获取config
             states: self.states.ok_or("balances is required")?,                             // 检查并获取balances
