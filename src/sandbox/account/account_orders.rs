@@ -469,7 +469,7 @@ mod tests
     #[tokio::test]
     async fn test_generate_latencies()
     {
-        let account_latency = AccountLatency::new(FluctuationMode::Logarithmic, 100, 10);
+        let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
 
         let latency_generator = Arc::new(RwLock::new(account_latency));
 

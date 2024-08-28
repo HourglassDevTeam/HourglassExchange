@@ -73,7 +73,8 @@ pub fn fluctuate_latency(latency: &mut AccountLatency, seed: i64)
             latency.current_value = exp_value.clamp(latency.minimum, latency.maximum);
         }
         FluctuationMode::Logarithmic => {
-            let log_value = (((dynamic_seed as f64).ln().abs().rem_euclid(range)) + latency.minimum as f64) as i64;
+            // Increase randomness and add a multiplier to spread values out
+            let log_value = (((dynamic_seed as f64).ln().abs() * rand::random::<f64>() * 10.0) % range) as i64;
             latency.current_value = log_value.clamp(latency.minimum, latency.maximum);
         }
         | FluctuationMode::LinearIncrease => {
