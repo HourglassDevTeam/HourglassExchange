@@ -27,7 +27,8 @@ pub struct AccountOrders
 {
     pub latency_generator: AccountLatency,
     pub selectable_latencies: [i64; 20],
-    pub request_counter: AtomicU64,                               // 用来生成一个唯一的 [`OrderId`]。
+    pub request_counter: AtomicU64,
+    pub order_counter: AtomicU64,      // 用来生成一个唯一的 [`OrderId`]。
     pub pending_order_registry: DashMap<ClientOrderId, Order<Pending>>, // 使用 HashMap
     pub instrument_orders_map: DashMap<Instrument, InstrumentOrders>,
 }
@@ -75,6 +76,7 @@ impl AccountOrders
         let selectable_latencies = Self::generate_latencies(&mut account_latency).await;
 
         Self {
+            order_counter: AtomicU64::new(0),
             request_counter: AtomicU64::new(0),
             pending_order_registry: DashMap::new(),
             instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
@@ -419,13 +421,13 @@ impl AccountOrders
     /// - 由于使用了 `Relaxed` 顺序，这种递增操作的结果可能对其他线程不可见。
     pub fn increment_request_counter(&self)
     {
-        self.request_counter.fetch_add(1, Ordering::Relaxed);
+        self.order_counter.fetch_add(1, Ordering::Relaxed);
     }
 
     /// 在 order_id 方法中，使用 [Ordering::Acquire] 确保读取到最新的计数器值。
     pub fn order_id(&self) -> OrderId
     {
-        OrderId(self.request_counter.load(Ordering::Acquire).to_string())
+        OrderId(self.order_counter.load(Ordering::Acquire).to_string())
     }
 
     pub fn update_latency(&mut self, current_time: i64)
@@ -458,7 +460,7 @@ mod tests
 
         let account_orders = AccountOrders::new(instruments.clone(), account_latency).await;
 
-        assert_eq!(account_orders.request_counter.load(Ordering::Acquire), 0);
+        assert_eq!(account_orders.order_counter.load(Ordering::Acquire), 0);
         assert_eq!(account_orders.instrument_orders_map.len(), instruments.len());
         assert!(account_orders.pending_order_registry.is_empty());
     }
@@ -651,9 +653,9 @@ mod tests
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
         let account_orders = AccountOrders::new(instruments, account_latency).await;
 
-        assert_eq!(account_orders.request_counter.load(Ordering::Acquire), 0);
+        assert_eq!(account_orders.order_counter.load(Ordering::Acquire), 0);
         account_orders.increment_request_counter();
-        assert_eq!(account_orders.request_counter.load(Ordering::Acquire), 1);
+        assert_eq!(account_orders.order_counter.load(Ordering::Acquire), 1);
     }
 
     #[tokio::test]
