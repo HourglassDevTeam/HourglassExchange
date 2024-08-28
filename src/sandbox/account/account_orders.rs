@@ -100,12 +100,6 @@ impl AccountOrders
         RequestId::new(self.machine_id, counter)
     }
 
-    /// 更新 `RequestId` 的计数器
-    pub fn update_request_counter(&self, value: u64)
-    {
-        self.request_counter.store(value, Ordering::SeqCst);
-    }
-
     /// 生成一组预定义的延迟值数组，用于模拟订单延迟。
     ///
     /// 该函数通过调用 `fluctuate_latency` 函数来动态调整延迟值，并将结果存储在一个数组中。
