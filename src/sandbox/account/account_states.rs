@@ -572,6 +572,7 @@ mod tests
         let account_state_arc = Arc::new(Mutex::new(account_state.clone()));
 
         let account = Arc::new(Account {
+            machine_id: 0,
             exchange_timestamp: AtomicI64::new(0),
             // data: Arc::new(RwLock::new(AccountDataStreams::default())),
             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
@@ -793,6 +794,7 @@ mod tests
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account {
+            machine_id: 0,
             exchange_timestamp: AtomicI64::new(0),
             // data: Arc::new(RwLock::new(AccountDataStreams::default())),
             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
@@ -838,6 +840,7 @@ mod tests
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account {
+            machine_id: 0,
             exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
             config: Arc::new(config),
@@ -878,6 +881,7 @@ mod tests
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account {
+            machine_id: 0,
             exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
             // data: Arc::new(RwLock::new(AccountDataStreams::default())),
             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
@@ -917,6 +921,7 @@ mod tests
 
         // 更新 account_state 的 account_ref，使其指向新的 AccountConfig
         let account = Arc::new(Account {
+            machine_id: 0,
             exchange_timestamp: AtomicI64::new(123456789), // 设置一个非零的初始时间戳值
             // data: Arc::new(RwLock::new(AccountDataStreams::default())),
             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
@@ -986,6 +991,7 @@ mod tests
         };
 
         let account = Arc::new(Account {
+            machine_id: 0,
             exchange_timestamp: AtomicI64::new(123456789),
             // data: Arc::new(RwLock::new(AccountDataStreams::default())),
             account_event_tx: mpsc::unbounded_channel().0,

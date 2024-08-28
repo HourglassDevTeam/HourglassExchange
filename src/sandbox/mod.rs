@@ -205,6 +205,7 @@ mod tests
 
         // 创建 Account 实例
         let account = Account {
+            machine_id: 0,
             exchange_timestamp: AtomicI64::new(0),
             // data: Arc::new(RwLock::new(AccountDataStreams::default())),
             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,

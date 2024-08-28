@@ -37,6 +37,7 @@ use crate::{
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
+use crate::common::order::identification::machine_id::generate_machine_id;
 
 pub mod account_config;
 pub mod account_latency;
@@ -47,11 +48,12 @@ pub mod account_states;
 #[derive(Debug)]
 pub struct Account
 {
+    pub machine_id: u64,
     pub exchange_timestamp: AtomicI64,
     pub account_event_tx: UnboundedSender<AccountEvent>, // 帐户事件发送器
     pub config: Arc<AccountConfig>,                      // 帐户配置
     pub states: Arc<Mutex<AccountState>>,                // 帐户余额
-    pub orders: Arc<RwLock<AccountOrders>>,
+    pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
 }
 
 // 手动实现 Clone trait
@@ -60,6 +62,7 @@ impl Clone for Account
     fn clone(&self) -> Self
     {
         Account {
+            machine_id: *(&self.machine_id),
             exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
             account_event_tx: self.account_event_tx.clone(),
             config: Arc::clone(&self.config),
@@ -126,6 +129,7 @@ impl AccountInitiator
     pub fn build(self) -> Result<Account, String>
     {
         Ok(Account {
+            machine_id: generate_machine_id()?,
             exchange_timestamp: 0.into(),
             account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
             config: self.config.ok_or("config is required")?,                               // 检查并获取config
