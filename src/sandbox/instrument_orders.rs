@@ -126,7 +126,7 @@ impl InstrumentOrders
             if remaining_quantity <= remaining_liquidity {
                 // 全量成交
                 remaining_liquidity -= remaining_quantity;
-                trades.push(self.generate_trade_event(&best_bid, remaining_quantity, fees_percent).unwrap());
+                trades.push(self.generate_client_trade_event(&best_bid, remaining_quantity, fees_percent).unwrap());
 
                 // 如果流动性刚好耗尽，退出循环
                 if remaining_liquidity == 0.0 {
@@ -137,7 +137,7 @@ impl InstrumentOrders
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_bid.state.filled_quantity += trade_quantity;
-                trades.push(self.generate_trade_event(&best_bid, trade_quantity, fees_percent).unwrap());
+                trades.push(self.generate_client_trade_event(&best_bid, trade_quantity, fees_percent).unwrap());
                 self.bids.push(best_bid); // 将部分成交后的订单重新放回队列
                 break;
             }
@@ -177,7 +177,7 @@ impl InstrumentOrders
             if remaining_quantity <= remaining_liquidity {
                 // 全量成交
                 remaining_liquidity -= remaining_quantity;
-                trades.push(self.generate_trade_event(&best_ask, remaining_quantity, fees_percent).unwrap());
+                trades.push(self.generate_client_trade_event(&best_ask, remaining_quantity, fees_percent).unwrap());
 
                 // 如果流动性刚好耗尽，退出循环
                 if remaining_liquidity == 0.0 {
@@ -188,7 +188,7 @@ impl InstrumentOrders
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_ask.state.filled_quantity += trade_quantity;
-                trades.push(self.generate_trade_event(&best_ask.clone(), trade_quantity, fees_percent).unwrap());
+                trades.push(self.generate_client_trade_event(&best_ask.clone(), trade_quantity, fees_percent).unwrap());
                 self.asks.push(best_ask); // 将部分成交后的订单重新放回队列
                 break;
             }
@@ -197,8 +197,8 @@ impl InstrumentOrders
         trades
     }
 
-    // 辅助函数：生成 TradeEvent
-    pub fn generate_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> Result<ClientTrade, ExecutionError>
+    // 辅助函数：生成 ClientTrade
+    pub fn generate_client_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> Result<ClientTrade, ExecutionError>
     {
         let fee = trade_quantity * order.state.price * fees_percent;
 
@@ -437,7 +437,7 @@ mod tests
 
         // 创建一个有效的 OrderId
         let order = create_order(Side::Buy, 100.0, 1.0);
-        let trade_event = instrument_orders.generate_trade_event(&order, 1.0, 0.01);
+        let trade_event = instrument_orders.generate_client_trade_event(&order, 1.0, 0.01);
 
         match trade_event {
             | Ok(trade) => {
