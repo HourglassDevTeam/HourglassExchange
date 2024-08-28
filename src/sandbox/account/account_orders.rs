@@ -26,8 +26,8 @@ pub struct AccountOrders
     pub latency_generator: AccountLatency,
     pub selectable_latencies: [i64; 20],
     pub request_counter: AtomicU64,
-    pub order_counter: AtomicU64,                                       // 用来生成一个唯一的 [`OrderId`]。
-    pub pending_order_registry: DashMap<RequestId, Order<Pending>>, // 使用 HashMap
+    pub order_counter: AtomicU64,
+    pub pending_order_registry: DashMap<RequestId, Order<Pending>>,
     pub instrument_orders_map: DashMap<Instrument, InstrumentOrders>,
 }
 
