@@ -488,10 +488,10 @@ impl DerefMut for AccountState
 mod tests
 {
     use super::*;
+    use crate::common::order::ClientOrderId;
     use crate::{
         common::{
             balance::Balance,
-            event::ClientOrderId,
             friction::{Fees, FutureFees, PerpetualFees},
             instrument::{kind::InstrumentKind, Instrument},
             order::{order_instructions::OrderInstruction, OrderId, OrderRole},
@@ -509,7 +509,8 @@ mod tests
         collections::HashMap,
         sync::{atomic::AtomicI64, Arc, Weak},
     };
-    use tokio::sync::Mutex; // 确保使用 tokio 的 Mutex
+    use tokio::sync::Mutex;
+    // 确保使用 tokio 的 Mutex
     use tokio::sync::{mpsc, RwLock};
     use uuid::Uuid;
 

@@ -1,6 +1,6 @@
+use crate::common::order::ClientOrderId;
 use crate::{
     common::{
-        event::ClientOrderId,
         instrument::Instrument,
         order::{
             order_instructions::OrderInstruction,

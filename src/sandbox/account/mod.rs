@@ -1,4 +1,5 @@
-use crate::common::{datafeed::market_event::MarketEvent, event::ClientOrderId};
+use crate::common::order::ClientOrderId;
+use crate::common::datafeed::market_event::MarketEvent;
 use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;

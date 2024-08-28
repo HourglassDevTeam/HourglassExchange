@@ -1,7 +1,4 @@
-use std::fmt::Formatter;
-
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::{
     common::{
@@ -53,22 +50,12 @@ pub enum AccountEventKind
     // Withdrawal(Withdrawal),
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub struct ClientOrderId(pub Uuid); // 客户端订单ID结构
-
-// 为ClientOrderId实现格式化显示
-impl std::fmt::Display for ClientOrderId
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result
-    {
-        write!(f, "{}", self.0)
-    }
-}
 
 #[cfg(test)]
 mod tests
 {
     use super::*;
+    use crate::common::order::ClientOrderId;
     use crate::common::{balance::Balance, token::Token};
     use uuid::Uuid;
 

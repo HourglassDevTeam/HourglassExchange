@@ -12,7 +12,6 @@
 /// use std::net::Ipv4Addr;
 /// use unilink_execution::{
 ///     common::{
-///         event::ClientOrderId,
 ///         instrument::{kind::InstrumentKind, Instrument},
 ///         order::{Order},
 ///         Side,
@@ -21,6 +20,7 @@
 ///     Exchange,
 /// };
 /// use uuid::Uuid;
+/// use unilink_execution::common::order::ClientOrderId;
 /// use unilink_execution::common::order::order_instructions::OrderInstruction;
 ///
 ///
@@ -85,6 +85,7 @@ use crate::{
 use serde::Deserialize;
 use tokio::sync::oneshot;
 
+
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct NetworkEvent
@@ -141,9 +142,9 @@ impl NetworkEvent
 mod tests
 {
     use super::*;
+    use crate::common::order::ClientOrderId;
     use crate::{
         common::{
-            event::ClientOrderId,
             instrument::{kind::InstrumentKind, Instrument},
             order::{order_instructions::OrderInstruction, Order},
             Side,
