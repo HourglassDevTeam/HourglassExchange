@@ -9,7 +9,6 @@ use crate::common::{
     token::Token,
 };
 
-
 /// 执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
 pub enum ExecutionError

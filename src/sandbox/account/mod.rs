@@ -17,14 +17,13 @@ use account_config::AccountConfig;
 use account_orders::AccountOrders;
 use account_states::AccountState;
 
-use crate::common::order::identification::client_order_id::ClientOrderId;
 use crate::{
     common::{
         balance::TokenBalance,
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
         order::{
-            identification::{machine_id::generate_machine_id, request_order_id::RequestId},
+            identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id, request_order_id::RequestId},
             order_instructions::OrderInstruction,
             states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
             Order, OrderRole,
@@ -238,8 +237,8 @@ impl Account
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
-                exchange: Exchange::SandBox,
-                kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
+                                 exchange: Exchange::SandBox,
+                                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
 
         Ok(open_order)
@@ -258,16 +257,15 @@ impl Account
         // 检查是否有验证失败的订单
         if validation_results.iter().any(|result| result.is_err()) {
             // 如果有任何订单验证失败，将所有验证失败的结果发送回调用者
-            let errors: Vec<Result<Order<Pending>, ExecutionError>> = validation_results
-                .into_iter()
-                .zip(order_requests.into_iter())
-                .filter_map(|(result, _order)| {
-                    match result {
-                        Err(err) => Some(Err(err)),
-                        Ok(_) => None, // 过滤掉成功的验证结果
-                    }
-                })
-                .collect();
+            let errors: Vec<Result<Order<Pending>, ExecutionError>> = validation_results.into_iter()
+                                                                                        .zip(order_requests.into_iter())
+                                                                                        .filter_map(|(result, _order)| {
+                                                                                            match result {
+                                                                                                | Err(err) => Some(Err(err)),
+                                                                                                | Ok(_) => None, // 过滤掉成功的验证结果
+                                                                                            }
+                                                                                        })
+                                                                                        .collect();
 
             let _ = response_tx.send(errors);
             return;
@@ -314,7 +312,8 @@ impl Account
         }
     }
 
-    pub fn validate_order_request_open( order: &Order<RequestOpen>) -> Result<(), ExecutionError> {
+    pub fn validate_order_request_open(order: &Order<RequestOpen>) -> Result<(), ExecutionError>
+    {
         // 检查是否提供了有效的 ClientOrderId
         if let Some(cid) = &order.cid.0 {
             if cid.trim().is_empty() {
@@ -348,8 +347,8 @@ impl Account
         Ok(())
     }
 
-
-    pub fn validate_order_request_cancel(order: &Order<RequestCancel>) -> Result<(), ExecutionError> {
+    pub fn validate_order_request_cancel(order: &Order<RequestCancel>) -> Result<(), ExecutionError>
+    {
         // 检查是否提供了有效的 OrderId
         if order.state.id.value() == 0 {
             return Err(ExecutionError::InvalidRequestCancel("OrderId is missing or invalid".into()));
@@ -360,7 +359,7 @@ impl Account
             return Err(ExecutionError::InvalidRequestCancel("Base and Quote tokens must be different".into()));
         }
 
-       Ok(())
+        Ok(())
     }
 
     pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>)
@@ -513,9 +512,9 @@ impl Account
         let cancel_results = join_all(cancel_futures).await;
         response_tx.send(cancel_results).unwrap_or(());
     }
+
     pub async fn process_cancel_request_into_cancelled_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError>
     {
-
         Self::validate_order_request_cancel(&request)?;
         // 首先使用读锁来查找并验证订单是否存在，同时减少写锁的持有时间
         let removed_order = {
@@ -523,23 +522,22 @@ impl Account
             let mut orders = orders_guard.get_ins_orders_mut(&request.instrument)?;
 
             // 查找并移除订单，这里使用写锁来修改订单集合
-            let removed = match request.side {
-                Side::Buy => {
+            match request.side {
+                | Side::Buy => {
                     let index = orders.bids
                         .par_iter()
                         .position_any(|bid| bid.state.id == request.state.id)
                         .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                     orders.bids.remove(index)
                 }
-                Side::Sell => {
+                | Side::Sell => {
                     let index = orders.asks
                         .par_iter()
                         .position_any(|ask| ask.state.id == request.state.id)
                         .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                     orders.asks.remove(index)
                 }
-            };
-            removed
+            }
         };
 
         // 处理余额更新（不需要持有订单写锁）
@@ -556,24 +554,19 @@ impl Account
 
         // 发送 AccountEvents 给客户端（不需要持有订单写锁）
         self.account_event_tx
-            .send(AccountEvent {
-                exchange_timestamp,
-                exchange: Exchange::SandBox,
-                kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
-            })
+            .send(AccountEvent { exchange_timestamp,
+                                 exchange: Exchange::SandBox,
+                                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.account_event_tx
-            .send(AccountEvent {
-                exchange_timestamp,
-                exchange: Exchange::SandBox,
-                kind: AccountEventKind::Balance(balance_event),
-            })
+            .send(AccountEvent { exchange_timestamp,
+                                 exchange: Exchange::SandBox,
+                                 kind: AccountEventKind::Balance(balance_event) })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
 
         Ok(cancelled)
     }
-
 
     pub async fn cancel_orders_all(&mut self, response_tx: Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>)
     {
@@ -627,51 +620,50 @@ pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
     });
 }
 
-
 #[cfg(test)]
-mod tests {
-    use crate::common::order::identification::OrderId;
-use super::*;
-    use crate::common::order::states::request_open::RequestOpen;
+mod tests
+{
+    use super::*;
+    use crate::common::order::{identification::OrderId, states::request_open::RequestOpen};
 
     #[tokio::test]
-    async fn test_validate_order_request_open() {
-        let order = Order {
-            kind: OrderInstruction::Market,
-            exchange: Exchange::SandBox,
-            instrument: Instrument { base: Token::from("BTC"), quote: Token::from("USD"), kind: InstrumentKind::Spot },
-            client_ts: 1625247600000,
-            cid: ClientOrderId(Some("validCID123".into())),
-            side: Side::Buy,
-            state: RequestOpen { price: 50000.0, size: 1.0, reduce_only: false },
-        };
+    async fn test_validate_order_request_open()
+    {
+        let order = Order { kind: OrderInstruction::Market,
+                            exchange: Exchange::SandBox,
+                            instrument: Instrument { base: Token::from("BTC"),
+                                                     quote: Token::from("USD"),
+                                                     kind: InstrumentKind::Spot },
+                            client_ts: 1625247600000,
+                            cid: ClientOrderId(Some("validCID123".into())),
+                            side: Side::Buy,
+                            state: RequestOpen { price: 50000.0,
+                                                 size: 1.0,
+                                                 reduce_only: false } };
 
         assert!(Account::validate_order_request_open(&order).is_ok());
 
-        let invalid_order = Order {
-            cid: ClientOrderId(Some("".into())),  // Invalid ClientOrderId
-            ..order.clone()
-        };
+        let invalid_order = Order { cid: ClientOrderId(Some("".into())), // Invalid ClientOrderId
+                                    ..order.clone() };
         assert!(Account::validate_order_request_open(&invalid_order).is_err());
     }
     #[tokio::test]
-    async fn test_validate_order_request_cancel() {
-        let cancel_order = Order {
-            kind: OrderInstruction::Market,
-            exchange: Exchange::SandBox,
-            instrument: Instrument { base: Token::from("BTC"), quote: Token::from("USD"), kind: InstrumentKind::Spot },
-            client_ts: 1625247600000,
-            cid: ClientOrderId(Some("validCID123".into())),
-            side: Side::Buy,
-            state: RequestCancel { id: OrderId(12345) },
-        };
+    async fn test_validate_order_request_cancel()
+    {
+        let cancel_order = Order { kind: OrderInstruction::Market,
+                                   exchange: Exchange::SandBox,
+                                   instrument: Instrument { base: Token::from("BTC"),
+                                                            quote: Token::from("USD"),
+                                                            kind: InstrumentKind::Spot },
+                                   client_ts: 1625247600000,
+                                   cid: ClientOrderId(Some("validCID123".into())),
+                                   side: Side::Buy,
+                                   state: RequestCancel { id: OrderId(12345) } };
 
         assert!(Account::validate_order_request_cancel(&cancel_order).is_ok());
 
-        let invalid_cancel_order = Order {
-            state: RequestCancel { id: OrderId(0) },  // Invalid OrderId
-            ..cancel_order.clone()
-        };
+        let invalid_cancel_order = Order { state: RequestCancel { id: OrderId(0) }, // Invalid OrderId
+                                           ..cancel_order.clone() };
         assert!(Account::validate_order_request_cancel(&invalid_cancel_order).is_err());
     }
 }

@@ -125,7 +125,7 @@ impl AccountPositions
             }
 
             | Position::LeveragedToken(p) => {
-                let positions =  &mut self.margin_pos;
+                let positions = &mut self.margin_pos;
                 if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                     *existing_position = p;
                 }
