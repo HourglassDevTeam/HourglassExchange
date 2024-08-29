@@ -71,3 +71,58 @@ impl ClientOrderId
         ID_REGEX.is_match(id)
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_valid_client_order_id() {
+        // 测试有效的ClientOrderId
+        let valid_id = "validID123";
+        let client_order_id = ClientOrderId::new(Some(valid_id.to_string()));
+        assert!(client_order_id.is_ok());
+        assert_eq!(client_order_id.unwrap().0, Some(valid_id.to_string()));
+    }
+
+    #[test]
+    fn test_invalid_client_order_id() {
+        // 测试无效的ClientOrderId（太短）
+        let invalid_id_short = "abc";
+        let client_order_id = ClientOrderId::new(Some(invalid_id_short.to_string()));
+        assert!(client_order_id.is_err());
+
+        // 测试无效的ClientOrderId（包含不允许的字符）
+        let invalid_id_chars = "abc!@#";
+        let client_order_id = ClientOrderId::new(Some(invalid_id_chars.to_string()));
+        assert!(client_order_id.is_err());
+
+        // 测试无效的ClientOrderId（太长）
+        let invalid_id_long = "a".repeat(21);
+        let client_order_id = ClientOrderId::new(Some(invalid_id_long));
+        assert!(client_order_id.is_err());
+    }
+
+    #[test]
+    fn test_none_client_order_id() {
+        // 测试没有提供ID的情况
+        let client_order_id = ClientOrderId::new(None);
+        assert!(client_order_id.is_ok());
+        assert_eq!(client_order_id.unwrap().0, None);
+    }
+
+    #[test]
+    fn test_validate_id_format() {
+        // 测试validate_id_format方法
+
+        // 合法的ID
+        assert!(ClientOrderId::validate_id_format("validID123"));
+        assert!(ClientOrderId::validate_id_format("A1_B2-C3"));
+
+        // 不合法的ID
+        assert!(!ClientOrderId::validate_id_format("ab")); // 太短
+        assert!(!ClientOrderId::validate_id_format("abc!@#")); // 包含不允许的字符
+        assert!(!ClientOrderId::validate_id_format(&"a".repeat(21))); // 太长
+    }
+}
