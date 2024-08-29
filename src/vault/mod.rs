@@ -7,6 +7,8 @@ use crate::common::position::position_id::PositionId;
 pub mod error;
 pub mod in_memory;
 pub mod redis;
+mod summariser;
+
 /// 处理 [`Position`] 在持久层的读写操作。
 pub trait PositionHandler {
     /// 使用 [`PositionId`] 更新或插入一个打开的 [`Position`]。

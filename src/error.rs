@@ -122,4 +122,9 @@ pub enum ExecutionError
 
     #[error("[UniLinkExecution] : Invalid RequestCancel: {0}")]
     InvalidRequestCancel(String),
+
+    #[error("[UniLinkExecution] : Redis Initialisation Failure: {0}")]
+    RedisInitialisationError(String),
+
+
 }
