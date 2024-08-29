@@ -8,6 +8,7 @@ use crate::common::{
     },
     token::Token,
 };
+use crate::common::order::Order;
 use crate::common::order::states::request_open::RequestOpen;
 
 /// 执行过程中可能遇到的错误。
@@ -119,5 +120,5 @@ pub enum ExecutionError
     NotImplemented(String),
 
     #[error("[UniLinkExecution] : Invalid RequestOpen: {0}")]
-    InvalidRequestOpen(RequestOpen),
+    InvalidRequestOpen(Order<RequestOpen>),
 }

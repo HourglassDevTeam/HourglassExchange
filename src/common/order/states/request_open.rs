@@ -2,6 +2,7 @@ use fmt::Display;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt;
+use crate::common::order::Order;
 
 /// 订单初始状态。发送到client进行操作
 ///
@@ -44,6 +45,16 @@ impl Display for RequestOpen {
             f,
             "RequestOpen {{ reduce_only: {}, price: {}, size: {} }}",
             self.reduce_only, self.price, self.size
+        )
+    }
+}
+
+impl Display for Order<RequestOpen> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Order {{ kind: {:?}, exchange: {:?}, instrument: {:?}, client_ts: {}, cid: {:?}, side: {:?}, state: {} }}",
+            self.kind, self.exchange, self.instrument, self.client_ts, self.cid, self.side, self.state
         )
     }
 }

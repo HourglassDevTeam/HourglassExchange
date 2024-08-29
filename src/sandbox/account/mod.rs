@@ -268,7 +268,8 @@ impl Account
     }
 
     /// [PART3]
-    /// `order_validity_check` 验证订单的合法性，确保订单类型是受支持的。
+    /// `validate_order_instruction` 验证订单的合法性，确保订单类型是受支持的。
+    /// `validate_order_request_open` 验证开单请求的合法性，确保订单类型是受支持的。
     /// `match_orders` 处理市场事件，根据市场事件匹配相应的订单并生成交易。
     /// `get_orders_for_instrument` 获取与特定金融工具相关的订单，用于进一步的订单匹配操作。
     /// `match_orders_by_side` 根据订单的买卖方向（Side）匹配订单并生成交易事件。
@@ -291,12 +292,12 @@ impl Account
         // 检查是否提供了有效的 ClientOrderId
         if let Some(cid) = &order.cid.0 {
             if cid.trim().is_empty() {
-                return Err(ExecutionError::InvalidRequestOpen(order.state));
+                return Err(ExecutionError::InvalidRequestOpen(order.clone()));
             }
 
             // 使用 validate_id_format 验证 ID 格式
             if !ClientOrderId::validate_id_format(cid) {
-                return Err(ExecutionError::InvalidRequestOpen(order.state));
+                return Err(ExecutionError::InvalidRequestOpen(order.clone()));
             }
         }
 
@@ -305,17 +306,17 @@ impl Account
 
         // 检查价格是否合法（应为正数）
         if order.state.price <= 0.0 {
-            return Err(ExecutionError::InvalidRequestOpen(order.state));
+            return Err(ExecutionError::InvalidRequestOpen(order.clone()));
         }
 
         // 检查数量是否合法（应为正数）
         if order.state.size <= 0.0 {
-            return Err(ExecutionError::InvalidRequestOpen(order.state));
+            return Err(ExecutionError::InvalidRequestOpen(order.clone()));
         }
 
         // 检查基础货币和报价货币是否相同
         if order.instrument.base == order.instrument.quote {
-            return Err(ExecutionError::InvalidRequestOpen(order.state));
+            return Err(ExecutionError::InvalidRequestOpen(order.clone()));
         }
 
         Ok(())
