@@ -22,6 +22,7 @@ pub mod error;
 pub mod network;
 pub mod okex;
 pub mod sandbox;
+pub mod test_util;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]
