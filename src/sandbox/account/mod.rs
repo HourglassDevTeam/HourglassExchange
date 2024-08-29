@@ -205,7 +205,7 @@ impl Account
         }
     }
 
-    pub async fn try_open_order_atomic(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
+    pub async fn open_order_atomic(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
     {
         Self::order_validity_check(order.kind)?;
 
@@ -328,7 +328,7 @@ impl Account
 
                 if let Ok(role) = role {
                     // 调用 try_open_order_atomic 替代 build_order_open
-                    let open_order_result = self.try_open_order_atomic(current_price, order.clone()).await;
+                    let open_order_result = self.open_order_atomic(current_price, order.clone()).await;
 
                     if let Ok(open_order) = open_order_result {
                         if let Ok(mut orders_write) = self.orders.write().await.get_ins_orders_mut(&open_order.instrument) {
