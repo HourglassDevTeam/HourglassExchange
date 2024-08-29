@@ -349,7 +349,7 @@ impl Account
     }
 
 
-    pub fn validate_order_request_cancel(&self, order: &Order<RequestCancel>) -> Result<(), ExecutionError> {
+    pub fn validate_order_request_cancel(order: &Order<RequestCancel>) -> Result<(), ExecutionError> {
         // 检查是否提供了有效的 OrderId
         if order.state.id.value() == 0 {
             return Err(ExecutionError::InvalidRequestCancel("OrderId is missing or invalid".into()));
@@ -515,6 +515,8 @@ impl Account
     }
     pub async fn process_cancel_request_into_cancelled_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError>
     {
+
+        Self::validate_order_request_cancel(&request)?;
         // 首先使用读锁来查找并验证订单是否存在，同时减少写锁的持有时间
         let removed_order = {
             let orders_guard = self.orders.read().await;
