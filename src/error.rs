@@ -2,10 +2,12 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::common::{
-    order::{identification::client_order_id::ClientOrderId, order_instructions::OrderInstruction},
+    order::{
+        identification::{client_order_id::ClientOrderId, request_order_id::RequestId},
+        order_instructions::OrderInstruction,
+    },
     token::Token,
 };
-use crate::common::order::identification::request_order_id::RequestId;
 
 /// 执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, Eq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
@@ -22,7 +24,6 @@ pub enum ExecutionError
     /// 余额不足，无法开单。
     #[error("[UniLinkExecution] : Insufficient balance for symbol {0}, unable to place order")]
     InsufficientBalance(Token),
-
 
     /// 找不到特定客户端订单ID的订单。
     #[error("[UniLinkExecution] : Order with ClientOrderId not found: {0}")]
@@ -44,11 +45,9 @@ pub enum ExecutionError
     #[error("[UniLinkExecution] : Operation timed out: {0}")]
     Timeout(String),
 
-
     /// 订单已存在。
     #[error("[UniLinkExecution] : Order already exists: {0}")]
     RequestAlreadyExists(RequestId),
-
 
     /// 订单已存在。
     #[error("[UniLinkExecution] : Order already exists: {0}")]

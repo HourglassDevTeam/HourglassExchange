@@ -1,13 +1,17 @@
 use fmt::{Display, Formatter};
-use std::fmt;
-use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
+use std::{
+    fmt,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize, PartialOrd)]
 pub struct RequestId(pub u64);
 
-impl Display for RequestId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl Display for RequestId
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result
+    {
         write!(f, "{}", self.0)
     }
 }
@@ -29,7 +33,7 @@ impl RequestId
         let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
 
         // 生成 RequestId: [timestamp:41 bits] [machine_id:10 bits] [counter:12 bits]
-        let id = ((now & 0x1FFFFFFFFFF) << 22) | ((machine_id as u64 & 0x3FF) << 12) | (counter & 0xFFF);
+        let id = ((now & 0x1FFFFFFFFFF) << 22) | ((machine_id & 0x3FF) << 12) | (counter & 0xFFF);
 
         RequestId(id)
     }

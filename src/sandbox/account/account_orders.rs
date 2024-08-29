@@ -2,7 +2,7 @@ use crate::{
     common::{
         instrument::Instrument,
         order::{
-            identification::{ request_order_id::RequestId, OrderId},
+            identification::{machine_id::generate_machine_id, request_order_id::RequestId, OrderId},
             order_instructions::OrderInstruction,
             states::{open::Open, pending::Pending, request_open::RequestOpen},
             Order, OrderRole,
@@ -18,7 +18,6 @@ use crate::{
 use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
-use crate::common::order::identification::machine_id::generate_machine_id;
 
 #[derive(Debug)]
 pub struct AccountOrders
@@ -200,7 +199,8 @@ impl AccountOrders
     /// # 返回值
     ///
     /// - 返回一个包含预测时间戳的待处理订单 (`Order<Pending>`)。
-    pub async fn process_request_as_pending(&mut self, order: Order<RequestOpen>) -> Order<Pending> {
+    pub async fn process_request_as_pending(&mut self, order: Order<RequestOpen>) -> Order<Pending>
+    {
         // 生成一个新的 RequestId
         let request_id = self.generate_request_id();
 
@@ -209,21 +209,17 @@ impl AccountOrders
         let adjusted_client_ts = order.client_ts + latency;
 
         // 创建并返回新的 Pending 订单
-        Order {
-            kind: order.kind,
-            exchange: order.exchange,
-            instrument: order.instrument,
-            cid: order.cid,
-            client_ts: order.client_ts,
-            side: order.side,
-            state: Pending {
-                reduce_only: order.state.reduce_only,
-                price: order.state.price,
-                size: order.state.size,
-                predicted_ts: adjusted_client_ts,
-                request_id, // 分配生成的 RequestId
-            },
-        }
+        Order { kind: order.kind,
+                exchange: order.exchange,
+                instrument: order.instrument,
+                cid: order.cid,
+                client_ts: order.client_ts,
+                side: order.side,
+                state: Pending { reduce_only: order.state.reduce_only,
+                                 price: order.state.price,
+                                 size: order.state.size,
+                                 predicted_ts: adjusted_client_ts,
+                                 request_id /* 分配生成的 RequestId */ } }
     }
 
     /// 将请求注册为待处理订单。
@@ -236,7 +232,8 @@ impl AccountOrders
     ///
     /// - 如果订单成功注册，返回 `Ok(())`。
     /// - 如果订单已存在，返回 `Err(ExecutionError::OrderAlreadyExists)`。
-    pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError> {
+    pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
+    {
         // Check if an entry with this ClientOrderId already exists
         if self.pending_registry.iter().any(|entry| entry.value().cid == request.cid) {
             return Err(ExecutionError::OrderAlreadyExists(request.cid));
@@ -354,18 +351,22 @@ impl AccountOrders
     pub(crate) fn determine_post_only_order_role(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
     {
         match order.side {
-            Side::Buy => {
+            | Side::Buy => {
                 if order.state.price >= current_price {
                     Ok(OrderRole::Maker)
-                } else {
-                    Err(ExecutionError::OrderRejected("PostOnly order should be rejected".into())) // 返回需要拒绝的错误，但不立即执行拒绝操作
+                }
+                else {
+                    Err(ExecutionError::OrderRejected("PostOnly order should be rejected".into()))
+                    // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
             }
-            Side::Sell => {
+            | Side::Sell => {
                 if order.state.price <= current_price {
                     Ok(OrderRole::Maker)
-                } else {
-                    Err(ExecutionError::OrderRejected("PostOnly order should be rejected".into())) // 返回需要拒绝的错误，但不立即执行拒绝操作
+                }
+                else {
+                    Err(ExecutionError::OrderRejected("PostOnly order should be rejected".into()))
+                    // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
             }
         }
@@ -424,7 +425,8 @@ impl AccountOrders
     }
 
     /// 在 order_id 方法中，使用 [Ordering::Acquire] 确保读取到最新的计数器值。
-    pub fn order_id(&self) -> OrderId {
+    pub fn order_id(&self) -> OrderId
+    {
         let counter = self.order_counter.fetch_add(1, Ordering::SeqCst);
         OrderId::new(self.machine_id, counter)
     }
@@ -544,8 +546,7 @@ mod tests
                                              price: 50.0,
                                              size: 1.0,
                                              predicted_ts: 0,
-                                request_id: RequestId(34534),
-                            } };
+                                             request_id: RequestId(34534) } };
 
         account_orders.pending_registry.insert(order.state.request_id, order.clone()); // Clone here as well
         let remove_result = account_orders.remove_order_from_pending_registry(order.state.request_id);
@@ -625,8 +626,7 @@ mod tests
                                              price: 50.0,
                                              size: 1.0,
                                              predicted_ts: 1000,
-                                request_id: RequestId(435),
-                            } };
+                                             request_id: RequestId(435) } };
 
         let role_maker = account_orders.determine_maker_taker(&order, 50.0).unwrap();
         assert_eq!(role_maker, OrderRole::Maker);
@@ -648,7 +648,8 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_order_id() {
+    async fn test_order_id()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
         let account_orders = AccountOrders::new(123123, instruments, account_latency).await;

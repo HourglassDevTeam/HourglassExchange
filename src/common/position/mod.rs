@@ -115,7 +115,7 @@ impl AccountPositions
     {
         match new_position {
             | Position::Perpetual(p) => {
-                let ref mut positions = self.perpetual_pos;
+                let positions = &mut self.perpetual_pos;
                 if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                     *existing_position = p;
                 }
@@ -125,7 +125,7 @@ impl AccountPositions
             }
 
             | Position::LeveragedToken(p) => {
-                let ref mut positions = self.margin_pos;
+                let positions =  &mut self.margin_pos;
                 if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                     *existing_position = p;
                 }
@@ -135,7 +135,7 @@ impl AccountPositions
             }
 
             | Position::Future(p) => {
-                let ref mut positions = self.futures_pos;
+                let positions = &mut self.futures_pos;
                 if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                     *existing_position = p;
                 }
@@ -145,7 +145,7 @@ impl AccountPositions
             }
 
             | Position::Option(p) => {
-                let ref mut positions = self.option_pos;
+                let positions = &mut self.option_pos;
                 if let Some(existing_position) = positions.iter_mut().find(|pos| pos.meta.instrument == p.meta.instrument) {
                     *existing_position = p;
                 }

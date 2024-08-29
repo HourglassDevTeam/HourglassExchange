@@ -23,7 +23,7 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
         order::{
-            identification::{ machine_id::generate_machine_id},
+            identification::{machine_id::generate_machine_id, request_order_id::RequestId},
             order_instructions::OrderInstruction,
             states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
             Order, OrderRole,
@@ -37,7 +37,6 @@ use crate::{
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
-use crate::common::order::identification::request_order_id::RequestId;
 
 pub mod account_config;
 pub mod account_latency;
@@ -61,7 +60,7 @@ impl Clone for Account
 {
     fn clone(&self) -> Self
     {
-        Account { machine_id: *(&self.machine_id),
+        Account { machine_id: self.machine_id,
                   exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
                   account_event_tx: self.account_event_tx.clone(),
                   config: Arc::clone(&self.config),
@@ -230,7 +229,7 @@ impl Account
             orders_guard.get_ins_orders_mut(&open_order.instrument)?.add_order_open(open_order.clone());
         }
 
-        let balance_event = self.states.lock().await.apply_open_order_changes(&open_order, required_balance).await.unwrap();
+        let balance_event = self.states.lock().await.apply_open_order_changes(&open_order, required_balance).await?;
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
         self.account_event_tx
@@ -287,11 +286,13 @@ impl Account
                                                              * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
     }
-    pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>) {
+
+    pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>)
+    {
         let current_price = market_event.kind.price;
 
         // 获取所有的请求 ID
-        let request_ids: Vec<RequestId> = self.orders.read().await.pending_registry.iter().map(|entry| entry.key().clone()).collect();
+        let request_ids: Vec<RequestId> = self.orders.read().await.pending_registry.iter().map(|entry| *entry.key()).collect();
 
         // 遍历订单 ID 来处理每个订单
         for request_id in request_ids {
@@ -303,24 +304,25 @@ impl Account
 
             if let Some(order) = order {
                 let role = match order.kind {
-                    OrderInstruction::Market | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => Ok(OrderRole::Taker),
-                    OrderInstruction::Limit | OrderInstruction::GoodTilCancelled => {
+                    | OrderInstruction::Market | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => Ok(OrderRole::Taker),
+                    | OrderInstruction::Limit | OrderInstruction::GoodTilCancelled => {
                         // 限价订单的判断逻辑可以在读锁下进行
                         self.orders.read().await.determine_limit_order_role(&order, current_price)
-                    },
-                    OrderInstruction::PostOnly => {
+                    }
+                    | OrderInstruction::PostOnly => {
                         // 这里仅判断是否应该拒绝订单，而不实际执行拒绝操作
                         let should_reject = {
                             match order.side {
-                                Side::Buy => order.state.price < current_price,
-                                Side::Sell => order.state.price > current_price,
+                                | Side::Buy => order.state.price < current_price,
+                                | Side::Sell => order.state.price > current_price,
                             }
                         };
 
                         if should_reject {
                             // 获取写锁并拒绝订单
                             self.orders.write().await.reject_post_only_order(&order)
-                        } else {
+                        }
+                        else {
                             Ok(OrderRole::Maker)
                         }
                     }
@@ -336,9 +338,9 @@ impl Account
 
                             let fees_percent = self.determine_fees_percent(&order.instrument.kind, &role);
                             let trades = match orders_write.determine_matching_side(&market_event) {
-                                Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
-                                Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
-                                None => continue, // 跳过当前订单处理
+                                | Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
+                                | Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
+                                | None => continue, // 跳过当前订单处理
                             };
 
                             self.process_trades(trades).await;
@@ -348,7 +350,6 @@ impl Account
             }
         }
     }
-
 
     fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &MarketEvent<MarketTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade>
     {

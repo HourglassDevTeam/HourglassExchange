@@ -1,5 +1,5 @@
-use std::time::{SystemTime, UNIX_EPOCH};
 use rand::Rng;
+use std::time::{SystemTime, UNIX_EPOCH};
 // 引入随机数生成器
 use rand_distr::{Distribution, Normal};
 
@@ -37,7 +37,7 @@ impl AccountLatency
         Self { fluctuation_mode,
                maximum,
                minimum,
-               current_value: minimum}
+               current_value: minimum }
     }
 }
 
@@ -48,12 +48,12 @@ pub fn fluctuate_latency(latency: &mut AccountLatency, seed: i64)
     let dynamic_seed = seed + (SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64 % 1000);
     match latency.fluctuation_mode {
         // FIXME : not sparse enough.
-        FluctuationMode::Sine => {
+        | FluctuationMode::Sine => {
             let adjusted_seed = (dynamic_seed as f64 / 100.0).sin() + (rand::random::<f64>() * 0.1);
             latency.current_value = (half_range * (adjusted_seed + 1.0)) as i64 + latency.minimum;
         }
         // FIXME : not sparse enough.
-        FluctuationMode::Cosine => {
+        | FluctuationMode::Cosine => {
             let adjusted_seed = (dynamic_seed as f64 / 100.0).cos() + (rand::random::<f64>() * 0.1);
             latency.current_value = (half_range * (adjusted_seed + 1.0)) as i64 + latency.minimum;
         }
@@ -72,7 +72,7 @@ pub fn fluctuate_latency(latency: &mut AccountLatency, seed: i64)
             let exp_value = (((seed as f64).exp() % range) + latency.minimum as f64) as i64;
             latency.current_value = exp_value.clamp(latency.minimum, latency.maximum);
         }
-        FluctuationMode::Logarithmic => {
+        | FluctuationMode::Logarithmic => {
             // Increase randomness and add a multiplier to spread values out
             let log_value = (((dynamic_seed as f64).ln().abs() * rand::random::<f64>() * 10.0) % range) as i64;
             latency.current_value = log_value.clamp(latency.minimum, latency.maximum);
@@ -112,7 +112,6 @@ mod tests
 {
     use super::*;
     use crate::common::order::identification::machine_id::generate_machine_id;
-
 
     // #[test]
     // fn test_fluctuate_latency_sine()
