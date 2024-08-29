@@ -94,10 +94,11 @@ impl AccountOrders
     ///
     /// 返回一个唯一的 `RequestId`。
     /// NOTE that the client's login PC might change frequently. This method is not web-compatible now.
-    pub fn generate_request_id(&self) -> RequestId
+    pub fn generate_request_id(&self,request: &Order<RequestOpen>) -> RequestId
     {
         let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
-        RequestId::new(self.machine_id, counter)
+        let request_ts = request.client_ts;
+        RequestId::new(request_ts as u64, self.machine_id, counter)
     }
 
     /// 生成一组预定义的延迟值数组，用于模拟订单延迟。
@@ -208,7 +209,7 @@ impl AccountOrders
     pub async fn process_request_as_pending(&mut self, order: Order<RequestOpen>) -> Order<Pending>
     {
         // 生成一个新的 RequestId
-        let request_id = self.generate_request_id();
+        let request_id = self.generate_request_id(&order);
 
         // 从预定义的延迟值数组中选择一个延迟值
         let latency = self.get_random_latency();

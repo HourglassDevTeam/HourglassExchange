@@ -2,7 +2,6 @@ use fmt::{Display, Formatter};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt,
-    time::{SystemTime, UNIX_EPOCH},
 };
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize, PartialOrd)]
@@ -22,18 +21,16 @@ impl RequestId
     ///
     /// # 参数
     ///
+    /// - `timestamp`: 当前的时间戳，用于生成唯一的 ID。
     /// - `machine_id`: 用于标识生成 ID 的机器，最大值为 1023。
     /// - `counter`: 当前的请求计数器值。
     ///
     /// # 返回
     ///
     /// 返回一个唯一的 `RequestId`。
-    pub fn new(machine_id: u64, counter: u64) -> Self
+    pub fn new(timestamp: u64, machine_id: u64, counter: u64) -> Self
     {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
-
-        let id = ((now & 0x1FFFFFFFFFF) << 22) | ((machine_id & 0x3FF) << 12) | (counter & 0xFFF);
-
+        let id = ((timestamp & 0x1FFFFFFFFFF) << 22) | ((machine_id & 0x3FF) << 12) | (counter & 0xFFF);
         RequestId(id)
     }
 
@@ -44,21 +41,25 @@ impl RequestId
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use std::time::SystemTime;
+    use std::time::UNIX_EPOCH;
     #[test]
     fn test_request_id_generation() {
         let machine_id = 1;
         let mut counter = 0;
 
-        let mut previous_id = RequestId::new(machine_id, counter);
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_millis() as u64;
+
+        let mut previous_id = RequestId::new(timestamp, machine_id, counter);
 
         for _ in 0..100 {
             counter += 1;
-            let current_id = RequestId::new(machine_id, counter);
+            let current_id = RequestId::new(timestamp, machine_id, counter);
 
             // 确保 ID 是递增的
             assert!(current_id > previous_id);
@@ -74,9 +75,13 @@ mod tests {
         let mut counter = 0;
         let mut ids = std::collections::HashSet::new();
 
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_millis() as u64;
+
         for _ in 0..1000 {
             counter += 1;
-            let id = RequestId::new(machine_id, counter);
+            let id = RequestId::new(timestamp, machine_id, counter);
             assert!(ids.insert(id), "Duplicate RequestId generated: {}", id);
         }
     }
