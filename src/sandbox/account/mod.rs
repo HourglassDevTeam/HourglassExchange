@@ -247,16 +247,33 @@ impl Account
 
     pub async fn process_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
     {
-        // 验证每个订单请求是否合法
+        // 创建一个向量，用于存储每个订单的验证结果
+        let mut validation_results: Vec<Result<(), ExecutionError>> = Vec::with_capacity(order_requests.len());
+
+        // 先验证每个订单请求的合法性
         for order in &order_requests {
-            if let Err(err) = Account::validate_order_request_open(order) {
-                // 如果有任何订单验证失败，立即返回错误响应
-                let _ = response_tx.send(vec![Err(err)]);
-                return;
-            }
+            validation_results.push(Account::validate_order_request_open(order));
         }
 
-        // 创建一个用于存储 Pending 订单的临时向量
+        // 检查是否有验证失败的订单
+        if validation_results.iter().any(|result| result.is_err()) {
+            // 如果有任何订单验证失败，将所有验证失败的结果发送回调用者
+            let errors: Vec<Result<Order<Pending>, ExecutionError>> = validation_results
+                .into_iter()
+                .zip(order_requests.into_iter())
+                .filter_map(|(result, _order)| {
+                    match result {
+                        Err(err) => Some(Err(err)),
+                        Ok(_) => None, // 过滤掉成功的验证结果
+                    }
+                })
+                .collect();
+
+            let _ = response_tx.send(errors);
+            return;
+        }
+
+        // 如果所有订单验证通过，继续处理请求
         let mut open_pending = Vec::new();
 
         {
@@ -267,7 +284,7 @@ impl Account
                 // 将每个 Order<Pending> 包装在 Ok 中
                 let pending_order = orders.process_request_as_pending(request.clone()).await;
                 open_pending.push(Ok(pending_order));
-            } // NOTE 在这个大括号内结束时，orders 的写锁会被释放，但 open_pending 仍然有效
+            } // 在这个大括号内结束时，orders 的写锁会被释放，但 open_pending 仍然有效
         }
 
         // 这里的 open_pending 仍然是上面声明的那个向量，并未被 drop
