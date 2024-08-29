@@ -1,3 +1,18 @@
+/// `PhantomData` 是 Rust 标准库中的一个零大小的类型，用于标记类型中的泛型参数，即使这些参数在运行时并未实际使用。
+/// 这在 Rust 的类型系统中非常有用，尤其是在编译时确保类型安全。通常用于以下情况：
+///
+/// - **保证类型参数的存在**：在使用泛型时，即使泛型类型在运行时没有直接使用，`PhantomData` 也可以确保这个类型参数在编译时存在。
+///   例如，在 `RedisVault` 和 `RedisVaultBuilder` 结构体中，`PhantomData<Statistic>` 确保了泛型 `Statistic` 的存在，即使它没有被显式地使用。
+///
+/// - **防止自动派生的实现**：Rust 编译器会自动为某些类型派生实现（如 `Send` 和 `Sync`），如果没有显式使用 `PhantomData`，可能会导致错误或不安全的实现。
+///   `PhantomData` 可以帮助编译器正确处理这些类型的实现。
+///
+/// - **编译时类型安全性**：在编译时确保某些泛型参数的类型安全，即使这些参数在运行时没有直接的表现形式。
+///
+/// 在代码中的具体用途：
+///
+/// `PhantomData<Statistic>` 用于标记 `RedisVault` 和 `RedisVaultBuilder` 结构体中的 `Statistic` 泛型参数。
+/// 这意味着即使 `Statistic` 在运行时没有被直接使用，Rust 的类型系统仍然会确保在编译时检查这个泛型参数的类型安全性。
 use crate::error::ExecutionError;
 use crate::error::ExecutionError::RedisInitialisationError;
 use crate::sandbox::account::account_config::{AccountConfig, SandboxMode};
@@ -29,21 +44,38 @@ where
     Statistic: PositionSummariser + Serialize + DeserializeOwned,
 {
     /// 使用提供的 Redis 连接和配置构造新的 [`RedisVault`] 组件。
+    ///
+    /// # 参数
+    /// - `conn`: 与 Redis 数据库的连接。
+    /// - `config`: 用于配置仓库的 `AccountConfig` 对象。
+    ///
+    /// # 返回
+    /// 返回一个新的 `RedisVault` 实例，该实例可以用于与 Redis 数据库交互。
     pub fn new(conn: Connection,config: AccountConfig) -> Self {
         Self {
             config, // 存储提供的配置
             _statistic_marker: PhantomData,
             conn,
-
         }
     }
 
     /// 构建器模式，用于构造仓库。
+    ///
+    /// # 返回
+    /// 返回一个新的 `RedisVaultBuilder` 实例，该实例可以逐步配置并最终构建 `RedisVault`。
+    ///
     pub fn builder() -> RedisVaultBuilder<Statistic> {
         RedisVaultBuilder::new()
     }
 
     /// 建立并返回一个 Redis 连接。
+    ///
+    /// # 参数
+    /// - `cfg`: 包含 Redis 连接 URI 的 `Config` 对象。
+    ///
+    /// # 返回
+    /// 返回一个 `Connection` 实例，用于与 Redis 服务器通信。
+    ///
     pub fn setup_redis_connection(cfg: Config) -> Connection {
         redis::Client::open(cfg.uri)
             .expect("无法创建 Redis 客户端")
@@ -52,6 +84,10 @@ where
     }
 
     /// 根据执行模式执行不同的操作。
+    ///
+    /// # 说明
+    /// 该方法检查当前配置的执行模式，并基于此执行不同的操作。
+    ///
     pub fn perform_action_based_on_mode(&self) {
         match self.config.execution_mode {
             SandboxMode::Backtest => {
