@@ -314,16 +314,16 @@ impl Account
         }
     }
 
-    pub fn validate_order_request_open(order: &Order<RequestOpen>) -> Result<(), ExecutionError> {
+    pub fn validate_order_request_open( order: &Order<RequestOpen>) -> Result<(), ExecutionError> {
         // 检查是否提供了有效的 ClientOrderId
         if let Some(cid) = &order.cid.0 {
             if cid.trim().is_empty() {
-                return Err(ExecutionError::InvalidRequestOpen(order.clone()));
+                return Err(ExecutionError::InvalidRequestOpen("ClientOrderId is empty".into()));
             }
 
             // 使用 validate_id_format 验证 ID 格式
             if !ClientOrderId::validate_id_format(cid) {
-                return Err(ExecutionError::InvalidRequestOpen(order.clone()));
+                return Err(ExecutionError::InvalidRequestOpen(format!("Invalid ClientOrderId format: {}", cid)));
             }
         }
 
@@ -332,20 +332,35 @@ impl Account
 
         // 检查价格是否合法（应为正数）
         if order.state.price <= 0.0 {
-            return Err(ExecutionError::InvalidRequestOpen(order.clone()));
+            return Err(ExecutionError::InvalidRequestOpen(format!("Invalid price: {}", order.state.price)));
         }
 
         // 检查数量是否合法（应为正数）
         if order.state.size <= 0.0 {
-            return Err(ExecutionError::InvalidRequestOpen(order.clone()));
+            return Err(ExecutionError::InvalidRequestOpen(format!("Invalid size: {}", order.state.size)));
         }
 
         // 检查基础货币和报价货币是否相同
         if order.instrument.base == order.instrument.quote {
-            return Err(ExecutionError::InvalidRequestOpen(order.clone()));
+            return Err(ExecutionError::InvalidRequestOpen(format!("Base and Quote tokens must be different: {}", order.instrument.base)));
         }
 
         Ok(())
+    }
+
+
+    pub fn validate_order_request_cancel(&self, order: &Order<RequestCancel>) -> Result<(), ExecutionError> {
+        // 检查是否提供了有效的 OrderId
+        if order.state.id.value() == 0 {
+            return Err(ExecutionError::InvalidRequestCancel("OrderId is missing or invalid".into()));
+        }
+
+        // 检查基础货币和报价货币是否相同
+        if order.instrument.base == order.instrument.quote {
+            return Err(ExecutionError::InvalidRequestCancel("Base and Quote tokens must be different".into()));
+        }
+
+       Ok(())
     }
 
     pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>)
