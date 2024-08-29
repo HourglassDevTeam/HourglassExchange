@@ -209,26 +209,25 @@ impl Account
         Self::order_validity_check(order.kind)?;
 
         // 提前声明所需的变量
-        let (required_balance, token, open_order);
-        let order_role;
+        let order_role = {
+            let orders_guard = self.orders.read().await; // 使用读锁来判断订单角色
+            orders_guard.determine_maker_taker(&order, current_price)?
+        };
 
-        {
-            // 缩小锁的范围
-            let mut orders_guard = self.orders.write().await;
-            order_role = orders_guard.determine_maker_taker(&order, current_price)?;
+        // 计算所需的可用余额，尽量避免锁操作
+        let (token, required_balance) = self.calculate_required_available_balance(&order, current_price).await;
 
-            // 计算所需的可用余额
-            let (t, r_balance) = self.calculate_required_available_balance(&order, current_price).await;
-            required_balance = r_balance;
-            token = t;
+        // 检查余额是否充足，并在锁定后更新订单
+        self.states.lock().await.has_sufficient_available_balance(token, required_balance)?;
 
-            self.states.lock().await.has_sufficient_available_balance(token, required_balance)?;
-
-            open_order = orders_guard.build_order_open(order, order_role).await;
-
+        let open_order = {
+            let mut orders_guard = self.orders.write().await; // 使用写锁来创建订单
+            let open_order = orders_guard.build_order_open(order, order_role).await;
             orders_guard.get_ins_orders_mut(&open_order.instrument)?.add_order_open(open_order.clone());
-        }
+            open_order
+        };
 
+        // 应用订单变更并发送事件
         let balance_event = self.states.lock().await.apply_open_order_changes(&open_order, required_balance).await?;
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
@@ -238,8 +237,8 @@ impl Account
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
+                exchange: Exchange::SandBox,
+                kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
 
         Ok(open_order)
@@ -379,7 +378,7 @@ impl Account
     {
         // 获取 orders_lock 并在 match 之前完成对它的操作
         let orders_result = {
-            let mut orders_lock = self.orders.write().await;
+            let orders_lock = self.orders.write().await;
             orders_lock.get_ins_orders_mut(instrument).map(|orders| orders.to_owned())
         };
 
@@ -430,67 +429,72 @@ impl Account
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
                                                             let mut this = self.clone();
-                                                            async move { this.try_cancel_order_atomic(request).await }
+                                                            async move { this.process_cancel_request_into_cancelled_atomic(request).await }
                                                         });
 
         // 等待所有的取消操作完成
         let cancel_results = join_all(cancel_futures).await;
         response_tx.send(cancel_results).unwrap_or(());
     }
-
-    pub async fn try_cancel_order_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError>
+    pub async fn process_cancel_request_into_cancelled_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError>
     {
-        // 获取写锁并查找到对应的Instrument Orders，以便修改订单
-        let mut orders_guard = self.orders.write().await;
-        let mut orders = orders_guard.get_ins_orders_mut(&request.instrument)?;
+        // 首先使用读锁来查找并验证订单是否存在，同时减少写锁的持有时间
+        let removed_order = {
+            let orders_guard = self.orders.read().await;
+            let mut orders = orders_guard.get_ins_orders_mut(&request.instrument)?;
 
-        // 找到并移除与 Order<RequestCancel> 关联的 Order<Open>
-        let removed = match request.side {
-            | Side::Buy => {
-                // 使用 OrderId 查找 Order<Open>
-                let index = orders.bids
-                                  .par_iter()
-                                  .position_any(|bid| bid.state.id == request.state.id)
-                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
-                orders.bids.remove(index)
-            }
-            | Side::Sell => {
-                // 使用 OrderId 查找 Order<Open>
-                let index = orders.asks
-                                  .par_iter()
-                                  .position_any(|ask| ask.state.id == request.state.id)
-                                  .ok_or(ExecutionError::OrderNotFound(request.cid))?;
-                orders.asks.remove(index)
-            }
+            // 查找并移除订单，这里使用写锁来修改订单集合
+            let removed = match request.side {
+                Side::Buy => {
+                    let index = orders.bids
+                        .par_iter()
+                        .position_any(|bid| bid.state.id == request.state.id)
+                        .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                    orders.bids.remove(index)
+                }
+                Side::Sell => {
+                    let index = orders.asks
+                        .par_iter()
+                        .position_any(|ask| ask.state.id == request.state.id)
+                        .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                    orders.asks.remove(index)
+                }
+            };
+            removed
         };
 
-        // 在可失败操作成功后，更新客户端余额
+        // 处理余额更新（不需要持有订单写锁）
         let balance_event = {
             let mut balances_guard = self.states.lock().await;
-            balances_guard.apply_cancel_order_changes(&removed)
+            balances_guard.apply_cancel_order_changes(&removed_order)
         };
 
         // 将 Order<Open> 映射到 Order<Cancelled>
-        let cancelled = Order::from(removed);
+        let cancelled = Order::from(removed_order);
 
         // 获取当前的 exchange_timestamp
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
-        // 发送 AccountEvents 给客户端
+        // 发送 AccountEvents 给客户端（不需要持有订单写锁）
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
+            .send(AccountEvent {
+                exchange_timestamp,
+                exchange: Exchange::SandBox,
+                kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
+            })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::Balance(balance_event) })
+            .send(AccountEvent {
+                exchange_timestamp,
+                exchange: Exchange::SandBox,
+                kind: AccountEventKind::Balance(balance_event),
+            })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
 
         Ok(cancelled)
     }
+
 
     pub async fn cancel_orders_all(&mut self, response_tx: Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>)
     {

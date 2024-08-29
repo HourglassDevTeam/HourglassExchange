@@ -139,7 +139,7 @@ impl AccountOrders
 
     /// 返回指定 [`Instrument`] 的客户端 [`InstrumentOrders`] 的可变引用。
 
-    pub fn get_ins_orders_mut(&mut self, instrument: &Instrument) -> Result<RefMut<Instrument, InstrumentOrders>, ExecutionError>
+    pub fn get_ins_orders_mut(&self, instrument: &Instrument) -> Result<RefMut<Instrument, InstrumentOrders>, ExecutionError>
     {
         self.instrument_orders_map
             .get_mut(instrument)
@@ -264,7 +264,7 @@ impl AccountOrders
     /// - 对于 `PostOnly` 类型的订单，调用 `determine_post_only_order_role` 来判断订单是否能作为 Maker，否则拒绝该订单。
     /// - 对于 `ImmediateOrCancel` 和 `FillOrKill` 类型的订单，总是返回 `OrderRole::Taker`，因为这些订单需要立即成交。
     /// - 对于 `GoodTilCancelled` 类型的订单，按照限价订单的逻辑来判断角色。
-    pub fn determine_maker_taker(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    pub fn determine_maker_taker(&self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
     {
         match order.kind {
             | OrderInstruction::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
@@ -348,7 +348,7 @@ impl AccountOrders
     /// - 对于卖单 (`Side::Sell`):
     ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
     ///   - 否则，调用 `self.reject_post_only_order(order)` 拒绝订单，并返回错误。
-    pub(crate) fn determine_post_only_order_role(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    pub(crate) fn determine_post_only_order_role(&self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
     {
         match order.side {
             | Side::Buy => {
@@ -504,7 +504,7 @@ mod tests
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::LinearIncrease, 100, 10);
 
-        let mut account_orders = AccountOrders::new(123124, instruments.clone(), account_latency).await;
+        let account_orders = AccountOrders::new(123124, instruments.clone(), account_latency).await;
 
         {
             // 创建一个作用域，使用完 `result` 后自动释放它
@@ -614,7 +614,7 @@ mod tests
     {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::None, 100, 10);
-        let mut account_orders = AccountOrders::new(2351235, instruments, account_latency).await;
+        let account_orders = AccountOrders::new(2351235, instruments, account_latency).await;
 
         let order = Order { kind: OrderInstruction::Limit,
                             exchange: Exchange::SandBox,
