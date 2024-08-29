@@ -110,7 +110,7 @@ where
 }
 
 
-//
+
 // impl<Statistic> PositionHandler for RedisVault<Statistic>
 // where
 //     Statistic: PositionSummariser + Serialize + DeserializeOwned,
