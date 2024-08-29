@@ -303,7 +303,7 @@ impl AccountOrders
     /// - 对于卖单 (`Side::Sell`):
     ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
     ///   - 否则，返回 `OrderRole::Taker`。
-    fn determine_limit_order_role(&self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    pub(crate) fn determine_limit_order_role(&self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
     {
         match order.side {
             | Side::Buy => {
@@ -383,7 +383,7 @@ impl AccountOrders
     /// - `order`: 待拒绝的 PostOnly 订单 (`Order<Pending>`)。
     ///
     /// # 返回值
-    fn reject_post_only_order(&mut self, order: &Order<Pending>) -> Result<OrderRole, ExecutionError>
+    pub(crate) fn reject_post_only_order(&mut self, order: &Order<Pending>) -> Result<OrderRole, ExecutionError>
     {
         self.remove_order_from_pending_registry(order.state.request_id)?; // 移除订单
         Err(ExecutionError::OrderRejected("PostOnly order rejected".into())) // 返回拒绝错误

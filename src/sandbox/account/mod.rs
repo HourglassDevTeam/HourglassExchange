@@ -303,12 +303,41 @@ impl Account
                 orders_read.pending_registry.get(&request_id).map(|entry| entry.value().clone())
             };
 
-            /// NOTE  之后要优化这个写锁，这个写锁是由于determine_maker_taker调用的post only订单的处理产生的。没有必要。
+            // NOTE  之后要优化这个写锁，这个写锁是由于determine_maker_taker调用的post only订单的处理产生的。没有必要。[DONE]
             if let Some(order) = order {
+                // 假设你可以预先判断订单类型，并根据类型决定是否需要持有写锁
                 let role = {
-                    // 在判断订单角色时再次持有写锁
-                    let mut orders_write = self.orders.write().await;
-                    orders_write.determine_maker_taker(&order, current_price)
+                    let orders_read = self.orders.read().await; // 使用读锁
+                    match order.kind {
+                        OrderInstruction::Market | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => {
+                            Ok(OrderRole::Taker)
+                        },
+                        OrderInstruction::Limit | OrderInstruction::GoodTilCancelled => {
+                            // 限价订单的判断逻辑可以在读锁下进行
+                            orders_read.determine_limit_order_role(&order, current_price)
+                        },
+                        OrderInstruction::PostOnly => {
+                            // 直接在此处判断PostOnly订单的角色
+                            match order.side {
+                                Side::Buy => {
+                                    if order.state.price >= current_price {
+                                        Ok(OrderRole::Maker)
+                                    } else {
+                                        // 如果需要修改状态，比如移除挂单，则才持有写锁
+                                        let mut orders_write = self.orders.write().await;
+                                        orders_write.reject_post_only_order(&order)
+                                    }
+                                },
+                                Side::Sell => {
+                                    if order.state.price <= current_price {
+                                        Ok(OrderRole::Maker)
+                                    } else {
+                                        // 如果需要修改状态，比如移除挂单，则才持有写锁
+                                        let mut orders_write = self.orders.write().await;
+                                        orders_write.reject_post_only_order(&order)
+                                    }
+                                },}}
+                    }
                 };
 
                 if let Ok(OrderRole::Maker) = role {
