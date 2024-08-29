@@ -39,8 +39,3 @@ impl PositionId
         self.0
     }
 }
-
-pub trait HasPositionId
-{
-    fn position_id(&self) -> PositionId;
-}
