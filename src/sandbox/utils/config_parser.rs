@@ -72,7 +72,9 @@ mod tests
     position_margin_mode = "Isolated"
     commission_level = "Lv2"
     funding_rate = 0.0001
-    account_leverage_rate = 100.0  # 示例杠杆率
+    account_leverage_rate = 100.0
+    execution_mode = "Backtest"
+
 
     [current_commission_rate]
     maker_fees = 0.001

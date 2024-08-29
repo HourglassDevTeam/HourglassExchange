@@ -1,7 +1,7 @@
 // src/test_util.rs
 
 use crate::common::order::OrderRole;
-use crate::sandbox::account::account_config::CommissionRates;
+use crate::sandbox::account::account_config::{CommissionRates, SandboxMode};
 use crate::common::friction::FutureFees;
 use std::{
     collections::HashMap,
@@ -58,6 +58,7 @@ pub fn create_test_account_config() -> AccountConfig {
         funding_rate: 0.0,
         account_leverage_rate: leverage_rate,
         fees_book: HashMap::new(),
+        execution_mode: SandboxMode::Backtest,
     }
 }
 // 帮助函数，用于创建测试用的 AccountOrders 实例
@@ -189,6 +190,7 @@ pub async fn create_test_account() -> Account {
         funding_rate: 0.0,
         account_leverage_rate: leverage_rate,
         fees_book: HashMap::new(),
+        execution_mode: SandboxMode::Backtest,
     };
 
     // 设置 CommissionRates 并插入到 fees_book 中

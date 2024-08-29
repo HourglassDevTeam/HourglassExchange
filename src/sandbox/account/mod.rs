@@ -10,6 +10,7 @@ use std::{
         Arc,
     },
 };
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 
@@ -37,6 +38,7 @@ use crate::{
     sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
+use crate::sandbox::account::account_config::SandboxMode;
 
 pub mod account_config;
 pub mod account_latency;
@@ -146,11 +148,13 @@ impl Account
     /// `fetch_positions` 发送当前所有代币的持仓信息，用于获取账户中所有代币的仓位数据。
     /// `generate_request_id` 生成请求id。
     /// `update_request_counter`更新请求计数器。NOTE 在产品上线之前应该增加断线重联沿用counter的功能。并考虑是否需要增加定时重置的功能(要考虑雪花算法的特性)。
-    pub fn update_exchange_timestamp(&self, timestamp: i64)
-    {
-        self.exchange_timestamp.store(timestamp, Ordering::SeqCst);
+    pub fn update_exchange_timestamp(&self, timestamp: i64) {
+        let adjusted_timestamp = match self.config.execution_mode {
+            SandboxMode::Backtest => timestamp, // 在回测模式下使用传入的时间戳
+            SandboxMode::RealTime => SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64, // 在实时模式下使用当前时间
+        };
+        self.exchange_timestamp.store(adjusted_timestamp, Ordering::SeqCst);
     }
-
     pub async fn fetch_orders_open(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>)
     {
         let orders = self.orders.read().await.fetch_all();

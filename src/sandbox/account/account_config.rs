@@ -19,8 +19,14 @@ pub struct AccountConfig
     pub funding_rate: f64,
     pub account_leverage_rate: f64,
     pub fees_book: HashMap<InstrumentKind, CommissionRates>,
+    pub execution_mode: SandboxMode,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub enum SandboxMode {
+    Backtest,
+    RealTime,
+}
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct CommissionRates
 {
@@ -174,6 +180,8 @@ impl AccountConfigInitiator
                            commission_level: self.commission_level.ok_or("commission_level is required")?,
                            funding_rate: self.fund_fee_rate.ok_or("commission_level is required")?,
                            account_leverage_rate: Default::default(),
-                           fees_book: Default::default() })
+                           fees_book: Default::default(),
+            execution_mode: SandboxMode::Backtest,
+        })
     }
 }
