@@ -626,3 +626,52 @@ pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
                    .expect("[UniLink_Execution] : SandBoxExchange failed to send oneshot response to execution request")
     });
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::common::order::identification::OrderId;
+use super::*;
+    use crate::common::order::states::request_open::RequestOpen;
+
+    #[tokio::test]
+    async fn test_validate_order_request_open() {
+        let order = Order {
+            kind: OrderInstruction::Market,
+            exchange: Exchange::SandBox,
+            instrument: Instrument { base: Token::from("BTC"), quote: Token::from("USD"), kind: InstrumentKind::Spot },
+            client_ts: 1625247600000,
+            cid: ClientOrderId(Some("validCID123".into())),
+            side: Side::Buy,
+            state: RequestOpen { price: 50000.0, size: 1.0, reduce_only: false },
+        };
+
+        assert!(Account::validate_order_request_open(&order).is_ok());
+
+        let invalid_order = Order {
+            cid: ClientOrderId(Some("".into())),  // Invalid ClientOrderId
+            ..order.clone()
+        };
+        assert!(Account::validate_order_request_open(&invalid_order).is_err());
+    }
+    #[tokio::test]
+    async fn test_validate_order_request_cancel() {
+        let cancel_order = Order {
+            kind: OrderInstruction::Market,
+            exchange: Exchange::SandBox,
+            instrument: Instrument { base: Token::from("BTC"), quote: Token::from("USD"), kind: InstrumentKind::Spot },
+            client_ts: 1625247600000,
+            cid: ClientOrderId(Some("validCID123".into())),
+            side: Side::Buy,
+            state: RequestCancel { id: OrderId(12345) },
+        };
+
+        assert!(Account::validate_order_request_cancel(&cancel_order).is_ok());
+
+        let invalid_cancel_order = Order {
+            state: RequestCancel { id: OrderId(0) },  // Invalid OrderId
+            ..cancel_order.clone()
+        };
+        assert!(Account::validate_order_request_cancel(&invalid_cancel_order).is_err());
+    }
+}
