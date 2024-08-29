@@ -91,3 +91,39 @@ impl OrderId
 }
 
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_order_id_generation() {
+        let machine_id = 1;
+        let mut counter = 0;
+
+        let mut previous_id = OrderId::new(machine_id, counter);
+
+        for _ in 0..100 {
+            counter += 1;
+            let current_id = OrderId::new(machine_id, counter);
+
+            // 确保 ID 是递增的
+            assert!(current_id > previous_id);
+
+            // 更新 previous_id
+            previous_id = current_id;
+        }
+    }
+
+    #[test]
+    fn test_order_id_uniqueness() {
+        let machine_id = 1;
+        let mut counter = 0;
+        let mut ids = std::collections::HashSet::new();
+
+        for _ in 0..1000 {
+            counter += 1;
+            let id = OrderId::new(machine_id, counter);
+            assert!(ids.insert(id.clone()), "Duplicate OrderId generated: {}", id);
+        }
+    }
+}
