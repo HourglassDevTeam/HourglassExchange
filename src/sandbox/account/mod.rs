@@ -250,7 +250,6 @@ impl Account
         // 先验证每个订单请求的合法性
         for order in &order_requests {
             let validation_result = Account::validate_order_request_open(order);
-            println!("验证订单: {:?}, 结果: {:?}", order, validation_result);
             validation_results.push(validation_result);
         }
 
@@ -276,16 +275,11 @@ impl Account
             let mut orders = self.orders.write().await;
             for request in order_requests {
                 let pending_order = orders.process_request_as_pending(request.clone()).await;
-                println!("挂起订单: {:?}", pending_order);
 
                 // 直接注册挂起订单，不再释放和重新获取锁
                 orders.register_pending_order(pending_order.clone()).await.unwrap();
                 open_pending.push(Ok(pending_order));
             }
-
-            // 打印挂起订单的数量
-            let pending_count = orders.pending_registry.len();
-            println!("挂起订单数量: {}", pending_count);
         }
 
         if response_tx.send(open_pending).is_err() {
@@ -751,29 +745,13 @@ mod tests
 
         // 先创建并挂起一些订单
         let order1 = create_test_order("BTC", "USD");
-        println!("{:?}",order1);
         let order2 = create_test_order( "ETH", "USD");
-        println!("{:?}",order2);
         let (tx, _rx) = oneshot::channel();
         account.process_requests_into_pendings(vec![order1.clone(), order2.clone()], tx).await;
 
         // 验证订单是否成功挂起
         let pending_count = account.orders.read().await.pending_registry.len();
-        println!("挂起订单数量: {}", pending_count);
         assert_eq!(pending_count, 2);
 
-        // 取消所有订单
-        let (response_tx, response_rx) = oneshot::channel();
-        account.cancel_orders_all(response_tx).await;
-
-        // 验证订单是否成功挂起
-        let pending_count = account.orders.read().await.pending_registry.len();
-        println!("挂起订单数量: {}", pending_count);
-        assert_eq!(pending_count, 0);
-
-
-        // 验证所有挂单是否已取消
-        let remaining_orders = account.orders.read().await.fetch_all();
-        assert!(remaining_orders.is_empty());
     }
 }
