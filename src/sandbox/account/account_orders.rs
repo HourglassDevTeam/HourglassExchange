@@ -18,6 +18,7 @@ use crate::{
 use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug)]
 pub struct AccountOrders
@@ -433,8 +434,9 @@ impl AccountOrders
     /// 在 order_id 方法中，使用 [Ordering::Acquire] 确保读取到最新的计数器值。
     pub fn order_id(&self) -> OrderId
     {
+        let now_ts = SystemTime::now().duration_since(UNIX_EPOCH).expect("时间出现倒退").as_millis() as u64;
         let counter = self.order_counter.fetch_add(1, Ordering::SeqCst);
-        OrderId::new(self.machine_id, counter)
+        OrderId::new(now_ts, self.machine_id, counter)
     }
 
     pub fn update_latency(&mut self, current_time: i64)

@@ -7,6 +7,7 @@ use std::{
     collections::HashMap,
     sync::{atomic::AtomicI64, Arc, Weak},
 };
+use std::time::{SystemTime, UNIX_EPOCH};
 use rand::Rng;
 use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
@@ -96,7 +97,9 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen> {
     let machine_id = generate_machine_id().unwrap();
     let mut rng = rand::thread_rng();
     let counter = rng.gen_range(0..10);
-    let order_id = OrderId::new(machine_id, counter);
+    let now_ts = SystemTime::now().duration_since(UNIX_EPOCH).expect("时间出现倒退").as_millis() as u64;
+
+    let order_id = OrderId::new(now_ts,machine_id, counter);
     Order {
         kind: OrderInstruction::Market,
         exchange: Exchange::SandBox,

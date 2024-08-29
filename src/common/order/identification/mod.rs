@@ -36,7 +36,6 @@ use serde::{Deserialize, Serialize};
 use std::{
     fmt,
     fmt::{Display, Formatter},
-    time::{SystemTime, UNIX_EPOCH},
 };
 
 /// **OrderID**
@@ -54,28 +53,28 @@ impl Display for OrderId
     }
 }
 
+
 impl OrderId
 {
     /// 生成一个具有更高安全性要求的 `OrderId`。
     ///
     /// # 参数
+    /// - `timestamp`: Unix时间戳，用于生成ID的时间标识。
     /// - `machine_id`: 用于生成ID的机器唯一标识符，最大值为1023。
     /// - `counter`: 当前的计数器值，用于确保ID的唯一性。
     ///
     /// # 返回值
     /// - 返回一个唯一且安全的 `OrderId`。
-    pub fn new(machine_id: u64, counter: u64) -> Self
+    pub fn new(timestamp: u64, machine_id: u64, counter: u64) -> Self
     {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("时间出现倒退").as_millis() as u64;
-
         // 将随机组件降低到更低的位置
         let random_component: u64 = rand::thread_rng().gen_range(0..8192);
 
-        // 调整 counter 的位移位置
-        // /// 这个设计使得 `now` 和 `machine_id` 对 `OrderId` 有最大的影响，
-        // 因为它们在高位，而 `counter` 和 `random_component` 位于低位，
-        // 因此它们的变化不会像高位那样显著影响 `OrderId` 的大小。
-        let id = ((now & 0x1FFFFFFFFFF) << 23) | ((machine_id & 0x3FF) << 13) | ((counter & 0x3FF) << 3) | (random_component & 0x7);
+        // 生成唯一的OrderId
+        let id = ((timestamp & 0x1FFFFFFFFFF) << 23)
+            | ((machine_id & 0x3FF) << 13)
+            | ((counter & 0x3FF) << 3)
+            | (random_component & 0x7);
 
         OrderId(id)
     }
@@ -90,21 +89,24 @@ impl OrderId
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn test_order_id_generation() {
         let machine_id = 1;
         let mut counter = 0;
 
-        let mut previous_id = OrderId::new(machine_id, counter);
+        // 获取当前时间戳
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("时间出现倒退").as_millis() as u64;
+
+        let mut previous_id = OrderId::new(timestamp, machine_id, counter);
 
         for _ in 0..100 {
             counter += 1;
-            let current_id = OrderId::new(machine_id, counter);
+            let current_id = OrderId::new(timestamp, machine_id, counter);
 
             // 确保 ID 是递增的
             assert!(current_id > previous_id);
@@ -120,9 +122,12 @@ mod tests {
         let mut counter = 0;
         let mut ids = std::collections::HashSet::new();
 
+        // 获取当前时间戳
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("时间出现倒退").as_millis() as u64;
+
         for _ in 0..1000 {
             counter += 1;
-            let id = OrderId::new(machine_id, counter);
+            let id = OrderId::new(timestamp, machine_id, counter);
             assert!(ids.insert(id.clone()), "Duplicate OrderId generated: {}", id);
         }
     }
