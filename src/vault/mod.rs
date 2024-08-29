@@ -2,7 +2,7 @@
 use uuid::Uuid;
 use crate::common::balance::Balance;
 use crate::common::instrument::Instrument;
-use crate::common::position::Position;
+// use crate::common::position::Position;
 use crate::Exchange;
 use crate::vault::error::VaultError;
 
