@@ -1,5 +1,6 @@
 // src/test_util.rs
 
+use crate::common::order::OrderRole;
 use crate::sandbox::account::account_config::CommissionRates;
 use crate::common::friction::FutureFees;
 use std::{
@@ -24,7 +25,7 @@ use crate::common::instrument::Instrument;
 use crate::common::instrument::kind::InstrumentKind;
 use crate::common::order::identification::client_order_id::ClientOrderId;
 use crate::common::order::identification::OrderId;
-use crate::common::order::{Order, OrderRole};
+use crate::common::order::Order;
 use crate::common::order::order_instructions::OrderInstruction;
 use crate::common::order::states::open::Open;
 use crate::common::order::states::request_open::RequestOpen;
@@ -176,7 +177,6 @@ pub async fn create_test_account() -> Account {
     let token2 = Token::from("TEST2");
     balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
     balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
-
     // 创建账户配置
     let mut account_config = AccountConfig {
         margin_mode: MarginMode::SingleCurrencyMargin,
