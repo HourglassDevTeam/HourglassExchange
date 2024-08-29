@@ -43,3 +43,41 @@ impl RequestId
         self.0
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_request_id_generation() {
+        let machine_id = 1;
+        let mut counter = 0;
+
+        let mut previous_id = RequestId::new(machine_id, counter);
+
+        for _ in 0..100 {
+            counter += 1;
+            let current_id = RequestId::new(machine_id, counter);
+
+            // 确保 ID 是递增的
+            assert!(current_id > previous_id);
+
+            // 更新 previous_id
+            previous_id = current_id;
+        }
+    }
+
+    #[test]
+    fn test_request_id_uniqueness() {
+        let machine_id = 1;
+        let mut counter = 0;
+        let mut ids = std::collections::HashSet::new();
+
+        for _ in 0..1000 {
+            counter += 1;
+            let id = RequestId::new(machine_id, counter);
+            assert!(ids.insert(id), "Duplicate RequestId generated: {}", id);
+        }
+    }
+}
