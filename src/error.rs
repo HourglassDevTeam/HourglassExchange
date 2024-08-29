@@ -3,7 +3,7 @@ use thiserror::Error;
 
 use crate::common::{
     order::{
-        identification::{client_order_id::ClientOrderId, request_order_id::RequestId},
+        identification::{client_order_id::ClientOrderId, request_id::RequestId},
         order_instructions::OrderInstruction,
     },
     token::Token,

@@ -29,7 +29,7 @@
 /// - `random_component` 被放在最右边的最低位。
 pub mod client_order_id;
 pub mod machine_id;
-pub mod request_order_id;
+pub mod request_id;
 
 use rand::Rng;
 use serde::{Deserialize, Serialize};

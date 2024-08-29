@@ -2,7 +2,7 @@ use crate::{
     common::{
         instrument::Instrument,
         order::{
-            identification::{machine_id::generate_machine_id, request_order_id::RequestId, OrderId},
+            identification::{machine_id::generate_machine_id, request_id::RequestId, OrderId},
             order_instructions::OrderInstruction,
             states::{open::Open, pending::Pending, request_open::RequestOpen},
             Order, OrderRole,

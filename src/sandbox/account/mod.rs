@@ -23,7 +23,7 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
         order::{
-            identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id, request_order_id::RequestId},
+            identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id, request_id::RequestId},
             order_instructions::OrderInstruction,
             states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
             Order, OrderRole,

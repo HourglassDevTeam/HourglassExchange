@@ -36,7 +36,7 @@ mod tests
 {
     use super::*;
     use crate::common::order::{
-        identification::request_order_id::RequestId,
+        identification::request_id::RequestId,
         states::{open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
     };
 

@@ -1,4 +1,4 @@
-use crate::common::order::identification::request_order_id::RequestId;
+use crate::common::order::identification::request_id::RequestId;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 

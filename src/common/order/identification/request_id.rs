@@ -32,7 +32,6 @@ impl RequestId
     {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
 
-        // 生成 RequestId: [timestamp:41 bits] [machine_id:10 bits] [counter:12 bits]
         let id = ((now & 0x1FFFFFFFFFF) << 22) | ((machine_id & 0x3FF) << 12) | (counter & 0xFFF);
 
         RequestId(id)
