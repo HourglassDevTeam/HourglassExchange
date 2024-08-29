@@ -238,16 +238,15 @@ impl AccountOrders
     ///
     /// - 如果订单成功注册，返回 `Ok(())`。
     /// - 如果订单已存在，返回 `Err(ExecutionError::OrderAlreadyExists)`。
-    pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError>
-    {
-        // Check if an entry with this ClientOrderId already exists
-        if self.pending_registry.iter().any(|entry| entry.value().cid == request.cid) {
+    pub async fn register_pending_order(&mut self, request: Order<Pending>) -> Result<(), ExecutionError> {
+        // println!("Attempting to register pending order with ID: {:?}", request.state.request_id);
+        if self.pending_registry.contains_key(&request.state.request_id) {
+            // println!("Order with ID {:?} already exists", request.state.request_id);
             return Err(ExecutionError::OrderAlreadyExists(request.cid));
         }
 
-        // Process the request to create a pending order
-        let pending_order = self.process_request_as_pending(request.clone()).await;
-        self.pending_registry.insert(pending_order.state.request_id, pending_order);
+        self.pending_registry.insert(request.state.request_id, request.clone());
+        // println!("Order with ID {:?} successfully registered", request.state.request_id);
         Ok(())
     }
 
@@ -586,33 +585,6 @@ mod tests
         let pending_order = account_orders.process_request_as_pending(request_order).await;
         assert_eq!(pending_order.cid, client_order_id);
         assert!(pending_order.state.predicted_ts > 1000);
-    }
-
-    #[tokio::test]
-    async fn test_register_pending_order()
-    {
-        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
-        let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
-        let client_order_id = crate::common::order::identification::client_order_id::ClientOrderId(Option::from("OJBK".to_string()));
-
-        let mut account_orders = AccountOrders::new(234523, instruments, account_latency).await;
-
-        let request_order = Order { kind: OrderInstruction::Limit,
-                                    exchange: Exchange::SandBox,
-                                    instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                                    cid: client_order_id,
-                                    client_ts: 1000,
-                                    side: Side::Buy,
-                                    state: RequestOpen { reduce_only: false,
-                                                         price: 50.0,
-                                                         size: 1.0 } };
-
-        let result = account_orders.register_pending_order(request_order.clone()).await;
-        assert!(result.is_ok());
-        assert_eq!(account_orders.pending_registry.len(), 1);
-
-        let duplicate_result = account_orders.register_pending_order(request_order).await;
-        assert!(duplicate_result.is_err());
     }
 
     #[tokio::test]

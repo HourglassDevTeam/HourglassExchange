@@ -6,7 +6,7 @@ use std::{
     collections::HashMap,
     sync::{atomic::AtomicI64, Arc, Weak},
 };
-
+use rand::Rng;
 use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
 use crate::{common::{
@@ -22,6 +22,11 @@ use crate::common::balance::{Balance, TokenBalance};
 use crate::common::friction::{Fees, PerpetualFees};
 use crate::common::instrument::Instrument;
 use crate::common::instrument::kind::InstrumentKind;
+use crate::common::order::identification::client_order_id::ClientOrderId;
+use crate::common::order::identification::OrderId;
+use crate::common::order::Order;
+use crate::common::order::order_instructions::OrderInstruction;
+use crate::common::order::states::request_open::RequestOpen;
 use crate::common::position::future::{FuturePosition, FuturePositionConfig};
 use crate::common::position::perpetual::{PerpetualPosition, PerpetualPositionConfig};
 use crate::common::position::position_meta::PositionMeta;
@@ -52,7 +57,38 @@ pub fn create_test_account_config() -> AccountConfig {
         fees_book: HashMap::new(),
     }
 }
+// 帮助函数，用于创建测试用的 AccountOrders 实例
+pub async fn create_test_account_orders() -> AccountOrders {
+    let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+    let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
+    AccountOrders::new(123124, instruments, account_latency).await
+}
 
+
+// 帮助函数，用于创建测试用的订单
+pub fn create_test_order(base: &str, quote: &str) -> Order<RequestOpen> {
+    let machine_id = generate_machine_id().unwrap();
+    let mut rng = rand::thread_rng();
+    let counter = rng.gen_range(0..10);
+    let order_id = OrderId::new(machine_id, counter);
+    Order {
+        kind: OrderInstruction::Market,
+        exchange: Exchange::SandBox,
+        instrument: Instrument {
+            base: Token::from(base),
+            quote: Token::from(quote),
+            kind: InstrumentKind::Spot,
+        },
+        client_ts: 1625247600000,
+        cid: ClientOrderId(Some(format!("CID{}", order_id.0 % 1_000_000))),
+        side: Side::Buy,
+        state: RequestOpen {
+            price: 50000.0,
+            size: 1.0,
+            reduce_only: false,
+        },
+    }
+}
 /// 创建一个测试用的 `AccountState` 实例，并将其封装在 `Arc<Mutex<...>>` 中。
 pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
     let balances = HashMap::new();

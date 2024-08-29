@@ -244,29 +244,27 @@ impl Account
         Ok(open_order)
     }
 
-    pub async fn process_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
-    {
-        // 创建一个向量，用于存储每个订单的验证结果
+    pub async fn process_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>) {
         let mut validation_results: Vec<Result<(), ExecutionError>> = Vec::with_capacity(order_requests.len());
 
         // 先验证每个订单请求的合法性
         for order in &order_requests {
-            validation_results.push(Account::validate_order_request_open(order));
+            let validation_result = Account::validate_order_request_open(order);
+            println!("验证订单: {:?}, 结果: {:?}", order, validation_result);
+            validation_results.push(validation_result);
         }
 
         // 检查是否有验证失败的订单
         if validation_results.iter().any(|result| result.is_err()) {
-            // 如果有任何订单验证失败，将所有验证失败的结果发送回调用者
             let errors: Vec<Result<Order<Pending>, ExecutionError>> = validation_results.into_iter()
-                                                                                        .zip(order_requests.into_iter())
-                                                                                        .filter_map(|(result, _order)| {
-                                                                                            match result {
-                                                                                                | Err(err) => Some(Err(err)),
-                                                                                                | Ok(_) => None, // 过滤掉成功的验证结果
-                                                                                            }
-                                                                                        })
-                                                                                        .collect();
-
+                .zip(order_requests.into_iter())
+                .filter_map(|(result, _order)| {
+                    match result {
+                        Err(err) => Some(Err(err)),
+                        Ok(_) => None,
+                    }
+                })
+                .collect();
             let _ = response_tx.send(errors);
             return;
         }
@@ -275,21 +273,27 @@ impl Account
         let mut open_pending = Vec::new();
 
         {
-            // 获取写锁并处理每个请求，将其标记为 pending
             let mut orders = self.orders.write().await;
-            for request in &order_requests {
-                // 假设 process_request_as_pending 返回 Order<Pending>
-                // 将每个 Order<Pending> 包装在 Ok 中
+            for request in order_requests {
                 let pending_order = orders.process_request_as_pending(request.clone()).await;
+                println!("挂起订单: {:?}", pending_order);
+
+                // 直接注册挂起订单，不再释放和重新获取锁
+                orders.register_pending_order(pending_order.clone()).await.unwrap();
                 open_pending.push(Ok(pending_order));
-            } // 在这个大括号内结束时，orders 的写锁会被释放，但 open_pending 仍然有效
+            }
+
+            // 打印挂起订单的数量
+            let pending_count = orders.pending_registry.len();
+            println!("挂起订单数量: {}", pending_count);
         }
 
-        // 这里的 open_pending 仍然是上面声明的那个向量，并未被 drop
         if response_tx.send(open_pending).is_err() {
             eprintln!("[UniLinkExecution] : Failed to send RequestOpen response");
         }
     }
+
+
 
     /// [PART3]
     /// `validate_order_instruction` 验证订单的合法性，确保订单类型是受支持的。
@@ -625,6 +629,7 @@ mod tests
 {
     use super::*;
     use crate::common::order::{identification::OrderId, states::request_open::RequestOpen};
+    use crate::test_util::{create_test_account, create_test_account_orders, create_test_order};
 
     #[tokio::test]
     async fn test_validate_order_request_open()
@@ -665,5 +670,111 @@ mod tests
         let invalid_cancel_order = Order { state: RequestCancel { id: OrderId(0) }, // Invalid OrderId
                                            ..cancel_order.clone() };
         assert!(Account::validate_order_request_cancel(&invalid_cancel_order).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_order_state_transition() {
+        // 创建测试环境中的一个订单，并初始化到 RequestOpen 状态
+        let order_request = Order {
+            kind: OrderInstruction::Market,
+            exchange: Exchange::SandBox,
+            instrument: Instrument {
+                base: Token::from("BTC"),
+                quote: Token::from("USD"),
+                kind: InstrumentKind::Spot,
+            },
+            client_ts: 1625247600000,
+            cid: ClientOrderId(Some("validCID123".into())),
+            side: Side::Buy,
+            state: RequestOpen {
+                price: 50000.0,
+                size: 1.0,
+                reduce_only: false,
+            },
+        };
+
+        // 验证 RequestOpen 状态
+        assert!(Account::validate_order_request_open(&order_request).is_ok());
+
+        // 测试转换到 Pending 状态
+        let mut account_orders = create_test_account_orders().await;
+        let pending_order = account_orders.process_request_as_pending(order_request.clone()).await;
+        assert_eq!(pending_order.cid, order_request.cid);
+        assert!(pending_order.state.predicted_ts > order_request.client_ts);
+
+        // 测试转换到 Open 状态
+        let role = account_orders.determine_maker_taker(&pending_order, 50000.0).unwrap();
+        let open_order = account_orders.build_order_open(pending_order, role).await;
+        assert_eq!(open_order.cid, order_request.cid);
+        assert_eq!(open_order.state.price, order_request.state.price);
+        assert_eq!(open_order.state.size, order_request.state.size);
+    }
+
+    //
+    // #[tokio::test]
+    // async fn test_apply_balance_changes() {
+    //     let mut account_state = create_test_account_state().await;
+    //
+    //     // 创建一个示例订单
+    //     let order = Order::<Open> {
+    //         kind: OrderInstruction::Market,
+    //         exchange: Exchange::SandBox,
+    //         instrument: Instrument {
+    //             base: Token::from("BTC"),
+    //             quote: Token::from("USD"),
+    //             kind: InstrumentKind::Spot,
+    //         },
+    //         client_ts: 1625247600000,
+    //         cid: ClientOrderId(Some("validCID123".into())),
+    //         side: Side::Buy,
+    //         state: Open {
+    //             id: OrderId(123),
+    //             price: 50000.0,
+    //             size: 1.0,
+    //             filled_quantity: 0.0,
+    //             order_role: OrderRole::Taker,
+    //             received_ts: 1625247600000,
+    //         },
+    //     };
+    //
+    //     // 应用订单变更
+    //     let result = account_state.apply(&order, 50000.0).await;
+    //     assert!(result.is_ok());
+    //
+    //     // 验证账户余额是否正确更新
+    //     let balance = account_state.balance(&Token::from("USD")).unwrap();
+    //     assert_eq!(balance.available, 0.0); // 确保余额更新正确，假设余额是减少的
+    // }
+
+    #[tokio::test]
+    async fn test_cancel_all_orders() {
+        let mut account = create_test_account().await;
+
+        // 先创建并挂起一些订单
+        let order1 = create_test_order("BTC", "USD");
+        println!("{:?}",order1);
+        let order2 = create_test_order( "ETH", "USD");
+        println!("{:?}",order2);
+        let (tx, _rx) = oneshot::channel();
+        account.process_requests_into_pendings(vec![order1.clone(), order2.clone()], tx).await;
+
+        // 验证订单是否成功挂起
+        let pending_count = account.orders.read().await.pending_registry.len();
+        println!("挂起订单数量: {}", pending_count);
+        assert_eq!(pending_count, 2);
+
+        // 取消所有订单
+        let (response_tx, response_rx) = oneshot::channel();
+        account.cancel_orders_all(response_tx).await;
+
+        // 验证订单是否成功挂起
+        let pending_count = account.orders.read().await.pending_registry.len();
+        println!("挂起订单数量: {}", pending_count);
+        assert_eq!(pending_count, 0);
+
+
+        // 验证所有挂单是否已取消
+        let remaining_orders = account.orders.read().await.fetch_all();
+        assert!(remaining_orders.is_empty());
     }
 }
