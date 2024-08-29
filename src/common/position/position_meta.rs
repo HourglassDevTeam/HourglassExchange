@@ -4,11 +4,12 @@ use crate::{
     common::{balance::TokenBalance, friction::Fees, instrument::Instrument, order::OrderRole, Side},
     Exchange,
 };
+use crate::common::position::position_id::PositionId;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionMeta
 {
-    pub position_id: String,          // 静态数据
+    pub position_id: PositionId,          // 静态数据
     pub enter_ts: i64,                // 静态数据
     pub update_ts: i64,               // 实时更新
     pub exit_balance: TokenBalance,   // 静态更新（退出时更新）当一个仓位被平仓（即完全退出）时，该仓位所涉及的资产或资金的最终状态。
@@ -106,7 +107,7 @@ impl PositionMeta
 
 pub struct PositionMetaBuilder
 {
-    position_id: Option<String>,
+    position_id: Option<PositionId>,
     enter_ts: Option<i64>,
     update_ts: Option<i64>,
     exit_balance: Option<TokenBalance>,
@@ -143,7 +144,7 @@ impl PositionMetaBuilder
                realised_pnl: None }
     }
 
-    pub fn position_id(mut self, position_id: String) -> Self
+    pub fn position_id(mut self, position_id: PositionId) -> Self
     {
         self.position_id = Some(position_id);
         self
@@ -262,7 +263,7 @@ mod tests
     #[test]
     fn test_position_meta_update_avg_price_gross()
     {
-        let mut meta = PositionMeta { position_id: "test_position".to_string(),
+        let mut meta = PositionMeta { position_id: PositionId(123124124124124),
                                       enter_ts: 1625247600,
                                       update_ts: 1625247601,
                                       exit_balance: TokenBalance::new(Token::from("BTC"), Balance::new(0.0, 0.0, 0.0)),

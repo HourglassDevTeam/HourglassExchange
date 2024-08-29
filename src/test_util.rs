@@ -10,7 +10,6 @@ use std::{
 use std::time::{SystemTime, UNIX_EPOCH};
 use rand::Rng;
 use tokio::sync::{Mutex, RwLock};
-use uuid::Uuid;
 use crate::{common::{
     order::identification::machine_id::generate_machine_id,
     position::{AccountPositions, PositionDirectionMode, PositionMarginMode},
@@ -32,6 +31,7 @@ use crate::common::order::states::open::Open;
 use crate::common::order::states::request_open::RequestOpen;
 use crate::common::position::future::{FuturePosition, FuturePositionConfig};
 use crate::common::position::perpetual::{PerpetualPosition, PerpetualPositionConfig};
+use crate::common::position::position_id::PositionId;
 use crate::common::position::position_meta::PositionMeta;
 use crate::common::Side;
 use crate::common::token::Token;
@@ -252,7 +252,7 @@ pub async fn create_test_account() -> Account {
 pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPosition {
     PerpetualPosition {
         meta: PositionMeta {
-            position_id: Uuid::new_v4().to_string(),
+            position_id: PositionId(12341241241),
             enter_ts: 0,
             update_ts: 0,
             exit_balance: TokenBalance {
@@ -288,7 +288,7 @@ pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPositi
 pub fn create_test_future_position_with_side(instrument: Instrument, side: Side) -> FuturePosition {
     FuturePosition {
         meta: PositionMeta {
-            position_id: Uuid::new_v4().to_string(),
+            position_id: PositionId(1234124512412),
             enter_ts: 0,
             update_ts: 0,
             exit_balance: TokenBalance {

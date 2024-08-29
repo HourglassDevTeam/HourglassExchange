@@ -20,13 +20,14 @@ use crate::{
 /// FIXME  : code below needs to be restructured and fitted to the framework. need to provide enums?
 /// CONSIDER: can these positions coexist, if so enums might not be ideal.
 use serde::{Deserialize, Serialize};
+use crate::common::position::position_id::PositionId;
 
 pub(crate) mod future;
 pub(crate) mod leveraged_token;
 pub(crate) mod option;
 pub mod perpetual;
 pub(crate) mod position_meta;
-mod position_id;
+pub mod position_id;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountPositions
@@ -54,7 +55,7 @@ impl AccountPositions
                                               trade: &ClientTrade, // 使用 ClientTrade 作为输入参数
                                               pos_margin_mode: PositionMarginMode,
                                               position_mode: PositionDirectionMode,
-                                              exchange_ts: i64)
+                                              exchange_ts: i64,machine_id:u64,counter:u64)
                                               -> Result<PerpetualPosition, ExecutionError>
     {
         let maker_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
@@ -67,7 +68,7 @@ impl AccountPositions
         let funding_fee = trade.quantity * trade.price * config.funding_rate;
 
         // 根据 Instrument 和 Side 动态生成 position_id
-        let position_meta = PositionMetaBuilder::new().position_id(format!("{}_{}", trade.instrument, if trade.side == Side::Buy { "Long" } else { "Short" }))
+        let position_meta = PositionMetaBuilder::new().position_id(PositionId::new(exchange_ts as u64, machine_id, counter))
                                                       .enter_ts(exchange_ts)
                                                       .update_ts(exchange_ts)
                                                       .exit_balance(TokenBalance { // 初始化为 exit_balance
@@ -256,7 +257,7 @@ mod tests
         // 计算清算价格 (liquidation_price)
         let liquidation_price = initial_trade_price * (1.0 - initial_margin / (trade_size * initial_trade_price));
 
-        PerpetualPosition { meta: PositionMetaBuilder::new().position_id("test_position".into())
+        PerpetualPosition { meta: PositionMetaBuilder::new().position_id(PositionId(124124123412412))
                                                             .instrument(instrument.clone())
                                                             .side(Side::Buy)
                                                             .enter_ts(1625097600000)

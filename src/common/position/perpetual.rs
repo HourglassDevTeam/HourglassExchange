@@ -114,11 +114,12 @@ mod tests
         },
         Exchange,
     };
+    use crate::common::position::position_id::PositionId;
 
     #[test]
     fn perpetual_position_should_update_liquidation_price()
     {
-        let mut position = PerpetualPosition { meta: PositionMeta { position_id: "test_position".to_string(),
+        let mut position = PerpetualPosition { meta: PositionMeta { position_id: PositionId(123124124124124),
                                                                     enter_ts: 1625247600,
                                                                     update_ts: 1625247601,
                                                                     exit_balance: TokenBalance::new(Token::from("BTC"), Balance::new(0.0, 0.0, 0.0)),
