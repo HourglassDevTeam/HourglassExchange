@@ -293,16 +293,17 @@ impl Account
         let current_price = market_event.kind.price;
 
         // 这里使用 `DashMap` 的 `iter()` 获取所有键值对，并提取键作为 `order_ids`
-        let order_ids: Vec<RequestId> = self.orders.read().await.pending_order_registry.iter().map(|entry| entry.key().clone()).collect();
+        let request_ids: Vec<RequestId> = self.orders.read().await.pending_registry.iter().map(|entry| entry.key().clone()).collect();
 
         // 遍历订单 ID 来处理每个订单
-        for order_id in order_ids {
+        for request_id in request_ids {
             let order = {
                 // 只在获取订单时持有锁
                 let orders_read = self.orders.read().await;
-                orders_read.pending_order_registry.get(&order_id).map(|entry| entry.value().clone())
+                orders_read.pending_registry.get(&request_id).map(|entry| entry.value().clone())
             };
 
+            /// NOTE  之后要优化这个写锁，这个写锁是由于determine_maker_taker调用的post only订单的处理产生的。没有必要。
             if let Some(order) = order {
                 let role = {
                     // 在判断订单角色时再次持有写锁

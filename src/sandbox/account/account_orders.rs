@@ -28,7 +28,7 @@ pub struct AccountOrders
     pub selectable_latencies: [i64; 20],
     pub request_counter: AtomicU64,
     pub order_counter: AtomicU64,
-    pub pending_order_registry: DashMap<RequestId, Order<Pending>>,
+    pub pending_registry: DashMap<RequestId, Order<Pending>>,
     pub instrument_orders_map: DashMap<Instrument, InstrumentOrders>,
 }
 
@@ -77,7 +77,7 @@ impl AccountOrders
         Self { machine_id,
                order_counter: AtomicU64::new(0),
                request_counter: AtomicU64::new(0),
-               pending_order_registry: DashMap::new(),
+               pending_registry: DashMap::new(),
                instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
                latency_generator: account_latency,
                selectable_latencies }
@@ -183,7 +183,7 @@ impl AccountOrders
     /// - 如果未找到订单，返回 `Err(ExecutionError::OrderNotFound)`。
     pub fn remove_order_from_pending_registry(&mut self, request_id: RequestId) -> Result<(), ExecutionError>
     {
-        if self.pending_order_registry.remove(&request_id).is_some() {
+        if self.pending_registry.remove(&request_id).is_some() {
             Ok(())
         }
         else {
@@ -238,13 +238,13 @@ impl AccountOrders
     /// - 如果订单已存在，返回 `Err(ExecutionError::OrderAlreadyExists)`。
     pub async fn register_pending_order(&mut self, request: Order<RequestOpen>) -> Result<(), ExecutionError> {
         // Check if an entry with this ClientOrderId already exists
-        if self.pending_order_registry.iter().any(|entry| entry.value().cid == request.cid) {
+        if self.pending_registry.iter().any(|entry| entry.value().cid == request.cid) {
             return Err(ExecutionError::OrderAlreadyExists(request.cid));
         }
 
         // Process the request to create a pending order
         let pending_order = self.process_request_as_pending(request.clone()).await;
-        self.pending_order_registry.insert(pending_order.state.request_id, pending_order);
+        self.pending_registry.insert(pending_order.state.request_id, pending_order);
         Ok(())
     }
 
@@ -463,7 +463,7 @@ mod tests
 
         assert_eq!(account_orders.order_counter.load(Ordering::Acquire), 0);
         assert_eq!(account_orders.instrument_orders_map.len(), instruments.len());
-        assert!(account_orders.pending_order_registry.is_empty());
+        assert!(account_orders.pending_registry.is_empty());
     }
 
     #[tokio::test]
@@ -539,7 +539,7 @@ mod tests
         let order = Order { kind: OrderInstruction::Limit,
                             exchange: Exchange::SandBox,
                             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                            cid: client_order_id.clone(), // Clone here to retain ownership
+                            cid: client_order_id, // Clone here to retain ownership
                             client_ts: 0,
                             side: Side::Buy,
                             state: Pending { reduce_only: false,
@@ -549,10 +549,10 @@ mod tests
                                 request_id: RequestId(34534),
                             } };
 
-        account_orders.pending_order_registry.insert(order.state.request_id.clone(), order.clone()); // Clone here as well
+        account_orders.pending_registry.insert(order.state.request_id, order.clone()); // Clone here as well
         let remove_result = account_orders.remove_order_from_pending_registry(order.state.request_id);
         assert!(remove_result.is_ok());
-        assert!(account_orders.pending_order_registry.is_empty());
+        assert!(account_orders.pending_registry.is_empty());
 
         let remove_invalid_result = account_orders.remove_order_from_pending_registry(order.state.request_id);
         assert!(remove_invalid_result.is_err());
@@ -604,7 +604,7 @@ mod tests
 
         let result = account_orders.register_pending_order(request_order.clone()).await;
         assert!(result.is_ok());
-        assert_eq!(account_orders.pending_order_registry.len(), 1);
+        assert_eq!(account_orders.pending_registry.len(), 1);
 
         let duplicate_result = account_orders.register_pending_order(request_order).await;
         assert!(duplicate_result.is_err());
