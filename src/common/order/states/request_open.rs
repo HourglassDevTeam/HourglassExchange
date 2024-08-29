@@ -1,5 +1,7 @@
+use fmt::Display;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::fmt;
 
 /// 订单初始状态。发送到client进行操作
 ///
@@ -32,5 +34,16 @@ impl PartialOrd for RequestOpen
         }
         // 最后比较 `reduce_only`
         Some(self.reduce_only.cmp(&other.reduce_only))
+    }
+}
+
+/// 手动实现 `Debug` 以便在错误处理中使用
+impl Display for RequestOpen {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "RequestOpen {{ reduce_only: {}, price: {}, size: {} }}",
+            self.reduce_only, self.price, self.size
+        )
     }
 }

@@ -8,9 +8,10 @@ use crate::common::{
     },
     token::Token,
 };
+use crate::common::order::states::request_open::RequestOpen;
 
 /// 执行过程中可能遇到的错误。
-#[derive(Error, PartialEq, Eq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
+#[derive(Error, PartialEq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
 pub enum ExecutionError
 {
     /// 缺少属性，无法构建组件。
@@ -116,4 +117,7 @@ pub enum ExecutionError
     /// NotImplemented。
     #[error("[UniLinkExecution] : Invalid instrument: {0}")]
     NotImplemented(String),
+
+    #[error("[UniLinkExecution] : Invalid RequestOpen: {0}")]
+    InvalidRequestOpen(RequestOpen),
 }

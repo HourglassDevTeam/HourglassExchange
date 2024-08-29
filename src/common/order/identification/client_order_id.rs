@@ -66,7 +66,7 @@ impl ClientOrderId
     }
 
     // 验证 ID 格式
-    fn validate_id_format(id: &str) -> bool
+    pub(crate) fn validate_id_format(id: &str) -> bool
     {
         ID_REGEX.is_match(id)
     }

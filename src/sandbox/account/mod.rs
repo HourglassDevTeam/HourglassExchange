@@ -17,6 +17,7 @@ use account_config::AccountConfig;
 use account_orders::AccountOrders;
 use account_states::AccountState;
 
+use crate::common::order::identification::client_order_id::ClientOrderId;
 use crate::{
     common::{
         balance::TokenBalance,
@@ -206,7 +207,7 @@ impl Account
 
     pub async fn process_pending_order_into_open_atomically(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
     {
-        Self::order_validity_check(order.kind)?;
+        Self::validate_order_instruction(order.kind)?;
 
         // 提前声明所需的变量
         let order_role = {
@@ -273,7 +274,7 @@ impl Account
     /// `match_orders_by_side` 根据订单的买卖方向（Side）匹配订单并生成交易事件。
     /// `determine_fees_percent` 根据金融工具类型和订单方向确定适用的费用百分比。
 
-    pub fn order_validity_check(kind: OrderInstruction) -> Result<(), ExecutionError>
+    pub fn validate_order_instruction(kind: OrderInstruction) -> Result<(), ExecutionError>
     {
         match kind {
             | OrderInstruction::Market
@@ -284,6 +285,40 @@ impl Account
             | OrderInstruction::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
                                                              * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
+    }
+
+    pub fn validate_order_request_open(&self, order: &Order<RequestOpen>) -> Result<(), ExecutionError> {
+        // 检查是否提供了有效的 ClientOrderId
+        if let Some(cid) = &order.cid.0 {
+            if cid.trim().is_empty() {
+                return Err(ExecutionError::InvalidRequestOpen(order.state));
+            }
+
+            // 使用 validate_id_format 验证 ID 格式
+            if !ClientOrderId::validate_id_format(cid) {
+                return Err(ExecutionError::InvalidRequestOpen(order.state));
+            }
+        }
+
+        // 检查订单类型是否合法
+        Account::validate_order_instruction(order.kind)?;
+
+        // 检查价格是否合法（应为正数）
+        if order.state.price <= 0.0 {
+            return Err(ExecutionError::InvalidRequestOpen(order.state));
+        }
+
+        // 检查数量是否合法（应为正数）
+        if order.state.size <= 0.0 {
+            return Err(ExecutionError::InvalidRequestOpen(order.state));
+        }
+
+        // 检查基础货币和报价货币是否相同
+        if order.instrument.base == order.instrument.quote {
+            return Err(ExecutionError::InvalidRequestOpen(order.state));
+        }
+
+        Ok(())
     }
 
     pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>)
