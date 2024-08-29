@@ -622,7 +622,8 @@ mod tests
 {
     use super::*;
     use crate::common::order::{identification::OrderId, states::request_open::RequestOpen};
-    use crate::test_util::{create_test_account, create_test_account_orders, create_test_order};
+    use crate::common::position::Position;
+    use crate::test_util::{create_test_account, create_test_account_orders, create_test_account_state, create_test_instrument, create_test_perpetual_position, create_test_request_open};
 
     #[tokio::test]
     async fn test_validate_order_request_open()
@@ -709,10 +710,10 @@ mod tests
         let mut account = create_test_account().await;
 
         // 先创建并挂起一些订单
-        let order1 = create_test_order("BTC", "USD");
-        let order2 = create_test_order( "ETH", "USD");
+        let request_open1 = create_test_request_open("BTC", "USD");
+        let request_open2 = create_test_request_open("ETH", "USD");
         let (tx, _rx) = oneshot::channel();
-        account.process_requests_into_pendings(vec![order1.clone(), order2.clone()], tx).await;
+        account.process_requests_into_pendings(vec![request_open1.clone(), request_open2.clone()], tx).await;
 
         // 验证订单是否成功挂起
         let pending_count = account.orders.read().await.pending_registry.len();
@@ -720,38 +721,75 @@ mod tests
 
     }
 
-    // #[tokio::test]
-    // async fn test_apply_balance_changes() {
-    //     let mut account_state = create_test_account_state().await;
-    //
-    //     // 创建一个示例订单
-    //     let order = Order::<Open> {
-    //         kind: OrderInstruction::Market,
-    //         exchange: Exchange::SandBox,
-    //         instrument: Instrument {
-    //             base: Token::from("BTC"),
-    //             quote: Token::from("USD"),
-    //             kind: InstrumentKind::Spot,
-    //         },
-    //         client_ts: 1625247600000,
-    //         cid: ClientOrderId(Some("validCID123".into())),
-    //         side: Side::Buy,
-    //         state: Open {
-    //             id: OrderId(123),
-    //             price: 50000.0,
-    //             size: 1.0,
-    //             filled_quantity: 0.0,
-    //             order_role: OrderRole::Taker,
-    //             received_ts: 1625247600000,
-    //         },
-    //     };
-    //
-    //     // 应用订单变更
-    //     let result = account_state.apply(&order, 50000.0).await;
-    //     assert!(result.is_ok());
-    //
-    //     // 验证账户余额是否正确更新
-    //     let balance = account_state.balance(&Token::from("USD")).unwrap();
-    //     assert_eq!(balance.available, 0.0); // 确保余额更新正确，假设余额是减少的
-    // }
+    #[tokio::test]
+    async fn test_apply_balance_changes_insufficient_funds() {
+
+        // 创建一个示例订单
+        let order = Order::<Open> {
+            kind: OrderInstruction::Market,
+            exchange: Exchange::SandBox,
+            instrument: Instrument {
+                base: Token::from("TEST1"),
+                quote: Token::from("TEST2"),
+                kind: InstrumentKind::Perpetual,
+            },
+            client_ts: 1625247600000,
+            cid: ClientOrderId(Some("validCID123".into())),
+            side: Side::Buy,
+            state: Open {
+                id: OrderId(123),
+                price: 50000.0,
+                size: 1.0,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Taker,
+                received_ts: 1625247600000,
+            },
+        };
+
+        let instrument = create_test_instrument(InstrumentKind::Perpetual);
+        let account_state = create_test_account_state().await;
+        let perpetual_position = create_test_perpetual_position(instrument);
+
+        // 创建 Account
+        let account = create_test_account().await;
+        let account_arc = Arc::new(account);
+
+        // 更新 account_state 的 account_ref
+        {
+            let mut account_state_locked = account_state.lock().await;
+            account_state_locked.account_ref = Arc::downgrade(&account_arc);
+        }
+
+        account_state.lock().await.set_position(Position::Perpetual(perpetual_position.clone())).await.unwrap();
+
+        // 应用订单变更, 首先应用一个金额为 50 的订单变更，应该成功
+        let result = account_state.lock().await.apply_open_order_changes(&order, 50.0).await;
+
+        // 检查并打印错误
+        if let Err(e) = &result {
+            println!("Error occurred during apply_open_order_changes: {:?}", e);
+        }
+
+        assert!(result.is_ok());
+
+        // 验证账户余额是否正确更新
+        let binding = account_state.lock().await;
+        let balance = binding.balance(&Token::from("TEST2")).unwrap();
+        assert_eq!(balance.available, 150.0 - 50.0); // 确保余额正确更新
+
+        // 尝试应用一个需要 101 的订单变更，应该失败，因为余额不足
+        let result = account_state.lock().await.apply_open_order_changes(&order, 101.0).await;
+
+        // 检查并打印错误
+        if let Err(e) = &result {
+            println!("Expected error occurred due to insufficient funds: {:?}", e);
+        }
+
+        assert!(result.is_err());
+
+        // 再次检查账户余额是否保持不变
+        let balance = binding.balance(&Token::from("TEST2")).unwrap();
+        assert_eq!(balance.available, 100.0); // 确保余额没有变化
+    }
+
 }

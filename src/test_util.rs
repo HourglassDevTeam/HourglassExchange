@@ -66,7 +66,7 @@ pub async fn create_test_account_orders() -> AccountOrders {
 
 
 // 帮助函数，用于创建测试用的订单
-pub fn create_test_order(base: &str, quote: &str) -> Order<RequestOpen> {
+pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen> {
     let machine_id = generate_machine_id().unwrap();
     let mut rng = rand::thread_rng();
     let counter = rng.gen_range(0..10);
@@ -91,7 +91,16 @@ pub fn create_test_order(base: &str, quote: &str) -> Order<RequestOpen> {
 }
 /// 创建一个测试用的 `AccountState` 实例，并将其封装在 `Arc<Mutex<...>>` 中。
 pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
-    let balances = HashMap::new();
+
+
+    // Create a mock balance map and populate it
+    let mut balances = HashMap::new();
+    // Define tokens for testing
+    let token1 = Token::from("TEST1");
+    let token2 = Token::from("TEST2");
+    balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
+    balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
+
     let positions = AccountPositions { margin_pos: Vec::new(),
         perpetual_pos: Vec::new(),
         futures_pos: Vec::new(),
