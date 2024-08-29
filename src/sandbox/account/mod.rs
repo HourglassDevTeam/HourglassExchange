@@ -247,7 +247,7 @@ impl Account
 
     pub async fn process_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
     {
-        // 验证每个订单请求
+        // 验证每个订单请求是否合法
         for order in &order_requests {
             if let Err(err) = Account::validate_order_request_open(order) {
                 // 如果有任何订单验证失败，立即返回错误响应
