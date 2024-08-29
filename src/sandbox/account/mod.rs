@@ -703,7 +703,23 @@ mod tests
         assert_eq!(open_order.state.size, order_request.state.size);
     }
 
-    //
+
+    #[tokio::test]
+    async fn test_pending_registration() {
+        let mut account = create_test_account().await;
+
+        // 先创建并挂起一些订单
+        let order1 = create_test_order("BTC", "USD");
+        let order2 = create_test_order( "ETH", "USD");
+        let (tx, _rx) = oneshot::channel();
+        account.process_requests_into_pendings(vec![order1.clone(), order2.clone()], tx).await;
+
+        // 验证订单是否成功挂起
+        let pending_count = account.orders.read().await.pending_registry.len();
+        assert_eq!(pending_count, 2);
+
+    }
+
     // #[tokio::test]
     // async fn test_apply_balance_changes() {
     //     let mut account_state = create_test_account_state().await;
@@ -738,20 +754,4 @@ mod tests
     //     let balance = account_state.balance(&Token::from("USD")).unwrap();
     //     assert_eq!(balance.available, 0.0); // 确保余额更新正确，假设余额是减少的
     // }
-
-    #[tokio::test]
-    async fn test_cancel_all_orders() {
-        let mut account = create_test_account().await;
-
-        // 先创建并挂起一些订单
-        let order1 = create_test_order("BTC", "USD");
-        let order2 = create_test_order( "ETH", "USD");
-        let (tx, _rx) = oneshot::channel();
-        account.process_requests_into_pendings(vec![order1.clone(), order2.clone()], tx).await;
-
-        // 验证订单是否成功挂起
-        let pending_count = account.orders.read().await.pending_registry.len();
-        assert_eq!(pending_count, 2);
-
-    }
 }
