@@ -1,121 +1,100 @@
-//
 // use std::collections::HashMap;
 // use uuid::Uuid;
-// use crate::common::position::Position;
-// use crate::common::position::position_id::PositionId;
+// use crate::common::position::{Position, position_id::PositionId};
+// use crate::vault::error::VaultError;
+// use crate::common::{balance::Balance, instrument::Instrument};
+// use crate::Exchange;
+// use crate::vault::PositionHandler;
 //
-// /// In-Memory repository for Proof Of Concepts. Implements [`PositionHandler`], [`BalanceHandler`]
-// /// & [`StatisticHandler`]. Used by a Proof Of Concept Portfolio implementation to
-// /// save the current equity, available cash, Positions, and market pair statistics.
-// /// **Careful in production - no fault tolerant guarantees!**
+// /// 用于 Proof Of Concept 的内存仓库。实现了 [`PositionHandler`]、[`BalanceHandler`] 和 [`StatisticHandler`]。
+// /// 用于概念验证投资组合实现，保存当前权益、可用资金、仓位和市场对的统计数据。
+// /// **注意：此实现无容错保证，谨慎用于生产环境！**
 // #[derive(Debug, Default)]
-// pub struct InMemoryRepository<Statistic: PositionSummariser> {
+// pub struct InMemoryRepository<Statistic> {
 //     open_positions: HashMap<PositionId, Position>,
 //     closed_positions: HashMap<String, Vec<Position>>,
-//     current_balances: HashMap<BalanceId, Balance>,
-//     statistics: HashMap<MarketId, Statistic>,
+//     current_balances: HashMap<Uuid, Balance>,
+//     statistics: HashMap<(Exchange, Instrument), Statistic>,
 // }
 //
-// impl<Statistic: PositionSummariser> PositionHandler for InMemoryRepository<Statistic> {
-//     fn set_open_position(&mut self, position: Position) -> Result<(), RepositoryError> {
-//         self.open_positions
-//             .insert(position.position_id.clone(), position);
+// impl<Statistic> PositionHandler for InMemoryRepository<Statistic> {
+//     fn set_open_position(&mut self, position: Position) -> Result<(), VaultError> {
+//         self.open_positions.insert(position.position_id.clone(), position);
 //         Ok(())
 //     }
 //
-//     fn get_open_position(
-//         &mut self,
-//         position_id: &PositionId,
-//     ) -> Result<Option<Position>, RepositoryError> {
+//     fn get_open_position(&mut self, position_id: &PositionId) -> Result<Option<Position>, VaultError> {
 //         Ok(self.open_positions.get(position_id).cloned())
 //     }
 //
-//     fn get_open_positions<'a, Markets: Iterator<Item = &'a Market>>(
+//     fn get_open_positions(
 //         &mut self,
-//         engine_id: Uuid,
-//         markets: Markets,
-//     ) -> Result<Vec<Position>, RepositoryError> {
-//         Ok(markets
-//             .filter_map(|market| {
-//                 self.open_positions
-//                     .get(&determine_position_id(
-//                         engine_id,
-//                         &market.exchange,
-//                         &market.instrument,
-//                     ))
-//                     .cloned()
-//             })
+//         instance_id: Uuid,
+//         exchange: Exchange,
+//         instrument: Instrument
+//     ) -> Result<Vec<Position>, VaultError> {
+//         Ok(self.open_positions.values()
+//             .filter(|position| position.instance_id == instance_id
+//                 && position.exchange == exchange
+//                 && position.instrument == instrument)
+//             .cloned()
 //             .collect())
 //     }
 //
-//     fn remove_position(
-//         &mut self,
-//         position_id: &String,
-//     ) -> Result<Option<Position>, RepositoryError> {
+//     fn remove_position(&mut self, position_id: &PositionId) -> Result<Option<Position>, VaultError> {
 //         Ok(self.open_positions.remove(position_id))
 //     }
 //
-//     fn set_exited_position(
-//         &mut self,
-//         engine_id: Uuid,
-//         position: Position,
-//     ) -> Result<(), RepositoryError> {
-//         let exited_positions_key = determine_exited_positions_id(engine_id);
+//     fn set_exited_position(&mut self, instance_id: Uuid, position: Position) -> Result<(), VaultError> {
+//         let exited_positions_key = determine_exited_positions_id(instance_id);
 //
 //         match self.closed_positions.get_mut(&exited_positions_key) {
 //             None => {
-//                 self.closed_positions
-//                     .insert(exited_positions_key, vec![position]);
+//                 self.closed_positions.insert(exited_positions_key, vec![position]);
 //             }
 //             Some(closed_positions) => closed_positions.push(position),
 //         }
 //         Ok(())
 //     }
 //
-//     fn get_exited_positions(&mut self, engine_id: Uuid) -> Result<Vec<Position>, RepositoryError> {
-//         Ok(self
-//             .closed_positions
-//             .get(&determine_exited_positions_id(engine_id))
+//     fn get_exited_positions(&mut self, instance_id: Uuid) -> Result<Vec<Position>, VaultError> {
+//         Ok(self.closed_positions
+//             .get(&determine_exited_positions_id(instance_id))
 //             .cloned()
 //             .unwrap_or_default())
 //     }
 // }
 //
-// impl<Statistic: PositionSummariser> BalanceHandler for InMemoryRepository<Statistic> {
-//     fn set_balance(&mut self, engine_id: Uuid, balance: Balance) -> Result<(), RepositoryError> {
-//         self.current_balances
-//             .insert(Balance::balance_id(engine_id), balance);
+// impl<Statistic> BalanceHandler for InMemoryRepository<Statistic> {
+//     fn set_balance(&mut self, instance_id: Uuid, balance: Balance) -> Result<(), VaultError> {
+//         self.current_balances.insert(instance_id, balance);
 //         Ok(())
 //     }
 //
-//     fn get_balance(&mut self, engine_id: Uuid) -> Result<Balance, RepositoryError> {
+//     fn get_balance(&mut self, instance_id: Uuid) -> Result<Balance, VaultError> {
 //         self.current_balances
-//             .get(&Balance::balance_id(engine_id))
+//             .get(&instance_id)
 //             .copied()
-//             .ok_or(RepositoryError::ExpectedDataNotPresentError)
+//             .ok_or(VaultError::ExpectedDataNotPresentError)
 //     }
 // }
 //
-// impl<Statistic: PositionSummariser> StatisticHandler<Statistic> for InMemoryRepository<Statistic> {
-//     fn set_statistics(
-//         &mut self,
-//         market_id: MarketId,
-//         statistic: Statistic,
-//     ) -> Result<(), RepositoryError> {
-//         self.statistics.insert(market_id, statistic);
+// impl<Statistic> StatisticHandler<Statistic> for InMemoryRepository<Statistic> {
+//     fn set_statistics(&mut self, exchange: Exchange, instrument: Instrument, statistic: Statistic) -> Result<(), VaultError> {
+//         self.statistics.insert((exchange, instrument), statistic);
 //         Ok(())
 //     }
 //
-//     fn get_statistics(&mut self, market_id: &MarketId) -> Result<Statistic, RepositoryError> {
+//     fn get_statistics(&mut self, exchange: Exchange, instrument: Instrument) -> Result<Statistic, VaultError> {
 //         self.statistics
-//             .get(market_id)
-//             .copied()
-//             .ok_or(RepositoryError::ExpectedDataNotPresentError)
+//             .get(&(exchange, instrument))
+//             .cloned()
+//             .ok_or(VaultError::ExpectedDataNotPresentError)
 //     }
 // }
 //
-// impl<Statistic: PositionSummariser> InMemoryRepository<Statistic> {
-//     /// Constructs a new [`InMemoryRepository`] component.
+// impl<Statistic> InMemoryRepository<Statistic> {
+//     /// 构建一个新的 [`InMemoryRepository`] 组件。
 //     pub fn new() -> Self {
 //         Self {
 //             open_positions: HashMap::new(),
