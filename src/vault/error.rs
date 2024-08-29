@@ -2,7 +2,8 @@ use thiserror::Error;
 
 /// All errors generated in the barter::portfolio::repository module.
 #[derive(Error, Debug)]
-pub enum VaultError {
+pub enum VaultError
+{
     #[error("Failed to deserialize/serialize JSON due to: {0}")]
     JsonSerDeError(#[from] serde_json::Error),
 

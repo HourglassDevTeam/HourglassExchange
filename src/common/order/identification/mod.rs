@@ -53,7 +53,6 @@ impl Display for OrderId
     }
 }
 
-
 impl OrderId
 {
     /// 生成一个具有更高安全性要求的 `OrderId`。
@@ -71,10 +70,7 @@ impl OrderId
         let random_component: u64 = rand::thread_rng().gen_range(0..8192);
 
         // 生成唯一的OrderId
-        let id = ((timestamp & 0x1FFFFFFFFFF) << 23)
-            | ((machine_id & 0x3FF) << 13)
-            | ((counter & 0x3FF) << 3)
-            | (random_component & 0x7);
+        let id = ((timestamp & 0x1FFFFFFFFFF) << 23) | ((machine_id & 0x3FF) << 13) | ((counter & 0x3FF) << 3) | (random_component & 0x7);
 
         OrderId(id)
     }
@@ -90,12 +86,14 @@ impl OrderId
 }
 
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
-    fn test_order_id_generation() {
+    fn test_order_id_generation()
+    {
         let machine_id = 1;
         let mut counter = 0;
 
@@ -117,7 +115,8 @@ mod tests {
     }
 
     #[test]
-    fn test_order_id_uniqueness() {
+    fn test_order_id_uniqueness()
+    {
         let machine_id = 1;
         let mut counter = 0;
         let mut ids = std::collections::HashSet::new();

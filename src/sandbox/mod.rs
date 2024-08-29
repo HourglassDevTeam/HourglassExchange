@@ -143,11 +143,9 @@ impl ExchangeInitiator
 mod tests
 {
     use super::*;
-    use std::{
-        net::TcpListener,
-    };
-    use tokio::sync::mpsc;
     use crate::test_util::create_test_account;
+    use std::net::TcpListener;
+    use tokio::sync::mpsc;
 
     #[tokio::test]
     async fn initiator_should_create_exchange_initiator_with_default_values()

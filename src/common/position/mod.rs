@@ -8,6 +8,7 @@ use crate::{
             leveraged_token::LeveragedTokenPosition,
             option::OptionPosition,
             perpetual::{PerpetualPosition, PerpetualPositionBuilder, PerpetualPositionConfig},
+            position_id::PositionId,
             position_meta::PositionMetaBuilder,
         },
         trade::ClientTrade,
@@ -20,14 +21,13 @@ use crate::{
 /// FIXME  : code below needs to be restructured and fitted to the framework. need to provide enums?
 /// CONSIDER: can these positions coexist, if so enums might not be ideal.
 use serde::{Deserialize, Serialize};
-use crate::common::position::position_id::PositionId;
 
 pub(crate) mod future;
 pub(crate) mod leveraged_token;
 pub(crate) mod option;
 pub mod perpetual;
-pub(crate) mod position_meta;
 pub mod position_id;
+pub(crate) mod position_meta;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountPositions
@@ -55,7 +55,9 @@ impl AccountPositions
                                               trade: &ClientTrade, // 使用 ClientTrade 作为输入参数
                                               pos_margin_mode: PositionMarginMode,
                                               position_mode: PositionDirectionMode,
-                                              exchange_ts: i64,machine_id:u64,counter:u64)
+                                              exchange_ts: i64,
+                                              machine_id: u64,
+                                              counter: u64)
                                               -> Result<PerpetualPosition, ExecutionError>
     {
         let maker_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;

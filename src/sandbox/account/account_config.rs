@@ -23,7 +23,8 @@ pub struct AccountConfig
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub enum SandboxMode {
+pub enum SandboxMode
+{
     Backtest,
     RealTime,
 }
@@ -181,7 +182,6 @@ impl AccountConfigInitiator
                            funding_rate: self.fund_fee_rate.ok_or("commission_level is required")?,
                            account_leverage_rate: Default::default(),
                            fees_book: Default::default(),
-            execution_mode: SandboxMode::Backtest,
-        })
+                           execution_mode: SandboxMode::Backtest })
     }
 }

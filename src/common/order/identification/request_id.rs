@@ -1,8 +1,6 @@
 use fmt::{Display, Formatter};
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt,
-};
+use std::fmt;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize, PartialOrd)]
 pub struct RequestId(pub u64);
@@ -42,18 +40,17 @@ impl RequestId
 }
 
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
-    use std::time::SystemTime;
-    use std::time::UNIX_EPOCH;
+    use std::time::{SystemTime, UNIX_EPOCH};
     #[test]
-    fn test_request_id_generation() {
+    fn test_request_id_generation()
+    {
         let machine_id = 1;
         let mut counter = 0;
 
-        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)
-            .expect("Time went backwards")
-            .as_millis() as u64;
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
 
         let mut previous_id = RequestId::new(timestamp, machine_id, counter);
 
@@ -70,14 +67,13 @@ mod tests {
     }
 
     #[test]
-    fn test_request_id_uniqueness() {
+    fn test_request_id_uniqueness()
+    {
         let machine_id = 1;
         let mut counter = 0;
         let mut ids = std::collections::HashSet::new();
 
-        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)
-            .expect("Time went backwards")
-            .as_millis() as u64;
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
 
         for _ in 0..1000 {
             counter += 1;

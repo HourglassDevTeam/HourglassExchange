@@ -108,13 +108,12 @@ mod tests
             balance::{Balance, TokenBalance},
             friction::{Fees, SpotFees},
             instrument::{kind::InstrumentKind, Instrument},
-            position::{PositionDirectionMode, PositionMarginMode},
+            position::{position_id::PositionId, PositionDirectionMode, PositionMarginMode},
             token::Token,
             Side,
         },
         Exchange,
     };
-    use crate::common::position::position_id::PositionId;
 
     #[test]
     fn perpetual_position_should_update_liquidation_price()

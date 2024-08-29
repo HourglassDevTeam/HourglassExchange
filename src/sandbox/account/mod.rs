@@ -9,8 +9,8 @@ use std::{
         atomic::{AtomicI64, Ordering},
         Arc,
     },
+    time::{SystemTime, UNIX_EPOCH},
 };
-use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 
@@ -35,10 +35,9 @@ use crate::{
         Side,
     },
     error::ExecutionError,
-    sandbox::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
+    sandbox::{account::account_config::SandboxMode, clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
-use crate::sandbox::account::account_config::SandboxMode;
 
 pub mod account_config;
 pub mod account_latency;
@@ -148,13 +147,15 @@ impl Account
     /// `fetch_positions` 发送当前所有代币的持仓信息，用于获取账户中所有代币的仓位数据。
     /// `generate_request_id` 生成请求id。
     /// `update_request_counter`更新请求计数器。NOTE 在产品上线之前应该增加断线重联沿用counter的功能。并考虑是否需要增加定时重置的功能(要考虑雪花算法的特性)。
-    pub fn update_exchange_timestamp(&self, timestamp: i64) {
+    pub fn update_exchange_timestamp(&self, timestamp: i64)
+    {
         let adjusted_timestamp = match self.config.execution_mode {
-            SandboxMode::Backtest => timestamp, // 在回测模式下使用传入的时间戳
-            SandboxMode::RealTime => SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64, // 在实时模式下使用当前时间
+            | SandboxMode::Backtest => timestamp,                                                              // 在回测模式下使用传入的时间戳
+            | SandboxMode::RealTime => SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64, // 在实时模式下使用当前时间
         };
         self.exchange_timestamp.store(adjusted_timestamp, Ordering::SeqCst);
     }
+
     pub async fn fetch_orders_open(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>)
     {
         let orders = self.orders.read().await.fetch_all();
@@ -248,7 +249,8 @@ impl Account
         Ok(open_order)
     }
 
-    pub async fn process_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>) {
+    pub async fn process_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
+    {
         let mut validation_results: Vec<Result<(), ExecutionError>> = Vec::with_capacity(order_requests.len());
 
         // 先验证每个订单请求的合法性
@@ -260,14 +262,12 @@ impl Account
         // 检查是否有验证失败的订单
         if validation_results.iter().any(|result| result.is_err()) {
             let errors: Vec<Result<Order<Pending>, ExecutionError>> = validation_results.into_iter()
-                .zip(order_requests.into_iter())
-                .filter_map(|(result, _order)| {
-                    match result {
-                        Err(err) => Some(Err(err)),
-                        Ok(_) => None,
-                    }
-                })
-                .collect();
+                                                                                        .zip(order_requests.into_iter())
+                                                                                        .filter_map(|(result, _order)| match result {
+                                                                                            | Err(err) => Some(Err(err)),
+                                                                                            | Ok(_) => None,
+                                                                                        })
+                                                                                        .collect();
             let _ = response_tx.send(errors);
             return;
         }
@@ -290,7 +290,6 @@ impl Account
             eprintln!("[UniLinkExecution] : Failed to send RequestOpen response");
         }
     }
-
 
     /// [PART3]
     /// `validate_order_instruction` 验证订单的合法性，确保订单类型是受支持的。
@@ -526,16 +525,16 @@ impl Account
             match request.side {
                 | Side::Buy => {
                     let index = orders.bids
-                        .par_iter()
-                        .position_any(|bid| bid.state.id == request.state.id)
-                        .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                                      .par_iter()
+                                      .position_any(|bid| bid.state.id == request.state.id)
+                                      .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                     orders.bids.remove(index)
                 }
                 | Side::Sell => {
                     let index = orders.asks
-                        .par_iter()
-                        .position_any(|ask| ask.state.id == request.state.id)
-                        .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                                      .par_iter()
+                                      .position_any(|ask| ask.state.id == request.state.id)
+                                      .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                     orders.asks.remove(index)
                 }
             }
@@ -625,9 +624,16 @@ pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
 mod tests
 {
     use super::*;
-    use crate::common::order::{identification::OrderId, states::request_open::RequestOpen};
-    use crate::common::position::Position;
-    use crate::test_util::{create_test_account, create_test_account_orders, create_test_account_state, create_test_instrument, create_test_order_open, create_test_perpetual_position, create_test_request_open};
+    use crate::{
+        common::{
+            order::{identification::OrderId, states::request_open::RequestOpen},
+            position::Position,
+        },
+        test_util::{
+            create_test_account, create_test_account_orders, create_test_account_state, create_test_instrument, create_test_order_open, create_test_perpetual_position,
+            create_test_request_open,
+        },
+    };
 
     #[tokio::test]
     async fn test_validate_order_request_open()
@@ -671,25 +677,20 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_order_state_transition() {
+    async fn test_order_state_transition()
+    {
         // 创建测试环境中的一个订单，并初始化到 RequestOpen 状态
-        let order_request = Order {
-            kind: OrderInstruction::Market,
-            exchange: Exchange::SandBox,
-            instrument: Instrument {
-                base: Token::from("BTC"),
-                quote: Token::from("USD"),
-                kind: InstrumentKind::Spot,
-            },
-            client_ts: 1625247600000,
-            cid: ClientOrderId(Some("validCID123".into())),
-            side: Side::Buy,
-            state: RequestOpen {
-                price: 50000.0,
-                size: 1.0,
-                reduce_only: false,
-            },
-        };
+        let order_request = Order { kind: OrderInstruction::Market,
+                                    exchange: Exchange::SandBox,
+                                    instrument: Instrument { base: Token::from("BTC"),
+                                                             quote: Token::from("USD"),
+                                                             kind: InstrumentKind::Spot },
+                                    client_ts: 1625247600000,
+                                    cid: ClientOrderId(Some("validCID123".into())),
+                                    side: Side::Buy,
+                                    state: RequestOpen { price: 50000.0,
+                                                         size: 1.0,
+                                                         reduce_only: false } };
 
         // 验证 RequestOpen 状态
         assert!(Account::validate_order_request_open(&order_request).is_ok());
@@ -708,9 +709,9 @@ mod tests
         assert_eq!(open_order.state.size, order_request.state.size);
     }
 
-
     #[tokio::test]
-    async fn test_pending_registration() {
+    async fn test_pending_registration()
+    {
         let mut account = create_test_account().await;
 
         // 先创建并挂起一些订单
@@ -722,33 +723,26 @@ mod tests
         // 验证订单是否成功挂起
         let pending_count = account.orders.read().await.pending_registry.len();
         assert_eq!(pending_count, 2);
-
     }
 
     #[tokio::test]
-    async fn test_apply_balance_changes_insufficient_funds() {
-
+    async fn test_apply_balance_changes_insufficient_funds()
+    {
         // 创建一个示例订单
-        let order = Order::<Open> {
-            kind: OrderInstruction::Market,
-            exchange: Exchange::SandBox,
-            instrument: Instrument {
-                base: Token::from("TEST_BASE"),
-                quote: Token::from("TEST_QUOTE"),
-                kind: InstrumentKind::Perpetual,
-            },
-            client_ts: 1625247600000,
-            cid: ClientOrderId(Some("validCID123".into())),
-            side: Side::Buy,
-            state: Open {
-                id: OrderId(123),
-                price: 50000.0,
-                size: 1.0,
-                filled_quantity: 0.0,
-                order_role: OrderRole::Taker,
-                received_ts: 1625247600000,
-            },
-        };
+        let order = Order::<Open> { kind: OrderInstruction::Market,
+                                    exchange: Exchange::SandBox,
+                                    instrument: Instrument { base: Token::from("TEST_BASE"),
+                                                             quote: Token::from("TEST_QUOTE"),
+                                                             kind: InstrumentKind::Perpetual },
+                                    client_ts: 1625247600000,
+                                    cid: ClientOrderId(Some("validCID123".into())),
+                                    side: Side::Buy,
+                                    state: Open { id: OrderId(123),
+                                                  price: 50000.0,
+                                                  size: 1.0,
+                                                  filled_quantity: 0.0,
+                                                  order_role: OrderRole::Taker,
+                                                  received_ts: 1625247600000 } };
 
         let instrument = create_test_instrument(InstrumentKind::Perpetual);
         let account_state = create_test_account_state().await;
@@ -780,24 +774,25 @@ mod tests
         let binding = account_state.lock().await;
         let balance = binding.balance(&Token::from("TEST_QUOTE")).unwrap();
         assert_eq!(balance.available, 150.0 - 50.0); // 确保余额正确更新
-        //
-        // // 尝试应用一个需要 101 的订单变更，应该失败，因为余额不足
-        // let result = account_state.lock().await.apply_open_order_changes(&order, 101.0).await;
-        //
-        // // 检查并打印错误
-        // if let Err(e) = &result {
-        //     println!("Expected error occurred due to insufficient funds: {:?}", e);
-        // }
-        //
-        // assert!(result.is_err());
-        //
-        // // 再次检查账户余额是否保持不变
-        // let balance = binding.balance(&Token::from("TEST_QUOTE")).unwrap();
-        // assert_eq!(balance.available, 100.0); // 确保余额没有变化
+                                                     //
+                                                     // // 尝试应用一个需要 101 的订单变更，应该失败，因为余额不足
+                                                     // let result = account_state.lock().await.apply_open_order_changes(&order, 101.0).await;
+                                                     //
+                                                     // // 检查并打印错误
+                                                     // if let Err(e) = &result {
+                                                     //     println!("Expected error occurred due to insufficient funds: {:?}", e);
+                                                     // }
+                                                     //
+                                                     // assert!(result.is_err());
+                                                     //
+                                                     // // 再次检查账户余额是否保持不变
+                                                     // let balance = binding.balance(&Token::from("TEST_QUOTE")).unwrap();
+                                                     // assert_eq!(balance.available, 100.0); // 确保余额没有变化
     }
 
     #[tokio::test]
-    async fn test_cancel_all_orders() {
+    async fn test_cancel_all_orders()
+    {
         let mut account = create_test_account().await;
 
         // 模拟一个空的客户端事件通道
@@ -852,7 +847,4 @@ mod tests
             assert_eq!(ins_orders.asks.len(), 0);
         }
     }
-
-
-
 }

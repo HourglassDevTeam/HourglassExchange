@@ -72,11 +72,13 @@ impl ClientOrderId
     }
 }
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
 
     #[test]
-    fn test_valid_client_order_id() {
+    fn test_valid_client_order_id()
+    {
         // 测试有效的ClientOrderId
         let valid_id = "validID123";
         let client_order_id = ClientOrderId::new(Some(valid_id.to_string()));
@@ -85,7 +87,8 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_client_order_id() {
+    fn test_invalid_client_order_id()
+    {
         // 测试无效的ClientOrderId（太短）
         let invalid_id_short = "abc";
         let client_order_id = ClientOrderId::new(Some(invalid_id_short.to_string()));
@@ -103,7 +106,8 @@ mod tests {
     }
 
     #[test]
-    fn test_none_client_order_id() {
+    fn test_none_client_order_id()
+    {
         // 测试没有提供ID的情况
         let client_order_id = ClientOrderId::new(None);
         assert!(client_order_id.is_ok());
@@ -111,7 +115,8 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_id_format() {
+    fn test_validate_id_format()
+    {
         // 测试validate_id_format方法
 
         // 合法的ID

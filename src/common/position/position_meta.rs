@@ -1,15 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common::{balance::TokenBalance, friction::Fees, instrument::Instrument, order::OrderRole, Side},
+    common::{balance::TokenBalance, friction::Fees, instrument::Instrument, order::OrderRole, position::position_id::PositionId, Side},
     Exchange,
 };
-use crate::common::position::position_id::PositionId;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionMeta
 {
-    pub position_id: PositionId,          // 静态数据
+    pub position_id: PositionId,      // 静态数据
     pub enter_ts: i64,                // 静态数据
     pub update_ts: i64,               // 实时更新
     pub exit_balance: TokenBalance,   // 静态更新（退出时更新）当一个仓位被平仓（即完全退出）时，该仓位所涉及的资产或资金的最终状态。

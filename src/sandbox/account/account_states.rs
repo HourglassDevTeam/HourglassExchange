@@ -488,7 +488,6 @@ impl DerefMut for AccountState
 mod tests
 {
     use super::*;
-    use crate::test_util::*;
     use crate::{
         common::{
             balance::Balance,
@@ -502,12 +501,9 @@ mod tests
             token::Token,
         },
         sandbox::account::account_config::{CommissionRates, MarginMode},
+        test_util::*,
     };
-    use std::{
-        collections::HashMap,
-        sync::Arc,
-    };
-
+    use std::{collections::HashMap, sync::Arc};
 
     #[tokio::test]
     async fn test_balance()
@@ -668,7 +664,8 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_determine_position_mode() {
+    async fn test_determine_position_mode()
+    {
         let account_state = create_test_account_state().await;
 
         // 创建一个新的 AccountConfig 并手动设置 fees_book

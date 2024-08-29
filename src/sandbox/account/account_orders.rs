@@ -17,8 +17,10 @@ use crate::{
 };
 use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    sync::atomic::{AtomicU64, Ordering},
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 #[derive(Debug)]
 pub struct AccountOrders
@@ -95,7 +97,7 @@ impl AccountOrders
     ///
     /// 返回一个唯一的 `RequestId`。
     /// NOTE that the client's login PC might change frequently. This method is not web-compatible now.
-    pub fn generate_request_id(&self,request: &Order<RequestOpen>) -> RequestId
+    pub fn generate_request_id(&self, request: &Order<RequestOpen>) -> RequestId
     {
         let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
         let request_ts = request.client_ts;
@@ -240,7 +242,8 @@ impl AccountOrders
     ///
     /// - 如果订单成功注册，返回 `Ok(())`。
     /// - 如果订单已存在，返回 `Err(ExecutionError::OrderAlreadyExists)`。
-    pub async fn register_pending_order(&mut self, request: Order<Pending>) -> Result<(), ExecutionError> {
+    pub async fn register_pending_order(&mut self, request: Order<Pending>) -> Result<(), ExecutionError>
+    {
         // println!("Attempting to register pending order with ID: {:?}", request.state.request_id);
         if self.pending_registry.contains_key(&request.state.request_id) {
             // println!("Order with ID {:?} already exists", request.state.request_id);

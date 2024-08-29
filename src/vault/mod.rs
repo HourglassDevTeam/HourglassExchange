@@ -1,15 +1,11 @@
-
+use crate::common::{balance::Balance, instrument::Instrument};
 use uuid::Uuid;
-use crate::common::balance::Balance;
-use crate::common::instrument::Instrument;
 // use crate::common::position::Position;
-use crate::Exchange;
-use crate::vault::error::VaultError;
+use crate::{vault::error::VaultError, Exchange};
 
+pub mod error;
 pub mod in_memory;
 pub mod redis;
-pub mod error;
-//
 // /// 处理 [`Position`] 在持久层的读写操作。
 // pub trait PositionHandler {
 //     /// 使用 [`PositionId`] 更新或插入一个打开的 [`Position`]。
@@ -46,7 +42,8 @@ pub mod error;
 // }
 
 /// 处理投资组合当前余额在持久层的读写操作。
-pub trait BalanceHandler {
+pub trait BalanceHandler
+{
     /// 使用 engine_id 更新或插入投资组合 [`Balance`]。
     fn set_balance(&mut self, engine_id: Uuid, balance: Balance) -> Result<(), VaultError>;
     /// 使用提供的 engine_id 获取投资组合 [`Balance`]。
@@ -54,15 +51,11 @@ pub trait BalanceHandler {
 }
 
 /// 处理投资组合中每个市场的统计数据的读写操作，每个市场由 [`MarketId`] 表示。
-pub trait StatisticHandler<Statistic> {
+pub trait StatisticHandler<Statistic>
+{
     /// 使用 [`MarketId`] 更新或插入市场统计数据。
-    fn set_statistics(
-        &mut self,
-        exchange: Exchange,
-        instrument: Instrument,
-        statistic: Statistic,
-    ) -> Result<(), VaultError>;
-    fn get_statistics(&mut self,  exchange: Exchange, instrument: Instrument,) -> Result<Statistic, VaultError>;
+    fn set_statistics(&mut self, exchange: Exchange, instrument: Instrument, statistic: Statistic) -> Result<(), VaultError>;
+    fn get_statistics(&mut self, exchange: Exchange, instrument: Instrument) -> Result<Statistic, VaultError>;
 }
 
 /// 用于表示投资组合中所有已退出 [`Position`] 的唯一标识符的字符串类型。
@@ -70,6 +63,7 @@ pub trait StatisticHandler<Statistic> {
 pub type ExitedPositionsId = String;
 
 /// 返回给定 engine_id 的投资组合的已退出 [`Position`] 的唯一标识符。
-pub fn determine_exited_positions_id(engine_id: Uuid) -> ExitedPositionsId {
+pub fn determine_exited_positions_id(engine_id: Uuid) -> ExitedPositionsId
+{
     format!("positions_exited_{}", engine_id)
 }
