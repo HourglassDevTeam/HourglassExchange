@@ -10,14 +10,14 @@
 // /// 用于概念验证投资组合实现，保存当前权益、可用资金、仓位和市场对的统计数据。
 // /// **注意：此实现无容错保证，未排除极端情况下会出现性能抖动和OOM等情况，谨慎用于生产环境！**
 // #[derive(Debug, Default)]
-// pub struct InMemoryRepository<Statistic> {
+// pub struct InMemoryVault<Statistic> {
 //     open_positions: HashMap<PositionId, Position>,
 //     closed_positions: HashMap<String, Vec<Position>>,
 //     current_balances: HashMap<Uuid, Balance>,
 //     statistics: HashMap<(Exchange, Instrument), Statistic>,
 // }
 //
-// impl<Statistic> PositionHandler for InMemoryRepository<Statistic> {
+// impl<Statistic> PositionHandler for InMemoryVault<Statistic> {
 //     fn set_open_position(&mut self, position: Position) -> Result<(), VaultError> {
 //         self.open_positions.insert(position.position_id.clone(), position);
 //         Ok(())
@@ -65,7 +65,7 @@
 //     }
 // }
 //
-// impl<Statistic> BalanceHandler for InMemoryRepository<Statistic> {
+// impl<Statistic> BalanceHandler for InMemoryVault<Statistic> {
 //     fn set_balance(&mut self, instance_id: Uuid, balance: Balance) -> Result<(), VaultError> {
 //         self.current_balances.insert(instance_id, balance);
 //         Ok(())
@@ -79,7 +79,7 @@
 //     }
 // }
 //
-// impl<Statistic> StatisticHandler<Statistic> for InMemoryRepository<Statistic> {
+// impl<Statistic> StatisticHandler<Statistic> for InMemoryVault<Statistic> {
 //     fn set_statistics(&mut self, exchange: Exchange, instrument: Instrument, statistic: Statistic) -> Result<(), VaultError> {
 //         self.statistics.insert((exchange, instrument), statistic);
 //         Ok(())
@@ -93,8 +93,8 @@
 //     }
 // }
 //
-// impl<Statistic> InMemoryRepository<Statistic> {
-//     /// 构建一个新的 [`InMemoryRepository`] 组件。
+// impl<Statistic> InMemoryVault<Statistic> {
+//     /// 构建一个新的 [`InMemoryVault`] 组件。
 //     pub fn new() -> Self {
 //         Self {
 //             open_positions: HashMap::new(),
