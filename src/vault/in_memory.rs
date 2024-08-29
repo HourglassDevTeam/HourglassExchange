@@ -1,3 +1,6 @@
+// use crate::vault::StatisticHandler;
+// use crate::vault::BalanceHandler;
+// use crate::vault::determine_exited_positions_id;
 // use std::collections::HashMap;
 // use uuid::Uuid;
 // use crate::common::position::{Position, position_id::PositionId};
@@ -19,7 +22,7 @@
 //
 // impl<Statistic> PositionHandler for InMemoryVault<Statistic> {
 //     fn set_open_position(&mut self, position: Position) -> Result<(), VaultError> {
-//         self.open_positions.insert(position.position_id.clone(), position);
+//         self.open_positions.insert(position.clone(), position);
 //         Ok(())
 //     }
 //
