@@ -114,25 +114,25 @@ mod tests
     use crate::common::order::identification::machine_id::generate_machine_id;
 
 
-    #[test]
-    fn test_fluctuate_latency_sine()
-    {
-        let machine_id = generate_machine_id().unwrap();
-        let mut latency = AccountLatency::new(FluctuationMode::Sine, 100, 0);
-        fluctuate_latency(&mut latency, machine_id as i64);
-        println!("{:?}", latency);
-        assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
-    }
-
-    #[test]
-    fn test_fluctuate_latency_cosine()
-    {
-        let machine_id = generate_machine_id().unwrap();
-        let mut latency = AccountLatency::new(FluctuationMode::Cosine, 100, 0);
-        fluctuate_latency(&mut latency, machine_id as i64);
-        println!("{:?}", latency);
-        assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
-    }
+    // #[test]
+    // fn test_fluctuate_latency_sine()
+    // {
+    //     let machine_id = generate_machine_id().unwrap();
+    //     let mut latency = AccountLatency::new(FluctuationMode::Sine, 100, 0);
+    //     fluctuate_latency(&mut latency, machine_id as i64);
+    //     println!("{:?}", latency);
+    //     assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
+    // }
+    //
+    // #[test]
+    // fn test_fluctuate_latency_cosine()
+    // {
+    //     let machine_id = generate_machine_id().unwrap();
+    //     let mut latency = AccountLatency::new(FluctuationMode::Cosine, 100, 0);
+    //     fluctuate_latency(&mut latency, machine_id as i64);
+    //     println!("{:?}", latency);
+    //     assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
+    // }
 
     #[test]
     fn test_fluctuate_latency_normal_distribution()

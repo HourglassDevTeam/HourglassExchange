@@ -351,23 +351,21 @@ impl AccountOrders
     /// - 对于卖单 (`Side::Sell`):
     ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
     ///   - 否则，调用 `self.reject_post_only_order(order)` 拒绝订单，并返回错误。
-    fn determine_post_only_order_role(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    pub(crate) fn determine_post_only_order_role(&mut self, order: &Order<Pending>, current_price: f64) -> Result<OrderRole, ExecutionError>
     {
         match order.side {
-            | Side::Buy => {
+            Side::Buy => {
                 if order.state.price >= current_price {
                     Ok(OrderRole::Maker)
-                }
-                else {
-                    self.reject_post_only_order(order)
+                } else {
+                    Err(ExecutionError::OrderRejected("PostOnly order should be rejected".into())) // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
             }
-            | Side::Sell => {
+            Side::Sell => {
                 if order.state.price <= current_price {
                     Ok(OrderRole::Maker)
-                }
-                else {
-                    self.reject_post_only_order(order)
+                } else {
+                    Err(ExecutionError::OrderRejected("PostOnly order should be rejected".into())) // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
             }
         }

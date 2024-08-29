@@ -287,106 +287,68 @@ impl Account
                                                              * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
         }
     }
-
-    pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>)
-    {
+    pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>) {
         let current_price = market_event.kind.price;
 
-        // 这里使用 `DashMap` 的 `iter()` 获取所有键值对，并提取键作为 `order_ids`
+        // 获取所有的请求 ID
         let request_ids: Vec<RequestId> = self.orders.read().await.pending_registry.iter().map(|entry| entry.key().clone()).collect();
 
         // 遍历订单 ID 来处理每个订单
         for request_id in request_ids {
             let order = {
-                // 只在获取订单时持有锁
+                // 只在获取订单时持有读锁
                 let orders_read = self.orders.read().await;
                 orders_read.pending_registry.get(&request_id).map(|entry| entry.value().clone())
             };
 
-            // NOTE  之后要优化这个写锁，这个写锁是由于determine_maker_taker调用的post only订单的处理产生的。没有必要。[DONE]
             if let Some(order) = order {
-                // 假设你可以预先判断订单类型，并根据类型决定是否需要持有写锁
-                let role = {
-                    let orders_read = self.orders.read().await; // 使用读锁
-                    match order.kind {
-                        OrderInstruction::Market | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => {
-                            Ok(OrderRole::Taker)
-                        },
-                        OrderInstruction::Limit | OrderInstruction::GoodTilCancelled => {
-                            // 限价订单的判断逻辑可以在读锁下进行
-                            orders_read.determine_limit_order_role(&order, current_price)
-                        },
-                        OrderInstruction::PostOnly => {
-                            // 直接在此处判断PostOnly订单的角色
+                let role = match order.kind {
+                    OrderInstruction::Market | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => Ok(OrderRole::Taker),
+                    OrderInstruction::Limit | OrderInstruction::GoodTilCancelled => {
+                        // 限价订单的判断逻辑可以在读锁下进行
+                        self.orders.read().await.determine_limit_order_role(&order, current_price)
+                    },
+                    OrderInstruction::PostOnly => {
+                        // 这里仅判断是否应该拒绝订单，而不实际执行拒绝操作
+                        let should_reject = {
                             match order.side {
-                                Side::Buy => {
-                                    if order.state.price >= current_price {
-                                        Ok(OrderRole::Maker)
-                                    } else {
-                                        // 如果需要修改状态，比如移除挂单，则才持有写锁
-                                        let mut orders_write = self.orders.write().await;
-                                        orders_write.reject_post_only_order(&order)
-                                    }
-                                },
-                                Side::Sell => {
-                                    if order.state.price <= current_price {
-                                        Ok(OrderRole::Maker)
-                                    } else {
-                                        // 如果需要修改状态，比如移除挂单，则才持有写锁
-                                        let mut orders_write = self.orders.write().await;
-                                        orders_write.reject_post_only_order(&order)
-                                    }
-                                },}}
+                                Side::Buy => order.state.price < current_price,
+                                Side::Sell => order.state.price > current_price,
+                            }
+                        };
+
+                        if should_reject {
+                            // 获取写锁并拒绝订单
+                            self.orders.write().await.reject_post_only_order(&order)
+                        } else {
+                            Ok(OrderRole::Maker)
+                        }
                     }
                 };
 
-                if let Ok(OrderRole::Maker) = role {
-                    // 生成 open_order
-                    let open_order = self.orders.write().await.build_order_open(order.clone(), OrderRole::Maker).await;
+                if let Ok(role) = role {
+                    // 调用 try_open_order_atomic 替代 build_order_open
+                    let open_order_result = self.try_open_order_atomic(current_price, order.clone()).await;
 
-                    // 处理 instrument_orders
-                    if let Ok(mut orders_write) = self.orders.write().await.get_ins_orders_mut(&order.instrument) {
-                        // 将订单加入到相应的订单簿
-                        orders_write.add_order_open(open_order.clone());
+                    if let Ok(open_order) = open_order_result {
+                        if let Ok(mut orders_write) = self.orders.write().await.get_ins_orders_mut(&open_order.instrument) {
+                            orders_write.add_order_open(open_order.clone());
 
-                        // 获取手续费
-                        let fees_percent = self.determine_fees_percent(&order.instrument.kind, &OrderRole::Maker);
+                            let fees_percent = self.determine_fees_percent(&order.instrument.kind, &role);
+                            let trades = match orders_write.determine_matching_side(&market_event) {
+                                Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
+                                Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
+                                None => continue, // 跳过当前订单处理
+                            };
 
-                        // 匹配订单并生成交易
-                        let trades = match orders_write.determine_matching_side(&market_event) {
-                            | Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
-                            | Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
-                            | None => continue, // 跳过当前订单处理
-                        };
-
-                        self.process_trades(trades).await;
-                    }
-                }
-                else if let Ok(OrderRole::Taker) = role {
-                    // 生成 open_order
-                    let open_order = self.orders.write().await.build_order_open(order.clone(), OrderRole::Taker).await;
-
-                    // 处理 instrument_orders
-                    if let Ok(mut orders_write) = self.orders.write().await.get_ins_orders_mut(&order.instrument) {
-                        // 将订单加入到相应的订单簿
-                        orders_write.add_order_open(open_order.clone());
-
-                        // 获取手续费
-                        let fees_percent = self.determine_fees_percent(&order.instrument.kind, &OrderRole::Taker);
-
-                        // 匹配订单并生成交易
-                        let trades = match orders_write.determine_matching_side(&market_event) {
-                            | Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
-                            | Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
-                            | None => continue, // 跳过当前订单处理
-                        };
-
-                        self.process_trades(trades).await;
+                            self.process_trades(trades).await;
+                        }
                     }
                 }
             }
         }
     }
+
 
     fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &MarketEvent<MarketTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade>
     {
