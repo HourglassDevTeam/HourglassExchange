@@ -73,8 +73,8 @@ pub fn create_test_order_open(side: Side, price: f64, size: f64) -> Order<Open> 
         kind: OrderInstruction::Limit, // 假设测试订单使用限价订单类型
         exchange: Exchange::SandBox, // 假设测试环境使用 SandBox 交易所
         instrument: Instrument {
-            base: Token::from("TEST1"), // 测试用基础货币
-            quote: Token::from("TEST2"), // 测试用报价货币
+            base: Token::from("TEST_BASE"), // 测试用基础货币
+            quote: Token::from("TEST_QUOTE"), // 测试用报价货币
             kind: InstrumentKind::Perpetual, // 测试用永续合约
         },
         client_ts: 1625247600000, // 假设的客户端时间戳
@@ -122,8 +122,8 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
     // Create a mock balance map and populate it
     let mut balances = HashMap::new();
     // Define tokens for testing
-    let token1 = Token::from("TEST1");
-    let token2 = Token::from("TEST2");
+    let token1 = Token::from("TEST_BASE");
+    let token2 = Token::from("TEST_QUOTE");
     balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
     balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
 
@@ -173,8 +173,8 @@ pub async fn create_test_account() -> Account {
     // Create a mock balance map and populate it
     let mut balances = HashMap::new();
     // Define tokens for testing
-    let token1 = Token::from("TEST1");
-    let token2 = Token::from("TEST2");
+    let token1 = Token::from("TEST_BASE");
+    let token2 = Token::from("TEST_QUOTE");
     balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
     balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
     // 创建账户配置

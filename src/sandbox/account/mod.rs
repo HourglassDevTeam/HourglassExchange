@@ -729,8 +729,8 @@ mod tests
             kind: OrderInstruction::Market,
             exchange: Exchange::SandBox,
             instrument: Instrument {
-                base: Token::from("TEST1"),
-                quote: Token::from("TEST2"),
+                base: Token::from("TEST_BASE"),
+                quote: Token::from("TEST_QUOTE"),
                 kind: InstrumentKind::Perpetual,
             },
             client_ts: 1625247600000,
@@ -774,7 +774,7 @@ mod tests
 
         // 验证账户余额是否正确更新
         let binding = account_state.lock().await;
-        let balance = binding.balance(&Token::from("TEST2")).unwrap();
+        let balance = binding.balance(&Token::from("TEST_QUOTE")).unwrap();
         assert_eq!(balance.available, 150.0 - 50.0); // 确保余额正确更新
         //
         // // 尝试应用一个需要 101 的订单变更，应该失败，因为余额不足
@@ -788,7 +788,7 @@ mod tests
         // assert!(result.is_err());
         //
         // // 再次检查账户余额是否保持不变
-        // let balance = binding.balance(&Token::from("TEST2")).unwrap();
+        // let balance = binding.balance(&Token::from("TEST_QUOTE")).unwrap();
         // assert_eq!(balance.available, 100.0); // 确保余额没有变化
     }
 

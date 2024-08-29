@@ -577,8 +577,8 @@ mod tests
     async fn test_fetch_all_balances()
     {
         // Define tokens for testing
-        let token1 = Token::from("TEST1");
-        let token2 = Token::from("TEST2");
+        let token1 = Token::from("TEST_BASE");
+        let token2 = Token::from("TEST_QUOTE");
 
         // Create a mock balance map and populate it
         let mut balances = HashMap::new();
