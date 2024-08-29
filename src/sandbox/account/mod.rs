@@ -247,6 +247,15 @@ impl Account
 
     pub async fn process_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
     {
+        // 验证每个订单请求
+        for order in &order_requests {
+            if let Err(err) = Account::validate_order_request_open(order) {
+                // 如果有任何订单验证失败，立即返回错误响应
+                let _ = response_tx.send(vec![Err(err)]);
+                return;
+            }
+        }
+
         // 创建一个用于存储 Pending 订单的临时向量
         let mut open_pending = Vec::new();
 
@@ -288,7 +297,7 @@ impl Account
         }
     }
 
-    pub fn validate_order_request_open(&self, order: &Order<RequestOpen>) -> Result<(), ExecutionError> {
+    pub fn validate_order_request_open(order: &Order<RequestOpen>) -> Result<(), ExecutionError> {
         // 检查是否提供了有效的 ClientOrderId
         if let Some(cid) = &order.cid.0 {
             if cid.trim().is_empty() {
