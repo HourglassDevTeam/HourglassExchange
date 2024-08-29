@@ -294,7 +294,6 @@ impl Account
     }
 
 
-
     /// [PART3]
     /// `validate_order_instruction` 验证订单的合法性，确保订单类型是受支持的。
     /// `validate_order_request_open` 验证开单请求的合法性，确保订单类型是受支持的。
