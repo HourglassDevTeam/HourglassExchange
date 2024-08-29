@@ -170,8 +170,8 @@ impl Account
     }
 
     /// [PART 2]
-    /// `try_open_order_atomic` 尝试以原子操作方式打开一个订单，确保在验证和更新账户余额后安全地打开订单。
-    /// `open_requests_into_pendings` 处理一组订单请求，将其转换为挂起订单，并在成功后更新状态。
+    /// `process_requests_into_pendings` 处理一组订单请求，将其转换为挂起订单，并在成功后更新状态。
+    /// `process_pending_order_into_open_atomically` 尝试以原子操作方式打开一个订单，确保在验证和更新账户余额后安全地打开订单。
     /// `calculate_required_available_balance` 计算打开订单所需的可用余额，用于验证账户中是否有足够的资金执行订单。
     // NOTE 注意size的单位
     pub async fn calculate_required_available_balance<'a>(&'a self, order: &'a Order<Pending>, current_price: f64) -> (&Token, f64)
@@ -204,7 +204,7 @@ impl Account
         }
     }
 
-    pub async fn open_order_atomic(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
+    pub async fn process_pending_order_into_open_atomically(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
     {
         Self::order_validity_check(order.kind)?;
 
@@ -245,7 +245,7 @@ impl Account
         Ok(open_order)
     }
 
-    pub async fn open_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
+    pub async fn process_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
     {
         // 创建一个用于存储 Pending 订单的临时向量
         let mut open_pending = Vec::new();
@@ -330,7 +330,7 @@ impl Account
 
                 if let Ok(role) = role {
                     // 调用 try_open_order_atomic 替代 build_order_open
-                    let open_order_result = self.open_order_atomic(current_price, order.clone()).await;
+                    let open_order_result = self.process_pending_order_into_open_atomically(current_price, order.clone()).await;
 
                     if let Ok(open_order) = open_order_result {
                         if let Ok(mut orders_write) = self.orders.write().await.get_ins_orders_mut(&open_order.instrument) {
