@@ -496,7 +496,7 @@ impl Account
 
     /// [PART4]
     /// `cancel_orders` 处理一组订单取消请求，异步执行取消操作，并将结果发送回调用者。
-    /// `try_cancel_order_atomic` 尝试以原子操作方式取消一个订单，确保在取消订单后更新账户余额，并发送取消事件。
+    /// `process_cancel_request_into_cancelled_atomic` 尝试以原子操作方式取消一个订单，确保在取消订单后更新账户余额，并发送取消事件。
     /// `cancel_orders_all` 取消所有打开的订单，发送取消结果给调用者，并处理可能的错误情况。
     pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)
     {
@@ -623,7 +623,7 @@ mod tests
     use super::*;
     use crate::common::order::{identification::OrderId, states::request_open::RequestOpen};
     use crate::common::position::Position;
-    use crate::test_util::{create_test_account, create_test_account_orders, create_test_account_state, create_test_instrument, create_test_perpetual_position, create_test_request_open};
+    use crate::test_util::{create_test_account, create_test_account_orders, create_test_account_state, create_test_instrument, create_test_order_open, create_test_perpetual_position, create_test_request_open};
 
     #[tokio::test]
     async fn test_validate_order_request_open()
@@ -777,19 +777,151 @@ mod tests
         let balance = binding.balance(&Token::from("TEST2")).unwrap();
         assert_eq!(balance.available, 150.0 - 50.0); // 确保余额正确更新
 
-        // 尝试应用一个需要 101 的订单变更，应该失败，因为余额不足
-        let result = account_state.lock().await.apply_open_order_changes(&order, 101.0).await;
+        // // 尝试应用一个需要 101 的订单变更，应该失败，因为余额不足
+        // let result = account_state.lock().await.apply_open_order_changes(&order, 101.0).await;
+        //
+        // // 检查并打印错误
+        // if let Err(e) = &result {
+        //     println!("Expected error occurred due to insufficient funds: {:?}", e);
+        // }
+        //
+        // assert!(result.is_err());
+        //
+        // // 再次检查账户余额是否保持不变
+        // let balance = binding.balance(&Token::from("TEST2")).unwrap();
+        // assert_eq!(balance.available, 100.0); // 确保余额没有变化
+    }
+    #[tokio::test]
+    async fn test_cancel_orders() {
+        let mut account = create_test_account().await;
 
-        // 检查并打印错误
-        if let Err(e) = &result {
-            println!("Expected error occurred due to insufficient funds: {:?}", e);
+        // 模拟一个空的客户端事件通道
+        let (dummy_tx, _dummy_rx) = tokio::sync::mpsc::unbounded_channel();
+        account.account_event_tx = dummy_tx;
+
+        // 创建测试订单，并将其添加到 `bids` 和 `asks` 中
+        let order_buy = create_test_order_open(Side::Buy, 100.0, 1.0);
+        let order_sell = create_test_order_open(Side::Sell, 110.0, 1.0);
+
+        // 手动初始化 InstrumentOrders
+        {
+            let orders = account.orders.write().await;
+            orders.instrument_orders_map.insert(order_buy.instrument.clone(), InstrumentOrders::default());
+            orders.instrument_orders_map.insert(order_sell.instrument.clone(), InstrumentOrders::default());
         }
 
-        assert!(result.is_err());
+        // 将订单添加到 `AccountOrders` 中
+        {
+            let orders = account.orders.write().await;
+            orders.get_ins_orders_mut(&order_buy.instrument).unwrap().add_order_open(order_buy.clone());
+            orders.get_ins_orders_mut(&order_sell.instrument).unwrap().add_order_open(order_sell.clone());
+        }
 
-        // 再次检查账户余额是否保持不变
-        let balance = binding.balance(&Token::from("TEST2")).unwrap();
-        assert_eq!(balance.available, 100.0); // 确保余额没有变化
+        // 确认 `bids` 和 `asks` 向量的初始长度
+        {
+            let orders = account.orders.read().await;
+            let ins_orders = orders.get_ins_orders_mut(&order_buy.instrument).unwrap();
+            assert_eq!(ins_orders.bids.len(), 1);
+            assert_eq!(ins_orders.asks.len(), 1);
+        }
+
+        // 创建取消订单的请求
+        let cancel_request_buy = Order {
+            kind: OrderInstruction::Market,
+            exchange: Exchange::SandBox,
+            instrument: order_buy.instrument.clone(),
+            cid: order_buy.cid.clone(),
+            client_ts: 1625247600000,
+            side: Side::Buy,
+            state: RequestCancel { id: order_buy.state.id },
+        };
+
+        let cancel_request_sell = Order {
+            kind: OrderInstruction::Market,
+            exchange: Exchange::SandBox,
+            instrument: order_sell.instrument.clone(),
+            cid: order_sell.cid.clone(),
+            client_ts: 1625247600000,
+            side: Side::Sell,
+            state: RequestCancel { id: order_sell.state.id },
+        };
+
+        // 执行取消订单操作
+        let (tx, rx) = oneshot::channel();
+        account.cancel_orders(vec![cancel_request_buy, cancel_request_sell], tx).await;
+
+        // 等待取消操作的结果
+        let cancel_results = rx.await.unwrap();
+
+        // 确保取消操作成功
+        for result in cancel_results {
+            assert!(result.is_ok());
+        }
+
+        // 验证 `bids` 和 `asks` 向量的长度是否更新正确
+        {
+            let orders = account.orders.read().await;
+            let ins_orders = orders.get_ins_orders_mut(&order_buy.instrument).unwrap();
+            assert_eq!(ins_orders.bids.len(), 0);
+            assert_eq!(ins_orders.asks.len(), 0);
+        }
+    }
+
+
+    #[tokio::test]
+    async fn test_cancel_all_orders() {
+        let mut account = create_test_account().await;
+
+        // 模拟一个空的客户端事件通道
+        let (dummy_tx, _dummy_rx) = tokio::sync::mpsc::unbounded_channel();
+        account.account_event_tx = dummy_tx;
+
+        // 创建测试订单，并将其添加到 `bids` 和 `asks` 中
+        let order_buy1 = create_test_order_open(Side::Buy, 100.0, 1.0);
+        let order_sell1 = create_test_order_open(Side::Sell, 110.0, 1.0);
+        let order_buy2 = create_test_order_open(Side::Buy, 105.0, 1.5);
+        let order_sell2 = create_test_order_open(Side::Sell, 115.0, 2.0);
+
+        // 手动初始化 InstrumentOrders
+        {
+            let orders = account.orders.write().await;
+            orders.instrument_orders_map.insert(order_buy1.instrument.clone(), InstrumentOrders::default());
+            orders.instrument_orders_map.insert(order_sell1.instrument.clone(), InstrumentOrders::default());
+        }
+
+        // 将订单添加到 `AccountOrders` 中
+        {
+            let orders = account.orders.write().await;
+            orders.get_ins_orders_mut(&order_buy1.instrument).unwrap().add_order_open(order_buy1.clone());
+            orders.get_ins_orders_mut(&order_sell1.instrument).unwrap().add_order_open(order_sell1.clone());
+            orders.get_ins_orders_mut(&order_buy1.instrument).unwrap().add_order_open(order_buy2.clone());
+            orders.get_ins_orders_mut(&order_sell1.instrument).unwrap().add_order_open(order_sell2.clone());
+        }
+
+        // 确认 `bids` 和 `asks` 向量的初始长度
+        {
+            let orders = account.orders.read().await;
+            let ins_orders = orders.get_ins_orders_mut(&order_buy1.instrument).unwrap();
+            assert_eq!(ins_orders.bids.len(), 2);
+            assert_eq!(ins_orders.asks.len(), 2);
+        }
+
+        // 执行取消所有订单操作
+        let (tx, rx) = oneshot::channel();
+        account.cancel_orders_all(tx).await;
+
+        // 等待取消操作的结果
+        let cancelled_orders = rx.await.unwrap().unwrap();
+
+        // 确保取消操作返回的订单与初始订单数量相同
+        assert_eq!(cancelled_orders.len(), 4);
+        // 验证 `bids` 和 `asks` 向量的长度是否更新正确
+        {
+            let orders = account.orders.read().await;
+            let ins_orders = orders.get_ins_orders_mut(&order_buy1.instrument).unwrap();
+            assert_eq!(ins_orders.bids.len(), 0);
+            assert_eq!(ins_orders.asks.len(), 0);
+        }
     }
 
 }

@@ -24,8 +24,9 @@ use crate::common::instrument::Instrument;
 use crate::common::instrument::kind::InstrumentKind;
 use crate::common::order::identification::client_order_id::ClientOrderId;
 use crate::common::order::identification::OrderId;
-use crate::common::order::Order;
+use crate::common::order::{Order, OrderRole};
 use crate::common::order::order_instructions::OrderInstruction;
+use crate::common::order::states::open::Open;
 use crate::common::order::states::request_open::RequestOpen;
 use crate::common::position::future::{FuturePosition, FuturePositionConfig};
 use crate::common::position::perpetual::{PerpetualPosition, PerpetualPositionConfig};
@@ -64,6 +65,30 @@ pub async fn create_test_account_orders() -> AccountOrders {
     AccountOrders::new(123124, instruments, account_latency).await
 }
 
+
+/// 创建一个测试用的 `Order<Open>` 实例。
+pub fn create_test_order_open(side: Side, price: f64, size: f64) -> Order<Open> {
+    Order {
+        kind: OrderInstruction::Limit, // 假设测试订单使用限价订单类型
+        exchange: Exchange::SandBox, // 假设测试环境使用 SandBox 交易所
+        instrument: Instrument {
+            base: Token::from("TEST1"), // 测试用基础货币
+            quote: Token::from("TEST2"), // 测试用报价货币
+            kind: InstrumentKind::Perpetual, // 测试用永续合约
+        },
+        client_ts: 1625247600000, // 假设的客户端时间戳
+        cid: ClientOrderId(Some("validCID123".into())), // 假设的客户端订单ID
+        side,
+        state: Open {
+            id: OrderId(123), // 假设的订单ID
+            price,
+            size,
+            filled_quantity: 0.0, // 初始填充数量为0
+            order_role: OrderRole::Taker, // 假设订单角色为 Taker
+            received_ts: 1625247600000, // 假设的接收时间戳
+        },
+    }
+}
 
 // 帮助函数，用于创建测试用的订单
 pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen> {
@@ -144,6 +169,13 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
 }
 pub async fn create_test_account() -> Account {
     let leverage_rate = 1.0;
+    // Create a mock balance map and populate it
+    let mut balances = HashMap::new();
+    // Define tokens for testing
+    let token1 = Token::from("TEST1");
+    let token2 = Token::from("TEST2");
+    balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
+    balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
 
     // 创建账户配置
     let mut account_config = AccountConfig {
@@ -172,7 +204,7 @@ pub async fn create_test_account() -> Account {
     };
 
     let account_state = AccountState {
-        balances: HashMap::new(),
+        balances,
         positions,
         account_ref: Weak::new(),
     };
