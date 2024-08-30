@@ -42,26 +42,32 @@ pub async fn run_default_exchange(
 ) {
     // Define supported Instruments for the Sandbox Exchange
     let instruments = instruments();
+    println!("Instruments initialized: {:?}", instruments);
 
     // Create initial account balances (wrapped in Arc<Mutex<AccountState>>)
     let balances = initial_balances().await;
+    println!("Initial balances created");
 
     // Build and run the Sandbox Exchange
-    SandBoxExchange::initiator()
+    let sandbox_exchange = SandBoxExchange::initiator()
         .event_sandbox_rx(event_simulated_rx)
         .account(
             Account::initiate()
                 .account_event_tx(event_account_tx)
                 .config(create_test_account_config())
-                .balances(balances) // Now passing Arc<Mutex<AccountState>>
+                .states(balances) // Now passing Arc<Mutex<AccountState>>
                 .orders(create_test_account_orders().await)
                 .build()
                 .expect("failed to build Account"),
         )
         .initiate() // Use `initiate` instead of `build` for `SandBoxExchange`
-        .expect("failed to build SandBoxExchange")
-        .run_local() // or `run_online()` depending on your use case
-        .await;
+        .expect("failed to build SandBoxExchange");
+
+    println!("Sandbox exchange built successfully");
+
+    // Run the exchange locally or online
+    sandbox_exchange.run_local().await;
+    println!("Sandbox exchange is running");
 }
 
 /// 设置延迟为50ms
@@ -79,7 +85,7 @@ pub fn instruments() -> Vec<Instrument> {
     vec![Instrument::from(("BTC", "USDT", InstrumentKind::Perpetual))]
 }
 /// 初始化沙箱交易所账户余额
-pub async fn initial_balances() -> AccountState {
+pub async fn initial_balances() -> Arc<Mutex<AccountState>> {
     // 初始化账户余额
     let mut balances = HashMap::new();
     balances.insert(Token::from("BTC"), Balance::new(10.0, 10.0, 1.0));
@@ -93,8 +99,8 @@ pub async fn initial_balances() -> AccountState {
     };
 
     let account_state = AccountState {
-        balances: balances.clone(),
-        positions: positions.clone(),
+        balances,
+        positions,
         account_ref: Weak::new(),
     };
 
@@ -122,10 +128,8 @@ pub async fn initial_balances() -> AccountState {
         account_state_locked.account_ref = Arc::downgrade(&account);
     }
 
-    // Unwrap the `Arc` and `Mutex` to return the raw `AccountState`
-    Arc::try_unwrap(account_state_arc)
-        .expect("Failed to unwrap Arc")
-        .into_inner()
+    // 直接返回 `Arc<Mutex<AccountState>>`
+    account_state_arc
 }
 /// 创建限价订单请求
 pub fn order_request_limit<I>(

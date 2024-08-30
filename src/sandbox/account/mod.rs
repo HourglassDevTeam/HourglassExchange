@@ -114,9 +114,9 @@ impl AccountInitiator
         self
     }
 
-    pub fn balances(mut self, value: AccountState) -> Self
+    pub fn states(mut self, value: Arc<Mutex<AccountState>>) -> Self
     {
-        self.states = Some(Arc::new(Mutex::new(value)));
+        self.states = Some(value);
         self
     }
 

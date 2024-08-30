@@ -34,7 +34,7 @@ pub trait ClientExecution
     // NOTE 这个类型关联项表示配置类型，不同的交易所可能需要不同的配置。例如，API 密钥、API 密码、或其他初始化参数等等。
     type Config;
 
-    async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<AccountEvent>, local_timestamp: i64) -> Self;
+    async fn init(config: Self::Config, event_tx: mpsc::UnboundedSender<AccountEvent>) -> Self;
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>;
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>;
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Pending>, ExecutionError>>;

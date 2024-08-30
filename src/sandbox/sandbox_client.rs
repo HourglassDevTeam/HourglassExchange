@@ -19,9 +19,7 @@ use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrde
 #[derive(Debug)]
 pub struct SandBoxClient
 {
-    pub local_timestamp: i64,
     pub request_tx: UnboundedSender<SandBoxClientEvent>, // NOTE 这是向模拟交易所端发送信号的发射器。注意指令格式是SandBoxClientEvent
-    pub strategy_signal_rx: UnboundedReceiver<SandBoxClientEvent>, // NOTE 这是从策略收取信号的接收器。注意指令格式是SandBoxClientEvent
 }
 
 // NOTE 模拟交易所客户端可向模拟交易所发送的命令
@@ -46,21 +44,19 @@ pub enum SandBoxClientEvent
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    // 注意：在我们的场景中，沙盒交易所的“可选”配置参数是一个 UnboundedSender。
-    type Config = (UnboundedSender<SandBoxClientEvent>, UnboundedReceiver<SandBoxClientEvent>);
-
     // 注意：客户端的类型自然地由交易所决定并与其保持一致。
     const CLIENT_KIND: Exchange = Exchange::SandBox;
 
-    async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>, local_timestamp: i64) -> Self
+    // 注意：在我们的场景中，沙盒交易所的“可选”配置参数是一个 UnboundedSender。
+    type Config = (UnboundedSender<SandBoxClientEvent>, UnboundedReceiver<SandBoxClientEvent>);
+
+    async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {
         // 从 config 元组中解构出 request_tx 和 request_rx
-        let (request_tx, request_rx) = config;
+        let (request_tx, _request_rx) = config;
 
         // 使用 request_tx 和 request_rx 初始化 SandBoxClient
-        Self { request_tx,
-               strategy_signal_rx: request_rx,
-               local_timestamp }
+        Self { request_tx}
     }
 
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>
@@ -136,9 +132,7 @@ mod tests
         // 创建通道，用于请求和响应通信
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
 
-        let client = SandBoxClient { local_timestamp: 1622547800,
-                                     request_tx: request_tx.clone(),                  // 请求通道的发送者用于客户端发送请求
-                                     strategy_signal_rx: mpsc::unbounded_channel().1  /* 虚拟的接收者，用于接收策略信号 */ };
+        let client = SandBoxClient { request_tx: request_tx.clone(),};
 
         // 启动一个异步任务来调用客户端的 fetch_orders_open 方法
         let client_task = tokio::spawn(async move {
@@ -175,9 +169,9 @@ async fn test_open_orders()
     let (request_tx, mut request_rx) = mpsc::unbounded_channel();
 
     // 初始化 SandBoxClient
-    let client = SandBoxClient { local_timestamp: 1622547800,
+    let client = SandBoxClient {
                                  request_tx: request_tx.clone(),
-                                 strategy_signal_rx: mpsc::unbounded_channel().1 /* 虚拟的接收通道 */ };
+                                  };
 
     // 模拟一个订单请求
     let open_request = Order { kind: crate::common::order::order_instructions::OrderInstruction::Limit,
@@ -245,9 +239,7 @@ async fn test_cancel_orders_all()
     let (_response_tx, _response_rx) = oneshot::channel::<Result<Vec<Order<Cancelled>>, ExecutionError>>();
 
     // 初始化 SandBoxClient
-    let client = SandBoxClient { local_timestamp: 1622547800,
-                                 request_tx: request_tx.clone(),
-                                 strategy_signal_rx: mpsc::unbounded_channel().1 };
+    let client = SandBoxClient {request_tx: request_tx.clone(), };
 
     // 启动一个异步任务来调用客户端的 cancel_orders_all 方法
     let client_task = tokio::spawn(async move {
