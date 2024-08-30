@@ -1,4 +1,4 @@
-use crate::statistics::{de_duration_from_secs, dispersion::Range, metric::EquityPoint, se_duration_as_secs, welford_online};
+use crate::dashboard::{de_duration_from_secs, dispersion::Range, metrics::EquityPoint, se_duration_as_secs, welford_online};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 

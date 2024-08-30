@@ -1,4 +1,4 @@
-use crate::statistics::welford_online;
+use crate::dashboard::welford_online;
 use serde::{Deserialize, Serialize};
 
 /// 表示一组数据集的离散程度的度量 - 范围、方差和标准差。

@@ -1,7 +1,7 @@
 // use crate::{
 //     portfolio::position::Position,
 //     statistic::{
-//         metric::ratio::{CalmarRatio, Ratio, SharpeRatio, SortinoRatio},
+//         metrics::ratio::{CalmarRatio, Ratio, SharpeRatio, SortinoRatio},
 //         summary::{
 //             drawdown::DrawdownSummary, pnl::PnLReturnSummary, Initialiser, PositionSummariser,
 //             TableBuilder,

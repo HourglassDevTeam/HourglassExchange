@@ -22,7 +22,7 @@ pub mod error;
 pub mod network;
 pub mod okex;
 pub mod sandbox;
-pub mod statistics;
+pub mod dashboard;
 pub mod test_util;
 pub mod vault;
 

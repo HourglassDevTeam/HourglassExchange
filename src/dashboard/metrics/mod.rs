@@ -4,7 +4,7 @@ use serde::Serialize;
 // use serde::{Deserialize, Serialize};
 // use crate::common::balance::Balance;
 // use crate::common::position::Position;
-// use crate::statistics::summary::PositionSummariser;
+// use crate::dashboard::summary::PositionSummariser;
 
 /// Total equity at a point in time - equates to [`Balance.total`](Balance).
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]

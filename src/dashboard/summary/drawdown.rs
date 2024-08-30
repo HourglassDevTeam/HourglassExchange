@@ -1,5 +1,5 @@
-use crate::statistics::{
-    metric::drawdown::{AvgDrawdown, Drawdown, MaxDrawdown},
+use crate::dashboard::{
+    metrics::drawdown::{AvgDrawdown, Drawdown, MaxDrawdown},
     summary::TableBuilder,
 };
 use prettytable::{row, Row};

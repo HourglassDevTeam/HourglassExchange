@@ -1,7 +1,7 @@
-use crate::statistics::de_duration_from_secs;
-use crate::statistics::se_duration_as_secs;
-use crate::statistics::summary::data::DataSummary;
-use crate::statistics::summary::Initialiser;
+use crate::dashboard::de_duration_from_secs;
+use crate::dashboard::se_duration_as_secs;
+use crate::dashboard::summary::data::DataSummary;
+use crate::dashboard::summary::Initialiser;
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 

@@ -2,7 +2,7 @@ use chrono::Duration;
 
 pub mod dispersion;
 pub mod error;
-pub mod metric;
+pub mod metrics;
 pub mod summary;
 pub mod welford_online;
 use serde::{Deserialize, Deserializer, Serializer};

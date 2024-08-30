@@ -1,4 +1,4 @@
-use crate::statistics::{dispersion::Dispersion, summary::TableBuilder, welford_online};
+use crate::dashboard::{dispersion::Dispersion, summary::TableBuilder, welford_online};
 use prettytable::{row, Row};
 use serde::{Deserialize, Serialize};
 
@@ -91,7 +91,7 @@ impl TableBuilder for DataSummary
 mod tests
 {
     use super::*;
-    use crate::statistics::dispersion::Range;
+    use crate::dashboard::dispersion::Range;
 
     #[test]
     fn update_data_summary_with_position()
