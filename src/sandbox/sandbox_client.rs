@@ -15,6 +15,8 @@ use mpsc::UnboundedSender;
 use oneshot::Sender;
 use tokio::sync::{mpsc, mpsc::UnboundedReceiver, oneshot};
 use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrdersOpen, OpenOrders};
+use crate::common::order::identification::OrderId;
+use crate::common::order::OrderRole;
 
 #[derive(Debug)]
 pub struct SandBoxClient
@@ -161,76 +163,123 @@ mod tests
         client_task.await.expect("Client task should complete successfully");
     }
 }
-
+//
+//
 // #[tokio::test]
-// async fn test_open_orders()
-// {
+// async fn test_open_orders() {
 //     // 创建通道用于发送和接收请求
 //     let (request_tx, mut request_rx) = mpsc::unbounded_channel();
+//     let (market_event_tx, market_event_rx) = mpsc::unbounded_channel();
 //
 //     // 初始化 SandBoxClient
 //     let client = SandBoxClient {
-//                                  request_tx: request_tx.clone(),
-//                                   };
+//         request_tx: request_tx.clone(),
+//         market_event_tx: market_event_tx.clone(),
+//     };
 //
 //     // 模拟一个订单请求
-//     let open_request = Order { kind: crate::common::order::order_instructions::OrderInstruction::Limit,
-//                                exchange: Exchange::Binance,
-//                                instrument: crate::common::instrument::Instrument::new("BTC", "USDT", crate::common::instrument::kind::InstrumentKind::Perpetual),
-//                                client_ts: chrono::Utc::now().timestamp_millis(),
-//                                cid: crate::common::order::identification::client_order_id::ClientOrderId(Option::from("OJBK".to_string())),
-//                                side: crate::common::Side::Buy,
-//                                state: RequestOpen { reduce_only: false,
-//                                                     price: 50000.0,
-//                                                     size: 1.0 } };
+//     let open_request = Order {
+//         kind: crate::common::order::order_instructions::OrderInstruction::Limit,
+//         exchange: Exchange::Binance,
+//         instrument: crate::common::instrument::Instrument::new(
+//             "BTC",
+//             "USDT",
+//             crate::common::instrument::kind::InstrumentKind::Perpetual,
+//         ),
+//         client_ts: chrono::Utc::now().timestamp_millis(),
+//         cid: crate::common::order::identification::client_order_id::ClientOrderId(Option::from("OJBK".to_string())),
+//         side: crate::common::Side::Buy,
+//         state: RequestOpen {
+//             reduce_only: false,
+//             price: 50000.0,
+//             size: 1.0,
+//         },
+//     };
 //
 //     // 启动一个异步任务来调用客户端的 open_orders 方法
 //     let client_task = tokio::spawn(async move {
 //         // 调用 open_orders 方法并验证返回的订单信息
 //         let orders = client.open_orders(vec![open_request]).await;
 //         println!("Client received response: {:?}", orders); // 打印客户端接收到的响应
-//         assert_eq!(orders.len(), 1, "Expected one pending order");
+//         assert_eq!(orders.len(), 1, "Expected one open order");
 //         assert_eq!(orders[0].as_ref().unwrap().state.price, 50000.0);
 //     });
 //
 //     // 处理接收到的 OpenOrders 请求事件
-//     if let Some(OpenOrders((orders, tx))) = request_rx.recv().await {
+//     if let Some(SandBoxClientEvent::OpenOrders((orders, tx))) = request_rx.recv().await {
 //         println!("Received OpenOrders event");
 //
-//         // 将订单转换为 Pending 状态，并发送响应
-//         let response = orders.into_iter()
-//                              .map(|order| {
-//                                  Ok(Order { kind: order.kind,
-//                                             exchange: order.exchange,
-//                                             instrument: order.instrument,
-//                                             client_ts: order.client_ts,
-//                                             cid: order.cid,
-//                                             side: order.side,
-//                                             state: Pending { reduce_only: order.state.reduce_only,
-//                                                              price: order.state.price,
-//                                                              size: order.state.size,
-//                                                              predicted_ts: chrono::Utc::now().timestamp_millis(),
-//                                                              request_id: crate::common::order::identification::request_id::RequestId(1241241241) } })
-//                              })
-//                              .collect::<Vec<_>>();
+//         // 将订单转换为 Pending 状态，并等待市场事件
+//         let pending_orders = orders.into_iter()
+//             .map(|order| {
+//                 Order {
+//                     kind: order.kind,
+//                     exchange: order.exchange,
+//                     instrument: order.instrument,
+//                     client_ts: order.client_ts,
+//                     cid: order.cid,
+//                     side: order.side,
+//                     state: Pending {
+//                         reduce_only: order.state.reduce_only,
+//                         price: order.state.price,
+//                         size: order.state.size,
+//                         predicted_ts: chrono::Utc::now().timestamp_millis(),
+//                         request_id: crate::common::order::identification::request_id::RequestId(1241241241),
+//                     },
+//                 }
+//             })
+//             .collect::<Vec<_>>();
 //
-//         println!("Response being sent: {:?}", response); // 打印将要发送的响应
+//         // 模拟市场事件来触发订单转换
+//         let market_event = MarketEvent {
+//             kind: MarketTrade {
+//                 timestamp: chrono::Utc::now().timestamp_millis(),
+//                 price: 50000.0,
+//                 size: 1.0,
+//             },
+//         };
+//
+//         // 发送市场事件
+//         market_event_tx.send(market_event).expect("Failed to send market event");
+//
+//         // 将挂起订单转换为打开订单，并发送响应
+//         let open_orders_results = pending_orders.into_iter()
+//             .map(|pending_order| {
+//                 Ok(Order {
+//                     kind: pending_order.kind,
+//                     exchange: pending_order.exchange,
+//                     instrument: pending_order.instrument,
+//                     client_ts: pending_order.client_ts,
+//                     cid: pending_order.cid,
+//                     side: pending_order.side,
+//                     state: Open {
+//                         id: OrderId::new(0, 0, 0),
+//                         price: pending_order.state.price,
+//                         size: pending_order.state.size,
+//                         filled_quantity: 0.0,
+//                         order_role: OrderRole::Maker,
+//                         received_ts: chrono::Utc::now().timestamp_millis(),
+//                     },
+//                 })
+//             })
+//             .collect::<Vec<_>>();
+//
+//         println!("Response being sent: {:?}", open_orders_results); // 打印将要发送的响应
 //
 //         // 发送响应，并确认是否成功发送
-//         if tx.send(response).is_ok() {
+//         if tx.send(open_orders_results).is_ok() {
 //             println!("Response sent successfully");
-//         }
-//         else {
+//         } else {
 //             println!("Failed to send OpenOrders response");
 //         }
-//     }
-//     else {
+//     } else {
 //         panic!("Did not receive OpenOrders event");
 //     }
 //
 //     // 确保客户端任务完成
 //     client_task.await.expect("Client task should complete successfully");
 // }
+
 #[tokio::test]
 async fn test_cancel_orders_all()
 {
