@@ -1,5 +1,3 @@
-use crate::statistics::welford_online;
-
 /// Welford's 在线算法是一种用于逐次计算均值和方差的数值稳定方法，尤其适合于处理大数据集或流数据。
 /// 该算法的主要优点在于它能够在单次遍历数据的过程中，以在线方式高效地计算均值和方差，且避免了在处理较大数据集时可能出现的数值不稳定问题。
 ///
@@ -11,7 +9,7 @@ use crate::statistics::welford_online;
 /// 具体而言，算法维护以下三个变量：
 ///
 /// - `mean`：当前数据的均值。
-/// - `M2`：与方差相关的累积量，用于计算样本方差或总体方差。
+/// - `S`：与方差相关的累积量，用于计算样本方差或总体方差。
 /// - `n`：数据点的数量。
 ///
 /// ### 计算步骤
@@ -23,16 +21,16 @@ use crate::statistics::welford_online;
 ///    mean_n = mean_(n-1) + (x - mean_(n-1)) / n
 ///    ```
 ///
-/// 3. 计算新的累积量 `M2`：
+/// 3. 计算新的累积量 `S`：
 ///
 ///    ```text
-///    M2_n = M2_(n-1) + (x - mean_(n-1)) * (x - mean_n)
+///    S_n = S_(n-1) + (x - mean_(n-1)) * (x - mean_n)
 ///    ```
 ///
-/// 4. 最后，可以通过 `M2` 计算样本方差或总体方差：
+/// 4. 最后，可以通过 `S` 计算样本方差或总体方差：
 ///
-///    - 样本方差 (使用贝塞尔校正)：`variance = M2 / (n - 1)`
-///    - 总体方差：`variance = M2 / n`
+///    - 样本方差 (使用贝塞尔校正)：`variance = S / (n - 1)`
+///    - 总体方差：`variance = S / n`
 ///
 /// ### 数值稳定性
 ///
@@ -129,8 +127,7 @@ mod tests {
         let expected = vec![0.1, -0.05, -0.05, 0.0125, 0.04, 0.05];
 
         for (input, expected) in inputs.iter().zip(expected.into_iter()) {
-            let actual =
-                welford_online::update_mean(input.prev_mean, input.next_value, input.count);
+            let actual =update_mean(input.prev_mean, input.next_value, input.count);
             let mean_diff = actual - expected;
 
             assert!(mean_diff < 1e-10);
@@ -219,7 +216,7 @@ mod tests {
         ];
 
         for (input, expected) in inputs.iter().zip(expected.into_iter()) {
-            let actual_m = welford_online::update_variance_accumulator(
+            let actual_m = update_variance_accumulator(
                 input.prev_m,
                 input.prev_mean,
                 input.new_value,
@@ -249,7 +246,7 @@ mod tests {
         ];
 
         for (input, expected) in inputs.iter().zip(expected.into_iter()) {
-            let actual_variance = welford_online::compute_sample_variance(input.0, input.1);
+            let actual_variance = compute_sample_variance(input.0, input.1);
             assert_eq!(actual_variance, expected);
         }
     }
@@ -273,7 +270,7 @@ mod tests {
         ];
 
         for (input, expected) in inputs.iter().zip(expected.into_iter()) {
-            let actual_variance = welford_online::compute_population_variance(input.0, input.1);
+            let actual_variance = compute_population_variance(input.0, input.1);
             assert_eq!(actual_variance, expected);
         }
     }
