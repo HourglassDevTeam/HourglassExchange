@@ -89,7 +89,13 @@ impl SandBoxExchange
                 | SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx).await,
                 | SandBoxClientEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx).await,
                 /// NOTE this is buggy. should return an open order or an error eventually, not pendings in the flight.
-                | SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => self.account.process_requests_into_pendings(open_requests, response_tx).await,
+                | SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => {
+                    // step one, process the requests into pendings, but note that pendings should not be sent out.
+                    // FIXME need to modify return type of process_requests_into_pendings
+                    self.account.process_requests_into_pendings(open_requests, response_tx).await
+                    /// extract the predicted_ts from the pendings.
+                    /// wait until there is a MarketEvent with that comes with appropriate timestamp that exceeds the predicted one.
+                },
                 | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.cancel_orders(cancel_requests, response_tx).await,
                 | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.cancel_orders_all(response_tx).await,
                 | SandBoxClientEvent::FetchMarketEvent(market_event) => self.account.match_orders(market_event).await,
