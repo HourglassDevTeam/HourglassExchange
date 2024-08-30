@@ -167,14 +167,14 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
 //
 //     fn get_open_positions(
 //         &mut self,
-//         instance_id: Uuid,
+//         session_id: Uuid,
 //         markets: impl Iterator<Item = Market>,
 //     ) -> Result<Vec<Position>, ExecutionError> {
 //         // 根据 markets 迭代器获取所有打开的 Position
 //         markets
 //             .filter_map(|market| {
 //                 self.get_open_position(&determine_position_id(
-//                     instance_id,
+//                     session_id,
 //                     &market.exchange,
 //                     &market.instrument,
 //                 ))
@@ -199,22 +199,22 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
 //
 //     fn set_exited_position(
 //         &mut self,
-//         instance_id: Uuid,
+//         session_id: Uuid,
 //         position: Position,
 //     ) -> Result<(), ExecutionError> {
 //         // 将已退出的 Position 推入 Redis 列表
 //         self.conn
 //             .lpush(
-//                 determine_exited_positions_id(instance_id),
+//                 determine_exited_positions_id(session_id),
 //                 serde_json::to_string(&position)?,
 //             )
 //             .map_err(|_| ExecutionError::WriteError)
 //     }
 //
-//     fn get_exited_positions(&mut self, instance_id: Uuid) -> Result<Vec<Position>, ExecutionError> {
+//     fn get_exited_positions(&mut self, session_id: Uuid) -> Result<Vec<Position>, ExecutionError> {
 //         // 获取 Redis 列表中的所有已退出 Position
 //         let positions: Vec<String> = self.conn
-//             .lrange(determine_exited_positions_id(instance_id), 0, -1)
+//             .lrange(determine_exited_positions_id(session_id), 0, -1)
 //             .map_err(|_| ExecutionError::ReadError)?;
 //
 //         positions

@@ -42,7 +42,7 @@ impl<Statistic> PositionHandler for InMemoryVault<Statistic>
         Ok(self.open_positions.get(position_id).cloned())
     }
 
-    fn get_open_positions(&mut self, _instance_id: Uuid, exchange: Exchange, instrument: Instrument) -> Result<Vec<Position>, VaultError>
+    fn get_open_positions(&mut self, _session_id: Uuid, exchange: Exchange, instrument: Instrument) -> Result<Vec<Position>, VaultError>
     {
         Ok(self.open_positions
                .values()
@@ -61,9 +61,9 @@ impl<Statistic> PositionHandler for InMemoryVault<Statistic>
         Ok(self.open_positions.remove(position_id))
     }
 
-    fn set_exited_position(&mut self, instance_id: Uuid, position: Position) -> Result<(), VaultError>
+    fn set_exited_position(&mut self, session_id: Uuid, position: Position) -> Result<(), VaultError>
     {
-        let exited_positions_key = determine_exited_positions_id(instance_id);
+        let exited_positions_key = determine_exited_positions_id(session_id);
 
         match self.closed_positions.get_mut(&exited_positions_key) {
             | None => {
@@ -74,23 +74,23 @@ impl<Statistic> PositionHandler for InMemoryVault<Statistic>
         Ok(())
     }
 
-    fn get_exited_positions(&mut self, instance_id: Uuid) -> Result<Vec<Position>, VaultError>
+    fn get_exited_positions(&mut self, session_id: Uuid) -> Result<Vec<Position>, VaultError>
     {
-        Ok(self.closed_positions.get(&determine_exited_positions_id(instance_id)).cloned().unwrap_or_default())
+        Ok(self.closed_positions.get(&determine_exited_positions_id(session_id)).cloned().unwrap_or_default())
     }
 }
 
 impl<Statistic> BalanceHandler for InMemoryVault<Statistic>
 {
-    fn set_balance(&mut self, instance_id: Uuid, balance: Balance) -> Result<(), VaultError>
+    fn set_balance(&mut self, session_id: Uuid, balance: Balance) -> Result<(), VaultError>
     {
-        self.current_balances.insert(instance_id, balance);
+        self.current_balances.insert(session_id, balance);
         Ok(())
     }
 
-    fn get_balance(&mut self, instance_id: Uuid) -> Result<Balance, VaultError>
+    fn get_balance(&mut self, session_id: Uuid) -> Result<Balance, VaultError>
     {
-        self.current_balances.get(&instance_id).copied().ok_or(VaultError::ExpectedDataNotPresentError)
+        self.current_balances.get(&session_id).copied().ok_or(VaultError::ExpectedDataNotPresentError)
     }
 }
 
