@@ -1,3 +1,5 @@
+use crate::accountant::welford_online;
+
 /// Welford's 在线算法是一种用于逐次计算均值和方差的数值稳定方法，尤其适合于处理大数据集或流数据。
 /// 该算法的主要优点在于它能够在单次遍历数据的过程中，以在线方式高效地计算均值和方差，且避免了在处理较大数据集时可能出现的数值不稳定问题。
 ///
@@ -44,7 +46,7 @@
 /// 更多详细信息请参考 [Welford's Online Algorithm](https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm)。
 
 /// 计算下一个均值。
-pub fn calculate_mean<T>(mut prev_mean: T, next_value: T, count: T) -> T
+pub fn update_mean<T>(mut prev_mean: T, next_value: T, count: T) -> T
 where
     T: Copy + std::ops::Sub<Output = T> + std::ops::Div<Output = T> + std::ops::AddAssign,
 {
@@ -53,7 +55,7 @@ where
 }
 
 /// 计算下一个 Welford 在线递推关系 M。
-pub fn calculate_recurrence_relation_m(
+pub fn update_variance_accumulator(
     prev_m: f64,
     prev_mean: f64,
     new_value: f64,
@@ -63,7 +65,7 @@ pub fn calculate_recurrence_relation_m(
 }
 
 /// 使用贝塞尔校正（count - 1）和 Welford 在线递推关系 M 计算下一个无偏的“样本”方差。
-pub fn calculate_sample_variance(recurrence_relation_m: f64, count: u64) -> f64 {
+pub fn compute_sample_variance(recurrence_relation_m: f64, count: u64) -> f64 {
     match count < 2 {
         true => 0.0,
         false => recurrence_relation_m / (count as f64 - 1.0),
@@ -71,10 +73,208 @@ pub fn calculate_sample_variance(recurrence_relation_m: f64, count: u64) -> f64 
 }
 
 /// 使用 Welford 在线递推关系 M 计算下一个有偏的“总体”方差。
-pub fn calculate_population_variance(recurrence_relation_m: f64, count: u64) -> f64 {
+pub fn compute_population_variance(recurrence_relation_m: f64, count: u64) -> f64 {
     match count < 1 {
         true => 0.0,
         false => recurrence_relation_m / count as f64,
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn calculate_mean() {
+        struct Input {
+            prev_mean: f64,
+            next_value: f64,
+            count: f64,
+        }
+
+        let inputs = vec![
+            Input {
+                prev_mean: 0.0,
+                next_value: 0.1,
+                count: 1.0,
+            },
+            Input {
+                prev_mean: 0.1,
+                next_value: -0.2,
+                count: 2.0,
+            },
+            Input {
+                prev_mean: -0.05,
+                next_value: -0.05,
+                count: 3.0,
+            },
+            Input {
+                prev_mean: -0.05,
+                next_value: 0.2,
+                count: 4.0,
+            },
+            Input {
+                prev_mean: 0.0125,
+                next_value: 0.15,
+                count: 5.0,
+            },
+            Input {
+                prev_mean: 0.04,
+                next_value: -0.17,
+                count: 6.0,
+            },
+        ];
+
+        let expected = vec![0.1, -0.05, -0.05, 0.0125, 0.04, 0.05];
+
+        for (input, expected) in inputs.iter().zip(expected.into_iter()) {
+            let actual =
+                welford_online::update_mean(input.prev_mean, input.next_value, input.count);
+            let mean_diff = actual - expected;
+
+            assert!(mean_diff < 1e-10);
+        }
+    }
+
+    #[test]
+    fn calculate_recurrence_relation_m() {
+        struct Input {
+            prev_m: f64,
+            prev_mean: f64,
+            new_value: f64,
+            new_mean: f64,
+        }
+
+        let inputs = vec![
+            // dataset_1 = [10, 100, -10]
+            Input {
+                prev_m: 0.0,
+                prev_mean: 0.0,
+                new_value: 10.0,
+                new_mean: 10.0,
+            },
+            Input {
+                prev_m: 0.0,
+                prev_mean: 10.0,
+                new_value: 100.0,
+                new_mean: 55.0,
+            },
+            Input {
+                prev_m: 4050.0,
+                prev_mean: 55.0,
+                new_value: -10.0,
+                new_mean: (100.0 / 3.0),
+            },
+            // dataset_2 = [-5, -50, -1000]
+            Input {
+                prev_m: 0.0,
+                prev_mean: 0.0,
+                new_value: -5.0,
+                new_mean: -5.0,
+            },
+            Input {
+                prev_m: 0.0,
+                prev_mean: -5.0,
+                new_value: -50.0,
+                new_mean: (-55.0 / 2.0),
+            },
+            Input {
+                prev_m: 1012.5,
+                prev_mean: (-55.0 / 2.0),
+                new_value: -1000.0,
+                new_mean: (-1055.0 / 3.0),
+            },
+            // dataset_3 = [90000, -90000, 0]
+            Input {
+                prev_m: 0.0,
+                prev_mean: 0.0,
+                new_value: 90000.0,
+                new_mean: 90000.0,
+            },
+            Input {
+                prev_m: 0.0,
+                prev_mean: 90000.0,
+                new_value: -90000.0,
+                new_mean: 0.0,
+            },
+            Input {
+                prev_m: 16200000000.0,
+                prev_mean: 0.0,
+                new_value: 0.0,
+                new_mean: 0.0,
+            },
+        ];
+
+        let expected = vec![
+            0.0,
+            4050.0,
+            20600.0 / 3.0,
+            0.0,
+            1012.5,
+            1894550.0 / 3.0,
+            0.0,
+            16200000000.0,
+            16200000000.0,
+        ];
+
+        for (input, expected) in inputs.iter().zip(expected.into_iter()) {
+            let actual_m = welford_online::update_variance_accumulator(
+                input.prev_m,
+                input.prev_mean,
+                input.new_value,
+                input.new_mean,
+            );
+
+            assert_eq!(actual_m, expected)
+        }
+    }
+
+    #[test]
+    fn calculate_sample_variance() {
+        // fn calculate_sample_variance(recurrence_relation_m: f64, count: u64) -> f64
+        let inputs = vec![
+            (0.0, 1),
+            (1050.0, 5),
+            (1012.5, 123223),
+            (16200000000.0, 3),
+            (99999.9999, 23232),
+        ];
+        let expected = vec![
+            0.0,
+            262.5,
+            (675.0 / 82148.0),
+            8100000000.0,
+            4.304592996427187,
+        ];
+
+        for (input, expected) in inputs.iter().zip(expected.into_iter()) {
+            let actual_variance = welford_online::compute_sample_variance(input.0, input.1);
+            assert_eq!(actual_variance, expected);
+        }
+    }
+
+    #[test]
+    fn calculate_population_variance() {
+        // fn calculate_population_variance(recurrence_relation_m: f64, count: u64) -> f64
+        let inputs = vec![
+            (0.0, 1),
+            (1050.0, 5),
+            (1012.5, 123223),
+            (16200000000.0, 3),
+            (99999.9999, 23232),
+        ];
+        let expected = vec![
+            0.0,
+            210.0,
+            (1012.5 / 123223.0),
+            5400000000.0,
+            4.304407709194215,
+        ];
+
+        for (input, expected) in inputs.iter().zip(expected.into_iter()) {
+            let actual_variance = welford_online::compute_population_variance(input.0, input.1);
+            assert_eq!(actual_variance, expected);
+        }
+    }
+}

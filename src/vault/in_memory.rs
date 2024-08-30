@@ -9,7 +9,7 @@ use crate::common::{balance::Balance, instrument::Instrument};
 use crate::Exchange;
 use crate::vault::PositionHandler;
 
-/// 用于 Proof Of Concept 的内存仓库。实现了 [`PositionHandler`]、[`BalanceHandler`] 和 [`StatisticHandler`]。
+/// 用于初步概念验证的内存仓库。实现了 [`PositionHandler`]、[`BalanceHandler`] 和 [`StatisticHandler`]。
 /// 用于概念验证投资组合实现，保存当前权益、可用资金、仓位和市场对的统计数据。
 /// **注意：此实现无容错保证，未排除极端情况下会出现性能抖动和OOM等情况，谨慎用于生产环境！**
 /// **注意：此处的数据结构要重新设计。以和[`Account`]模块对齐。**
