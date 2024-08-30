@@ -5,15 +5,15 @@ use crate::{
         balance::TokenBalance,
         event::AccountEvent,
         order::{
-            states::{cancelled::Cancelled, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
+            states::{cancelled::Cancelled, request_cancel::RequestCancel, request_open::RequestOpen},
             Order,
         },
     },
     error::ExecutionError,
 };
 use async_trait::async_trait;
-use mpsc::UnboundedSender;
 use common::order::states::open::Open;
+use mpsc::UnboundedSender;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
