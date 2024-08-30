@@ -1,22 +1,5 @@
 use crate::common::datafeed::market_event::MarketEvent;
-use account_config::AccountConfig;
-use account_orders::AccountOrders;
-use account_states::AccountState;
-use futures::future::join_all;
-use mpsc::UnboundedSender;
-use oneshot::Sender;
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
-use std::{
-    fmt::Debug,
-    sync::{
-        atomic::{AtomicI64, Ordering},
-        Arc,
-    },
-    time::{SystemTime, UNIX_EPOCH},
-};
-use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
-use tracing::warn;
-use uuid::Uuid;
+use crate::sandbox::sandbox_client::OpenOrderResults;
 use crate::{
     common::{
         balance::TokenBalance,
@@ -37,6 +20,24 @@ use crate::{
     sandbox::{account::account_config::SandboxMode, clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
     Exchange,
 };
+use account_config::AccountConfig;
+use account_orders::AccountOrders;
+use account_states::AccountState;
+use futures::future::join_all;
+use mpsc::UnboundedSender;
+use oneshot::Sender;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
+use std::{
+    fmt::Debug,
+    sync::{
+        atomic::{AtomicI64, Ordering},
+        Arc,
+    },
+    time::{SystemTime, UNIX_EPOCH},
+};
+use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
+use tracing::warn;
+use uuid::Uuid;
 
 pub mod account_config;
 pub mod account_latency;
@@ -142,7 +143,6 @@ impl AccountInitiator
 #[allow(dead_code)]
 impl Account
 {
-    /// [Initiation] `Account` 模块的初始化函数`initiate`
     pub fn initiate() -> AccountInitiator
     {
         AccountInitiator::new()
@@ -224,7 +224,50 @@ impl Account
             }
         }
     }
+    /// 处理一组请求，将其转换为挂起订单，并在市场事件条件满足时将其转换为打开订单。
 
+    pub async fn process_requests_into_opens(
+        &mut self,
+        order_requests: Vec<Order<RequestOpen>>,
+        response_tx: Sender<OpenOrderResults>,
+        mut market_event_rx: mpsc::UnboundedReceiver<MarketEvent<MarketTrade>>,
+    ) {
+        // 处理请求并转换为挂起订单
+        let pending_orders = match self.process_requests_into_pendings(order_requests).await {
+            Ok(orders) => orders,
+            Err(e) => {
+                let _ = response_tx.send(vec![Err(e)]);
+                return;
+            }
+        };
+
+        // 提取挂起订单的最大 `predicted_ts`
+        let max_predicted_ts = pending_orders
+            .iter()
+            .map(|order| order.state.predicted_ts)
+            .max()
+            .unwrap();
+
+        // 等待合适的市场事件
+        while let Some(market_event) = market_event_rx.recv().await {
+            if market_event.kind.timestamp > max_predicted_ts {
+                let current_price = market_event.kind.price;
+
+                // 将挂起订单处理为打开订单
+                let mut open_orders_results = Vec::new();
+                for pending_order in pending_orders {
+                    match self.process_pending_order_into_open_atomically(current_price, pending_order).await {
+                        Ok(open_order) => open_orders_results.push(Ok(open_order)),
+                        Err(err) => open_orders_results.push(Err(err)),
+                    }
+                }
+
+                // 发送打开订单结果
+                let _ = response_tx.send(open_orders_results);
+                break;
+            }
+        }
+    }
     pub async fn process_pending_order_into_open_atomically(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
     {
         Self::validate_order_instruction(order.kind)?;
@@ -265,47 +308,35 @@ impl Account
         Ok(open_order)
     }
 
-    pub async fn process_requests_into_pendings(&mut self, order_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Pending>, ExecutionError>>>)
-    {
+    pub async fn process_requests_into_pendings(
+        &mut self,
+        order_requests: Vec<Order<RequestOpen>>,
+    ) -> Result<Vec<Order<Pending>>, ExecutionError> {
+        // 这里是原始逻辑，但改为返回 `Vec<Order<Pending>>`
+        let mut pending_orders = Vec::new();
         let mut validation_results: Vec<Result<(), ExecutionError>> = Vec::with_capacity(order_requests.len());
 
-        // 先验证每个订单请求的合法性
         for order in &order_requests {
             let validation_result = Account::validate_order_request_open(order);
             validation_results.push(validation_result);
         }
 
-        // 检查是否有验证失败的订单
         if validation_results.iter().any(|result| result.is_err()) {
-            let errors: Vec<Result<Order<Pending>, ExecutionError>> = validation_results.into_iter()
-                                                                                        .zip(order_requests.into_iter())
-                                                                                        .filter_map(|(result, _order)| match result {
-                                                                                            | Err(err) => Some(Err(err)),
-                                                                                            | Ok(_) => None,
-                                                                                        })
-                                                                                        .collect();
-            let _ = response_tx.send(errors);
-            return;
+            return Err(ExecutionError::InvalidRequestOpen("Not Sure Why".to_string()));
         }
-
-        // 如果所有订单验证通过，继续处理请求
-        let mut open_pending = Vec::new();
 
         {
             let mut orders = self.orders.write().await;
             for request in order_requests {
                 let pending_order = orders.process_request_as_pending(request.clone()).await;
-
-                // 直接注册挂起订单，不再释放和重新获取锁
-                orders.register_pending_order(pending_order.clone()).await.unwrap();
-                open_pending.push(Ok(pending_order));
+                orders.register_pending_order(pending_order.clone()).await?;
+                pending_orders.push(pending_order);
             }
         }
 
-        if response_tx.send(open_pending).is_err() {
-            eprintln!("[UniLinkExecution] : Failed to send RequestOpen response");
-        }
+        Ok(pending_orders)
     }
+
 
     /// [PART3]
     /// `validate_order_instruction` 验证订单的合法性，确保订单类型是受支持的。
@@ -728,15 +759,15 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_pending_registration()
-    {
+    async fn test_pending_registration() {
         let mut account = create_test_account().await;
 
         // 先创建并挂起一些订单
         let request_open1 = create_test_request_open("BTC", "USD");
         let request_open2 = create_test_request_open("ETH", "USD");
-        let (tx, _rx) = oneshot::channel();
-        account.process_requests_into_pendings(vec![request_open1.clone(), request_open2.clone()], tx).await;
+
+        // 将订单请求转换为挂起订单
+        account.process_requests_into_pendings(vec![request_open1.clone(), request_open2.clone()]).await.unwrap();
 
         // 验证订单是否成功挂起
         let pending_count = account.orders.read().await.pending_registry.len();
