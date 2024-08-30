@@ -1,3 +1,4 @@
+use chrono::Utc;
 use crate::{
     common::{
         balance::{Balance, TokenBalance},
@@ -75,7 +76,9 @@ impl AccountPositions
                                                       .update_ts(exchange_ts)
                                                       .exit_balance(TokenBalance { // 初始化为 exit_balance
                                                                                    token: trade.instrument.base.clone(),
-                                                                                   balance: Balance { current_price: trade.price,
+                                                                                   balance: Balance {
+                                                                                       time: Utc::now(),
+                                                                                       current_price: trade.price,
                                                                                                       total: trade.quantity,
                                                                                                       available: trade.quantity } })
                                                       .exchange(Exchange::SandBox)
@@ -265,7 +268,9 @@ mod tests
                                                             .enter_ts(1625097600000)
                                                             .update_ts(1625097600000)
                                                             .exit_balance(TokenBalance { token: instrument.base.clone(),
-                                                                                         balance: Balance { current_price: current_market_price,
+                                                                                         balance: Balance {
+                                                                                             time: Utc::now(),
+                                                                                             current_price: current_market_price,
                                                                                                             total: trade_size,
                                                                                                             available: trade_size } })
                                                             .exchange(Exchange::Binance)

@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::common::token::Token;
@@ -28,6 +29,7 @@ impl TokenBalance
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Balance
 {
+    pub time: DateTime<Utc>,
     pub current_price: f64, // NOTE 当前价格 newly added on 1st Aug 2024
     pub total: f64,         // 总额
     pub available: f64,     // 可用余额
@@ -38,7 +40,7 @@ impl Balance
     /// 构造一个新的[`Balance`]。
     pub fn new(total: f64, available: f64, current_price: f64) -> Self
     {
-        Self { total, available, current_price }
+        Self { time: Utc::now(), total, available, current_price }
     }
 
     /// 计算使用过的余额（`total` - `available`）。
