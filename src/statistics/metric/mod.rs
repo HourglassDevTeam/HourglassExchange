@@ -5,7 +5,6 @@ use serde::Serialize;
 // use crate::common::balance::Balance;
 // use crate::common::position::Position;
 // use crate::statistics::summary::PositionSummariser;
-//
 
 
 /// Total equity at a point in time - equates to [`Balance.total`](Balance).

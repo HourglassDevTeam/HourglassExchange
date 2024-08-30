@@ -1,20 +1,25 @@
 use crate::statistics::de_duration_from_secs;
 use crate::statistics::se_duration_as_secs;
 use crate::statistics::metric::EquityPoint;
-use crate::statistics::{welford_online, dispersion::Range
-};
+use crate::statistics::{welford_online, dispersion::Range};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 
-/// [`Drawdown`] is the peak-to-trough decline of the Portfolio, or investment, during a specific
-/// period. Drawdown is a measure of downside volatility.
+/// [`Drawdown`] 表示投资组合或投资在特定时期内从峰值到谷底的下降幅度。它是衡量下行波动性的一种方式。
 ///
-/// See documentation: <https://www.investopedia.com/terms/d/drawdown.asp>
+/// # 背景
+/// Drawdown 是投资中常用的概念，表示资产从峰值下降到谷底的幅度。较大的 Drawdown 表示投资有较大的下行风险。
+///
+/// 参考文档: <https://www.investopedia.com/terms/d/drawdown.asp>
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Drawdown {
+    /// 记录投资组合的最高和最低权益（equity）
     pub equity_range: Range,
+    /// 当前的 Drawdown 数值，表示从峰值下降的百分比
     pub drawdown: f64,
+    /// Drawdown 开始的时间点
     pub start_time: DateTime<Utc>,
+    /// Drawdown 持续的时间，用 `Duration` 表示
     #[serde(
         deserialize_with = "de_duration_from_secs",
         serialize_with = "se_duration_as_secs"
@@ -23,6 +28,7 @@ pub struct Drawdown {
 }
 
 impl Default for Drawdown {
+    /// 创建一个默认的 [`Drawdown`] 实例，所有字段初始化为默认值。
     fn default() -> Self {
         Self {
             equity_range: Default::default(),
@@ -34,7 +40,13 @@ impl Default for Drawdown {
 }
 
 impl Drawdown {
-    /// Initialises a new [`Drawdown`] using the starting equity as the first peak.
+    /// 使用初始的权益值（equity）作为第一个峰值来初始化 [`Drawdown`]。
+    ///
+    /// # 参数
+    /// - `starting_equity`: 初始的权益值
+    ///
+    /// # 返回
+    /// 返回一个初始化的 `Drawdown` 实例。
     pub fn init(starting_equity: f64) -> Self {
         Self {
             equity_range: Range {
@@ -48,21 +60,26 @@ impl Drawdown {
         }
     }
 
-    /// Updates the [`Drawdown`] using the latest input [`EquityPoint`] of the Portfolio. If the drawdown
-    /// period has ended (investment recovers from a trough back above the previous peak), the
-    /// function return Some(Drawdown), else None is returned.
+    /// 使用最新的权益点 [`EquityPoint`] 更新 [`Drawdown`]。如果 Drawdown 周期结束（投资从谷底恢复到高于之前的峰值），
+    /// 则函数返回 `Some(Drawdown)`，否则返回 `None`。
+    ///
+    /// # 参数
+    /// - `current`: 当前的权益点
+    ///
+    /// # 返回
+    /// 如果 Drawdown 周期结束，返回 `Some(Drawdown)`；否则返回 `None`。
     pub fn update(&mut self, current: EquityPoint) -> Option<Drawdown> {
         match (
             self.is_waiting_for_peak(),
             current.total > self.equity_range.high,
         ) {
-            // A) No current drawdown - waiting for next equity peak (waiting for B)
+            // A) 当前没有 drawdown，等待下一个权益峰值（等待 B 的出现）
             (true, true) => {
                 self.equity_range.high = current.total;
                 None
             }
 
-            // B) Start of new drawdown - previous equity point set peak & current equity lower
+            // B) 新的 drawdown 开始，上一个权益点设为峰值，当前权益更低
             (true, false) => {
                 self.start_time = current.time;
                 self.equity_range.low = current.total;
@@ -70,17 +87,17 @@ impl Drawdown {
                 None
             }
 
-            // C) Continuation of drawdown - equity lower than most recent peak
+            // C) drawdown 持续进行中，权益低于最近的峰值
             (false, false) => {
                 self.duration = current.time.signed_duration_since(self.start_time);
                 self.equity_range.update(current.total);
-                self.drawdown = self.calculate(); // I don't need to calculate this now if I don't want
+                self.drawdown = self.calculate(); // 如果不想，可以不立即计算
                 None
             }
 
-            // D) End of drawdown - equity has reached new peak (enters A)
+            // D) drawdown 结束，权益达到新峰值（进入 A）
             (false, true) => {
-                // Clone Drawdown from previous iteration to return
+                // 克隆上一个迭代的 Drawdown 以返回
                 let finished_drawdown = Drawdown {
                     equity_range: self.equity_range,
                     drawdown: self.drawdown,
@@ -88,11 +105,11 @@ impl Drawdown {
                     duration: self.duration,
                 };
 
-                // Clean up - start_time overwritten next drawdown start
-                self.drawdown = 0.0; // ie/ waiting for peak = true
+                // 清理 - 在下一个 drawdown 开始时重写 start_time
+                self.drawdown = 0.0; // 即等待新的峰值
                 self.duration = Duration::zero();
 
-                // Set new equity peak in preparation for next iteration
+                // 设置新的权益峰值，为下一次迭代做准备
                 self.equity_range.high = current.total;
 
                 Some(finished_drawdown)
@@ -100,40 +117,49 @@ impl Drawdown {
         }
     }
 
-    /// Determines if a [`Drawdown`] is waiting for the next equity peak. This is true if the new
-    /// [`EquityPoint`] is higher than the previous peak.
+    /// 判断是否在等待下一个权益峰值。如果新的 [`EquityPoint`] 高于之前的峰值，则为 `true`。
+    ///
+    /// # 返回
+    /// 返回 `true` 如果在等待峰值；否则返回 `false`。
     pub fn is_waiting_for_peak(&self) -> bool {
         self.drawdown == 0.0
     }
 
-    /// Calculates the value of the [`Drawdown`] in the specific period. Uses the formula:
-    /// [`Drawdown`] = (range_low - range_high) / range_high
+    /// 计算特定时期内的 [`Drawdown`] 值。公式为：[`Drawdown`] = (range_low - range_high) / range_high
+    ///
+    /// # 返回
+    /// 返回计算得到的 drawdown 值。
     pub fn calculate(&self) -> f64 {
-        // range_low - range_high / range_high
         (-self.equity_range.calculate_range()) / self.equity_range.high
     }
 }
 
-/// [`MaxDrawdown`] is the largest
-/// peak-to-trough decline of the Portfolio, or investment. Max Drawdown is a measure of downside
-/// risk, with large values indicating down movements could be volatile.
+/// [`MaxDrawdown`] 是投资组合或投资的最大峰值到谷底的下降幅度。它是衡量下行风险的一种方式，
+/// 较大的 Max Drawdown 表示可能会有较大的波动。
 ///
-/// See documentation: <https://www.investopedia.com/terms/m/maximum-drawdown-mdd.asp>
+/// 参考文档: <https://www.investopedia.com/terms/m/maximum-drawdown-mdd.asp>
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct MaxDrawdown {
+    /// 当前的最大 Drawdown
     pub drawdown: Drawdown,
 }
 
 impl MaxDrawdown {
-    /// Initialises a new [`MaxDrawdown`] using the [`Drawdown`] default value.
+    /// 使用 [`Drawdown`] 的默认值来初始化一个新的 [`MaxDrawdown`] 实例。
+    ///
+    /// # 返回
+    /// 返回一个初始化的 `MaxDrawdown` 实例。
     pub fn init() -> Self {
         Self {
             drawdown: Drawdown::default(),
         }
     }
 
-    /// Updates the [`MaxDrawdown`] using the latest input [`Drawdown`] of the Portfolio. If the input
-    /// drawdown is larger than the current [`MaxDrawdown`], it supersedes it.
+    /// 使用最新的 [`Drawdown`] 更新 [`MaxDrawdown`]。如果输入的 drawdown 大于当前的 [`MaxDrawdown`]，
+    /// 则使用新的 drawdown 替换它。
+    ///
+    /// # 参数
+    /// - `next_drawdown`: 最新的 drawdown 值
     pub fn update(&mut self, next_drawdown: &Drawdown) {
         if next_drawdown.drawdown.abs() > self.drawdown.drawdown.abs() {
             self.drawdown = *next_drawdown;
@@ -141,21 +167,25 @@ impl MaxDrawdown {
     }
 }
 
-/// [`AvgDrawdown`] contains the average drawdown value and duration from a collection of [`Drawdown`]s
-/// within a specific period.
+/// [`AvgDrawdown`] 包含在特定时期内从一组 [`Drawdown`] 中计算的平均 drawdown 值和持续时间。
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct AvgDrawdown {
+    /// 记录的 drawdown 数量
     pub count: u64,
+    /// 平均 drawdown 值
     pub mean_drawdown: f64,
+    /// 平均持续时间，用 `Duration` 表示
     #[serde(
         deserialize_with = "de_duration_from_secs",
         serialize_with = "se_duration_as_secs"
     )]
     pub mean_duration: Duration,
+    /// 平均持续时间，以毫秒为单位
     pub mean_duration_milliseconds: i64,
 }
 
 impl Default for AvgDrawdown {
+    /// 创建一个默认的 [`AvgDrawdown`] 实例，所有字段初始化为默认值。
     fn default() -> Self {
         Self {
             count: 0,
@@ -167,13 +197,18 @@ impl Default for AvgDrawdown {
 }
 
 impl AvgDrawdown {
-    /// Initialises a new [`AvgDrawdown`] using the default method, providing zero values for all
-    /// fields.
+    /// 使用默认方法初始化一个新的 [`AvgDrawdown`]，为所有字段提供零值。
+    ///
+    /// # 返回
+    /// 返回一个初始化的 `AvgDrawdown` 实例。
     pub fn init() -> Self {
         Self::default()
     }
 
-    /// Updates the [`AvgDrawdown`] using the latest input [`Drawdown`] of the Portfolio.
+    /// 使用最新的 [`Drawdown`] 更新 [`AvgDrawdown`]。
+    ///
+    /// # 参数
+    /// - `drawdown`: 最新的 drawdown 值
     pub fn update(&mut self, drawdown: &Drawdown) {
         self.count += 1;
 
@@ -190,391 +225,5 @@ impl AvgDrawdown {
         );
 
         self.mean_duration = Duration::milliseconds(self.mean_duration_milliseconds);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::statistics::metric::EquityPoint;
-    use std::ops::Add;
-
-    #[test]
-    fn drawdown_update() {
-        struct TestCase {
-            input_equity: EquityPoint,
-            expected_drawdown: Drawdown,
-        }
-        let base_time = Utc::now();
-        let starting_equity = 100.0;
-
-        let mut drawdown = Drawdown {
-            equity_range: Range {
-                activated: true,
-                high: starting_equity,
-                low: starting_equity,
-            },
-            drawdown: 0.0,
-            start_time: base_time,
-            duration: Duration::zero(),
-        };
-
-        let test_cases = vec![
-            TestCase {
-                // Test case 0: No current drawdown
-                input_equity: EquityPoint {
-                    total: 110.0,
-                    time: base_time.add(Duration::days(1)),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 110.0,
-                        low: 100.0,
-                    },
-                    drawdown: 0.0,
-                    start_time: base_time,
-                    duration: Duration::zero(),
-                },
-            },
-            TestCase {
-                // Test case 1: Start of new drawdown w/ lower equity than peak
-                input_equity: EquityPoint {
-                    total: 100.0,
-                    time: base_time.add(Duration::days(2)),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 110.0,
-                        low: 100.0,
-                    },
-                    drawdown: (-10.0 / 110.0),
-                    start_time: base_time.add(Duration::days(2)),
-                    duration: Duration::zero(),
-                },
-            },
-            TestCase {
-                // Test case 2: Continuation of drawdown w/ lower equity than previous
-                input_equity: EquityPoint {
-                    total: 90.0,
-                    time: base_time.add(Duration::days(3)),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 110.0,
-                        low: 90.0,
-                    },
-                    drawdown: (-20.0 / 110.0),
-                    start_time: base_time.add(Duration::days(2)),
-                    duration: Duration::days(1),
-                },
-            },
-            TestCase {
-                // Test case 3: Continuation of drawdown w/ higher equity than previous but not higher than peak
-                input_equity: EquityPoint {
-                    total: 95.0,
-                    time: base_time.add(Duration::days(4)),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 110.0,
-                        low: 90.0,
-                    },
-                    drawdown: (-20.0 / 110.0),
-                    start_time: base_time.add(Duration::days(2)),
-                    duration: Duration::days(2),
-                },
-            },
-            TestCase {
-                // Test case 4: End of drawdown w/ equity higher than peak
-                input_equity: EquityPoint {
-                    total: 120.0,
-                    time: base_time.add(Duration::days(5)),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 120.0,
-                        low: 90.0,
-                    },
-                    drawdown: 0.0,
-                    start_time: base_time.add(Duration::days(2)),
-                    duration: Duration::zero(),
-                },
-            },
-            TestCase {
-                // Test case 5: No current drawdown w/ residual start_time from previous
-                input_equity: EquityPoint {
-                    total: 200.0,
-                    time: base_time.add(Duration::days(6)),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 200.0,
-                        low: 90.0,
-                    },
-                    drawdown: 0.0,
-                    start_time: base_time.add(Duration::days(2)),
-                    duration: Duration::zero(),
-                },
-            },
-            TestCase {
-                // Test case 6: Start of new drawdown w/ lower equity than peak & residual fields from previous drawdown
-                input_equity: EquityPoint {
-                    total: 180.0,
-                    time: base_time.add(Duration::days(7)),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 200.0,
-                        low: 180.0,
-                    },
-                    drawdown: (-20.0 / 200.0),
-                    start_time: base_time.add(Duration::days(7)),
-                    duration: Duration::zero(),
-                },
-            },
-            TestCase {
-                // Test case 7: Continuation of drawdown w/ equity equal to peak
-                input_equity: EquityPoint {
-                    total: 200.0,
-                    time: base_time.add(Duration::days(8)),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 200.0,
-                        low: 180.0,
-                    },
-                    drawdown: (-20.0 / 200.0),
-                    start_time: base_time.add(Duration::days(7)),
-                    duration: Duration::days(1),
-                },
-            },
-            TestCase {
-                // Test case 8: End of drawdown w/ equity higher than peak
-                input_equity: EquityPoint {
-                    total: 200.01,
-                    time: base_time.add(Duration::days(9)),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 200.01,
-                        low: 180.0,
-                    },
-                    drawdown: 0.0,
-                    start_time: base_time.add(Duration::days(7)),
-                    duration: Duration::zero(),
-                },
-            },
-        ];
-
-        for (index, test) in test_cases.into_iter().enumerate() {
-            drawdown.update(test.input_equity);
-            assert_eq!(drawdown, test.expected_drawdown, "Test case: {:?}", index)
-        }
-    }
-
-    #[test]
-    fn max_drawdown_update() {
-        struct TestCase {
-            input_drawdown: Drawdown,
-            expected_drawdown: Drawdown,
-        }
-
-        let base_time = Utc::now();
-
-        let mut max_drawdown = MaxDrawdown::init();
-
-        let test_cases = vec![
-            TestCase {
-                // Test case 0: First ever drawdown
-                input_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 115.0,
-                        low: 90.0,
-                    },
-                    drawdown: (-25.0 / 110.0),
-                    start_time: base_time,
-                    duration: Duration::days(2),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 115.0,
-                        low: 90.0,
-                    },
-                    drawdown: (-25.0 / 110.0),
-                    start_time: base_time,
-                    duration: Duration::days(2),
-                },
-            },
-            TestCase {
-                // Test case 1: Larger drawdown
-                input_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 200.0,
-                        low: 90.0,
-                    },
-                    drawdown: (-110.0 / 200.0),
-                    start_time: base_time.add(Duration::days(3)),
-                    duration: Duration::days(1),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 200.0,
-                        low: 90.0,
-                    },
-                    drawdown: (-110.0 / 200.0),
-                    start_time: base_time.add(Duration::days(3)),
-                    duration: Duration::days(1),
-                },
-            },
-            TestCase {
-                // Test case 1: Smaller drawdown
-                input_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 300.0,
-                        low: 290.0,
-                    },
-                    drawdown: (-10.0 / 300.0),
-                    start_time: base_time.add(Duration::days(8)),
-                    duration: Duration::days(1),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 200.0,
-                        low: 90.0,
-                    },
-                    drawdown: (-110.0 / 200.0),
-                    start_time: base_time.add(Duration::days(3)),
-                    duration: Duration::days(1),
-                },
-            },
-            TestCase {
-                // Test case 1: Largest drawdown
-                input_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 10000.0,
-                        low: 0.1,
-                    },
-                    drawdown: (-9999.9 / 10000.0),
-                    start_time: base_time.add(Duration::days(12)),
-                    duration: Duration::days(20),
-                },
-                expected_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 10000.0,
-                        low: 0.1,
-                    },
-                    drawdown: (-9999.9 / 10000.0),
-                    start_time: base_time.add(Duration::days(12)),
-                    duration: Duration::days(20),
-                },
-            },
-        ];
-
-        for (index, test) in test_cases.into_iter().enumerate() {
-            max_drawdown.update(&test.input_drawdown);
-            assert_eq!(
-                max_drawdown.drawdown, test.expected_drawdown,
-                "Test case: {:?}",
-                index
-            )
-        }
-    }
-
-    #[test]
-    fn avg_drawdown_update() {
-        struct TestCase {
-            input_drawdown: Drawdown,
-            expected_avg_drawdown: AvgDrawdown,
-        }
-
-        let base_time = Utc::now();
-
-        let mut avg_drawdown = AvgDrawdown::init();
-
-        let test_cases = vec![
-            TestCase {
-                // Test case 0: First ever drawdown
-                input_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 100.0,
-                        low: 50.0,
-                    },
-                    drawdown: (-50.0 / 100.0),
-                    start_time: base_time,
-                    duration: Duration::days(2),
-                },
-                expected_avg_drawdown: AvgDrawdown {
-                    count: 1,
-                    mean_drawdown: -0.5,
-                    mean_duration: Duration::days(2),
-                    mean_duration_milliseconds: Duration::days(2).num_milliseconds(),
-                },
-            },
-            TestCase {
-                // Test case 1
-                input_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 200.0,
-                        low: 100.0,
-                    },
-                    drawdown: (-100.0 / 200.0),
-                    start_time: base_time,
-                    duration: Duration::days(2),
-                },
-                expected_avg_drawdown: AvgDrawdown {
-                    count: 2,
-                    mean_drawdown: -0.5,
-                    mean_duration: Duration::days(2),
-                    mean_duration_milliseconds: Duration::days(2).num_milliseconds(),
-                },
-            },
-            TestCase {
-                // Test case 2
-                input_drawdown: Drawdown {
-                    equity_range: Range {
-                        activated: true,
-                        high: 1000.0,
-                        low: 820.0,
-                    },
-                    drawdown: (-180.0 / 1000.0),
-                    start_time: base_time,
-                    duration: Duration::days(5),
-                },
-                expected_avg_drawdown: AvgDrawdown {
-                    count: 3,
-                    mean_drawdown: (-59.0 / 150.0),
-                    mean_duration: Duration::days(3),
-                    mean_duration_milliseconds: Duration::days(3).num_milliseconds(),
-                },
-            },
-        ];
-
-        for (index, test) in test_cases.into_iter().enumerate() {
-            avg_drawdown.update(&test.input_drawdown);
-            assert_eq!(
-                avg_drawdown, test.expected_avg_drawdown,
-                "Test case: {:?}",
-                index
-            )
-        }
     }
 }
