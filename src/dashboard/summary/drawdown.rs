@@ -1,9 +1,13 @@
+use chrono::Utc;
 use crate::dashboard::{
     metrics::drawdown::{AvgDrawdown, Drawdown, MaxDrawdown},
     summary::TableBuilder,
 };
 use prettytable::{row, Row};
 use serde::{Deserialize, Serialize};
+use crate::common::position::Position;
+use crate::dashboard::metrics::EquityPoint;
+use crate::dashboard::summary::PositionSummariser;
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct DrawdownSummary
@@ -12,22 +16,42 @@ pub struct DrawdownSummary
     pub avg_drawdown: AvgDrawdown,
     pub max_drawdown: MaxDrawdown,
 }
-// impl PositionSummariser for DrawdownSummary {
-//     fn update(&mut self, position: &Position) {
-//         // Only update DrawdownSummary with closed Positions
-//         let equity_point = match position.meta.exit_balance {
-//             None => return,
-//             Some(exit_balance) => EquityPoint::from(exit_balance),
-//         };
-//
-//         // Updates
-//         if let Some(ended_drawdown) = self.current_drawdown.update(equity_point) {
-//             self.avg_drawdown.update(&ended_drawdown);
-//             self.max_drawdown.update(&ended_drawdown);
-//         }
-//     }
-// }
 
+
+/// FIXME 这里的time到底输入历史时间戳还是实时时间戳？？？
+impl PositionSummariser for DrawdownSummary {
+    fn update(&mut self, position: &Position) {
+        // 通过模式匹配获取不同头寸类型的 `exit_balance` 和时间戳，并构造 `EquityPoint`
+        let equity_point = match position {
+            // 如果是 Perpetual 类型头寸
+            Position::Perpetual(pos) => EquityPoint {
+                time: Utc::now(), // 使用当前时间或从 `pos.meta` 获取时间戳
+                total: pos.meta.exit_balance.balance.total,
+            },
+            // 如果是 LeveragedToken 类型头寸
+            Position::LeveragedToken(pos) => EquityPoint {
+                time: Utc::now(), // 使用当前时间或从 `pos.meta` 获取时间戳
+                total: pos.meta.exit_balance.balance.total,
+            },
+            // 如果是 Future 类型头寸
+            Position::Future(pos) => EquityPoint {
+                time: Utc::now(), // 使用当前时间或从 `pos.meta` 获取时间戳
+                total: pos.meta.exit_balance.balance.total,
+            },
+            // 如果是 Option 类型头寸
+            Position::Option(pos) => EquityPoint {
+                time: Utc::now(), // 使用当前时间或从 `pos.meta` 获取时间戳
+                total: pos.meta.exit_balance.balance.total,
+            },
+        };
+
+        // 更新 DrawdownSummary
+        if let Some(ended_drawdown) = self.current_drawdown.update(equity_point) {
+            self.avg_drawdown.update(&ended_drawdown);
+            self.max_drawdown.update(&ended_drawdown);
+        }
+    }
+}
 impl TableBuilder for DrawdownSummary
 {
     fn titles(&self) -> Row
