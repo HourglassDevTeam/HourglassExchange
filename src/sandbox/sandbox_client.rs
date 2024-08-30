@@ -86,7 +86,7 @@ impl ClientExecution for SandBoxClient
                    .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive FetchBalances response")
     }
 
-    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>
+    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Pending>, ExecutionError>>
     {
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送开启订单的请求。
