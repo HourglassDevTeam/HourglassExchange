@@ -13,7 +13,7 @@ use std::{
 };
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
-
+use uuid::Uuid;
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
 use account_states::AccountState;
@@ -48,6 +48,7 @@ pub mod account_states;
 #[derive(Debug)]
 pub struct Account
 {
+    pub current_session: Uuid,
     pub machine_id: u64,
     pub exchange_timestamp: AtomicI64,
     pub account_event_tx: UnboundedSender<AccountEvent>, // 帐户事件发送器
@@ -61,7 +62,9 @@ impl Clone for Account
 {
     fn clone(&self) -> Self
     {
-        Account { machine_id: self.machine_id,
+        Account {
+            current_session: Uuid::new_v4(),
+            machine_id: self.machine_id,
                   exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
                   account_event_tx: self.account_event_tx.clone(),
                   config: Arc::clone(&self.config),
@@ -122,7 +125,9 @@ impl AccountInitiator
 
     pub fn build(self) -> Result<Account, String>
     {
-        Ok(Account { machine_id: generate_machine_id()?,
+        Ok(Account {
+            current_session: Uuid::new_v4(),
+            machine_id: generate_machine_id()?,
                      exchange_timestamp: 0.into(), // NOTE initialisation to 0 might be problematic. Consider compatability of online and local modes.
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
                      config: self.config.ok_or("config is required")?, // 检查并获取config

@@ -37,6 +37,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::{Mutex, RwLock};
+use uuid::Uuid;
 
 /// 创建一个测试用的 `Instrument` 实例。
 pub fn create_test_instrument(kind: InstrumentKind) -> Instrument
@@ -130,7 +131,9 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>>
 
     let account_state_arc = Arc::new(Mutex::new(account_state));
 
-    let account = Arc::new(Account { machine_id: 0,
+    let account = Arc::new(Account {
+        current_session: Uuid::new_v4(),
+        machine_id: 0,
                                      exchange_timestamp: AtomicI64::new(1234567),
                                      account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                                      config: Arc::new(create_test_account_config()),
@@ -188,7 +191,9 @@ pub async fn create_test_account() -> Account
 
     let machine_id = generate_machine_id().unwrap();
     // 创建 Account 实例
-    let account = Account { machine_id,
+    let account = Account {
+        current_session: Uuid::new_v4(),
+        machine_id,
                             exchange_timestamp: AtomicI64::new(1234567),
                             account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                             config: Arc::new(account_config),
