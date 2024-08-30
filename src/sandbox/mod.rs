@@ -89,16 +89,14 @@ impl SandBoxExchange
                 | SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx).await,
                 | SandBoxClientEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx).await,
                 // NOTE this is buggy. should return an open order or an error eventually, not pendings in the flight.
-                | SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => {
-                    // step one, process the requests into pendings, but note that pendings should not be sent out.
-                    // FIXME need to modify return type of process_requests_into_pendings
-                    // 创建市场事件接收通道
+                |   SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => {
+                    // Creating market event receiver
                     let (market_event_tx, market_event_rx) = mpsc::unbounded_channel();
-                    // 将市场事件传递到 `process_requests_into_opens`
+
+                    // Process requests into opens
                     self.account.process_requests_into_opens(open_requests, response_tx, market_event_rx).await;
 
-                    // 将模拟的市场事件发送到通道（这里你需要替换为实际的数据流逻辑）
-                    // market_event_tx.send(...);
+                    // In a real scenario, the market_event_tx would be used to send market events
                 },
                 | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.cancel_orders(cancel_requests, response_tx).await,
                 | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.cancel_orders_all(response_tx).await,

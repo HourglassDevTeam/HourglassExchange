@@ -10,7 +10,7 @@ pub struct Pending
     pub reduce_only: bool,
     pub price: f64,
     pub size: f64,
-    pub(crate) predicted_ts: i64,
+    pub predicted_ts: i64,
     pub(crate) request_id: RequestId,
 }
 

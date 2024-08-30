@@ -151,8 +151,8 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>>
 
     account_state_arc
 }
-pub async fn create_test_account() -> Account
-{
+
+pub async fn create_test_account() -> Account {
     let leverage_rate = 1.0;
     // Create a mock balance map and populate it
     let mut balances = HashMap::new();
@@ -161,47 +161,67 @@ pub async fn create_test_account() -> Account
     let token2 = Token::from("TEST_QUOTE");
     balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
     balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
+
     // 创建账户配置
-    let mut account_config = AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
-                                             position_mode: PositionDirectionMode::NetMode,
-                                             position_margin_mode: PositionMarginMode::Isolated,
-                                             commission_level: CommissionLevel::Lv1,
-                                             funding_rate: 0.0,
-                                             account_leverage_rate: leverage_rate,
-                                             fees_book: HashMap::new(),
-                                             execution_mode: SandboxMode::Backtest };
+    let mut account_config = AccountConfig {
+        margin_mode: MarginMode::SingleCurrencyMargin,
+        position_mode: PositionDirectionMode::NetMode,
+        position_margin_mode: PositionMarginMode::Isolated,
+        commission_level: CommissionLevel::Lv1,
+        funding_rate: 0.0,
+        account_leverage_rate: leverage_rate,
+        fees_book: HashMap::new(),
+        execution_mode: SandboxMode::Backtest,
+    };
 
     // 设置 CommissionRates 并插入到 fees_book 中
-    let commission_rates = CommissionRates { maker_fees: 0.001,
-                                             taker_fees: 0.002 };
+    let commission_rates = CommissionRates {
+        maker_fees: 0.001,
+        taker_fees: 0.002,
+    };
     account_config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
     // 创建账户状态
-    let positions = AccountPositions { margin_pos: Vec::new(),
-                                       perpetual_pos: Vec::new(),
-                                       futures_pos: Vec::new(),
-                                       option_pos: Vec::new() };
+    let positions = AccountPositions {
+        margin_pos: Vec::new(),
+        perpetual_pos: Vec::new(),
+        futures_pos: Vec::new(),
+        option_pos: Vec::new(),
+    };
 
-    let account_state = AccountState { balances,
-                                       positions,
-                                       account_ref: Weak::new() };
+    let account_state = AccountState {
+        balances,
+        positions,
+        account_ref: Weak::new(),
+    };
 
     // 包装为 Arc<Mutex<...>>
-    let account_state_arc = Arc::new(Mutex::new(account_state.clone()));
+    let account_state_arc = Arc::new(Mutex::new(account_state));
 
     let machine_id = generate_machine_id().unwrap();
+
     // 创建 Account 实例
     let account = Account {
         current_session: Uuid::new_v4(),
         machine_id,
-                            exchange_timestamp: AtomicI64::new(1234567),
-                            account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                            config: Arc::new(account_config),
-                            states: account_state_arc.clone(),
-                            orders: Arc::new(RwLock::new(AccountOrders::new(machine_id, vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
-                                                                                                                 maximum: 300,
-                                                                                                                 minimum: 0,
-                                                                                                                 current_value: 0 }).await)) };
+        exchange_timestamp: AtomicI64::new(1234567),
+        account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+        config: Arc::new(account_config),
+        states: account_state_arc.clone(),
+        orders: Arc::new(RwLock::new(
+            AccountOrders::new(
+                machine_id,
+                vec![],
+                AccountLatency {
+                    fluctuation_mode: FluctuationMode::Sine,
+                    maximum: 300,
+                    minimum: 0,
+                    current_value: 0,
+                },
+            )
+                .await,
+        )),
+    };
 
     // 更新 account_ref，使其指向 Account
     {
@@ -211,6 +231,7 @@ pub async fn create_test_account() -> Account
 
     account
 }
+
 
 /// 创建一个测试用的 `PerpetualPosition` 实例。
 pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPosition
