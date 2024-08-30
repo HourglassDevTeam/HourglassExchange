@@ -134,7 +134,7 @@ impl Range {
     ///
     /// # 返回
     /// 返回范围值，即 `high - low` 的结果。
-    pub fn calculate_hl_diff(&self) -> f64 {
+    pub fn calculate_range(&self) -> f64 {
         self.high - self.low
     }
 }
