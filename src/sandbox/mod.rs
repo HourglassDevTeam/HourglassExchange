@@ -92,7 +92,7 @@ impl SandBoxExchange
                 |   SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => {
                     println!("Processing OpenOrders event.");
                     // Creating market event receiver NOTE this may well be the buggy part as market_event_tx was not utilised properlly.
-                    let (market_event_tx, market_event_rx) = mpsc::unbounded_channel();
+                    let (_market_event_tx, market_event_rx) = mpsc::unbounded_channel();
                     // Process requests into opens
                     self.account.process_requests_into_opens(open_requests, response_tx, market_event_rx).await;
                     println!("OpenOrders event processed, awaiting market events.");

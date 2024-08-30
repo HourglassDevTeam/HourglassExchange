@@ -1,22 +1,22 @@
-use crate::common::order::identification::OrderId;
-use crate::common::order::OrderRole;
-use crate::{
-    common::{
-        balance::TokenBalance,
-        datafeed::market_event::MarketEvent,
-        order::{
-            states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel},
-            Order,
-        },
-    },
-    sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
-    AccountEvent, ClientExecution, Exchange, ExecutionError, RequestOpen,
-};
 use async_trait::async_trait;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use tokio::sync::{mpsc, mpsc::UnboundedReceiver, oneshot};
+
 use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrdersOpen, OpenOrders};
+
+use crate::{
+    AccountEvent,
+    ClientExecution,
+    common::{
+        balance::TokenBalance,
+        datafeed::market_event::MarketEvent,
+        order::{
+            Order,
+            states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel},
+        },
+    }, Exchange, ExecutionError, RequestOpen, sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
+};
 
 #[derive(Debug)]
 pub struct SandBoxClient
@@ -126,15 +126,15 @@ impl ClientExecution for SandBoxClient
 #[cfg(test)]
 mod tests
 {
-    use super::*;
     use tokio::sync::mpsc;
 
+    use super::*;
 
     #[tokio::test]
     async fn test_fetch_orders_open() {
         // 创建通道，用于请求和响应通信
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
-        let (market_event_tx, market_event_rx) = mpsc::unbounded_channel(); // 添加 market_event_rx 通道
+        let (_market_event_tx, market_event_rx) = mpsc::unbounded_channel(); // 添加 market_event_rx 通道
 
         let client = SandBoxClient {
             request_tx: request_tx.clone(),
@@ -301,7 +301,7 @@ mod tests
     {
         // 创建一个模拟的 SandBoxClientEvent 发射器和接收器
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
-        let (market_event_tx, market_event_rx) = mpsc::unbounded_channel();
+        let (_market_event_tx, market_event_rx) = mpsc::unbounded_channel();
         let (_response_tx, _response_rx) = oneshot::channel::<Result<Vec<Order<Cancelled>>, ExecutionError>>();
 
         // 初始化 SandBoxClient
@@ -319,12 +319,12 @@ mod tests
         });
 
         // 模拟从 SandBoxClientEvent 接收器获取 CancelOrdersAll 事件
-        if let Some(SandBoxClientEvent::CancelOrdersAll(tx)) = request_rx.recv().await {
-            println!("Received CancelOrdersAll event");
+        if let Some(CancelOrdersAll(tx)) = request_rx.recv().await {
+            // println!("Received CancelOrdersAll event");
 
             // 发送一个空的取消订单列表作为响应
             let response = Ok(vec![]);
-            println!("Response being sent: {:?}", response); // 打印将要发送的响应
+            // println!("Response being sent: {:?}", response); // 打印将要发送的响应
 
             // 发送响应，并确认是否成功发送
             if tx.send(response).is_ok() {
