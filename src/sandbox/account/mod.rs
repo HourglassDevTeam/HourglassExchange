@@ -1,4 +1,7 @@
 use crate::common::datafeed::market_event::MarketEvent;
+use account_config::AccountConfig;
+use account_orders::AccountOrders;
+use account_states::AccountState;
 use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
@@ -14,10 +17,6 @@ use std::{
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 use uuid::Uuid;
-use account_config::AccountConfig;
-use account_orders::AccountOrders;
-use account_states::AccountState;
-
 use crate::{
     common::{
         balance::TokenBalance,
@@ -47,6 +46,8 @@ pub mod account_states;
 
 #[derive(Debug)]
 pub struct Account
+// where Vault: PositionHandler + BalanceHandler + StatisticHandler<Statistic>,
+//       Statistic: Initialiser + PositionSummariser,
 {
     pub current_session: Uuid,
     pub machine_id: u64,
@@ -55,6 +56,8 @@ pub struct Account
     pub config: Arc<AccountConfig>,                      // 帐户配置
     pub states: Arc<Mutex<AccountState>>,                // 帐户余额
     pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
+    // pub vault:Vault,
+
 }
 
 // 手动实现 Clone trait
