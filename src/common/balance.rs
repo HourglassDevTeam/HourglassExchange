@@ -50,13 +50,13 @@ impl Balance
     }
 
     /// 对这个[`Balance`]应用一个[`BalanceDelta`]。
-    pub fn apply(&mut self, delta: BalanceDelta) -> Result<(), &'static str>
-    {
+    pub fn apply(&mut self, delta: BalanceDelta) -> Result<(), &'static str> {
         if self.total + delta.total < 0.0 || self.available + delta.available < 0.0 {
             return Err("[UniLinkExecution] : Insufficient balance to apply the delta.");
         }
         self.total += delta.total;
         self.available += delta.available;
+        self.time = Utc::now();  // 更新时间戳
         Ok(())
     }
 }

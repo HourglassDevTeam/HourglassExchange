@@ -138,20 +138,27 @@ async fn test_1_fetch_initial_orders_and_check_empty(client: &SandBoxClient) {
     assert!(initial_orders.is_empty());
 }
 
+// 自定义比较函数，忽略 time 字段
+fn assert_balance_equal_ignore_time(actual: &Balance, expected: &Balance) {
+    assert_eq!(actual.current_price, expected.current_price, "current_price mismatch");
+    assert_eq!(actual.total, expected.total, "total mismatch");
+    assert_eq!(actual.available, expected.available, "available mismatch");
+}
+
 // 2. Fetch initial Balances when there have been no balance changing events.
 async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient) {
     let actual_balances = client.fetch_balances().await.unwrap();
-    let initial_balances = initial_balances().await; // Await the Future to get Arc<Mutex<AccountState>>
-    let initial_balances_locked = initial_balances.lock().await; // Lock the Mutex to get AccountState
+    let initial_balances = initial_balances().await;
+    let initial_balances_locked = initial_balances.lock().await;
 
     assert_eq!(actual_balances.len(), initial_balances_locked.balances.len());
 
     for actual in actual_balances {
         let expected = initial_balances_locked.balances.get(&actual.token).unwrap();
-        assert_eq!(actual.balance, *expected);
+        assert_balance_equal_ignore_time(&actual.balance, expected);
     }
 }
-//
+
 // // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (usdt).
 // async fn test_3_open_limit_buy_order(
 //     client: &SandBoxClient,
