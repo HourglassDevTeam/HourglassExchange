@@ -1,4 +1,4 @@
-use crate::dashboard::{de_duration_from_secs, dispersion::Range, metrics::EquityPoint, se_duration_as_secs, welford_online};
+use crate::dashboard::{de_duration_from_secs, dispersion::Range, metrics::EquitySnapshot, se_duration_as_secs, welford_online};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -53,7 +53,7 @@ impl Drawdown
                duration: Duration::zero() }
     }
 
-    /// 使用最新的权益点 [`EquityPoint`] 更新 [`Drawdown`]。如果 Drawdown 周期结束（投资从谷底恢复到高于之前的峰值），
+    /// 使用最新的权益点 [`EquitySnapshot`] 更新 [`Drawdown`]。如果 Drawdown 周期结束（投资从谷底恢复到高于之前的峰值），
     /// 则函数返回 `Some(Drawdown)`，否则返回 `None`。
     ///
     /// # 参数
@@ -61,7 +61,7 @@ impl Drawdown
     ///
     /// # 返回
     /// 如果 Drawdown 周期结束，返回 `Some(Drawdown)`；否则返回 `None`。
-    pub fn update(&mut self, current: EquityPoint) -> Option<Drawdown>
+    pub fn update(&mut self, current: EquitySnapshot) -> Option<Drawdown>
     {
         match (self.is_waiting_for_peak(), current.total > self.equity_range.high) {
             // A) 当前没有 drawdown，等待下一个权益峰值（等待 B 的出现）
@@ -106,7 +106,7 @@ impl Drawdown
         }
     }
 
-    /// 判断是否在等待下一个权益峰值。如果新的 [`EquityPoint`] 高于之前的峰值，则为 `true`。
+    /// 判断是否在等待下一个权益峰值。如果新的 [`EquitySnapshot`] 高于之前的峰值，则为 `true`。
     ///
     /// # 返回
     /// 返回 `true` 如果在等待峰值；否则返回 `false`。
