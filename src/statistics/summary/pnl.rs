@@ -1,47 +1,42 @@
-// use crate::{
-//     portfolio::position::Position,
-//     statistic::{
-//         de_duration_from_secs, se_duration_as_secs,
-//         summary::{data::DataSummary, Initialiser, PositionSummariser, TableBuilder},
-//     },
-// };
-// use barter_integration::model::Side;
-// use chrono::{DateTime, Duration, Utc};
-// use prettytable::Row;
-// use serde::{Deserialize, Serialize};
-//
-// #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-// pub struct PnLReturnSummary {
-//     pub time: DateTime<Utc>,
-//     #[serde(
-//         deserialize_with = "de_duration_from_secs",
-//         serialize_with = "se_duration_as_secs"
-//     )]
-//     pub duration: Duration,
-//     pub trades_per_day: f64,
-//     pub total: DataSummary,
-//     pub losses: DataSummary,
-// }
-//
-// impl Initialiser for PnLReturnSummary {
-//     type Config = ();
-//
-//     fn init(_: Self::Config) -> Self {
-//         Self::default()
-//     }
-// }
-//
-// impl Default for PnLReturnSummary {
-//     fn default() -> Self {
-//         Self {
-//             time: Utc::now(),
-//             duration: Duration::zero(),
-//             trades_per_day: 0.0,
-//             total: DataSummary::default(),
-//             losses: DataSummary::default(),
-//         }
-//     }
-// }
+use crate::statistics::de_duration_from_secs;
+use crate::statistics::se_duration_as_secs;
+use crate::statistics::summary::data::DataSummary;
+use crate::statistics::summary::Initialiser;
+use chrono::{DateTime, Duration, Utc};
+use serde::{Deserialize, Serialize};
+
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
+pub struct PnLReturnSummary {
+    pub time: DateTime<Utc>,
+    #[serde(
+        deserialize_with = "de_duration_from_secs",
+        serialize_with = "se_duration_as_secs"
+    )]
+    pub duration: Duration,
+    pub trades_per_day: f64,
+    pub total: DataSummary,
+    pub losses: DataSummary,
+}
+
+impl Initialiser for PnLReturnSummary {
+    type Config = ();
+
+    fn init(_: Self::Config) -> Self {
+        Self::default()
+    }
+}
+
+impl Default for PnLReturnSummary {
+    fn default() -> Self {
+        Self {
+            time: Utc::now(),
+            duration: Duration::zero(),
+            trades_per_day: 0.0,
+            total: DataSummary::default(),
+            losses: DataSummary::default(),
+        }
+    }
+}
 //
 // impl PositionSummariser for PnLReturnSummary {
 //     fn update(&mut self, position: &Position) {
