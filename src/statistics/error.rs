@@ -1,6 +1,5 @@
 use thiserror::Error;
 
-/// All errors generated in the barter::statistic module.
 #[derive(Error, Copy, Clone, Debug)]
 pub enum StatisticsError {
     #[error("Failed to build struct due to missing attributes: {0}")]
