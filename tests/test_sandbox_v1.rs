@@ -1,6 +1,6 @@
 mod util;
 
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use redis::Commands;
 use crate::util::{
     fees_50_percent, initial_balances, latency_50ms, open_order, order_cancel_request,
@@ -15,6 +15,7 @@ use unilink_execution::common::event::{AccountEvent, AccountEventKind};
 use unilink_execution::common::instrument::Instrument;
 use unilink_execution::common::instrument::kind::InstrumentKind;
 use unilink_execution::common::order::identification::client_order_id::ClientOrderId;
+use unilink_execution::common::order::identification::machine_id::generate_machine_id;
 use unilink_execution::common::order::identification::OrderId;
 use unilink_execution::common::Side;
 use unilink_execution::sandbox::sandbox_client::SandBoxClient;
@@ -26,10 +27,10 @@ struct Ids {
 }
 
 impl Ids {
-    fn new<Id: Into<OrderId>>(cid: Option<String>, id: Id) -> Self {
+    fn new(cid: Option<String>, id: OrderId) -> Self {
         Self {
             cid: ClientOrderId(cid),
-            id: id.into(),
+            id,
         }
     }
 }
@@ -56,10 +57,12 @@ async fn main() {
     // 2. Fetch initial Balances when there have been no balance changing events
     test_2_fetch_balances_and_check_same_as_initial(&client).await;
 
-    // // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (usdt)
-    // let test_3_ids = Ids::new(Uuid::new_v4(), 1);
-    // test_3_open_limit_buy_order(&client, test_3_ids.clone(), &mut event_account_rx).await;
-    //
+    // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (usdt)
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
+    let machine_id = generate_machine_id().unwrap();
+    let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId::new(timestamp, machine_id, 1));
+    test_3_open_limit_buy_order(&client, test_3_ids.clone(), &mut event_account_rx).await;
+
     // // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent
     // test_4_send_market_event_that_does_not_match_any_open_order(
     //     &mut event_simulated_tx,
@@ -159,73 +162,73 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
     }
 }
 
-// // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (usdt).
-// async fn test_3_open_limit_buy_order(
-//     client: &SandBoxClient,
-//     test_3_ids: Ids,
-//     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
-// ) {
-//     let new_orders = client
-//         .open_orders(vec![order_request_limit(
-//             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
-//             test_3_ids.cid,
-//             Side::Buy,
-//             100.0,
-//             1.0,
-//         )])
-//         .await;
-//
-//     let expected_new_order = open_order(
-//         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
-//         test_3_ids.cid,
-//         test_3_ids.id,
-//         Side::Buy,
-//         100.0,
-//         1.0,
-//         0.0,
-//     );
-//
-//     assert_eq!(new_orders.len(), 1);
-//     assert_eq!(new_orders[0].clone().unwrap(), expected_new_order);
-//
-//     // Check AccountEvent Balance for quote currency (usdt) has available balance decrease
-//     match event_account_rx.try_recv() {
-//         Ok(AccountEvent {
-//             kind: AccountEventKind::Balance(usdt_balance),
-//             ..
-//         }) => {
-//             // Expected usdt Balance.available = 10_000 - (100.0 * 1.0)
-//             let expected = TokenBalance::new("usdt", Balance::new(10_000.0, 9_900.0));
-//             assert_eq!(usdt_balance, expected);
-//         }
-//         other => {
-//             panic!("try_recv() consumed unexpected: {:?}", other);
-//         }
-//     }
-//
-//     // Check AccountEvent OrderNew generated
-//     match event_account_rx.try_recv() {
-//         Ok(AccountEvent {
-//             kind: AccountEventKind::OrdersNew(new_orders),
-//             ..
-//         }) => {
-//             assert_eq!(new_orders.len(), 1);
-//             assert_eq!(new_orders[0].clone(), expected_new_order);
-//         }
-//         other => {
-//             panic!("try_recv() consumed unexpected: {:?}", other);
-//         }
-//     }
-//
-//     // Check no more AccountEvents generated
-//     match event_account_rx.try_recv() {
-//         Err(mpsc::error::TryRecvError::Empty) => {}
-//         other => {
-//             panic!("try_recv() consumed unexpected: {:?}", other);
-//         }
-//     }
-// }
-//
+// 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (usdt).
+async fn test_3_open_limit_buy_order(
+    client: &SandBoxClient,
+    test_3_ids: Ids,
+    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+) {
+    let new_orders = client
+        .open_orders(vec![order_request_limit(
+            Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+            test_3_ids.cid,
+            Side::Buy,
+            100.0,
+            1.0,
+        )])
+        .await;
+
+    let expected_new_order = open_order(
+        Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+        test_3_ids.cid,
+        test_3_ids.id,
+        Side::Buy,
+        100.0,
+        1.0,
+        0.0,
+    );
+
+    assert_eq!(new_orders.len(), 1);
+    assert_eq!(new_orders[0].clone().unwrap(), expected_new_order);
+
+    // Check AccountEvent Balance for quote currency (usdt) has available balance decrease
+    match event_account_rx.try_recv() {
+        Ok(AccountEvent {
+            kind: AccountEventKind::Balance(usdt_balance),
+            ..
+        }) => {
+            // Expected usdt Balance.available = 10_000 - (100.0 * 1.0)
+            let expected = TokenBalance::new("usdt", Balance::new(10_000.0, 9_900.0));
+            assert_eq!(usdt_balance, expected);
+        }
+        other => {
+            panic!("try_recv() consumed unexpected: {:?}", other);
+        }
+    }
+
+    // Check AccountEvent OrderNew generated
+    match event_account_rx.try_recv() {
+        Ok(AccountEvent {
+            kind: AccountEventKind::OrdersNew(new_orders),
+            ..
+        }) => {
+            assert_eq!(new_orders.len(), 1);
+            assert_eq!(new_orders[0].clone(), expected_new_order);
+        }
+        other => {
+            panic!("try_recv() consumed unexpected: {:?}", other);
+        }
+    }
+
+    // Check no more AccountEvents generated
+    match event_account_rx.try_recv() {
+        Err(mpsc::error::TryRecvError::Empty) => {}
+        other => {
+            panic!("try_recv() consumed unexpected: {:?}", other);
+        }
+    }
+}
+
 // // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent.
 // fn test_4_send_market_event_that_does_not_match_any_open_order(
 //     event_simulated_tx: &mut mpsc::UnboundedSender<SimulatedEvent>,

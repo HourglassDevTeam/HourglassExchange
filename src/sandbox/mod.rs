@@ -88,6 +88,7 @@ impl SandBoxExchange
             match event {
                 | SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx).await,
                 | SandBoxClientEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx).await,
+                /// NOTE this is buggy. should return an open order or an error eventually, not pendings in the flight.
                 | SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => self.account.process_requests_into_pendings(open_requests, response_tx).await,
                 | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.cancel_orders(cancel_requests, response_tx).await,
                 | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.cancel_orders_all(response_tx).await,
