@@ -1,6 +1,6 @@
 use chrono::{Duration as ChronoDuration, NaiveDate};
 use std::sync::Arc;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Mutex};
 use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
 use unilink_execution::test_util::create_test_account;
 
@@ -9,8 +9,8 @@ async fn main() {
     // 创建 ClickHouse 客户端实例
     let client = Arc::new(ClickHouseClient::new());
 
-    // 创建测试账户实例
-    let mut account = create_test_account().await;
+    // 创建测试账户实例，并将其封装在 Arc<Mutex<>> 中
+    let account = Arc::new(Mutex::new(create_test_account().await));
 
     // 定义参数
     let exchange = "binance";
@@ -35,6 +35,7 @@ async fn main() {
 
                 // 克隆 Arc 以在异步任务中使用
                 let date_str_clone = Arc::clone(&date_str);
+                let account_clone = Arc::clone(&account);
 
                 // 启动一个任务来从游标读取数据并发送到通道
                 let cursor_task = tokio::spawn(async move {
@@ -64,7 +65,8 @@ async fn main() {
                 // 启动一个接收器任务，处理通道中的交易数据
                 let receiver_task = tokio::spawn(async move {
                     while let Some(trade) = _rx.recv().await {
-                        if let Err(e) = account.handle_trade_data(trade).await {
+                        let mut account_locked = account_clone.lock().await;
+                        if let Err(e) = account_locked.handle_trade_data(trade).await {
                             eprintln!("[UniLinkExecution] : Error handling trade data: {:?}", e);
                         }
                     }

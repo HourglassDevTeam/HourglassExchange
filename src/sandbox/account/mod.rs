@@ -164,6 +164,14 @@ impl Account
         self.exchange_timestamp.store(adjusted_timestamp, Ordering::SeqCst);
     }
 
+    /// 处理交易数据的方法
+    pub async fn handle_trade_data(&mut self, trade: MarketTrade) -> Result<(), ExecutionError> {
+        // 更新时间戳
+        self.update_exchange_timestamp(trade.timestamp);
+        // self.process_trade(trade).await?;
+        Ok(())
+    }
+
     pub async fn fetch_orders_open(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>)
     {
         let orders = self.orders.read().await.fetch_all();
