@@ -23,12 +23,12 @@ use crate::{
 /// CONSIDER: can these positions coexist, if so enums might not be ideal.
 use serde::{Deserialize, Serialize};
 
-pub(crate) mod future;
+pub mod future;
 pub(crate) mod leveraged_token;
 pub(crate) mod option;
 pub mod perpetual;
 pub mod position_id;
-pub(crate) mod position_meta;
+pub mod position_meta;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountPositions

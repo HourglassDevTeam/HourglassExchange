@@ -143,7 +143,7 @@ impl ExchangeInitiator
 mod tests
 {
     use super::*;
-    use crate::test_util::create_test_account;
+    use crate::test_utils::create_test_account;
     use std::net::TcpListener;
     use tokio::sync::mpsc;
 

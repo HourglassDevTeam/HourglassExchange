@@ -323,8 +323,9 @@ impl Account
             | OrderInstruction::ImmediateOrCancel
             | OrderInstruction::FillOrKill
             | OrderInstruction::PostOnly
-            | OrderInstruction::GoodTilCancelled => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
+            | OrderInstruction::GoodTilCancelled | OrderInstruction::Cancel => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
                                                              * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
+
         }
     }
 
@@ -417,6 +418,7 @@ impl Account
                             Ok(OrderRole::Maker)
                         }
                     }
+                    OrderInstruction::Cancel => {todo!()}
                 };
 
                 if let Ok(role) = role {
@@ -645,7 +647,7 @@ mod tests
             order::{identification::OrderId, states::request_open::RequestOpen},
             position::Position,
         },
-        test_util::{
+        test_utils::{
             create_test_account, create_test_account_orders, create_test_account_state, create_test_instrument, create_test_order_open, create_test_perpetual_position,
             create_test_request_open,
         },

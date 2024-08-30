@@ -11,6 +11,7 @@ pub enum OrderInstruction
     ImmediateOrCancel,
     FillOrKill,
     GoodTilCancelled,
+    Cancel,
 }
 
 impl Display for OrderInstruction
@@ -24,6 +25,7 @@ impl Display for OrderInstruction
             | OrderInstruction::FillOrKill => "fill_or_kill",
             | OrderInstruction::GoodTilCancelled => "good_til_cancelled",
             | OrderInstruction::PostOnly => "post_only",
+            OrderInstruction::Cancel => "cancel_request",
         })
     }
 }

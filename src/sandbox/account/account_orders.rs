@@ -286,6 +286,7 @@ impl AccountOrders
             | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => Ok(OrderRole::Taker), // 立即成交或取消的订单总是 Taker
 
             | OrderInstruction::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
+            OrderInstruction::Cancel => { todo!() }
         }
     }
 

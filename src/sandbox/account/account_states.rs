@@ -501,7 +501,7 @@ mod tests
             token::Token,
         },
         sandbox::account::account_config::{CommissionRates, MarginMode},
-        test_util::*,
+        test_utils::*,
     };
     use std::{collections::HashMap, sync::Arc};
 
