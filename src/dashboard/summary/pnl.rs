@@ -94,7 +94,7 @@ impl Default for PnLReturnSummary {
 //         ]
 //     }
 // }
-//
+
 // impl PnLReturnSummary {
 //     const SECONDS_IN_DAY: f64 = 86400.0;
 //
@@ -123,7 +123,7 @@ impl Default for PnLReturnSummary {
 //             / (self.duration.num_seconds() as f64 / PnLReturnSummary::SECONDS_IN_DAY)
 //     }
 // }
-//
+
 // #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Default, Deserialize, Serialize)]
 // pub struct ProfitLossSummary {
 //     pub long_contracts: f64,

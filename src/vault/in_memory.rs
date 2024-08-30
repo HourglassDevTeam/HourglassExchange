@@ -25,7 +25,7 @@ pub struct InMemoryVault<Statistic>
 
 impl<Statistic> PositionHandler for InMemoryVault<Statistic>
 {
-    fn set_open_position(&mut self, position: Position) -> Result<(), VaultError>
+    fn add_open_position(&mut self, position: Position) -> Result<(), VaultError>
     {
         let position_id = match &position {
             | Position::Perpetual(pos) => pos.meta.position_id,

@@ -18,7 +18,7 @@ mod summariser;
 pub trait PositionHandler
 {
     /// 使用 [`PositionId`] 更新或插入一个打开的 [`Position`]。
-    fn set_open_position(&mut self, position: Position) -> Result<(), VaultError>;
+    fn add_open_position(&mut self, position: Position) -> Result<(), VaultError>;
 
     /// 使用提供的 [`PositionId`] 获取一个打开的 [`Position`]。
     fn get_open_position(&mut self, position_id: &PositionId) -> Result<Option<Position>, VaultError>;
