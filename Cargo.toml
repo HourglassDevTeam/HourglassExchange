@@ -56,6 +56,10 @@ dashmap = "6.0.1"
 pnet = "0.35.0"
 warp = "0.3"
 serde_json = "1.0.125"
+
+# summary
+prettytable-rs = "0.10.0"
+
 [dev-dependencies]
 tempfile = "3.12.0"
 
