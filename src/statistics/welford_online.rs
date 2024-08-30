@@ -1,4 +1,4 @@
-use crate::accountant::welford_online;
+use crate::statistics::welford_online;
 
 /// Welford's 在线算法是一种用于逐次计算均值和方差的数值稳定方法，尤其适合于处理大数据集或流数据。
 /// 该算法的主要优点在于它能够在单次遍历数据的过程中，以在线方式高效地计算均值和方差，且避免了在处理较大数据集时可能出现的数值不稳定问题。
