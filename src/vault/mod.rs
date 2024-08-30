@@ -1,8 +1,13 @@
-use crate::common::{balance::Balance, instrument::Instrument};
+use crate::{
+    common::{
+        balance::Balance,
+        instrument::Instrument,
+        position::{position_id::PositionId, Position},
+    },
+    vault::error::VaultError,
+    Exchange,
+};
 use uuid::Uuid;
-use crate::{vault::error::VaultError, Exchange};
-use crate::common::position::Position;
-use crate::common::position::position_id::PositionId;
 
 pub mod error;
 pub mod in_memory;
@@ -10,35 +15,22 @@ pub mod redis;
 mod summariser;
 
 /// 处理 [`Position`] 在持久层的读写操作。
-pub trait PositionHandler {
+pub trait PositionHandler
+{
     /// 使用 [`PositionId`] 更新或插入一个打开的 [`Position`]。
     fn set_open_position(&mut self, position: Position) -> Result<(), VaultError>;
 
     /// 使用提供的 [`PositionId`] 获取一个打开的 [`Position`]。
-    fn get_open_position(
-        &mut self,
-        position_id: &PositionId,
-    ) -> Result<Option<Position>, VaultError>;
+    fn get_open_position(&mut self, position_id: &PositionId) -> Result<Option<Position>, VaultError>;
 
     /// 获取与一个投资组合相关联的所有打开的 [`Position`]。
-    fn get_open_positions(
-        &mut self,
-        instance_id: Uuid,
-        exchange: Exchange, instrument: Instrument
-    ) -> Result<Vec<Position>, VaultError>;
+    fn get_open_positions(&mut self, instance_id: Uuid, exchange: Exchange, instrument: Instrument) -> Result<Vec<Position>, VaultError>;
 
     /// 移除在 [`PositionId`] 位置的 [`Position`]。
-    fn remove_position(
-        &mut self,
-        position_id: &PositionId,
-    ) -> Result<Option<Position>, VaultError>;
+    fn remove_position(&mut self, position_id: &PositionId) -> Result<Option<Position>, VaultError>;
 
     /// 将一个已退出的 [`Position`] 附加到投资组合的已退出持仓列表中。
-    fn set_exited_position(
-        &mut self,
-        instance_id: Uuid,
-        position: Position,
-    ) -> Result<(), VaultError>;
+    fn set_exited_position(&mut self, instance_id: Uuid, position: Position) -> Result<(), VaultError>;
 
     /// 获取与 instance_id 相关联的所有已退出的 [`Position`]。
     fn get_exited_positions(&mut self, instance_id: Uuid) -> Result<Vec<Position>, VaultError>;

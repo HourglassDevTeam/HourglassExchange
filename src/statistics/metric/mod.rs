@@ -6,20 +6,19 @@ use serde::Serialize;
 // use crate::common::position::Position;
 // use crate::statistics::summary::PositionSummariser;
 
-
 /// Total equity at a point in time - equates to [`Balance.total`](Balance).
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct EquityPoint {
+pub struct EquityPoint
+{
     pub time: DateTime<Utc>,
     pub total: f64,
 }
 
-impl Default for EquityPoint {
-    fn default() -> Self {
-        Self {
-            time: Utc::now(),
-            total: 0.0,
-        }
+impl Default for EquityPoint
+{
+    fn default() -> Self
+    {
+        Self { time: Utc::now(), total: 0.0 }
     }
 }
 

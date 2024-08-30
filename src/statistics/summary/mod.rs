@@ -3,8 +3,8 @@ pub mod drawdown;
 pub mod pnl;
 pub mod trading;
 
-use prettytable::{Cell, Row, Table};
 use crate::common::position::Position;
+use prettytable::{Cell, Row, Table};
 
 /// 该模块定义了一些用于处理交易数据和生成摘要表格的通用工具和接口。
 ///
@@ -16,20 +16,25 @@ use crate::common::position::Position;
 /// - `PositionSummariser` 特性定义了一个更新和生成交易仓位摘要的接口。通过实现这个接口，可以在处理一组交易仓位时快速生成统计数据。
 /// - `TableBuilder` 特性定义了一套接口，用于生成表格标题、行数据以及完整表格。它还支持将多个表格合并为一个表格。
 /// - `combine` 函数用于合并多个表格生成器，生成一个包含所有行数据的完整表格。
+///
 
-/// 用于初始化结构体的接口，要求实现者能够通过配置进行初始化。
-pub trait Initialiser {
+
+///  用于初始化结构体的接口，要求实现者能够通过配置进行初始化。
+pub trait Initialiser
+{
     type Config;
     fn init(config: Self::Config) -> Self;
 }
 
 /// 用于生成交易仓位摘要的接口，提供更新仓位和生成仓位摘要的功能。
-pub trait PositionSummariser {
+pub trait PositionSummariser
+{
     /// 更新当前仓位摘要，根据传入的 `Position` 对象更新内部状态。
     fn update(&mut self, position: &Position);
 
     /// 生成仓位摘要，根据一组 `Position` 对象迭代调用 `update` 方法。
-    fn generate_summary(&mut self, positions: &[Position]) {
+    fn generate_summary(&mut self, positions: &[Position])
+    {
         for position in positions.iter() {
             self.update(position)
         }
@@ -37,7 +42,8 @@ pub trait PositionSummariser {
 }
 
 /// 用于生成表格的接口，提供生成标题行、数据行和完整表格的功能。
-pub trait TableBuilder {
+pub trait TableBuilder
+{
     /// 返回表格的标题行。
     fn titles(&self) -> Row;
 
@@ -51,7 +57,8 @@ pub trait TableBuilder {
     ///
     /// # 返回
     /// 返回包含标题和一行数据的表格。
-    fn table(&self, id_cell: &str) -> Table {
+    fn table(&self, id_cell: &str) -> Table
+    {
         let mut table = Table::new();
 
         let mut titles = self.titles();
@@ -73,7 +80,8 @@ pub trait TableBuilder {
     ///
     /// # 返回
     /// 返回包含两个表格数据的完整表格。
-    fn table_with<T: TableBuilder>(&self, id_cell: &str, another: (T, &str)) -> Table {
+    fn table_with<T: TableBuilder>(&self, id_cell: &str, another: (T, &str)) -> Table
+    {
         let mut table = Table::new();
 
         let mut titles = self.titles();
@@ -100,26 +108,22 @@ pub trait TableBuilder {
 /// # 返回
 /// 返回包含所有行数据的合并表格。
 pub fn combine<Iter, T>(builders: Iter) -> Table
-where
-    Iter: IntoIterator<Item = (String, T)>,
-    T: TableBuilder,
+    where Iter: IntoIterator<Item = (String, T)>,
+          T: TableBuilder
 {
-    builders
-        .into_iter()
-        .enumerate()
-        .fold(Table::new(), |mut table, (index, (id, builder))| {
-            // 使用第一个生成器设置表格标题
-            if index == 0 {
-                let mut titles = builder.titles();
-                titles.insert_cell(0, Cell::new(""));
-                table.set_titles(titles);
-            }
+    builders.into_iter().enumerate().fold(Table::new(), |mut table, (index, (id, builder))| {
+                                        // 使用第一个生成器设置表格标题
+                                        if index == 0 {
+                                            let mut titles = builder.titles();
+                                            titles.insert_cell(0, Cell::new(""));
+                                            table.set_titles(titles);
+                                        }
 
-            // 为每个生成器添加行数据
-            let mut row = builder.row();
-            row.insert_cell(0, Cell::new(&id));
-            table.add_row(row);
+                                        // 为每个生成器添加行数据
+                                        let mut row = builder.row();
+                                        row.insert_cell(0, Cell::new(&id));
+                                        table.add_row(row);
 
-            table
-        })
+                                        table
+                                    })
 }

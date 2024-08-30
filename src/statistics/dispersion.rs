@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::statistics::welford_online;
+use serde::{Deserialize, Serialize};
 
 /// 表示一组数据集的离散程度的度量 - 范围、方差和标准差。
 ///
@@ -10,7 +10,8 @@ use crate::statistics::welford_online;
 /// - **方差（Variance）**：是数据集中的数据点与其平均值之间的平方差的平均值，用于衡量数据的波动程度。
 /// - **标准差（Standard Deviation）**：是方差的平方根，更直观地表示数据的波动性。
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Default, Deserialize, Serialize)]
-pub struct Dispersion {
+pub struct Dispersion
+{
     /// 数据集的范围（即最高值和最低值之间的差距）
     pub range: Range,
     /// Welford 在线算法的递推关系 M，用于计算方差和标准差
@@ -21,7 +22,8 @@ pub struct Dispersion {
     pub std_dev: f64,
 }
 
-impl Dispersion {
+impl Dispersion
+{
     /// 迭代更新 Dispersion 的度量，包括范围、方差和标准差。
     ///
     /// # 原理解释
@@ -42,21 +44,16 @@ impl Dispersion {
     /// - `new_mean`: 新的均值
     /// - `new_value`: 新的值
     /// - `value_count`: 数据集中的值的数量
-    pub fn update(&mut self, prev_mean: f64, new_mean: f64, new_value: f64, value_count: u64) {
+    pub fn update(&mut self, prev_mean: f64, new_mean: f64, new_value: f64, value_count: u64)
+    {
         // 更新范围
         self.range.update(new_value);
 
         // 更新 Welford 在线算法的递推关系 M
-        self.recurrence_relation_m = welford_online::update_variance_accumulator(
-            self.recurrence_relation_m,
-            prev_mean,
-            new_value,
-            new_mean,
-        );
+        self.recurrence_relation_m = welford_online::update_variance_accumulator(self.recurrence_relation_m, prev_mean, new_value, new_mean);
 
         // 更新总体方差
-        self.variance =
-            welford_online::compute_population_variance(self.recurrence_relation_m, value_count);
+        self.variance = welford_online::compute_population_variance(self.recurrence_relation_m, value_count);
 
         // 更新标准差
         self.std_dev = self.variance.sqrt();
@@ -73,7 +70,8 @@ impl Dispersion {
 /// # 应用
 /// 在统计分析中，范围可以帮助你快速了解数据的总体分布情况，例如判断一个班级的考试成绩差距有多大。
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Default, Deserialize, Serialize)]
-pub struct Range {
+pub struct Range
+{
     /// 指示范围是否已初始化
     pub activated: bool,
     /// 数据集中的最高值
@@ -82,7 +80,8 @@ pub struct Range {
     pub low: f64,
 }
 
-impl Range {
+impl Range
+{
     /// 使用提供的数据集的第一个值初始化范围。
     ///
     /// # 原理解释
@@ -93,12 +92,11 @@ impl Range {
     ///
     /// # 返回
     /// 返回初始化后的 `Range` 结构体。
-    pub fn init(first_value: f64) -> Self {
-        Self {
-            activated: false,
-            high: first_value,
-            low: first_value,
-        }
+    pub fn init(first_value: f64) -> Self
+    {
+        Self { activated: false,
+               high: first_value,
+               low: first_value }
     }
 
     /// 给定数据集中的下一个值，迭代更新范围。
@@ -108,9 +106,10 @@ impl Range {
     ///
     /// # 参数
     /// - `new_value`: 数据集中的新值
-    pub fn update(&mut self, new_value: f64) {
+    pub fn update(&mut self, new_value: f64)
+    {
         match self.activated {
-            true => {
+            | true => {
                 if new_value > self.high {
                     self.high = new_value;
                 }
@@ -119,7 +118,7 @@ impl Range {
                     self.low = new_value;
                 }
             }
-            false => {
+            | false => {
                 self.activated = true;
                 self.high = new_value;
                 self.low = new_value;
@@ -134,7 +133,8 @@ impl Range {
     ///
     /// # 返回
     /// 返回范围值，即 `high - low` 的结果。
-    pub fn calculate_range(&self) -> f64 {
+    pub fn calculate_range(&self) -> f64
+    {
         self.high - self.low
     }
 }
