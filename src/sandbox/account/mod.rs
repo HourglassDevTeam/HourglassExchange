@@ -1,3 +1,6 @@
+use tokio::time::timeout;
+use tokio::time::Duration;
+use chrono::Utc;
 use crate::common::datafeed::market_event::MarketEvent;
 use crate::sandbox::sandbox_client::OpenOrderResults;
 use crate::{
@@ -24,7 +27,7 @@ use account_config::AccountConfig;
 use account_orders::AccountOrders;
 use account_states::AccountState;
 use futures::future::join_all;
-use mpsc::UnboundedSender;
+use mpsc::{UnboundedReceiver, UnboundedSender};
 use oneshot::Sender;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
 use std::{
@@ -225,49 +228,80 @@ impl Account
         }
     }
     /// 处理一组请求，将其转换为挂起订单，并在市场事件条件满足时将其转换为打开订单。
-
     pub async fn process_requests_into_opens(
         &mut self,
         order_requests: Vec<Order<RequestOpen>>,
         response_tx: Sender<OpenOrderResults>,
-        mut market_event_rx: mpsc::UnboundedReceiver<MarketEvent<MarketTrade>>,
+        mut market_event_rx: UnboundedReceiver<MarketEvent<MarketTrade>>,
     ) {
-        // 处理请求并转换为挂起订单
+        println!("Starting to process requests into opens.");
+
+        // Process requests and convert them to pending orders
         let pending_orders = match self.process_requests_into_pendings(order_requests).await {
-            Ok(orders) => orders,
+            Ok(orders) => {
+                println!("Processed requests into pending orders.");
+                orders
+            }
             Err(e) => {
                 let _ = response_tx.send(vec![Err(e)]);
                 return;
             }
         };
 
-        // 提取挂起订单的最大 `predicted_ts`
         let max_predicted_ts = pending_orders
             .iter()
             .map(|order| order.state.predicted_ts)
             .max()
             .unwrap();
+        println!("Max predicted timestamp for pending orders: {}", max_predicted_ts);
 
-        // 等待合适的市场事件
-        while let Some(market_event) = market_event_rx.recv().await {
-            if market_event.kind.timestamp > max_predicted_ts {
+        let timeout_duration = Duration::from_secs(5);  // Slightly increase the timeout
+
+        let market_event_result = tokio::time::timeout(timeout_duration, async {
+            while let Some(market_event) = market_event_rx.recv().await {
+                println!(
+                    "Received market event with timestamp: {}",
+                    market_event.kind.timestamp
+                );
+                if market_event.kind.timestamp > max_predicted_ts {
+                    println!("Market event timestamp is valid, processing...");
+                    return Some(market_event);
+                } else {
+                    println!("Market event timestamp is not greater than the max predicted timestamp. Waiting...");
+                }
+            }
+            None
+        }).await;
+
+        match market_event_result {
+            Ok(Some(market_event)) => {
                 let current_price = market_event.kind.price;
 
-                // 将挂起订单处理为打开订单
                 let mut open_orders_results = Vec::new();
                 for pending_order in pending_orders {
                     match self.process_pending_order_into_open_atomically(current_price, pending_order).await {
-                        Ok(open_order) => open_orders_results.push(Ok(open_order)),
+                        Ok(open_order) => { open_orders_results.push(Ok(open_order));println!("processed pending order into open atomically!") },
                         Err(err) => open_orders_results.push(Err(err)),
                     }
                 }
 
-                // 发送打开订单结果
+                println!("Sending open orders result back to the client.");
                 let _ = response_tx.send(open_orders_results);
-                break;
+            }
+            Ok(None) => {
+                println!("Market event channel closed unexpectedly.");
+                let _ = response_tx.send(vec![Err(ExecutionError::MarketEventChannelClosed)]);
+            }
+            Err(_) => {
+                println!("Timeout occurred while waiting for market events.");
+                let _ = response_tx.send(vec![Err(ExecutionError::Timeout("Market event processing timed out".to_string()))]);
             }
         }
+
+        println!("Finished processing OpenOrders event.");
     }
+
+
     pub async fn process_pending_order_into_open_atomically(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
     {
         Self::validate_order_instruction(order.kind)?;

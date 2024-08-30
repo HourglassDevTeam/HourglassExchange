@@ -187,9 +187,6 @@ async fn test_3_open_limit_buy_order(
 
     println!("Sending order request via SandBoxClient.");
     let new_orders = client.open_orders(vec![open_request]).await;
-    println!("Received new orders: {:?}", new_orders);
-
-    assert_eq!(new_orders.len(), 1);
 
     let expected_new_order = open_order(
         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
@@ -201,11 +198,12 @@ async fn test_3_open_limit_buy_order(
         0.0,
     );
 
+    assert_eq!(new_orders.len(), 1);
     assert_eq!(new_orders[0].as_ref().unwrap(), &expected_new_order);
 
-    // Simulate sending a market event after the order request has been processed
+    println!("Preparing market event.");
     let market_event = MarketEvent {
-        exchange_time: pending_order_predicted_ts + 100,  // Ensure this value is greater than pending_order_predicted_ts
+        exchange_time: pending_order_predicted_ts + 100,  // Ensure this is greater than the predicted_ts
         received_time: pending_order_predicted_ts + 100,
         exchange: Exchange::Binance,
         instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual),
@@ -214,49 +212,49 @@ async fn test_3_open_limit_buy_order(
             symbol: "BTCUSDT".to_string(),
             side: "buy".to_string(),
             price: 50000.0,
-            timestamp: pending_order_predicted_ts + 100,  // Ensure this value is greater than pending_order_predicted_ts
+            timestamp: pending_order_predicted_ts + 100,  // Ensure this is greater than the predicted_ts
             amount: 1.0,
         },
     };
+    println!("Sending market event.");
     account.match_orders(market_event.clone()).await;
     println!("Market event processed, timestamp: {}", market_event.kind.timestamp);
 
     let current_px = 9_200.0;
-    // Check if the AccountEvent Balance has been updated
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
                kind: AccountEventKind::Balance(usdt_balance),
                ..
            }) => {
+            println!("Account balance event received.");
             let expected = TokenBalance::new("usdt", Balance::new(10_000.0, 9_900.0, current_px));
             assert_eq!(usdt_balance, expected);
         }
         other => {
-            panic!("Unexpected event received when waiting for balance update: {:?}", other);
+            panic!("Unexpected or missing balance event: {:?}", other);
         }
     }
 
-    // Check if the new order event has been generated
     match event_account_rx.try_recv() {
         Ok(AccountEvent {
                kind: AccountEventKind::OrdersNew(new_orders),
                ..
            }) => {
+            println!("Orders new event received.");
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone(), expected_new_order);
         }
         other => {
-            panic!("Unexpected event received when waiting for new order event: {:?}", other);
+            panic!("Unexpected or missing orders new event: {:?}", other);
         }
     }
 
-    // Ensure no other AccountEvents have been generated
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {
-            println!("No other unexpected events received.");
+            println!("No additional account events, as expected.");
         }
         other => {
-            panic!("Unexpected event received: {:?}", other);
+            panic!("Unexpected additional account event: {:?}", other);
         }
     }
 }

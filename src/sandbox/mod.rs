@@ -90,12 +90,12 @@ impl SandBoxExchange
                 | SandBoxClientEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx).await,
                 // NOTE this is buggy. should return an open order or an error eventually, not pendings in the flight.
                 |   SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => {
+                    println!("Processing OpenOrders event.");
                     // Creating market event receiver
                     let (market_event_tx, market_event_rx) = mpsc::unbounded_channel();
-
                     // Process requests into opens
                     self.account.process_requests_into_opens(open_requests, response_tx, market_event_rx).await;
-
+                    println!("OpenOrders event processed, awaiting market events.");
                     // In a real scenario, the market_event_tx would be used to send market events
                 },
                 | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.cancel_orders(cancel_requests, response_tx).await,

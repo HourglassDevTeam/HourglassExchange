@@ -125,4 +125,6 @@ pub enum ExecutionError
 
     #[error("[UniLinkExecution] : Redis Initialisation Failure: {0}")]
     RedisInitialisationError(String),
+    #[error("[UniLinkExecution] : MarketEventChannelClosed")]
+    MarketEventChannelClosed,
 }
