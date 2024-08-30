@@ -217,7 +217,7 @@ async fn test_3_open_limit_buy_order(
         },
     };
     println!("Sending market event.");
-    account.match_orders(market_event.clone()).await;
+    account.match_orders(market_event.clone()).await; // Directly call match_orders
     println!("Market event processed, timestamp: {}", market_event.kind.timestamp);
 
     let current_px = 9_200.0;
