@@ -1,5 +1,5 @@
-use crate::statistic::algorithm::welford_online;
 use serde::{Deserialize, Serialize};
+use crate::statistics::welford_online;
 
 /// 表示一组数据集的离散程度的度量 - 范围、方差和标准差。
 ///
@@ -47,7 +47,7 @@ impl Dispersion {
         self.range.update(new_value);
 
         // 更新 Welford 在线算法的递推关系 M
-        self.recurrence_relation_m = welford_online::calculate_recurrence_relation_m(
+        self.recurrence_relation_m = welford_online::update_variance_accumulator(
             self.recurrence_relation_m,
             prev_mean,
             new_value,
@@ -56,7 +56,7 @@ impl Dispersion {
 
         // 更新总体方差
         self.variance =
-            welford_online::calculate_population_variance(self.recurrence_relation_m, value_count);
+            welford_online::compute_population_variance(self.recurrence_relation_m, value_count);
 
         // 更新标准差
         self.std_dev = self.variance.sqrt();
