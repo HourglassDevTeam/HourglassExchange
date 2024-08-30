@@ -6,18 +6,29 @@ use serde::Serialize;
 // use crate::common::position::Position;
 // use crate::dashboard::summary::PositionSummariser;
 
-/// Total equity at a point in time - equates to [`Balance.total`](Balance).
+/// `EquityPoint` 结构体表示在某个时间点上的总权益值，与 [`Balance.total`](Balance) 对应。
+///
+/// # 结构体概述
+/// `EquityPoint` 用于记录在某个特定时间点上，投资组合或交易账户的总权益（即所有资产的总价值）。它包括两个字段：
+/// - `time`：记录时间戳，表示该总权益值是在什么时候记录的。
+/// - `total`：总权益值，以 `f64` 类型表示。
+///
+/// 这个结构体在量化交易和投资组合管理中非常重要，因为它提供了一个准确的历史记录，帮助分析和跟踪账户的资金波动情况。
+///
+/// # 主要用途
+/// - **回撤计算**：在回撤分析中，`EquityPoint` 可以用来识别账户价值从一个峰值到谷底的下降幅度，从而计算最大回撤（Max Drawdown）等重要风险指标。
+/// - **绩效评估**：通过记录多个时间点的 `EquityPoint`，可以分析投资组合在不同时间段的表现，包括计算收益率、波动性等指标。
+/// - **时间序列分析**：`EquityPoint` 可以作为时间序列数据的一部分，用于分析权益值随时间变化的趋势，从而帮助做出更好的投资决策。
+
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct EquityPoint
-{
+pub struct EquityPoint {
     pub time: DateTime<Utc>,
     pub total: f64,
 }
 
-impl Default for EquityPoint
-{
-    fn default() -> Self
-    {
+impl Default for EquityPoint {
+    /// 默认构造函数，初始化 `EquityPoint`，将 `time` 设置为当前时间，`total` 初始化为 `0.0`。
+    fn default() -> Self {
         Self { time: Utc::now(), total: 0.0 }
     }
 }
