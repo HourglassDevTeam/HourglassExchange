@@ -44,11 +44,6 @@ pub async fn run_default_exchange(
     let instruments = instruments();
     println!("Instruments initialized: {:?}", instruments);
 
-    // Create initial account balances (wrapped in Arc<Mutex<AccountState>>)
-    let balances = initial_balances().await;
-    println!("Initial balances created");
-
-
     // Build and run the Sandbox Exchange
     let sandbox_exchange = SandBoxExchange::initiator()
         .event_sandbox_rx(event_simulated_rx)
@@ -79,14 +74,14 @@ pub fn fees_50_percent() -> f64 {
 
 /// 定义沙箱交易所支持的Instrument
 pub fn instruments() -> Vec<Instrument> {
-    vec![Instrument::from(("BTC", "USDT", InstrumentKind::Perpetual))]
+    vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))]
 }
 /// 初始化沙箱交易所账户余额
 pub async fn initial_balances() -> Arc<Mutex<AccountState>> {
     // 初始化账户余额
     let mut balances = HashMap::new();
-    balances.insert(Token::from("BTC"), Balance::new(10.0, 10.0, 1.0));
-    balances.insert(Token::from("USDT"), Balance::new(10_000.0, 10_000.0, 1.0));
+    balances.insert(Token::from("TEST_BASE"), Balance::new(10.0, 10.0, 1.0));
+    balances.insert(Token::from("TEST_QUOTE"), Balance::new(10_000.0, 10_000.0, 1.0));
 
     let positions = AccountPositions {
         margin_pos: Vec::new(),
@@ -100,7 +95,8 @@ pub async fn initial_balances() -> Arc<Mutex<AccountState>> {
         positions,
         account_ref: Weak::new(),
     };
-
+    // Debug
+    println!("Initial balances created,{:?}", account_state.balances);
     let account_state_arc = Arc::new(Mutex::new(account_state));
 
     // 模拟环境中的 `Account`

@@ -179,10 +179,8 @@ pub async fn create_test_account() -> Account {
     // Create a mock balance map and populate it
     let mut balances = HashMap::new();
     // Define tokens for testing
-    let token1 = Token::from("TEST_BASE");
-    let token2 = Token::from("TEST_QUOTE");
-    balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
-    balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
+    balances.insert(Token::from("TEST_BASE"), Balance::new(10.0, 10.0, 1.0));
+    balances.insert(Token::from("TEST_QUOTE"), Balance::new(10_000.0, 10_000.0, 1.0));
 
     // 创建账户配置
     let mut account_config = AccountConfig {

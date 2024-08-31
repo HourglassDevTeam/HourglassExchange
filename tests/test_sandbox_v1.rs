@@ -42,7 +42,7 @@ impl Ids {
 #[tokio::test]
 async fn main() {
     // 创建通道用于发送和接收事件
-    let (mut event_simulated_tx, event_simulated_rx) = mpsc::unbounded_channel();
+    let ( event_simulated_tx, event_simulated_rx) = mpsc::unbounded_channel();
     let (market_event_tx, market_event_rx) = mpsc::unbounded_channel();
 
     // 创建并运行 SimulatedExchange
@@ -152,8 +152,11 @@ fn assert_balance_equal_ignore_time(actual: &Balance, expected: &Balance) {
     assert_eq!(actual.available, expected.available, "available mismatch");
 }
 
-// 2. Fetch initial Balances when there have been no balance changing events.
+
 async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient) {
+    let actual_balances_before = client.fetch_balances().await.unwrap();
+    println!("Balances before test: {:?}", actual_balances_before);
+
     let actual_balances = client.fetch_balances().await.unwrap();
     let initial_balances = initial_balances().await;
     let initial_balances_locked = initial_balances.lock().await;
@@ -161,9 +164,14 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
     assert_eq!(actual_balances.len(), initial_balances_locked.balances.len());
 
     for actual in actual_balances {
-        let expected = initial_balances_locked.balances.get(&actual.token).unwrap();
-        assert_balance_equal_ignore_time(&actual.balance, expected);
-    } }
+        if let Some(expected) = initial_balances_locked.balances.get(&actual.token) {
+            assert_balance_equal_ignore_time(&actual.balance, expected);
+        } else {
+            println!("Token not found in initial balances: {:?}", actual.token);
+            panic!("Test failed due to missing token in initial balances.");
+        }
+    }
+}
 // async fn test_3_open_limit_buy_order(
 //     client: &SandBoxClient,
 //     test_3_ids: Ids,
