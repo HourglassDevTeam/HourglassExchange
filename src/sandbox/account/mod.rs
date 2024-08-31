@@ -196,10 +196,56 @@ impl Account
     }
 
     /// [PART 2]
-    /// `process_requests_into_pendings` 处理一组订单请求，将其转换为挂起订单，并在成功后更新状态。
+    /// `open_orders` 执行开单操作。
     /// `process_pending_order_into_open_atomically` 尝试以原子操作方式打开一个订单，确保在验证和更新账户余额后安全地打开订单。
     /// `calculate_required_available_balance` 计算打开订单所需的可用余额，用于验证账户中是否有足够的资金执行订单。
-    // NOTE 注意size的单位
+
+
+    pub async fn open_orders(
+        &mut self,
+        open_requests: Vec<Order<RequestOpen>>,
+    ) -> Result<(), ExecutionError> {
+        let mut open_results = Vec::new();
+
+        for request in open_requests {
+            let processed_request = match self.config.execution_mode {
+                SandboxMode::Backtest => {
+                    // NOTE 如果是回测模式，则通过 AccountOrders 的方法给订单添加模拟延迟
+                    self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await
+                }
+                _ => request, // 实时模式下直接使用原始请求
+            };
+
+            // 获取该订单所需的 `Token` 的 `Balance`
+            let current_price = {
+                let states = self.states.lock().await;
+                match processed_request.side {
+                    Side::Buy => {
+                        let token = &processed_request.instrument.base;
+                        let balance = states.balance(token)?;
+                        balance.current_price
+                    }
+                    Side::Sell => {
+                        let token = &processed_request.instrument.quote;
+                        let balance = states.balance(token)?;
+                        balance.current_price
+                    }
+                }
+            };
+
+            // 执行开单请求，将 `current_price` 传递给 `process_request_open_into_open_atomically` 方法
+            let open_result = self.process_request_open_into_open_atomically(current_price, processed_request).await;
+            open_results.push(open_result);
+        }
+
+        // 发送处理结果 FIXME 不可省略。
+        // self.account_event_tx
+        //     .send(open_results)
+        //     .expect("[UniLink_Execution] : Attempt to open orders has failed.");
+
+        Ok(())
+    }
+
     pub async fn calculate_required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&Token, f64)
     {
         match order.instrument.kind {
@@ -278,7 +324,6 @@ impl Account
     /// `validate_order_request_open` 验证开单请求的合法性，确保订单类型是受支持的。
     /// `match_orders` 处理市场事件，根据市场事件匹配相应的订单并生成交易。
     /// `get_orders_for_instrument` 获取与特定金融工具相关的订单，用于进一步的订单匹配操作。
-    /// `match_orders_by_side` 根据订单的买卖方向（Side）匹配订单并生成交易事件。
     /// `determine_fees_percent` 根据金融工具类型和订单方向确定适用的费用百分比。
 
     pub fn validate_order_instruction(kind: OrderInstruction) -> Result<(), ExecutionError>
