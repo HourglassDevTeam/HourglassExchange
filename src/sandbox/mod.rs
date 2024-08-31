@@ -169,9 +169,10 @@ impl ExchangeInitiator
 #[cfg(test)]
 mod tests
 {
+    use std::net::TcpListener;
     use super::*;
-    use crate::test_utils::create_test_account;
     use tokio::sync::mpsc;
+    use crate::test_utils::create_test_account;
 
     #[tokio::test]
     async fn initiator_should_create_exchange_initiator_with_default_values()
@@ -189,44 +190,44 @@ mod tests
         assert!(initiator.event_sandbox_rx.is_some());
     }
 
-    // #[tokio::test]
-    // async fn initiator_should_set_account()
-    // {
-    //     let account = create_test_account().await;
-    //     let arc_mutex_account = Arc::new(Mutex::new(account));
-    //     let initiator = ExchangeInitiator::new().account(arc_mutex_account);
-    //     assert!(initiator.account.is_some());
-    // }
+    #[tokio::test]
+    async fn initiator_should_set_account()
+    {
+        let account = create_test_account().await;
+        let arc_mutex_account = account;
+        let initiator = ExchangeInitiator::new().account(arc_mutex_account);
+        assert!(initiator.account.is_some());
+    }
 
-    // #[tokio::test]
-    // async fn initiator_should_return_error_if_event_sandbox_rx_is_missing()
-    // {
-    //     let account = create_test_account().await;
-    //     let initiator = ExchangeInitiator::new().account(account);
-    //     let result = initiator.initiate();
-    //     assert!(result.is_err());
-    // }
-    //
-    // #[tokio::test]
-    // async fn initiator_should_return_error_if_account_is_missing()
-    // {
-    //     let (_tx, rx) = mpsc::unbounded_channel();
-    //     let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
-    //     let result = initiator.initiate();
-    //     assert!(result.is_err());
-    // }
+    #[tokio::test]
+    async fn initiator_should_return_error_if_event_sandbox_rx_is_missing()
+    {
+        let account = create_test_account().await;
+        let initiator = ExchangeInitiator::new().account(account);
+        let result = initiator.initiate();
+        assert!(result.is_err());
+    }
 
-    // #[tokio::test]
-    // async fn run_online_should_return_if_port_is_in_use()
-    // {
-    //     // 占用端口 3030
-    //     let _listener = TcpListener::bind("127.0.0.1:3030").unwrap();
-    //
-    //     let (_tx, rx) = mpsc::unbounded_channel();
-    //     let account: Account = create_test_account().await;
-    //     let exchange = SandBoxExchange { event_sandbox_rx: rx, account };
-    //     let address = ([127, 0, 0, 1], 3030);
-    //     assert!(is_port_in_use(address));
-    //     exchange.run_online().await;
-    // }
+    #[tokio::test]
+    async fn initiator_should_return_error_if_account_is_missing()
+    {
+        let (_tx, rx) = mpsc::unbounded_channel();
+        let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
+        let result = initiator.initiate();
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn run_online_should_return_if_port_is_in_use()
+    {
+        // 占用端口 3030
+        let _listener = TcpListener::bind("127.0.0.1:3030").unwrap();
+
+        let (_tx, rx) = mpsc::unbounded_channel();
+        let account = create_test_account().await;
+        let exchange = SandBoxExchange { event_sandbox_rx: rx, account };
+        let address = ([127, 0, 0, 1], 3030);
+        assert!(is_port_in_use(address));
+        exchange.run_online().await;
+    }
 }
