@@ -1,17 +1,18 @@
 use account::Account;
+use clickhouse::query::RowCursor;
 use mpsc::UnboundedReceiver;
 use std::fmt::Debug;
-use clickhouse::query::RowCursor;
-use tokio::sync::{mpsc};
+use std::sync::{Arc};
+use tokio::sync::{mpsc, Mutex};
 use warp::Filter;
 
+use crate::common::datafeed::market_event::MarketEvent;
+use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 use crate::{
     error::ExecutionError,
     network::{event::NetworkEvent, is_port_in_use},
     sandbox::sandbox_client::SandBoxClientEvent,
 };
-use crate::common::datafeed::market_event::MarketEvent;
-use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 
 pub mod account;
 pub mod clickhouse_api;
@@ -31,7 +32,8 @@ pub struct SandBoxExchange
     /// data_source could be added here as a daughter struct with variants.
     pub data_source: TradeEventSource,
     pub event_sandbox_rx: UnboundedReceiver<SandBoxClientEvent>,
-    pub account: Account,
+    pub market_event_tx: UnboundedReceiver<MarketEvent<MarketTrade>>,
+    pub account: Arc<Mutex<Account>>,
 }
 
 impl SandBoxExchange
@@ -95,13 +97,13 @@ impl SandBoxExchange
     {
         while let Some(event) = self.event_sandbox_rx.recv().await {
             match event {
-                | SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.fetch_orders_open(response_tx).await,
-                | SandBoxClientEvent::FetchBalances(response_tx) => self.account.fetch_balances(response_tx).await,
+                | SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.lock().await.fetch_orders_open(response_tx).await,
+                | SandBoxClientEvent::FetchBalances(response_tx) => self.account.lock().await.fetch_balances(response_tx).await,
                 // NOTE this is buggy. should return an open order or an error eventually, not pendings in the flight.
                 |   SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => {
                     println!("Processing OpenOrders event.");
                     // 处理请求，将其转换为 pending 状态的订单
-                    let pending_orders = match self.account.process_requests_into_pendings(open_requests).await {
+                    let pending_orders = match self.account.lock().await.process_requests_into_pendings(open_requests).await {
                         Ok(orders) => orders,
                         Err(e) => {
                             let _ = response_tx.send(vec![Err(e)]);
@@ -111,9 +113,9 @@ impl SandBoxExchange
                     // 在合适的地方执行account的match_orders(&mut self, market_event: MarketEvent<MarketTrade>)，不断匹配时间戳和是的trade，匹配到马上开单停止匹配，并把open 订单发送回客户端
 
                 },
-                | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.cancel_orders(cancel_requests, response_tx).await,
-                | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.cancel_orders_all(response_tx).await,
-                | SandBoxClientEvent::FetchMarketEvent(market_event) => self.account.match_orders(market_event).await,
+                | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.lock().await.cancel_orders(cancel_requests, response_tx).await,
+                | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.lock().await.cancel_orders_all(response_tx).await,
+                | SandBoxClientEvent::FetchMarketEvent(market_event) => self.account.lock().await.match_orders(market_event).await,
             }
         }
     }
@@ -125,22 +127,29 @@ impl Default for ExchangeInitiator
     {
         let (_tx, rx) = mpsc::unbounded_channel();
         Self { event_sandbox_rx: Some(rx),
-               account: None }
+            account: None,
+            market_event_tx: None,
+        }
     }
 }
 #[derive(Debug)]
 pub struct ExchangeInitiator
 {
     pub(crate) event_sandbox_rx: Option<UnboundedReceiver<SandBoxClientEvent>>,
-    pub(crate) account: Option<Account>,
+    pub(crate) account: Option<Arc<Mutex<Account>>>,
+    pub(crate) market_event_tx: Option<UnboundedReceiver<MarketEvent<MarketTrade>>>,
+
 }
 
 impl ExchangeInitiator
 {
     pub fn new() -> Self
     {
-        Self { event_sandbox_rx: None,
-               account: None }
+        Self {
+            event_sandbox_rx: None,
+            account: None,
+            market_event_tx: None,
+        }
     }
 
     pub fn event_sandbox_rx(self, value: UnboundedReceiver<SandBoxClientEvent>) -> Self
@@ -149,7 +158,7 @@ impl ExchangeInitiator
                ..self }
     }
 
-    pub fn account(self, value: Account) -> Self
+    pub fn account(self, value: Arc<Mutex<Account>>) -> Self
     {
         Self { account: Some(value), ..self }
     }
@@ -159,7 +168,9 @@ impl ExchangeInitiator
         Ok(SandBoxExchange {
             data_source,
             event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
-                             account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
+            market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
+            account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))?
+        })
     }
 }
 
@@ -190,7 +201,8 @@ mod tests
     async fn initiator_should_set_account()
     {
         let account = create_test_account().await;
-        let initiator = ExchangeInitiator::new().account(account);
+        let arc_mutex_account = Arc::new(Mutex::new(account));
+        let initiator = ExchangeInitiator::new().account(arc_mutex_account);
         assert!(initiator.account.is_some());
     }
 
