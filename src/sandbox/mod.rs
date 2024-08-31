@@ -1,12 +1,8 @@
 use account::Account;
-use clickhouse::query::RowCursor;
 use mpsc::UnboundedReceiver;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use warp::Filter;
-
-use crate::common::datafeed::market_event::MarketEvent;
-use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 use crate::{
     error::ExecutionError,
     network::{event::NetworkEvent, is_port_in_use},
@@ -118,7 +114,7 @@ impl Default for ExchangeInitiator
         Self {
             event_sandbox_rx: Some(rx),
             account: None,
-            market_event_tx: None,
+            // market_event_tx: None,
             // data_source: None,
         }
     }
@@ -127,7 +123,7 @@ pub struct ExchangeInitiator
 {
     pub(crate) event_sandbox_rx: Option<UnboundedReceiver<SandBoxClientEvent>>,
     pub(crate) account: Option<Arc<Mutex<Account>>>,
-    pub(crate) market_event_tx: Option<UnboundedReceiver<MarketEvent<MarketTrade>>>,
+    // pub(crate) market_event_tx: Option<UnboundedReceiver<MarketEvent<MarketTrade>>>,
     // pub(crate) data_source: Option<TradeEventSource>,
 }
 
@@ -138,7 +134,7 @@ impl ExchangeInitiator
         Self {
             event_sandbox_rx: None,
             account: None,
-            market_event_tx: None,
+            // market_event_tx: None,
             // data_source: None,
         }
     }
