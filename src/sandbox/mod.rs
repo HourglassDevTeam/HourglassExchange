@@ -21,7 +21,7 @@ pub mod sandbox_orderbook;
 pub mod utils;
 pub mod ws_trade;
 
-pub(crate) enum TradeEventSource {
+pub enum TradeEventSource {
     RealTime(UnboundedReceiver<MarketEvent<MarketTrade>>),
     Backtest(RowCursor<MarketTrade>),
 }
@@ -168,7 +168,6 @@ mod tests
 {
     use super::*;
     use crate::test_utils::create_test_account;
-    use std::net::TcpListener;
     use tokio::sync::mpsc;
 
     #[tokio::test]

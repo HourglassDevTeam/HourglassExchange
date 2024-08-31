@@ -71,7 +71,6 @@ mod tests
         let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::Sine, 100, 0);
         fluctuate_latency(&mut latency, machine_id as i64);
-        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
@@ -81,7 +80,6 @@ mod tests
         let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::Cosine, 100, 0);
         fluctuate_latency(&mut latency, machine_id as i64);
-        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
@@ -91,7 +89,6 @@ mod tests
         let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::NormalDistribution, 100, 0);
         fluctuate_latency(&mut latency, machine_id as i64);
-        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 
@@ -101,7 +98,6 @@ mod tests
         let machine_id = generate_machine_id().unwrap();
         let mut latency = AccountLatency::new(FluctuationMode::Uniform, 100, 0);
         fluctuate_latency(&mut latency, machine_id as i64);
-        println!("{:?}", latency);
         assert!(latency.current_value >= latency.minimum && latency.current_value <= latency.maximum);
     }
 }

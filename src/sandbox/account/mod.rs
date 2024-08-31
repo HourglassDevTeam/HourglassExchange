@@ -1,18 +1,17 @@
 use std::{
     fmt::Debug,
     sync::{
-        Arc,
         atomic::{AtomicI64, Ordering},
+        Arc,
     },
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use futures::future::join_all;
-use mpsc::{UnboundedReceiver, UnboundedSender};
+use mpsc::{UnboundedSender};
 use oneshot::Sender;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
-use tokio::sync::{mpsc, Mutex, oneshot, RwLock};
-use tokio::time::Duration;
+use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 use uuid::Uuid;
 
@@ -20,28 +19,27 @@ use account_config::AccountConfig;
 use account_orders::AccountOrders;
 use account_states::AccountState;
 
+use crate::common::datafeed::market_event::MarketEvent;
 use crate::{
     common::{
         balance::TokenBalance,
         event::{AccountEvent, AccountEventKind},
-        instrument::{Instrument, kind::InstrumentKind},
+        instrument::{kind::InstrumentKind, Instrument},
         order::{
             identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id, request_id::RequestId},
-            Order,
             order_instructions::OrderInstruction,
-            OrderRole, states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
+            states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
+            Order, OrderRole,
         },
         position::AccountPositions,
-        Side,
         token::Token,
         trade::ClientTrade,
+        Side,
     },
     error::ExecutionError,
-    Exchange,
     sandbox::{account::account_config::SandboxMode, clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, instrument_orders::InstrumentOrders},
+    Exchange,
 };
-use crate::common::datafeed::market_event::MarketEvent;
-use crate::sandbox::sandbox_client::OpenOrderResults;
 
 pub mod account_config;
 pub mod account_latency;
@@ -717,7 +715,6 @@ mod tests
             create_test_request_open,
         },
     };
-
     use super::*;
 
     #[tokio::test]
