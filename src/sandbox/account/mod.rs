@@ -204,6 +204,7 @@ impl Account
     pub async fn open_orders(
         &mut self,
         open_requests: Vec<Order<RequestOpen>>,
+        response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>,
     ) -> Result<(), ExecutionError> {
         let mut open_results = Vec::new();
 
@@ -234,14 +235,14 @@ impl Account
             };
 
             // 执行开单请求，将 `current_price` 传递给 `process_request_open_into_open_atomically` 方法
-            let open_result = self.process_request_open_into_open_atomically(current_price, processed_request).await;
+            let open_result = self.request_into_open_atomically(current_price, processed_request).await;
             open_results.push(open_result);
         }
 
-        // 发送处理结果 FIXME 不可省略。
-        // self.account_event_tx
-        //     .send(open_results)
-        //     .expect("[UniLink_Execution] : Attempt to open orders has failed.");
+        // 发送处理结果
+        response_tx
+            .send(open_results)
+            .expect("[UniLink_Execution] : Attempt to open orders has failed.");
 
         Ok(())
     }
@@ -276,7 +277,7 @@ impl Account
         }
     }
 
-    pub async fn process_request_open_into_open_atomically(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError>
+    pub async fn request_into_open_atomically(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError>
     {
         Self::validate_order_instruction(order.kind)?;
 
@@ -391,7 +392,6 @@ impl Account
 
 
     pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>) -> Vec<ClientTrade> {
-        let current_price = market_event.kind.price;
 
         let mut trades = Vec::new();
 
@@ -415,7 +415,6 @@ impl Account
 
         trades
     }
-
 
 
     fn determine_fees_percent(&self, kind: &InstrumentKind, role: &OrderRole) -> Option<f64>
