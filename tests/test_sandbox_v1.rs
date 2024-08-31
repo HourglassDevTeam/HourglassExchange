@@ -171,7 +171,7 @@ async fn test_3_open_limit_buy_order(
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
     account: &mut Account,
 ) {
-    println!("Creating a limit buy order request.");
+    println!("[TEST] : Creating a limit buy order request.");
     let open_request = order_request_limit(
         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),
