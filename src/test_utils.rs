@@ -124,9 +124,7 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen>
         },
     }
 }
-/// 创建一个测试用的 `AccountState` 实例，并将其封装在 `Arc<Mutex<...>>` 中。
-pub async fn create_test_account_state() -> Arc<Mutex<AccountState>>
-{
+pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
     // Create a mock balance map and populate it
     let mut balances = HashMap::new();
     // Define tokens for testing
@@ -150,7 +148,8 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>>
 
     let account_state_arc = Arc::new(Mutex::new(account_state));
 
-    let account = Arc::new(Account {
+    // 包装 Account 实例在 Arc<Mutex<...>> 中
+    let account = Arc::new(Mutex::new(Account {
         current_session: Uuid::new_v4(),
         machine_id: 0,
         exchange_timestamp: AtomicI64::new(1234567),
@@ -163,7 +162,7 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>>
             minimum: 0,
             current_value: 0,
         }).await)),
-    });
+    }));
 
     // 更新 `account_ref` 以指向 `Account`
     {
@@ -174,15 +173,17 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>>
     account_state_arc
 }
 
-pub async fn create_test_account() -> Account {
+pub async fn create_test_account() -> Arc<Mutex<Account>> {
     let leverage_rate = 1.0;
-    // Create a mock balance map and populate it
     let mut balances = HashMap::new();
-    // Define tokens for testing
     balances.insert(Token::from("TEST_BASE"), Balance::new(10.0, 10.0, 1.0));
     balances.insert(Token::from("TEST_QUOTE"), Balance::new(10_000.0, 10_000.0, 1.0));
 
-    // 创建账户配置
+    let commission_rates = CommissionRates {
+        maker_fees: 0.001,
+        taker_fees: 0.002,
+    };
+
     let mut account_config = AccountConfig {
         margin_mode: MarginMode::SingleCurrencyMargin,
         position_mode: PositionDirectionMode::NetMode,
@@ -194,14 +195,10 @@ pub async fn create_test_account() -> Account {
         execution_mode: SandboxMode::Backtest,
     };
 
-    // 设置 CommissionRates 并插入到 fees_book 中
-    let commission_rates = CommissionRates {
-        maker_fees: 0.001,
-        taker_fees: 0.002,
-    };
-    account_config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
+    account_config
+        .fees_book
+        .insert(InstrumentKind::Perpetual, commission_rates);
 
-    // 创建账户状态
     let positions = AccountPositions {
         margin_pos: Vec::new(),
         perpetual_pos: Vec::new(),
@@ -209,19 +206,19 @@ pub async fn create_test_account() -> Account {
         option_pos: Vec::new(),
     };
 
+    let machine_id = generate_machine_id().unwrap();
+
+    // 预先创建空的 AccountState，然后再初始化 Account
     let account_state = AccountState {
         balances,
         positions,
-        account_ref: Weak::new(),
+        account_ref: Weak::new(), // 先初始化为空的 Weak
     };
 
-    // 包装为 Arc<Mutex<...>>
     let account_state_arc = Arc::new(Mutex::new(account_state));
 
-    let machine_id = generate_machine_id().unwrap();
-
-    // 创建 Account 实例
-    let account = Account {
+    // 创建 Account 实例，并将其包裹在 Arc<Mutex<...>> 中
+    let account = Arc::new(Mutex::new(Account {
         current_session: Uuid::new_v4(),
         machine_id,
         exchange_timestamp: AtomicI64::new(1234567),
@@ -231,27 +228,25 @@ pub async fn create_test_account() -> Account {
         orders: Arc::new(RwLock::new(
             AccountOrders::new(
                 machine_id,
-                vec![],
+                vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))],
                 AccountLatency {
                     fluctuation_mode: FluctuationMode::Sine,
                     maximum: 300,
                     minimum: 0,
                     current_value: 0,
                 },
-            )
-                .await,
+            ).await,
         )),
-    };
+    }));
 
-    // 更新 account_ref，使其指向 Account
+    // 更新 account_ref，使其指向 Weak<Mutex<Account>>
     {
         let mut account_state_locked = account_state_arc.lock().await;
-        account_state_locked.account_ref = Arc::downgrade(&Arc::new(account.clone()));
+        account_state_locked.account_ref = Arc::downgrade(&account);
     }
 
     account
 }
-
 
 /// 创建一个测试用的 `PerpetualPosition` 实例。
 pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPosition

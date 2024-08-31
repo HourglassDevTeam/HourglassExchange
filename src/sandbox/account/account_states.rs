@@ -24,13 +24,14 @@ use std::{
     ops::{Deref, DerefMut},
     sync::{atomic::Ordering, Weak},
 };
+use tokio::sync::Mutex;
 
 #[derive(Clone, Debug)]
 pub struct AccountState
 {
     pub balances: HashMap<Token, Balance>,
     pub positions: AccountPositions,
-    pub account_ref: Weak<Account>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
+    pub account_ref: Weak<Mutex<Account>>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
 }
 
 impl PartialEq for AccountState
@@ -68,30 +69,32 @@ impl AccountState
             .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {token}")))
     }
 
-    pub async fn get_fee(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExecutionError>
-    {
+    pub async fn get_fee(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
-            let account_read = account;
-            let commission_rates = account_read.config
+            // 先获取锁定的 Account 实例
+            let account_guard = account.lock().await;
+            let commission_rates = account_guard.config
                 .fees_book
                 .get(instrument_kind)
                 .cloned()
                 .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
 
             match role {
-                | OrderRole::Maker => Ok(commission_rates.maker_fees),
-                | OrderRole::Taker => Ok(commission_rates.taker_fees),
+                OrderRole::Maker => Ok(commission_rates.maker_fees),
+                OrderRole::Taker => Ok(commission_rates.taker_fees),
             }
         } else {
             Err(ExecutionError::SandBox("Account reference is not set".to_string()))
         }
     }
 
-    pub async fn get_exchange_ts(&self) -> Result<i64, ExecutionError>
-    {
+
+    pub async fn get_exchange_ts(&self) -> Result<i64, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
-            let account_read = account;
-            Ok(account_read.exchange_timestamp.load(Ordering::SeqCst))
+            // 锁定 Account，并在新的作用域中使用锁定的结果
+            let account_guard = account.lock().await;
+            let exchange_ts = account_guard.exchange_timestamp.load(Ordering::SeqCst);
+            Ok(exchange_ts)
         } else {
             Err(ExecutionError::SandBox("Account reference is not set".to_string()))
         }
@@ -113,26 +116,25 @@ impl AccountState
             Err(ExecutionError::InsufficientBalance(token.clone()))
         }
     }
-
-    /// 判断Account的当前持仓模式。
     #[allow(dead_code)]
-    async fn determine_position_mode(&self) -> Result<PositionDirectionMode, ExecutionError>
-    {
+
+    async fn determine_position_mode(&self) -> Result<PositionDirectionMode, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
-            let account_read = account;
-            Ok(account_read.config.position_mode.clone())
+            // 锁定 Account，并在新的作用域中使用锁定的结果
+            let account_guard = account.lock().await;
+            let position_mode = account_guard.config.position_mode.clone();
+            Ok(position_mode)
         } else {
             Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
-        }
-    }
+        }}
 
     /// 判断Account的当前保证金模式。
     #[allow(dead_code)]
-    async fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError>
-    {
+    async fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
-            let account_read = account;
-            Ok(account_read.config.margin_mode.clone())
+            // 先获取锁定的 Account 实例
+            let account_guard = account.lock().await;
+            Ok(account_guard.config.margin_mode.clone())
         } else {
             Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
@@ -311,7 +313,7 @@ impl AccountState
     {
         if let Some(account) = self.account_ref.upgrade() {
             let position_mode = self.determine_position_mode().await?;
-            let position_margin_mode = account.config.position_margin_mode.clone();
+            let position_margin_mode = account.lock().await.config.position_margin_mode.clone();
 
             // 前置检查 InstrumentKind 和 NetMode 方向
             match open.instrument.kind {

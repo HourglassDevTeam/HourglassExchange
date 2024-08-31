@@ -40,18 +40,11 @@ use unilink_execution::common::order::states::request_cancel::RequestCancel;
 pub async fn run_default_exchange(
     event_simulated_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
 ) {
-    // Define supported Instruments for the Sandbox Exchange
-    let instruments = instruments();
-    println!("Instruments initialized: {:?}", instruments);
-
     // Build and run the Sandbox Exchange
     let sandbox_exchange = SandBoxExchange::initiator()
         .event_sandbox_rx(event_simulated_rx)
         // .market_event_tx(None)
-        .account(
-          Arc::new(Mutex::new(create_test_account().await
-          ))
-        )
+        .account(create_test_account().await) // 直接使用 create_test_account().await
         .initiate() // Use `initiate` instead of `build` for `SandBoxExchange`
         .expect("failed to build SandBoxExchange");
 
@@ -95,12 +88,10 @@ pub async fn initial_balances() -> Arc<Mutex<AccountState>> {
         positions,
         account_ref: Weak::new(),
     };
-    // Debug
-    println!("Initial balances created,{:?}", account_state.balances);
     let account_state_arc = Arc::new(Mutex::new(account_state));
 
     // 模拟环境中的 `Account`
-    let account = Arc::new(Account {
+    let account = Arc::new(Mutex::new(Account {
         current_session: Uuid::new_v4(),
         machine_id: 0,
         exchange_timestamp: AtomicI64::new(1234567),
@@ -113,7 +104,7 @@ pub async fn initial_balances() -> Arc<Mutex<AccountState>> {
             minimum: 0,
             current_value: 0,
         }).await)),
-    });
+    }));
 
     // 更新 `account_ref` 以指向 `Account`
     {
