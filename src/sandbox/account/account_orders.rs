@@ -100,7 +100,7 @@ impl AccountOrders
     pub fn generate_request_id(&self, request: &Order<RequestOpen>) -> RequestId
     {
         let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
-        let request_ts = request.client_ts;
+        let request_ts = request.timestamp;
         RequestId::new(request_ts as u64, self.machine_id, counter)
     }
 
@@ -195,7 +195,7 @@ impl AccountOrders
 
         // 从预定义的延迟值数组中选择一个延迟值
         let latency = self.get_random_latency();
-        let adjusted_client_ts = order.client_ts + latency;
+        let adjusted_client_ts = order.timestamp + latency;
 
         // 创建并返回新的 RequestOpen 订单
         Order {
@@ -203,7 +203,7 @@ impl AccountOrders
             exchange: order.exchange,
             instrument: order.instrument,
             cid: order.cid,
-            client_ts: order.client_ts,
+            timestamp: order.timestamp,
             side: order.side,
             state: RequestOpen {
                 reduce_only: order.state.reduce_only,
@@ -366,7 +366,7 @@ impl AccountOrders
             exchange: request.exchange,
             instrument: request.instrument,
             cid: request.cid,
-            client_ts: request.client_ts,
+            timestamp: request.timestamp,
             side: request.side,
             state: Open {
                 id: self.order_id(),

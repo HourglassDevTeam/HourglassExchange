@@ -530,7 +530,7 @@ impl Account
                 kind: order.kind,
                 cid: order.cid,
                 exchange: Exchange::SandBox,
-                client_ts: 0,
+                timestamp: 0,
             })
             .collect();
 
@@ -585,7 +585,7 @@ mod tests
                 quote: Token::from("USD"),
                 kind: InstrumentKind::Spot,
             },
-            client_ts: 1625247600000,
+            timestamp: 1625247600000,
             cid: ClientOrderId(Some("validCID123".into())),
             side: Side::Buy,
             state: RequestOpen {
@@ -614,7 +614,7 @@ mod tests
                 quote: Token::from("USD"),
                 kind: InstrumentKind::Spot,
             },
-            client_ts: 1625247600000,
+            timestamp: 1625247600000,
             cid: ClientOrderId(Some("validCID123".into())),
             side: Side::Buy,
             state: RequestCancel { id: OrderId(12345) },

@@ -18,7 +18,7 @@ pub struct Order<State>
     pub kind: OrderInstruction, // 订单指令
     pub exchange: Exchange,     // 交易所
     pub instrument: Instrument, // 交易工具
-    pub client_ts: i64,         // 客户端下单时间
+    pub timestamp: i64,         // 生成的时候填客户端下单时间,回测场景中之后会被加上一个延迟时间。
     pub cid: ClientOrderId,     // 客户端订单ID
     pub side: Side,             // 买卖方向
     pub state: State,           // 订单状态

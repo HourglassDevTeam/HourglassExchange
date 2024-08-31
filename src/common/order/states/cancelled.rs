@@ -32,7 +32,7 @@ impl From<Order<Open>> for Order<Cancelled>
             exchange: order.exchange,
             instrument: order.instrument.clone(),
             cid: order.cid,
-            client_ts: order.client_ts,
+            timestamp: order.timestamp,
             side: order.side,
             state: Cancelled { id: order.state.id },
         }

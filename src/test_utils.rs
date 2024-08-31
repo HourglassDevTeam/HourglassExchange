@@ -84,7 +84,7 @@ pub fn create_test_order_open(side: Side, price: f64, size: f64) -> Order<Open>
             quote: Token::from("TEST_QUOTE"), // 测试用报价货币
             kind: InstrumentKind::Perpetual, /* 测试用永续合约 */
         },
-        client_ts: 1625247600000,                       // 假设的客户端时间戳
+        timestamp: 1625247600000,                       // 假设的客户端时间戳
         cid: ClientOrderId(Some("validCID123".into())), // 假设的客户端订单ID
         side,
         state: Open {
@@ -114,7 +114,7 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen>
             quote: Token::from(quote),
             kind: InstrumentKind::Spot,
         },
-        client_ts: 1625247600000,
+        timestamp: 1625247600000,
         cid: ClientOrderId(Some(format!("CID{}", order_id.0 % 1_000_000))),
         side: Side::Buy,
         state: RequestOpen {
