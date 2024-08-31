@@ -39,15 +39,14 @@ impl Ids {
 #[tokio::test]
 async fn main() {
     // 创建通道用于发送和接收事件
-    let ( event_simulated_tx, event_simulated_rx) = mpsc::unbounded_channel();
+    let (request_tx, request_rx) = mpsc::unbounded_channel();
 
     // 创建并运行 SimulatedExchange
-    tokio::spawn(run_default_exchange(event_simulated_rx));
+    tokio::spawn(run_default_exchange(request_rx));
 
     // 初始化 SandBoxClient，用于与交易所进行交互
     let client = SandBoxClient {
-        request_tx: event_simulated_tx.clone(),
-        // market_event_rx, // 传递 market_event_rx
+        request_tx: request_tx.clone(),
     };
 
     // 1. Fetch initial OpenOrders when we have no open Orders
