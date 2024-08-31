@@ -197,9 +197,8 @@ impl Account
 
     /// [PART 2]
     /// `open_orders` 执行开单操作。
-    /// `process_pending_order_into_open_atomically` 尝试以原子操作方式打开一个订单，确保在验证和更新账户余额后安全地打开订单。
-    /// `calculate_required_available_balance` 计算打开订单所需的可用余额，用于验证账户中是否有足够的资金执行订单。
-
+    /// `atomic_open` 尝试以原子操作方式打开一个订单，确保在验证和更新账户余额后安全地打开订单。
+    /// `required_available_balance` 计算打开订单所需的可用余额，用于验证账户中是否有足够的资金执行订单。
 
     pub async fn open_orders(
         &mut self,
@@ -235,19 +234,21 @@ impl Account
             };
 
             // 执行开单请求，将 `current_price` 传递给 `process_request_open_into_open_atomically` 方法
-            let open_result = self.request_into_open_atomically(current_price, processed_request).await;
+            let open_result = self.atomic_open(current_price, processed_request).await;
             open_results.push(open_result);
         }
 
-        // 发送处理结果
-        response_tx
-            .send(open_results)
-            .expect("[UniLink_Execution] : Attempt to open orders has failed.");
-
+        // 发送处理结果，处理可能的发送错误
+        if let Err(e) = response_tx.send(open_results) {
+            return Err(ExecutionError::SandBox(format!(
+                "Failed to send open order results: {:?}",
+                e
+            )));
+        }
         Ok(())
     }
 
-    pub async fn calculate_required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&Token, f64)
+    pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&Token, f64)
     {
         match order.instrument.kind {
             | InstrumentKind::Spot => match order.side {
@@ -263,21 +264,21 @@ impl Account
                 | Side::Sell => (&order.instrument.base, order.state.size * self.config.account_leverage_rate),
             },
             | InstrumentKind::CryptoOption => {
-                todo!()
+                todo!("CryptoOption is not supported yet")
             }
             | InstrumentKind::CryptoLeveragedToken => {
-                todo!()
+                todo!("CryptoLeveragedToken is not supported yet")
             }
             | InstrumentKind::CommodityOption => {
-                todo!()
+                todo!("CommodityOption is not supported yet")
             }
             | InstrumentKind::CommodityFuture => {
-                todo!()
+                todo!("CommodityFuture is not supported yet")
             }
         }
     }
 
-    pub async fn request_into_open_atomically(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError>
+    pub async fn atomic_open(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError>
     {
         Self::validate_order_instruction(order.kind)?;
 
@@ -288,7 +289,7 @@ impl Account
         };
 
         // 计算所需的可用余额，尽量避免锁操作
-        let (token, required_balance) = self.calculate_required_available_balance(&order, current_price).await;
+        let (token, required_balance) = self.required_available_balance(&order, current_price).await;
 
         // 检查余额是否充足，并在锁定后更新订单
         self.states.lock().await.has_sufficient_available_balance(token, required_balance)?;
@@ -315,7 +316,6 @@ impl Account
                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]),
             })
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
-
         Ok(open_order)
     }
 
