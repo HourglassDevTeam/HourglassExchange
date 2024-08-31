@@ -1,7 +1,6 @@
 use account::Account;
 use clickhouse::query::RowCursor;
 use mpsc::UnboundedReceiver;
-use std::fmt::Debug;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use warp::Filter;
@@ -22,17 +21,18 @@ pub mod sandbox_orderbook;
 pub mod utils;
 pub mod ws_trade;
 
-pub enum TradeEventSource {
-    RealTime(UnboundedReceiver<MarketEvent<MarketTrade>>),
-    Backtest(RowCursor<MarketTrade>),
-}
+// pub enum TradeEventSource {
+//     RealTime(UnboundedReceiver<MarketEvent<MarketTrade>>),
+//     Backtest(RowCursor<MarketTrade>),
+// }
 
 pub struct SandBoxExchange
 {
     /// data_source could be added here as a daughter struct with variants.
-    pub data_source: TradeEventSource,
+    // #[allow(dead_code)]
+    // pub data_source: TradeEventSource,
     pub event_sandbox_rx: UnboundedReceiver<SandBoxClientEvent>,
-    pub market_event_tx: UnboundedReceiver<MarketEvent<MarketTrade>>,
+    // pub market_event_tx: UnboundedReceiver<MarketEvent<MarketTrade>>,
     pub account: Arc<Mutex<Account>>,
 }
 
@@ -119,16 +119,16 @@ impl Default for ExchangeInitiator
             event_sandbox_rx: Some(rx),
             account: None,
             market_event_tx: None,
+            // data_source: None,
         }
     }
 }
-#[derive(Debug)]
 pub struct ExchangeInitiator
 {
     pub(crate) event_sandbox_rx: Option<UnboundedReceiver<SandBoxClientEvent>>,
     pub(crate) account: Option<Arc<Mutex<Account>>>,
     pub(crate) market_event_tx: Option<UnboundedReceiver<MarketEvent<MarketTrade>>>,
-
+    // pub(crate) data_source: Option<TradeEventSource>,
 }
 
 impl ExchangeInitiator
@@ -139,6 +139,7 @@ impl ExchangeInitiator
             event_sandbox_rx: None,
             account: None,
             market_event_tx: None,
+            // data_source: None,
         }
     }
 
@@ -155,15 +156,18 @@ impl ExchangeInitiator
         Self { account: Some(value), ..self }
     }
 
-    pub fn initiate(self, data_source: TradeEventSource) -> Result<SandBoxExchange, ExecutionError>
-    {
+    pub fn initiate(self) -> Result<SandBoxExchange, ExecutionError> {
         Ok(SandBoxExchange {
-            data_source,
             event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
-            market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
+            // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::InitiatorIncomplete("market_event_tx".to_string()))?,
             account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))?,
         })
     }
+
+    // pub fn trade_event_source(self, value: TradeEventSource) -> Self
+    // {
+    //     Self { data_source: Some(value), ..self }
+    // }
 }
 
 #[cfg(test)]

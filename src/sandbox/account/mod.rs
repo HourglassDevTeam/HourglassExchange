@@ -1,3 +1,5 @@
+/// FIXME respond function is not used in some of the functions.
+
 use std::{
     fmt::Debug,
     sync::{
@@ -159,7 +161,6 @@ impl Account
     /// `fetch_balances` 发送当前所有代币的余额信息，用于获取账户中所有代币的账本数据。
     /// `fetch_positions` 发送当前所有代币的持仓信息，用于获取账户中所有代币的仓位数据。
     /// `generate_request_id` 生成请求id。
-    /// `update_request_counter`更新请求计数器。NOTE 在产品上线之前应该增加断线重联沿用counter的功能。并考虑是否需要增加定时重置的功能(要考虑雪花算法的特性)。
     pub fn update_exchange_timestamp(&self, timestamp: i64)
     {
         let adjusted_timestamp = match self.config.execution_mode {
