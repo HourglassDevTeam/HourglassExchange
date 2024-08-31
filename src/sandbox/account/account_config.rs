@@ -26,7 +26,7 @@ pub struct AccountConfig
 pub enum SandboxMode
 {
     Backtest,
-    RealTime,
+    Online,
 }
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct CommissionRates

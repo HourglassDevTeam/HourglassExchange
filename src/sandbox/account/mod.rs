@@ -164,7 +164,7 @@ impl Account
     {
         let adjusted_timestamp = match self.config.execution_mode {
             | SandboxMode::Backtest => timestamp,                                                              // 在回测模式下使用传入的时间戳
-            | SandboxMode::RealTime => SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64, // 在实时模式下使用当前时间
+            | SandboxMode::Online => SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64, // 在实时模式下使用当前时间
         };
         self.exchange_timestamp.store(adjusted_timestamp, Ordering::SeqCst);
     }
