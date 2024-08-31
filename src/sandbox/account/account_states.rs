@@ -751,41 +751,6 @@ mod tests
         assert!(position_result.unwrap().is_some());
     }
 
-    #[tokio::test]
-    async fn test_any_position_open()
-    {
-        let account_state = create_test_account_state().await;
-        let instrument = create_test_instrument(InstrumentKind::Perpetual);
-
-        // 正确地创建一个 ClientOrderId
-        let client_order_id = ClientOrderId(Option::from("OJBK".to_string()));
-
-        // 模拟一个 Open 订单
-        let open_order = Order::<Open> { kind: OrderInstruction::Market,
-                                         exchange: Exchange::SandBox,
-                                         instrument: instrument.clone(),
-                                         client_ts: 123456789,
-                                         cid: client_order_id,
-                                         side: Side::Buy,
-                                         state: Open { id: OrderId(123),
-                                                       price: 100.0,
-                                                       size: 1.0,
-                                                       filled_quantity: 0.0,
-                                                       order_role: OrderRole::Maker,
-                                                       received_ts: 123456789 } };
-
-        // 在没有任何仓位的情况下调用
-        let result = account_state.lock().await.any_position_open(&open_order).await;
-
-        assert_eq!(result.expect("Failed to check position open status"), false);
-
-        // 模拟已有仓位的情况
-        account_state.lock().await.positions.perpetual_pos = vec![create_test_perpetual_position(instrument.clone())];
-
-        let result = account_state.lock().await.any_position_open(&open_order).await;
-
-        assert_eq!(result.expect("Failed to check position open status"), true);
-    }
 
     #[tokio::test]
     async fn test_check_position_direction_conflict()

@@ -129,11 +129,6 @@ impl NetworkEvent
                 let (response_tx, _response_rx) = oneshot::channel();
                 Ok(SandBoxClientEvent::CancelOrdersAll(response_tx))
             }
-            | "FetchMarketEvent" => {
-                // 解析 payload 为 MarketEvent<ClickhousePublicTrade> 类型
-                let market_event: MarketEvent<MarketTrade> = serde_json::from_str(&self.payload).map_err(|e| format!("Failed to parse FetchMarketEvent payload: {}", e))?;
-                Ok(SandBoxClientEvent::FetchMarketEvent(market_event))
-            }
             | _ => Err("Unknown event type".to_string()),
         }
     }

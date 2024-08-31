@@ -101,21 +101,12 @@ impl SandBoxExchange
                 | SandBoxClientEvent::FetchBalances(response_tx) => self.account.lock().await.fetch_balances(response_tx).await,
                 // NOTE this is buggy. should return an open order or an error eventually, not pendings in the flight.
                 |   SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => {
-                    println!("Processing OpenOrders event.");
-                    // 处理请求，将其转换为 pending 状态的订单
-                    let pending_orders = match self.account.lock().await.process_requests_into_pendings(open_requests).await {
-                        Ok(orders) => orders,
-                        Err(e) => {
-                            let _ = response_tx.send(vec![Err(e)]);
-                            return;
-                        }
-                    };
-                    // 在合适的地方执行account的match_orders(&mut self, market_event: MarketEvent<MarketTrade>)，不断匹配时间戳和是的trade，匹配到马上开单停止匹配，并把open 订单发送回客户端
+                  todo!()
 
                 },
                 | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.lock().await.cancel_orders(cancel_requests, response_tx).await,
                 | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.lock().await.cancel_orders_all(response_tx).await,
-                | SandBoxClientEvent::FetchMarketEvent(market_event) => self.account.lock().await.match_orders(market_event).await,
+                // | SandBoxClientEvent::FetchMarketEvent(market_event) => self.account.lock().await.match_orders(market_event).await,
             }
         }
     }

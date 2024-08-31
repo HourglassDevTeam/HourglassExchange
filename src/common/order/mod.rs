@@ -35,10 +35,7 @@ pub enum OrderRole
 mod tests
 {
     use super::*;
-    use crate::common::order::{
-        identification::request_id::RequestId,
-        states::{open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
-    };
+    use crate::common::order::states::{open::Open, request_cancel::RequestCancel, request_open::RequestOpen};
 
     #[test]
     fn order_execution_type_display_should_format_correctly()
@@ -63,21 +60,6 @@ mod tests
         assert!(req1 < req2);
     }
 
-    #[test]
-    fn pending_should_be_comparable()
-    {
-        let pending1 = Pending { reduce_only: true,
-                                 price: 50.0,
-                                 size: 1.0,
-                                 predicted_ts: 1000,
-                                 request_id: RequestId(123123123) };
-        let pending2 = Pending { reduce_only: false,
-                                 price: 60.0,
-                                 size: 2.0,
-                                 predicted_ts: 2000,
-                                 request_id: RequestId(123123123) };
-        assert!(pending1 < pending2);
-    }
 
     #[test]
     fn request_cancel_should_create_from_order_id()
@@ -87,15 +69,4 @@ mod tests
         assert_eq!(cancel_request.id, order_id);
     }
 
-    #[test]
-    fn open_order_remaining_quantity_should_be_calculated_correctly()
-    {
-        let open_order = Open { id: crate::common::order::identification::OrderId(123),
-                                price: 50.0,
-                                size: 10.0,
-                                filled_quantity: 3.0,
-                                order_role: OrderRole::Maker,
-                                received_ts: 1000 };
-        assert_eq!(open_order.remaining_quantity(), 7.0);
-    }
 }

@@ -11,7 +11,7 @@ pub struct Open
     pub size: f64,
     pub filled_quantity: f64,
     pub order_role: OrderRole,
-    pub received_ts: i64,
+    // pub received_ts: i64,
 }
 
 impl Open

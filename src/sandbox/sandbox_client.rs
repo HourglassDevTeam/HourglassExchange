@@ -37,7 +37,7 @@ pub type RequestCancelOrders = (Vec<Order<RequestCancel>>, Sender<CancelOrderRes
 #[derive(Debug)]
 pub enum SandBoxClientEvent
 {
-    FetchMarketEvent(MarketEvent<MarketTrade>),
+    // FetchMarketEvent(MarketEvent<MarketTrade>),
     FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExecutionError>>),
     FetchBalances(Sender<Result<Vec<TokenBalance>, ExecutionError>>),
     OpenOrders(RequestOpenOrders),

@@ -85,7 +85,7 @@ pub fn create_test_order_open(side: Side, price: f64, size: f64) -> Order<Open>
                           size,
                           filled_quantity: 0.0,         // 初始填充数量为0
                           order_role: OrderRole::Taker, // 假设订单角色为 Taker
-                          received_ts: 1625247600000    /* 假设的接收时间戳 */ } }
+                         } }
 }
 
 // 帮助函数，用于创建测试用的订单

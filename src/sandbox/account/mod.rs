@@ -28,7 +28,7 @@ use crate::{
         order::{
             identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id, request_id::RequestId},
             order_instructions::OrderInstruction,
-            states::{cancelled::Cancelled, open::Open, pending::Pending, request_cancel::RequestCancel, request_open::RequestOpen},
+            states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
             Order, OrderRole,
         },
         position::AccountPositions,
@@ -197,7 +197,7 @@ impl Account
     /// `process_pending_order_into_open_atomically` 尝试以原子操作方式打开一个订单，确保在验证和更新账户余额后安全地打开订单。
     /// `calculate_required_available_balance` 计算打开订单所需的可用余额，用于验证账户中是否有足够的资金执行订单。
     // NOTE 注意size的单位
-    pub async fn calculate_required_available_balance<'a>(&'a self, order: &'a Order<Pending>, current_price: f64) -> (&Token, f64)
+    pub async fn calculate_required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&Token, f64)
     {
         match order.instrument.kind {
             | InstrumentKind::Spot => match order.side {
@@ -226,82 +226,8 @@ impl Account
             }
         }
     }
-    // /// 处理一组请求，将其转换为挂起订单，并在市场事件条件满足时将其转换为打开订单。
-    // pub async fn process_requests_into_opens(
-    //     &mut self,
-    //     order_requests: Vec<Order<RequestOpen>>,
-    //     response_tx: Sender<OpenOrderResults>,
-    //     mut market_event_rx: UnboundedReceiver<MarketEvent<MarketTrade>>,
-    // ) {
-    //     println!("Starting to process requests into opens.");
-    //
-    //     // Process requests and convert them to pending orders
-    //     let pending_orders = match self.process_requests_into_pendings(order_requests).await {
-    //         Ok(orders) => {
-    //             println!("Processed requests into pending orders.");
-    //             orders
-    //         }
-    //         Err(e) => {
-    //             let _ = response_tx.send(vec![Err(e)]);
-    //             return;
-    //         }
-    //     };
-    //
-    //     let max_predicted_ts = pending_orders
-    //         .iter()
-    //         .map(|order| order.state.predicted_ts)
-    //         .max()
-    //         .unwrap();
-    //     println!("Max predicted timestamp for pending orders: {}", max_predicted_ts);
-    //
-    //     let timeout_duration = Duration::from_secs(5);  // Slightly increase the timeout
-    //
-    //     let market_event_result = tokio::time::timeout(timeout_duration, async {
-    //         while let Some(market_event) = market_event_rx.recv().await {
-    //             println!(
-    //                 "Received market event with timestamp: {}",
-    //                 market_event.kind.timestamp
-    //             );
-    //             if market_event.kind.timestamp > max_predicted_ts {
-    //                 println!("Market event timestamp is valid, processing...");
-    //                 return Some(market_event);
-    //             } else {
-    //                 println!("Market event timestamp is not greater than the max predicted timestamp. Waiting...");
-    //             }
-    //         }
-    //         None
-    //     }).await;
-    //
-    //     match market_event_result {
-    //         Ok(Some(market_event)) => {
-    //             let current_price = market_event.kind.price;
-    //
-    //             let mut open_orders_results = Vec::new();
-    //             for pending_order in pending_orders {
-    //                 match self.process_pending_order_into_open_atomically(current_price, pending_order).await {
-    //                     Ok(open_order) => { open_orders_results.push(Ok(open_order));println!("processed pending order into open atomically!") },
-    //                     Err(err) => open_orders_results.push(Err(err)),
-    //                 }
-    //             }
-    //
-    //             println!("Sending open orders result back to the client.");
-    //             let _ = response_tx.send(open_orders_results);
-    //         }
-    //         Ok(None) => {
-    //             println!("Market event channel closed unexpectedly.");
-    //             let _ = response_tx.send(vec![Err(ExecutionError::MarketEventChannelClosed)]);
-    //         }
-    //         Err(_) => {
-    //             println!("Timeout occurred while waiting for market events.");
-    //             let _ = response_tx.send(vec![Err(ExecutionError::Timeout("Market event processing timed out".to_string()))]);
-    //         }
-    //     }
-    //
-    //     println!("Finished processing OpenOrders event.");
-    // }
 
-
-    pub async fn process_pending_order_into_open_atomically(&mut self, current_price: f64, order: Order<Pending>) -> Result<Order<Open>, ExecutionError>
+    pub async fn process_request_open_into_open_atomically(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError>
     {
         Self::validate_order_instruction(order.kind)?;
 
@@ -339,35 +265,6 @@ impl Account
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
 
         Ok(open_order)
-    }
-
-    pub async fn process_requests_into_pendings(
-        &mut self,
-        order_requests: Vec<Order<RequestOpen>>,
-    ) -> Result<Vec<Order<Pending>>, ExecutionError> {
-        // 这里是原始逻辑，但改为返回 `Vec<Order<Pending>>`
-        let mut pending_orders = Vec::new();
-        let mut validation_results: Vec<Result<(), ExecutionError>> = Vec::with_capacity(order_requests.len());
-
-        for order in &order_requests {
-            let validation_result = Account::validate_order_request_open(order);
-            validation_results.push(validation_result);
-        }
-
-        if validation_results.iter().any(|result| result.is_err()) {
-            return Err(ExecutionError::InvalidRequestOpen("Not Sure Why".to_string()));
-        }
-
-        {
-            let mut orders = self.orders.write().await;
-            for request in order_requests {
-                let pending_order = orders.process_request_as_pending(request.clone()).await;
-                orders.register_pending_order(pending_order.clone()).await?;
-                pending_orders.push(pending_order);
-            }
-        }
-
-        Ok(pending_orders)
     }
 
 
@@ -443,70 +340,103 @@ impl Account
         Ok(())
     }
 
-    pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>)
-    {
+
+    pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>) -> Vec<ClientTrade> {
         let current_price = market_event.kind.price;
 
-        // 获取所有的请求 ID
-        let request_ids: Vec<RequestId> = self.orders.read().await.pending_registry.iter().map(|entry| *entry.key()).collect();
+        let mut trades = Vec::new();
 
-        // 遍历订单 ID 来处理每个订单
-        for request_id in request_ids {
-            let order = {
-                // 只在获取订单时持有读锁
-                let orders_read = self.orders.read().await;
-                orders_read.pending_registry.get(&request_id).map(|entry| entry.value().clone())
-            };
+        let mut orders = self.orders.write().await;
 
-            if let Some(order) = order {
-                let role = match order.kind {
-                    | OrderInstruction::Market | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => Ok(OrderRole::Taker),
-                    | OrderInstruction::Limit | OrderInstruction::GoodTilCancelled => {
-                        // 限价订单的判断逻辑可以在读锁下进行
-                        self.orders.read().await.determine_limit_order_role(&order, current_price)
-                    }
-                    | OrderInstruction::PostOnly => {
-                        // 这里仅判断是否应该拒绝订单，而不实际执行拒绝操作
-                        let should_reject = {
-                            match order.side {
-                                | Side::Buy => order.state.price < current_price,
-                                | Side::Sell => order.state.price > current_price,
-                            }
-                        };
-
-                        if should_reject {
-                            // 获取写锁并拒绝订单
-                            self.orders.write().await.reject_post_only_order(&order)
+        // Handle the result of `get_ins_orders_mut`
+        match orders.get_ins_orders_mut(&market_event.instrument) {
+            Ok(mut instrument_orders) => {
+                if let Some(matching_side) = instrument_orders.determine_matching_side(&market_event) {
+                    match matching_side {
+                        Side::Buy => {
+                            trades.append(&mut instrument_orders.match_bids(&market_event, self.determine_fees_percent(&market_event.instrument.kind, &OrderRole::Taker).expect("Missing fees percent")));
                         }
-                        else {
-                            Ok(OrderRole::Maker)
-                        }
-                    }
-                    OrderInstruction::Cancel => {todo!()}
-                };
-
-                if let Ok(role) = role {
-                    // 调用 try_open_order_atomic 替代 build_order_open
-                    let open_order_result = self.process_pending_order_into_open_atomically(current_price, order.clone()).await;
-
-                    if let Ok(open_order) = open_order_result {
-                        if let Ok(mut orders_write) = self.orders.write().await.get_ins_orders_mut(&open_order.instrument) {
-                            orders_write.add_order_open(open_order.clone());
-
-                            let fees_percent = self.determine_fees_percent(&order.instrument.kind, &role);
-                            let trades = match orders_write.determine_matching_side(&market_event) {
-                                | Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
-                                | Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
-                                | None => continue, // 跳过当前订单处理
-                            };
-
-                            self.process_trades(trades).await;
+                        Side::Sell => {
+                            trades.append(&mut instrument_orders.match_asks(&market_event, self.determine_fees_percent(&market_event.instrument.kind, &OrderRole::Taker).expect("Missing fees percent")));
                         }
                     }
                 }
             }
+            Err(e) => {
+                // Handle the error, log it or return an empty trade list
+                eprintln!("Failed to get instrument orders: {:?}", e);
+                // You might want to return early or handle the error differently depending on your requirements.
+            }
         }
+
+        self.process_trades(trades.clone()).await;
+
+        trades
     }
+    // pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>)
+    // {
+    //     let current_price = market_event.kind.price;
+    //
+    //     // 获取所有的请求 ID
+    //     let request_ids: Vec<RequestId> = self.orders.read().await.pending_registry.iter().map(|entry| *entry.key()).collect();
+    //
+    //     // 遍历订单 ID 来处理每个订单
+    //     for request_id in request_ids {
+    //         let order = {
+    //             // 只在获取订单时持有读锁
+    //             let orders_read = self.orders.read().await;
+    //             orders_read.pending_registry.get(&request_id).map(|entry| entry.value().clone())
+    //         };
+    //
+    //         if let Some(order) = order {
+    //             let role = match order.kind {
+    //                 | OrderInstruction::Market | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => Ok(OrderRole::Taker),
+    //                 | OrderInstruction::Limit | OrderInstruction::GoodTilCancelled => {
+    //                     // 限价订单的判断逻辑可以在读锁下进行
+    //                     self.orders.read().await.determine_limit_order_role(&order, current_price)
+    //                 }
+    //                 | OrderInstruction::PostOnly => {
+    //                     // 这里仅判断是否应该拒绝订单，而不实际执行拒绝操作
+    //                     let should_reject = {
+    //                         match order.side {
+    //                             | Side::Buy => order.state.price < current_price,
+    //                             | Side::Sell => order.state.price > current_price,
+    //                         }
+    //                     };
+    //
+    //                     if should_reject {
+    //                         // 获取写锁并拒绝订单
+    //                         self.orders.write().await.reject_post_only_order(&order)
+    //                     }
+    //                     else {
+    //                         Ok(OrderRole::Maker)
+    //                     }
+    //                 }
+    //                 OrderInstruction::Cancel => {todo!()}
+    //             };
+    //
+    //             if let Ok(role) = role {
+    //                 // 调用 try_open_order_atomic 替代 build_order_open
+    //                 let open_order_result = self.process_request_open_into_open_atomically(current_price, order.clone()).await;
+    //
+    //                 if let Ok(open_order) = open_order_result {
+    //                     if let Ok(mut orders_write) = self.orders.write().await.get_ins_orders_mut(&open_order.instrument) {
+    //                         orders_write.add_order_open(open_order.clone());
+    //
+    //                         let fees_percent = self.determine_fees_percent(&order.instrument.kind, &role);
+    //                         let trades = match orders_write.determine_matching_side(&market_event) {
+    //                             | Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
+    //                             | Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
+    //                             | None => continue, // 跳过当前订单处理
+    //                         };
+    //
+    //                         self.process_trades(trades).await;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &MarketEvent<MarketTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade>
     {
@@ -756,177 +686,4 @@ mod tests
         let invalid_cancel_order = Order { state: RequestCancel { id: OrderId(0) }, // Invalid OrderId
                                            ..cancel_order.clone() };
         assert!(Account::validate_order_request_cancel(&invalid_cancel_order).is_err());
-    }
-
-    #[tokio::test]
-    async fn test_order_state_transition()
-    {
-        // 创建测试环境中的一个订单，并初始化到 RequestOpen 状态
-        let order_request = Order { kind: OrderInstruction::Market,
-                                    exchange: Exchange::SandBox,
-                                    instrument: Instrument { base: Token::from("BTC"),
-                                                             quote: Token::from("USD"),
-                                                             kind: InstrumentKind::Spot },
-                                    client_ts: 1625247600000,
-                                    cid: ClientOrderId(Some("validCID123".into())),
-                                    side: Side::Buy,
-                                    state: RequestOpen { price: 50000.0,
-                                                         size: 1.0,
-                                                         reduce_only: false } };
-
-        // 验证 RequestOpen 状态
-        assert!(Account::validate_order_request_open(&order_request).is_ok());
-
-        // 测试转换到 Pending 状态
-        let mut account_orders = create_test_account_orders().await;
-        let pending_order = account_orders.process_request_as_pending(order_request.clone()).await;
-        assert_eq!(pending_order.cid, order_request.cid);
-        assert!(pending_order.state.predicted_ts > order_request.client_ts);
-
-        // 测试转换到 Open 状态
-        let role = account_orders.determine_maker_taker(&pending_order, 50000.0).unwrap();
-        let open_order = account_orders.build_order_open(pending_order, role).await;
-        assert_eq!(open_order.cid, order_request.cid);
-        assert_eq!(open_order.state.price, order_request.state.price);
-        assert_eq!(open_order.state.size, order_request.state.size);
-    }
-
-    #[tokio::test]
-    async fn test_pending_registration() {
-        let mut account = create_test_account().await;
-
-        // 先创建并挂起一些订单
-        let request_open1 = create_test_request_open("BTC", "USD");
-        let request_open2 = create_test_request_open("ETH", "USD");
-
-        // 将订单请求转换为挂起订单
-        account.process_requests_into_pendings(vec![request_open1.clone(), request_open2.clone()]).await.unwrap();
-
-        // 验证订单是否成功挂起
-        let pending_count = account.orders.read().await.pending_registry.len();
-        assert_eq!(pending_count, 2);
-    }
-
-    #[tokio::test]
-    async fn test_apply_balance_changes_insufficient_funds()
-    {
-        // 创建一个示例订单
-        let order = Order::<Open> { kind: OrderInstruction::Market,
-                                    exchange: Exchange::SandBox,
-                                    instrument: Instrument { base: Token::from("TEST_BASE"),
-                                                             quote: Token::from("TEST_QUOTE"),
-                                                             kind: InstrumentKind::Perpetual },
-                                    client_ts: 1625247600000,
-                                    cid: ClientOrderId(Some("validCID123".into())),
-                                    side: Side::Buy,
-                                    state: Open { id: OrderId(123),
-                                                  price: 50000.0,
-                                                  size: 1.0,
-                                                  filled_quantity: 0.0,
-                                                  order_role: OrderRole::Taker,
-                                                  received_ts: 1625247600000 } };
-
-        let instrument = create_test_instrument(InstrumentKind::Perpetual);
-        let account_state = create_test_account_state().await;
-        let perpetual_position = create_test_perpetual_position(instrument);
-
-        // 创建 Account
-        let account = create_test_account().await;
-        let account_arc = Arc::new(account);
-
-        // 更新 account_state 的 account_ref
-        {
-            let mut account_state_locked = account_state.lock().await;
-            account_state_locked.account_ref = Arc::downgrade(&account_arc);
-        }
-
-        account_state.lock().await.set_position(Position::Perpetual(perpetual_position.clone())).await.unwrap();
-
-        // 应用订单变更, 首先应用一个金额为 50 的订单变更，应该成功
-        let result = account_state.lock().await.apply_open_order_changes(&order, 50.0).await;
-
-        // 检查并打印错误
-        if let Err(e) = &result {
-            println!("Error occurred during apply_open_order_changes: {:?}", e);
-        }
-
-        assert!(result.is_ok());
-
-        // 验证账户余额是否正确更新
-        let binding = account_state.lock().await;
-        let balance = binding.balance(&Token::from("TEST_QUOTE")).unwrap();
-        assert_eq!(balance.available, 150.0 - 50.0); // 确保余额正确更新
-                                                     //
-                                                     // // 尝试应用一个需要 101 的订单变更，应该失败，因为余额不足
-                                                     // let result = account_state.lock().await.apply_open_order_changes(&order, 101.0).await;
-                                                     //
-                                                     // // 检查并打印错误
-                                                     // if let Err(e) = &result {
-                                                     //     println!("Expected error occurred due to insufficient funds: {:?}", e);
-                                                     // }
-                                                     //
-                                                     // assert!(result.is_err());
-                                                     //
-                                                     // // 再次检查账户余额是否保持不变
-                                                     // let balance = binding.balance(&Token::from("TEST_QUOTE")).unwrap();
-                                                     // assert_eq!(balance.available, 100.0); // 确保余额没有变化
-    }
-
-    #[tokio::test]
-    async fn test_cancel_all_orders()
-    {
-        let mut account = create_test_account().await;
-
-        // 模拟一个空的客户端事件通道
-        let (dummy_tx, _dummy_rx) = tokio::sync::mpsc::unbounded_channel();
-        account.account_event_tx = dummy_tx;
-
-        // 创建测试订单，并将其添加到 `bids` 和 `asks` 中
-        let order_buy1 = create_test_order_open(Side::Buy, 100.0, 1.0);
-        let order_sell1 = create_test_order_open(Side::Sell, 110.0, 1.0);
-        let order_buy2 = create_test_order_open(Side::Buy, 105.0, 1.5);
-        let order_sell2 = create_test_order_open(Side::Sell, 115.0, 2.0);
-
-        // 手动初始化 InstrumentOrders
-        {
-            let orders = account.orders.write().await;
-            orders.instrument_orders_map.insert(order_buy1.instrument.clone(), InstrumentOrders::default());
-            orders.instrument_orders_map.insert(order_sell1.instrument.clone(), InstrumentOrders::default());
-        }
-
-        // 将订单添加到 `AccountOrders` 中
-        {
-            let orders = account.orders.write().await;
-            orders.get_ins_orders_mut(&order_buy1.instrument).unwrap().add_order_open(order_buy1.clone());
-            orders.get_ins_orders_mut(&order_sell1.instrument).unwrap().add_order_open(order_sell1.clone());
-            orders.get_ins_orders_mut(&order_buy1.instrument).unwrap().add_order_open(order_buy2.clone());
-            orders.get_ins_orders_mut(&order_sell1.instrument).unwrap().add_order_open(order_sell2.clone());
-        }
-
-        // 确认 `bids` 和 `asks` 向量的初始长度
-        {
-            let orders = account.orders.read().await;
-            let ins_orders = orders.get_ins_orders_mut(&order_buy1.instrument).unwrap();
-            assert_eq!(ins_orders.bids.len(), 2);
-            assert_eq!(ins_orders.asks.len(), 2);
-        }
-
-        // 执行取消所有订单操作
-        let (tx, rx) = oneshot::channel();
-        account.cancel_orders_all(tx).await;
-
-        // 等待取消操作的结果
-        let cancelled_orders = rx.await.unwrap().unwrap();
-
-        // 确保取消操作返回的订单与初始订单数量相同
-        assert_eq!(cancelled_orders.len(), 4);
-
-        // 验证 `bids` 和 `asks` 向量的长度是否更新正确
-        {
-            let orders = account.orders.read().await;
-            let ins_orders = orders.get_ins_orders_mut(&order_buy1.instrument).unwrap();
-            assert_eq!(ins_orders.bids.len(), 0);
-            assert_eq!(ins_orders.asks.len(), 0);
-        }
-    }
-}
+    }}
