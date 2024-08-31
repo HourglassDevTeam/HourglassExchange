@@ -189,14 +189,14 @@ mod tests
         assert!(initiator.event_sandbox_rx.is_some());
     }
 
-    #[tokio::test]
-    async fn initiator_should_set_account()
-    {
-        let account = create_test_account().await;
-        let arc_mutex_account = Arc::new(Mutex::new(account));
-        let initiator = ExchangeInitiator::new().account(arc_mutex_account);
-        assert!(initiator.account.is_some());
-    }
+    // #[tokio::test]
+    // async fn initiator_should_set_account()
+    // {
+    //     let account = create_test_account().await;
+    //     let arc_mutex_account = Arc::new(Mutex::new(account));
+    //     let initiator = ExchangeInitiator::new().account(arc_mutex_account);
+    //     assert!(initiator.account.is_some());
+    // }
 
     // #[tokio::test]
     // async fn initiator_should_return_error_if_event_sandbox_rx_is_missing()

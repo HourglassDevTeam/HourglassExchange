@@ -66,7 +66,11 @@ async fn main() {
     let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
     let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId::new(timestamp, machine_id, 1));
     let mut account = create_test_account().await;
-    test_3_open_limit_buy_order(&client, test_3_ids.clone(), &mut event_account_rx).await;
+    test_3_open_limit_buy_order(
+        &client,
+        test_3_ids.clone(),
+        &mut event_account_rx
+    ).await;
 
     // // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent
     // test_4_send_market_event_that_does_not_match_any_open_order(
@@ -186,60 +190,60 @@ async fn test_3_open_limit_buy_order(
     );
 
     println!("Sending order request via SandBoxClient.");
-    // let new_orders = client.open_orders(vec![open_request]).await;
+    let new_orders = client.open_orders(vec![open_request]).await;
 
-    // let expected_new_order = open_order(
-    //     Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
-    //     test_3_ids.cid.clone(),
-    //     test_3_ids.id,
-    //     Side::Buy,
-    //     100.0,
-    //     1.0,
-    //     0.0,
-    // );
-    //
-    // assert_eq!(new_orders.len(), 1);
-    // assert_eq!(new_orders[0].as_ref().unwrap(), &expected_new_order);
-    //
-    // // 使用实际的价格来确保一致性
-    // let current_px = 100.0;  // 与订单中的价格匹配
-    //
-    // match event_account_rx.recv().await {
-    //     Some(AccountEvent {
-    //              kind: AccountEventKind::Balance(TEST_QUOTE_balance),
-    //              ..
-    //          }) => {
-    //         println!("Account balance event received.");
-    //         let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 10_000.0 - 100.0, current_px));
-    //         assert_balance_equal_ignore_time(&TEST_QUOTE_balance.balance, &expected.balance);
-    //     }
-    //     other => {
-    //         panic!("Unexpected or missing balance event: {:?}", other);
-    //     }
-    // }
-    //
-    // match event_account_rx.recv().await {
-    //     Some(AccountEvent {
-    //              kind: AccountEventKind::OrdersNew(new_orders),
-    //              ..
-    //          }) => {
-    //         println!("Orders new event received.");
-    //         assert_eq!(new_orders.len(), 1);
-    //         assert_eq!(new_orders[0], expected_new_order);
-    //     }
-    //     other => {
-    //         panic!("Unexpected or missing orders new event: {:?}", other);
-    //     }
-    // }
-    //
-    // match event_account_rx.try_recv() {
-    //     Err(mpsc::error::TryRecvError::Empty) => {
-    //         println!("No additional account events, as expected.");
-    //     }
-    //     other => {
-    //         panic!("Unexpected additional account event: {:?}", other);
-    //     }
-    // }
+    let expected_new_order = open_order(
+        Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+        test_3_ids.cid.clone(),
+        test_3_ids.id,
+        Side::Buy,
+        100.0,
+        1.0,
+        0.0,
+    );
+
+    assert_eq!(new_orders.len(), 1);
+    assert_eq!(new_orders[0].as_ref().unwrap(), &expected_new_order);
+
+    // 使用实际的价格来确保一致性
+    let current_px = 100.0;  // 与订单中的价格匹配
+
+    match event_account_rx.recv().await {
+        Some(AccountEvent {
+                 kind: AccountEventKind::Balance(TEST_QUOTE_balance),
+                 ..
+             }) => {
+            println!("Account balance event received.");
+            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 10_000.0 - 100.0, current_px));
+            assert_balance_equal_ignore_time(&TEST_QUOTE_balance.balance, &expected.balance);
+        }
+        other => {
+            panic!("Unexpected or missing balance event: {:?}", other);
+        }
+    }
+
+    match event_account_rx.recv().await {
+        Some(AccountEvent {
+                 kind: AccountEventKind::OrdersNew(new_orders),
+                 ..
+             }) => {
+            println!("Orders new event received.");
+            assert_eq!(new_orders.len(), 1);
+            assert_eq!(new_orders[0], expected_new_order);
+        }
+        other => {
+            panic!("Unexpected or missing orders new event: {:?}", other);
+        }
+    }
+
+    match event_account_rx.try_recv() {
+        Err(mpsc::error::TryRecvError::Empty) => {
+            println!("No additional account events, as expected.");
+        }
+        other => {
+            panic!("Unexpected additional account event: {:?}", other);
+        }
+    }
 }
 
 
