@@ -1,3 +1,10 @@
+use crate::common::position::Position;
+use crate::dashboard::metrics::EquitySnapshot;
+use crate::dashboard::summary::PositionSummariser;
+use crate::dashboard::{
+    metrics::drawdown::{AvgDrawdown, Drawdown, MaxDrawdown},
+    summary::TableBuilder,
+};
 /// `DrawdownSummary` 模块用于计算和跟踪投资组合或交易策略中的最大回撤、平均回撤以及它们的持续时间。
 ///
 /// # 模块概述
@@ -25,15 +32,8 @@
 /// 该模块特别适用于量化交易和投资组合管理中的风险评估。通过跟踪并分析回撤，投资者可以更好地理解他们的策略在不同市场条件下的表现，并做出相应的调整，以优化回报与风险的平衡。
 
 use chrono::Utc;
-use crate::dashboard::{
-    metrics::drawdown::{AvgDrawdown, Drawdown, MaxDrawdown},
-    summary::TableBuilder,
-};
 use prettytable::{row, Row};
 use serde::{Deserialize, Serialize};
-use crate::common::position::Position;
-use crate::dashboard::metrics::EquitySnapshot;
-use crate::dashboard::summary::PositionSummariser;
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct DrawdownSummary
@@ -98,8 +98,10 @@ impl DrawdownSummary
 {
     pub fn new(starting_equity: f64) -> Self
     {
-        Self { current_drawdown: Drawdown::init(starting_equity),
-               avg_drawdown: AvgDrawdown::init(),
-               max_drawdown: MaxDrawdown::init() }
+        Self {
+            current_drawdown: Drawdown::init(starting_equity),
+            avg_drawdown: AvgDrawdown::init(),
+            max_drawdown: MaxDrawdown::init(),
+        }
     }
 }

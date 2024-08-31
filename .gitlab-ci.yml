@@ -20,7 +20,7 @@ mergeCode:
 
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
     
-        ##
+    ##
     ## Check if inside a git vault, if not, initialize one
     ##
     - |

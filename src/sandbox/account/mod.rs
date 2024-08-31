@@ -8,7 +8,7 @@ use std::{
 };
 
 use futures::future::join_all;
-use mpsc::{UnboundedSender};
+use mpsc::UnboundedSender;
 use oneshot::Sender;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
@@ -26,7 +26,7 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
         order::{
-            identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id, request_id::RequestId},
+            identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id},
             order_instructions::OrderInstruction,
             states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
             Order, OrderRole,
@@ -71,11 +71,12 @@ impl Clone for Account
         Account {
             current_session: Uuid::new_v4(),
             machine_id: self.machine_id,
-                  exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
-                  account_event_tx: self.account_event_tx.clone(),
-                  config: Arc::clone(&self.config),
-                  states: Arc::clone(&self.states),
-                  orders: Arc::clone(&self.orders) }
+            exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
+            account_event_tx: self.account_event_tx.clone(),
+            config: Arc::clone(&self.config),
+            states: Arc::clone(&self.states),
+            orders: Arc::clone(&self.orders),
+        }
     }
 }
 #[derive(Debug)]
@@ -99,10 +100,12 @@ impl AccountInitiator
 {
     pub fn new() -> Self
     {
-        AccountInitiator { account_event_tx: None,
-                           config: None,
-                           states: None,
-                           orders: None }
+        AccountInitiator {
+            account_event_tx: None,
+            config: None,
+            states: None,
+            orders: None,
+        }
     }
 
     pub fn account_event_tx(mut self, value: UnboundedSender<AccountEvent>) -> Self
@@ -134,15 +137,15 @@ impl AccountInitiator
         Ok(Account {
             current_session: Uuid::new_v4(),
             machine_id: generate_machine_id()?,
-                     exchange_timestamp: 0.into(), // NOTE initialisation to 0 might be problematic. Consider compatability of online and local modes.
-                     account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
-                     config: self.config.ok_or("config is required")?, // 检查并获取config
-                     states: self.states.ok_or("balances is required")?, // 检查并获取balances
-                     orders: self.orders.ok_or("orders are required")? })
+            exchange_timestamp: 0.into(), // NOTE initialisation to 0 might be problematic. Consider compatability of online and local modes.
+            account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?, // 检查并获取account_event_tx
+            config: self.config.ok_or("config is required")?, // 检查并获取config
+            states: self.states.ok_or("balances is required")?, // 检查并获取balances
+            orders: self.orders.ok_or("orders are required")?,
+        })
     }
 }
 
-#[allow(dead_code)]
 impl Account
 {
     pub fn initiate() -> AccountInitiator
@@ -259,9 +262,11 @@ impl Account
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Balance");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
+            .send(AccountEvent {
+                exchange_timestamp,
+                exchange: Exchange::SandBox,
+                kind: AccountEventKind::OrdersNew(vec![open_order.clone()]),
+            })
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade");
 
         Ok(open_order)
@@ -286,7 +291,6 @@ impl Account
             | OrderInstruction::PostOnly
             | OrderInstruction::GoodTilCancelled | OrderInstruction::Cancel => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
                                                              * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */
-
         }
     }
 
@@ -346,105 +350,28 @@ impl Account
 
         let mut trades = Vec::new();
 
-        let mut orders = self.orders.write().await;
-
-        // Handle the result of `get_ins_orders_mut`
-        match orders.get_ins_orders_mut(&market_event.instrument) {
-            Ok(mut instrument_orders) => {
-                if let Some(matching_side) = instrument_orders.determine_matching_side(&market_event) {
-                    match matching_side {
-                        Side::Buy => {
-                            trades.append(&mut instrument_orders.match_bids(&market_event, self.determine_fees_percent(&market_event.instrument.kind, &OrderRole::Taker).expect("Missing fees percent")));
-                        }
-                        Side::Sell => {
-                            trades.append(&mut instrument_orders.match_asks(&market_event, self.determine_fees_percent(&market_event.instrument.kind, &OrderRole::Taker).expect("Missing fees percent")));
-                        }
+        // 调用 get_orders_for_instrument 方法获取与当前 market_event 对应的 InstrumentOrders
+        if let Some(mut instrument_orders) = self.get_orders_for_instrument(&market_event.instrument).await {
+            if let Some(matching_side) = instrument_orders.determine_matching_side(&market_event) {
+                match matching_side {
+                    Side::Buy => {
+                        trades.append(&mut instrument_orders.match_bids(&market_event, self.determine_fees_percent(&market_event.instrument.kind, &OrderRole::Taker).expect("Missing fees percent")));
+                    }
+                    Side::Sell => {
+                        trades.append(&mut instrument_orders.match_asks(&market_event, self.determine_fees_percent(&market_event.instrument.kind, &OrderRole::Taker).expect("Missing fees percent")));
                     }
                 }
             }
-            Err(e) => {
-                // Handle the error, log it or return an empty trade list
-                eprintln!("Failed to get instrument orders: {:?}", e);
-                // You might want to return early or handle the error differently depending on your requirements.
-            }
+        } else {
+            warn!("No orders found for the given instrument in the market event.");
         }
 
         self.process_trades(trades.clone()).await;
 
         trades
     }
-    // pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>)
-    // {
-    //     let current_price = market_event.kind.price;
-    //
-    //     // 获取所有的请求 ID
-    //     let request_ids: Vec<RequestId> = self.orders.read().await.pending_registry.iter().map(|entry| *entry.key()).collect();
-    //
-    //     // 遍历订单 ID 来处理每个订单
-    //     for request_id in request_ids {
-    //         let order = {
-    //             // 只在获取订单时持有读锁
-    //             let orders_read = self.orders.read().await;
-    //             orders_read.pending_registry.get(&request_id).map(|entry| entry.value().clone())
-    //         };
-    //
-    //         if let Some(order) = order {
-    //             let role = match order.kind {
-    //                 | OrderInstruction::Market | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => Ok(OrderRole::Taker),
-    //                 | OrderInstruction::Limit | OrderInstruction::GoodTilCancelled => {
-    //                     // 限价订单的判断逻辑可以在读锁下进行
-    //                     self.orders.read().await.determine_limit_order_role(&order, current_price)
-    //                 }
-    //                 | OrderInstruction::PostOnly => {
-    //                     // 这里仅判断是否应该拒绝订单，而不实际执行拒绝操作
-    //                     let should_reject = {
-    //                         match order.side {
-    //                             | Side::Buy => order.state.price < current_price,
-    //                             | Side::Sell => order.state.price > current_price,
-    //                         }
-    //                     };
-    //
-    //                     if should_reject {
-    //                         // 获取写锁并拒绝订单
-    //                         self.orders.write().await.reject_post_only_order(&order)
-    //                     }
-    //                     else {
-    //                         Ok(OrderRole::Maker)
-    //                     }
-    //                 }
-    //                 OrderInstruction::Cancel => {todo!()}
-    //             };
-    //
-    //             if let Ok(role) = role {
-    //                 // 调用 try_open_order_atomic 替代 build_order_open
-    //                 let open_order_result = self.process_request_open_into_open_atomically(current_price, order.clone()).await;
-    //
-    //                 if let Ok(open_order) = open_order_result {
-    //                     if let Ok(mut orders_write) = self.orders.write().await.get_ins_orders_mut(&open_order.instrument) {
-    //                         orders_write.add_order_open(open_order.clone());
-    //
-    //                         let fees_percent = self.determine_fees_percent(&order.instrument.kind, &role);
-    //                         let trades = match orders_write.determine_matching_side(&market_event) {
-    //                             | Some(Side::Buy) => orders_write.match_bids(&market_event, fees_percent.expect("REASON")),
-    //                             | Some(Side::Sell) => orders_write.match_asks(&market_event, fees_percent.expect("REASON")),
-    //                             | None => continue, // 跳过当前订单处理
-    //                         };
-    //
-    //                         self.process_trades(trades).await;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
 
-    fn match_orders_by_side(&self, orders: &mut InstrumentOrders, market_event: &MarketEvent<MarketTrade>, fees_percent: f64, side: &Side) -> Vec<ClientTrade>
-    {
-        match side {
-            | Side::Buy => orders.match_bids(market_event, fees_percent),
-            | Side::Sell => orders.match_asks(market_event, fees_percent),
-        }
-    }
+
 
     fn determine_fees_percent(&self, kind: &InstrumentKind, role: &OrderRole) -> Option<f64>
     {
@@ -493,9 +420,11 @@ impl Account
                     }
                 };
 
-                if let Err(err) = self.account_event_tx.send(AccountEvent { exchange_timestamp,
-                                                                            exchange: Exchange::SandBox,
-                                                                            kind: AccountEventKind::Trade(trade) })
+                if let Err(err) = self.account_event_tx.send(AccountEvent {
+                    exchange_timestamp,
+                    exchange: Exchange::SandBox,
+                    kind: AccountEventKind::Trade(trade),
+                })
                 {
                     // 如果发送交易事件失败，记录警告日志
                     warn!("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Trade: {:?}", err);
@@ -516,9 +445,9 @@ impl Account
     pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
-                                                            let mut this = self.clone();
-                                                            async move { this.process_cancel_request_into_cancelled_atomic(request).await }
-                                                        });
+            let mut this = self.clone();
+            async move { this.process_cancel_request_into_cancelled_atomic(request).await }
+        });
 
         // 等待所有的取消操作完成
         let cancel_results = join_all(cancel_futures).await;
@@ -537,16 +466,16 @@ impl Account
             match request.side {
                 | Side::Buy => {
                     let index = orders.bids
-                                      .par_iter()
-                                      .position_any(|bid| bid.state.id == request.state.id)
-                                      .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                        .par_iter()
+                        .position_any(|bid| bid.state.id == request.state.id)
+                        .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                     orders.bids.remove(index)
                 }
                 | Side::Sell => {
                     let index = orders.asks
-                                      .par_iter()
-                                      .position_any(|ask| ask.state.id == request.state.id)
-                                      .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                        .par_iter()
+                        .position_any(|ask| ask.state.id == request.state.id)
+                        .ok_or(ExecutionError::OrderNotFound(request.cid))?;
                     orders.asks.remove(index)
                 }
             }
@@ -566,15 +495,19 @@ impl Account
 
         // 发送 AccountEvents 给客户端（不需要持有订单写锁）
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
+            .send(AccountEvent {
+                exchange_timestamp,
+                exchange: Exchange::SandBox,
+                kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
+            })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Trade");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::Balance(balance_event) })
+            .send(AccountEvent {
+                exchange_timestamp,
+                exchange: Exchange::SandBox,
+                kind: AccountEventKind::Balance(balance_event),
+            })
             .expect("[TideBroker] : Client is offline - failed to send AccountEvent::Balance");
 
         Ok(cancelled)
@@ -590,14 +523,16 @@ impl Account
 
         // 将所有打开的订单转换为取消请求
         let cancel_requests: Vec<Order<RequestCancel>> = orders_to_cancel.into_iter()
-                                                                         .map(|order| Order { state: RequestCancel { id: order.state.id },
-                                                                                              instrument: order.instrument,
-                                                                                              side: order.side,
-                                                                                              kind: order.kind,
-                                                                                              cid: order.cid,
-                                                                                              exchange: Exchange::SandBox,
-                                                                                              client_ts: 0 })
-                                                                         .collect();
+            .map(|order| Order {
+                state: RequestCancel { id: order.state.id },
+                instrument: order.instrument,
+                side: order.side,
+                kind: order.kind,
+                cid: order.cid,
+                exchange: Exchange::SandBox,
+                client_ts: 0,
+            })
+            .collect();
 
         // 调用现有的 cancel_orders 方法
         let (tx, rx) = oneshot::channel();
@@ -608,14 +543,14 @@ impl Account
             | Ok(results) => {
                 let cancelled_orders: Vec<_> = results.into_iter().collect::<Result<Vec<_>, _>>().expect("Failed to collect cancel results");
                 response_tx.send(Ok(cancelled_orders)).unwrap_or_else(|_| {
-                                                          eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all response");
-                                                      });
+                    eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all response");
+                });
             }
             | Err(_) => {
                 response_tx.send(Err(ExecutionError::InternalError("Failed to receive cancel results".to_string())))
-                           .unwrap_or_else(|_| {
-                               eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all error response");
-                           });
+                    .unwrap_or_else(|_| {
+                        eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all error response");
+                    });
             }
         }
     }
@@ -624,66 +559,73 @@ impl Account
 /// [PART5]
 /// `respond` 函数:响应处理。
 pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
-    where Response: Debug + Send + 'static
+where
+    Response: Debug + Send + 'static,
 {
     tokio::spawn(async move {
         response_tx.send(response)
-                   .expect("[UniLink_Execution] : SandBoxExchange failed to send oneshot response to execution request")
+            .expect("[UniLink_Execution] : SandBoxExchange failed to send oneshot response to execution request")
     });
 }
 
 #[cfg(test)]
 mod tests
 {
-    use crate::{
-        common::{
-            order::{identification::OrderId, states::request_open::RequestOpen},
-            position::Position,
-        },
-        test_utils::{
-            create_test_account, create_test_account_orders, create_test_account_state, create_test_instrument, create_test_order_open, create_test_perpetual_position,
-            create_test_request_open,
-        },
-    };
     use super::*;
+    use crate::common::order::{identification::OrderId, states::request_open::RequestOpen};
 
     #[tokio::test]
     async fn test_validate_order_request_open()
     {
-        let order = Order { kind: OrderInstruction::Market,
-                            exchange: Exchange::SandBox,
-                            instrument: Instrument { base: Token::from("BTC"),
-                                                     quote: Token::from("USD"),
-                                                     kind: InstrumentKind::Spot },
-                            client_ts: 1625247600000,
-                            cid: ClientOrderId(Some("validCID123".into())),
-                            side: Side::Buy,
-                            state: RequestOpen { price: 50000.0,
-                                                 size: 1.0,
-                                                 reduce_only: false } };
+        let order = Order {
+            kind: OrderInstruction::Market,
+            exchange: Exchange::SandBox,
+            instrument: Instrument {
+                base: Token::from("BTC"),
+                quote: Token::from("USD"),
+                kind: InstrumentKind::Spot,
+            },
+            client_ts: 1625247600000,
+            cid: ClientOrderId(Some("validCID123".into())),
+            side: Side::Buy,
+            state: RequestOpen {
+                price: 50000.0,
+                size: 1.0,
+                reduce_only: false,
+            },
+        };
 
         assert!(Account::validate_order_request_open(&order).is_ok());
 
-        let invalid_order = Order { cid: ClientOrderId(Some("".into())), // Invalid ClientOrderId
-                                    ..order.clone() };
+        let invalid_order = Order {
+            cid: ClientOrderId(Some("".into())), // Invalid ClientOrderId
+            ..order.clone()
+        };
         assert!(Account::validate_order_request_open(&invalid_order).is_err());
     }
     #[tokio::test]
     async fn test_validate_order_request_cancel()
     {
-        let cancel_order = Order { kind: OrderInstruction::Market,
-                                   exchange: Exchange::SandBox,
-                                   instrument: Instrument { base: Token::from("BTC"),
-                                                            quote: Token::from("USD"),
-                                                            kind: InstrumentKind::Spot },
-                                   client_ts: 1625247600000,
-                                   cid: ClientOrderId(Some("validCID123".into())),
-                                   side: Side::Buy,
-                                   state: RequestCancel { id: OrderId(12345) } };
+        let cancel_order = Order {
+            kind: OrderInstruction::Market,
+            exchange: Exchange::SandBox,
+            instrument: Instrument {
+                base: Token::from("BTC"),
+                quote: Token::from("USD"),
+                kind: InstrumentKind::Spot,
+            },
+            client_ts: 1625247600000,
+            cid: ClientOrderId(Some("validCID123".into())),
+            side: Side::Buy,
+            state: RequestCancel { id: OrderId(12345) },
+        };
 
         assert!(Account::validate_order_request_cancel(&cancel_order).is_ok());
 
-        let invalid_cancel_order = Order { state: RequestCancel { id: OrderId(0) }, // Invalid OrderId
-                                           ..cancel_order.clone() };
+        let invalid_cancel_order = Order {
+            state: RequestCancel { id: OrderId(0) }, // Invalid OrderId
+            ..cancel_order.clone()
+        };
         assert!(Account::validate_order_request_cancel(&invalid_cancel_order).is_err());
-    }}
+    }
+}

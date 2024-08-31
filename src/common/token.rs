@@ -34,7 +34,9 @@ impl Deref for Token
     }
 }
 
-impl<S> From<S> for Token where S: Into<String>
+impl<S> From<S> for Token
+where
+    S: Into<String>,
 {
     fn from(input: S) -> Self
     {
@@ -46,7 +48,8 @@ impl Token
 {
     /// 使用提供的 `Into<String>` 值构造一个新的 [`Token`]，并将其转换为大写。
     pub fn new<S>(input: S) -> Self
-        where S: Into<String>
+    where
+        S: Into<String>,
     {
         Self(input.into().to_uppercase())
     }

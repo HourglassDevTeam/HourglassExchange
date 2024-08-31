@@ -63,13 +63,12 @@ impl PriceLevel
     fn remove_expired_orders(&mut self, expiration_times: &HashMap<OrderId, i64>, current_time: i64)
     {
         self.orders.retain(|order| {
-                       if let Some(&expire_time) = expiration_times.get(&order.state.id) {
-                           expire_time > current_time // 保留未过期的订单
-                       }
-                       else {
-                           true // 如果订单没有指定过期时间，则保留
-                       }
-                   });
+            if let Some(&expire_time) = expiration_times.get(&order.state.id) {
+                expire_time > current_time // 保留未过期的订单
+            } else {
+                true // 如果订单没有指定过期时间，则保留
+            }
+        });
     }
 }
 
@@ -86,10 +85,12 @@ impl SandBoxOrderBook
 {
     pub fn new(max_levels: usize) -> Self
     {
-        Self { bid_levels: Vec::new(),
-               ask_levels: Vec::new(),
-               max_levels,
-               expiration_registry: HashMap::new() }
+        Self {
+            bid_levels: Vec::new(),
+            ask_levels: Vec::new(),
+            max_levels,
+            expiration_registry: HashMap::new(),
+        }
     }
 
     pub fn set_order_expiration(&mut self, order_id: OrderId, expire_ts: i64)
@@ -154,8 +155,7 @@ impl SandBoxOrderBook
                     // 计算成交量，取买单和卖单的最小剩余数量
                     let executed_quantity = if buy_order.state.size < sell_order.state.size {
                         buy_order.state.size
-                    }
-                    else {
+                    } else {
                         sell_order.state.size
                     };
 
@@ -171,8 +171,7 @@ impl SandBoxOrderBook
                     if sell_order.state.size > 0.0 {
                         sell_level.add_order(sell_order);
                     }
-                }
-                else {
+                } else {
                     // 如果买单价格小于卖单价格，则无法成交，将订单重新放回原层级
                     buy_level.add_order(buy_order);
                     sell_level.add_order(sell_order);

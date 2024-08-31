@@ -105,38 +105,59 @@ mod tests
         let mut data_summary = DataSummary::default();
 
         let test_cases = vec![TestCase { // Test case 0
-                                         input_next_value: 1.1,
-                                         expected_summary: DataSummary { count: 1,
-                                                                         sum: 1.1,
-                                                                         mean: 1.1,
-                                                                         dispersion: Dispersion { range: Range { activated: true,
-                                                                                                                 high: 1.1,
-                                                                                                                 low: 1.1 },
-                                                                                                  recurrence_relation_m: 0.00,
-                                                                                                  variance: 0.0,
-                                                                                                  std_dev: 0.0 } } },
+            input_next_value: 1.1,
+            expected_summary: DataSummary {
+                count: 1,
+                sum: 1.1,
+                mean: 1.1,
+                dispersion: Dispersion {
+                    range: Range {
+                        activated: true,
+                        high: 1.1,
+                        low: 1.1
+                    },
+                    recurrence_relation_m: 0.00,
+                    variance: 0.0,
+                    std_dev: 0.0
+                }
+            }
+        },
                               TestCase { // Test case 1
-                                         input_next_value: 1.2,
-                                         expected_summary: DataSummary { count: 2,
-                                                                         sum: 2.3,
-                                                                         mean: (2.3 / 2.0),
-                                                                         dispersion: Dispersion { range: Range { activated: true,
-                                                                                                                 high: 1.2,
-                                                                                                                 low: 1.1 },
-                                                                                                  recurrence_relation_m: 0.005,
-                                                                                                  variance: 0.0025,
-                                                                                                  std_dev: 0.05 } } },
+                                  input_next_value: 1.2,
+                                  expected_summary: DataSummary {
+                                      count: 2,
+                                      sum: 2.3,
+                                      mean: (2.3 / 2.0),
+                                      dispersion: Dispersion {
+                                          range: Range {
+                                              activated: true,
+                                              high: 1.2,
+                                              low: 1.1
+                                          },
+                                          recurrence_relation_m: 0.005,
+                                          variance: 0.0025,
+                                          std_dev: 0.05
+                                      }
+                                  }
+                              },
                               TestCase { // Test case 2
-                                         input_next_value: 1.3,
-                                         expected_summary: DataSummary { count: 3,
-                                                                         sum: (2.3 + 1.3),
-                                                                         mean: (3.6 / 3.0),
-                                                                         dispersion: Dispersion { range: Range { activated: true,
-                                                                                                                 high: 1.3,
-                                                                                                                 low: 1.1 },
-                                                                                                  recurrence_relation_m: 0.02,
-                                                                                                  variance: 1.0 / 150.0,
-                                                                                                  std_dev: (6.0_f64.sqrt() / 30.0) } } },];
+                                  input_next_value: 1.3,
+                                  expected_summary: DataSummary {
+                                      count: 3,
+                                      sum: (2.3 + 1.3),
+                                      mean: (3.6 / 3.0),
+                                      dispersion: Dispersion {
+                                          range: Range {
+                                              activated: true,
+                                              high: 1.3,
+                                              low: 1.1
+                                          },
+                                          recurrence_relation_m: 0.02,
+                                          variance: 1.0 / 150.0,
+                                          std_dev: (6.0_f64.sqrt() / 30.0)
+                                      }
+                                  }
+                              }, ];
 
         for (index, test) in test_cases.into_iter().enumerate() {
             data_summary.update(test.input_next_value);

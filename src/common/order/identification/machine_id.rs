@@ -2,7 +2,8 @@ use pnet::datalink;
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
-}; // 从pnet库中导入正确的模块
+};
+// 从pnet库中导入正确的模块
 
 /// 生成机器ID的函数。
 ///

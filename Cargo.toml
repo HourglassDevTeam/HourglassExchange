@@ -14,7 +14,7 @@ lark = ["dotenvy", "open-lark"]
 
 # optional
 dotenvy = { version = "0.15", optional = true }
-open-lark = { path = "../open-lark" ,optional = true}
+open-lark = { path = "../open-lark", optional = true }
 
 # Logging 日志
 tracing = "0.1.36" # 高性能事件记录库，用于结构化日志和分布式跟踪

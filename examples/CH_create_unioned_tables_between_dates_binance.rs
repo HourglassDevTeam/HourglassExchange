@@ -45,24 +45,24 @@ async fn main()
     // 创建一个表名与日期的字典，并将其转换为 Arc<Mutex<_>> 以供并行使用
     let table_date_map: Arc<Mutex<HashMap<String, NaiveDate>>> =
         Arc::new(Mutex::new(table_names.par_iter()
-                                       .filter_map(|table_name| {
-                                           if !table_name.contains("union") {
-                                               if let Some(table_date_str) = extract_date(table_name) {
-                                                   if let Ok(table_date) = NaiveDate::parse_from_str(&table_date_str, "%Y_%m_%d") {
-                                                       return Some((table_name.clone(), table_date));
-                                                   }
-                                               }
-                                           }
-                                           None
-                                       })
-                                       .collect()));
+            .filter_map(|table_name| {
+                if !table_name.contains("union") {
+                    if let Some(table_date_str) = extract_date(table_name) {
+                        if let Ok(table_date) = NaiveDate::parse_from_str(&table_date_str, "%Y_%m_%d") {
+                            return Some((table_name.clone(), table_date));
+                        }
+                    }
+                }
+                None
+            })
+            .collect()));
 
     // 计算总的表数量，用于进度汇报
     let total_tables = table_date_map.lock()
-                                     .unwrap()
-                                     .values()
-                                     .filter(|&&table_date| table_date >= start_date && table_date <= end_date)
-                                     .count();
+        .unwrap()
+        .values()
+        .filter(|&&table_date| table_date >= start_date && table_date <= end_date)
+        .count();
     let mut processed_tables = 0;
 
     #[cfg(feature = "lark")]
@@ -82,9 +82,9 @@ async fn main()
             let table_date_map = table_date_map.clone();
             let map = table_date_map.lock().unwrap();
             map.par_iter()
-               .filter(|&(_, &table_date)| table_date == current_date)
-               .map(|(table_name, _)| table_name.clone())
-               .collect()
+                .filter(|&(_, &table_date)| table_date == current_date)
+                .map(|(table_name, _)| table_name.clone())
+                .collect()
         };
 
         // 并行创建联合表
@@ -108,15 +108,14 @@ async fn main()
                     | Err(e) => eprintln!("[UniLinkExecution] : Error creating table: {}", e),
                 }
             }).await
-              .unwrap();
+                .unwrap();
 
             // 更新进度
             processed_tables += tables.len();
             let progress = (processed_tables as f64 / total_tables as f64) * 100.0;
             println!("[UniLinkExecution] : Overall progress: Processed {} / {} tables ({:.2}%)",
                      processed_tables, total_tables, progress);
-        }
-        else {
+        } else {
             println!("[UniLinkExecution] : No data for date: {}", date_str);
         }
 

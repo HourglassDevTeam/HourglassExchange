@@ -3,6 +3,7 @@
 use crate::dashboard::summary::pnl::PnLReturnSummary;
 use serde::{Deserialize, Serialize};
 
+
 pub trait Ratio {
     /// 初始化比率，使用无风险收益率作为输入。
     fn init(risk_free_return: f64) -> Self;

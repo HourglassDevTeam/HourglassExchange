@@ -60,10 +60,12 @@ impl PerpetualPositionBuilder
 {
     pub fn new() -> Self
     {
-        Self { meta: None,
-               pos_config: None,
-               liquidation_price: None,
-               margin: None }
+        Self {
+            meta: None,
+            pos_config: None,
+            liquidation_price: None,
+            margin: None,
+        }
     }
 
     pub fn meta(mut self, meta: PositionMeta) -> Self
@@ -92,10 +94,12 @@ impl PerpetualPositionBuilder
 
     pub fn build(self) -> Option<PerpetualPosition>
     {
-        Some(PerpetualPosition { meta: self.meta?,
-                                 pos_config: self.pos_config?,
-                                 liquidation_price: self.liquidation_price?,
-                                 margin: self.margin? })
+        Some(PerpetualPosition {
+            meta: self.meta?,
+            pos_config: self.pos_config?,
+            liquidation_price: self.liquidation_price?,
+            margin: self.margin?,
+        })
     }
 }
 
@@ -118,25 +122,31 @@ mod tests
     #[test]
     fn perpetual_position_should_update_liquidation_price()
     {
-        let mut position = PerpetualPosition { meta: PositionMeta { position_id: PositionId(123124124124124),
-                                                                    enter_ts: 1625247600,
-                                                                    update_ts: 1625247601,
-                                                                    exit_balance: TokenBalance::new(Token::from("BTC"), Balance::new(0.0, 0.0, 0.0)),
-                                                                    exchange: Exchange::SandBox,
-                                                                    instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
-                                                                    side: Side::Buy,
-                                                                    current_size: 1.0,
-                                                                    current_fees_total: Fees::Spot(SpotFees { maker_fee: 11.0, taker_fee: 9.0 }),
-                                                                    current_avg_price_gross: 50_000.0,
-                                                                    current_symbol_price: 61_000.0,
-                                                                    current_avg_price: 50_000.0,
-                                                                    unrealised_pnl: 11_000.0,
-                                                                    realised_pnl: 0.0 },
-                                               pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
-                                                                                     leverage: 1.0,
-                                                                                     position_mode: PositionDirectionMode::LongShortMode },
-                                               liquidation_price: 100.0,
-                                               margin: 10.0 };
+        let mut position = PerpetualPosition {
+            meta: PositionMeta {
+                position_id: PositionId(123124124124124),
+                enter_ts: 1625247600,
+                update_ts: 1625247601,
+                exit_balance: TokenBalance::new(Token::from("BTC"), Balance::new(0.0, 0.0, 0.0)),
+                exchange: Exchange::SandBox,
+                instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
+                side: Side::Buy,
+                current_size: 1.0,
+                current_fees_total: Fees::Spot(SpotFees { maker_fee: 11.0, taker_fee: 9.0 }),
+                current_avg_price_gross: 50_000.0,
+                current_symbol_price: 61_000.0,
+                current_avg_price: 50_000.0,
+                unrealised_pnl: 11_000.0,
+                realised_pnl: 0.0,
+            },
+            pos_config: PerpetualPositionConfig {
+                pos_margin_mode: PositionMarginMode::Cross,
+                leverage: 1.0,
+                position_mode: PositionDirectionMode::LongShortMode,
+            },
+            liquidation_price: 100.0,
+            margin: 10.0,
+        };
         position.update_liquidation_price(150.0);
         assert_eq!(position.liquidation_price, 150.0);
     }

@@ -18,7 +18,6 @@ use prettytable::{Cell, Row, Table};
 /// - `combine` 函数用于合并多个表格生成器，生成一个包含所有行数据的完整表格。
 ///
 
-
 ///  用于初始化结构体的接口，要求实现者能够通过配置进行初始化。
 pub trait Initialiser
 {
@@ -108,22 +107,23 @@ pub trait TableBuilder
 /// # 返回
 /// 返回包含所有行数据的合并表格。
 pub fn combine<Iter, T>(builders: Iter) -> Table
-    where Iter: IntoIterator<Item = (String, T)>,
-          T: TableBuilder
+where
+    Iter: IntoIterator<Item=(String, T)>,
+    T: TableBuilder,
 {
     builders.into_iter().enumerate().fold(Table::new(), |mut table, (index, (id, builder))| {
-                                        // 使用第一个生成器设置表格标题
-                                        if index == 0 {
-                                            let mut titles = builder.titles();
-                                            titles.insert_cell(0, Cell::new(""));
-                                            table.set_titles(titles);
-                                        }
+        // 使用第一个生成器设置表格标题
+        if index == 0 {
+            let mut titles = builder.titles();
+            titles.insert_cell(0, Cell::new(""));
+            table.set_titles(titles);
+        }
 
-                                        // 为每个生成器添加行数据
-                                        let mut row = builder.row();
-                                        row.insert_cell(0, Cell::new(&id));
-                                        table.add_row(row);
+        // 为每个生成器添加行数据
+        let mut row = builder.row();
+        row.insert_cell(0, Cell::new(&id));
+        table.add_row(row);
 
-                                        table
-                                    })
+        table
+    })
 }

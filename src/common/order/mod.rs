@@ -35,7 +35,7 @@ pub enum OrderRole
 mod tests
 {
     use super::*;
-    use crate::common::order::states::{open::Open, request_cancel::RequestCancel, request_open::RequestOpen};
+    use crate::common::order::states::{request_cancel::RequestCancel, request_open::RequestOpen};
 
     #[test]
     fn order_execution_type_display_should_format_correctly()
@@ -51,12 +51,16 @@ mod tests
     #[test]
     fn request_open_should_be_comparable()
     {
-        let req1 = RequestOpen { reduce_only: true,
-                                 price: 50.0,
-                                 size: 1.0 };
-        let req2 = RequestOpen { reduce_only: false,
-                                 price: 60.0,
-                                 size: 2.0 };
+        let req1 = RequestOpen {
+            reduce_only: true,
+            price: 50.0,
+            size: 1.0,
+        };
+        let req2 = RequestOpen {
+            reduce_only: false,
+            price: 60.0,
+            size: 2.0,
+        };
         assert!(req1 < req2);
     }
 
@@ -68,5 +72,4 @@ mod tests
         let cancel_request: RequestCancel = order_id.clone().into();
         assert_eq!(cancel_request.id, order_id);
     }
-
 }

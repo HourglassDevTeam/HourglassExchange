@@ -15,7 +15,9 @@ pub struct RequestCancel
 /// 通过 `OrderId` 或其他可以转换为 `OrderId` 的类型生成 `RequestCancel` 实例。
 ///
 /// 这个实现允许从不同的标识符类型（如字符串）直接创建 `RequestCancel` 实例。
-impl<Id> From<Id> for RequestCancel where Id: Into<OrderId>
+impl<Id> From<Id> for RequestCancel
+where
+    Id: Into<OrderId>,
 {
     fn from(id: Id) -> Self
     {

@@ -27,13 +27,17 @@ impl Display for Instrument
 }
 
 // 允许从元组直接构造Instrument。
-impl<S> From<(S, S, InstrumentKind)> for Instrument where S: Into<Token>
+impl<S> From<(S, S, InstrumentKind)> for Instrument
+where
+    S: Into<Token>,
 {
     fn from((base, quote, kind): (S, S, InstrumentKind)) -> Self
     {
-        Self { base: base.into(),
-               quote: quote.into(),
-               kind }
+        Self {
+            base: base.into(),
+            quote: quote.into(),
+            kind,
+        }
     }
 }
 
@@ -41,11 +45,14 @@ impl<S> From<(S, S, InstrumentKind)> for Instrument where S: Into<Token>
 impl Instrument
 {
     pub fn new<S>(base: S, quote: S, kind: InstrumentKind) -> Self
-        where S: Into<Token>
+    where
+        S: Into<Token>,
     {
-        Self { base: base.into(),
-               quote: quote.into(),
-               kind }
+        Self {
+            base: base.into(),
+            quote: quote.into(),
+            kind,
+        }
     }
 }
 
@@ -70,14 +77,17 @@ impl InstrumentInitiator
     // 初始化构建器，所有字段均为None。
     pub fn new() -> Self
     {
-        InstrumentInitiator { base: None,
-                              quote: None,
-                              kind: None }
+        InstrumentInitiator {
+            base: None,
+            quote: None,
+            kind: None,
+        }
     }
 
     // 设置基础货币。
     pub fn base<S>(mut self, base: S) -> Self
-        where S: Into<Token>
+    where
+        S: Into<Token>,
     {
         self.base = Some(base.into());
         self
@@ -85,7 +95,8 @@ impl InstrumentInitiator
 
     // 设置报价货币。
     pub fn quote<S>(mut self, quote: S) -> Self
-        where S: Into<Token>
+    where
+        S: Into<Token>,
     {
         self.quote = Some(quote.into());
         self
@@ -101,8 +112,10 @@ impl InstrumentInitiator
     // 结束构建，并尝试生成Instrument。如果任何字段未设置，将返回错误。
     pub fn initiate(self) -> Result<Instrument, &'static str>
     {
-        Ok(Instrument { base: self.base.ok_or("Base is missing")?,
-                        quote: self.quote.ok_or("Quote is missing")?,
-                        kind: self.kind.ok_or("Instrument kind is missing")? })
+        Ok(Instrument {
+            base: self.base.ok_or("Base is missing")?,
+            quote: self.quote.ok_or("Quote is missing")?,
+            kind: self.kind.ok_or("Instrument kind is missing")?,
+        })
     }
 }

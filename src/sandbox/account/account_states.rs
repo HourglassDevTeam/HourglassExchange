@@ -45,9 +45,11 @@ impl AccountState
 {
     pub fn new(balances: HashMap<Token, Balance>, positions: AccountPositions) -> Self
     {
-        Self { balances,
-               positions,
-               account_ref: Weak::new() }
+        Self {
+            balances,
+            positions,
+            account_ref: Weak::new(),
+        }
     }
 
     /// 返回指定[`Token`]的[`Balance`]的引用。
@@ -71,17 +73,16 @@ impl AccountState
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account;
             let commission_rates = account_read.config
-                                               .fees_book
-                                               .get(instrument_kind)
-                                               .cloned()
-                                               .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
+                .fees_book
+                .get(instrument_kind)
+                .cloned()
+                .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
 
             match role {
                 | OrderRole::Maker => Ok(commission_rates.maker_fees),
                 | OrderRole::Taker => Ok(commission_rates.taker_fees),
             }
-        }
-        else {
+        } else {
             Err(ExecutionError::SandBox("Account reference is not set".to_string()))
         }
     }
@@ -91,8 +92,7 @@ impl AccountState
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account;
             Ok(account_read.exchange_timestamp.load(Ordering::SeqCst))
-        }
-        else {
+        } else {
             Err(ExecutionError::SandBox("Account reference is not set".to_string()))
         }
     }
@@ -109,8 +109,7 @@ impl AccountState
         let available = self.balance(token)?.available;
         if available >= required_balance {
             Ok(())
-        }
-        else {
+        } else {
             Err(ExecutionError::InsufficientBalance(token.clone()))
         }
     }
@@ -122,8 +121,7 @@ impl AccountState
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account;
             Ok(account_read.config.position_mode.clone())
-        }
-        else {
+        } else {
             Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
@@ -135,8 +133,7 @@ impl AccountState
         if let Some(account) = self.account_ref.upgrade() {
             let account_read = account;
             Ok(account_read.config.margin_mode.clone())
-        }
-        else {
+        } else {
             Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
@@ -218,8 +215,7 @@ impl AccountState
         if let Some(existing_pos) = perpetual_positions.iter_mut().find(|p| p.meta.instrument == pos.meta.instrument) {
             // 如果找到了相同的 `instrument`，则更新现有仓位信息
             *existing_pos = pos;
-        }
-        else {
+        } else {
             // 如果没有找到相同的 `instrument`，将新的仓位添加到永续合约仓位列表中
             perpetual_positions.push(pos);
         }
@@ -349,13 +345,17 @@ impl AccountState
                     // Isolated margin: apply changes to the specific position's margin
                     match open.side {
                         | Side::Buy => {
-                            let delta = BalanceDelta { total: 0.0,
-                                                       available: -required_balance };
+                            let delta = BalanceDelta {
+                                total: 0.0,
+                                available: -required_balance,
+                            };
                             self.apply_balance_delta(&open.instrument.quote, delta);
                         }
                         | Side::Sell => {
-                            let delta = BalanceDelta { total: 0.0,
-                                                       available: -required_balance };
+                            let delta = BalanceDelta {
+                                total: 0.0,
+                                available: -required_balance,
+                            };
                             self.apply_balance_delta(&open.instrument.base, delta);
                         }
                     }
@@ -374,11 +374,12 @@ impl AccountState
                 | Side::Sell => *self.balance(&open.instrument.base)?,
             };
 
-            Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
-                              exchange: Exchange::SandBox,
-                              kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)) })
-        }
-        else {
+            Ok(AccountEvent {
+                exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
+                exchange: Exchange::SandBox,
+                kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)),
+            })
+        } else {
             Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
@@ -390,13 +391,13 @@ impl AccountState
         match cancelled.side {
             | Side::Buy => {
                 let balance = self.balance_mut(&cancelled.instrument.quote)
-                                  .expect("[UniLink_Execution] : Balance existence checked when opening Order");
+                    .expect("[UniLink_Execution] : Balance existence checked when opening Order");
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
                 TokenBalance::new(cancelled.instrument.quote.clone(), *balance)
             }
             | Side::Sell => {
                 let balance = self.balance_mut(&cancelled.instrument.base)
-                                  .expect("[UniLink_Execution] : Balance existence checked when opening Order");
+                    .expect("[UniLink_Execution] : Balance existence checked when opening Order");
                 balance.available += cancelled.state.remaining_quantity();
                 TokenBalance::new(cancelled.instrument.base.clone(), *balance)
             }
@@ -428,19 +429,27 @@ impl AccountState
                     | Side::Buy => {
                         let base_increase = trade.quantity - fee;
                         // Note: available was already decreased by the opening of the Side::Buy order
-                        let base_delta = BalanceDelta { total: base_increase,
-                                                        available: base_increase };
-                        let quote_delta = BalanceDelta { total: -trade.quantity * trade.price,
-                                                         available: 0.0 };
+                        let base_delta = BalanceDelta {
+                            total: base_increase,
+                            available: base_increase,
+                        };
+                        let quote_delta = BalanceDelta {
+                            total: -trade.quantity * trade.price,
+                            available: 0.0,
+                        };
                         (base_delta, quote_delta)
                     }
                     | Side::Sell => {
                         // Note: available was already decreased by the opening of the Side::Sell order
-                        let base_delta = BalanceDelta { total: -trade.quantity,
-                                                        available: 0.0 };
+                        let base_delta = BalanceDelta {
+                            total: -trade.quantity,
+                            available: 0.0,
+                        };
                         let quote_increase = (trade.quantity * trade.price) - fee;
-                        let quote_delta = BalanceDelta { total: quote_increase,
-                                                         available: quote_increase };
+                        let quote_delta = BalanceDelta {
+                            total: quote_increase,
+                            available: quote_increase,
+                        };
                         (base_delta, quote_delta)
                     }
                 };
@@ -448,9 +457,11 @@ impl AccountState
                 let base_balance = self.apply_balance_delta(base, base_delta);
                 let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
-                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
-                                  exchange: Exchange::SandBox,
-                                  kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) })
+                Ok(AccountEvent {
+                    exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
+                    exchange: Exchange::SandBox,
+                    kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance), ]),
+                })
             }
         }
     }
@@ -492,11 +503,7 @@ mod tests
         common::{
             balance::Balance,
             instrument::kind::InstrumentKind,
-            order::{
-                identification::{client_order_id::ClientOrderId, OrderId},
-                order_instructions::OrderInstruction,
-                OrderRole,
-            },
+            order::OrderRole,
             position::AccountPositions,
             token::Token,
         },
@@ -582,10 +589,12 @@ mod tests
         balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
 
         // Create a mock positions structure with all positions set to None
-        let positions = AccountPositions { margin_pos: Vec::new(),
-                                           perpetual_pos: Vec::new(),
-                                           futures_pos: Vec::new(),
-                                           option_pos: Vec::new() };
+        let positions = AccountPositions {
+            margin_pos: Vec::new(),
+            perpetual_pos: Vec::new(),
+            futures_pos: Vec::new(),
+            option_pos: Vec::new(),
+        };
 
         // Instantiate the account state with the balances and positions
         let account_state = AccountState::new(balances, positions);
@@ -609,8 +618,10 @@ mod tests
         let mut config = create_test_account_config();
 
         // 设置 CommissionRates 并插入到 fees_book 中
-        let commission_rates = CommissionRates { maker_fees: 0.001,
-                                                 taker_fees: 0.002 };
+        let commission_rates = CommissionRates {
+            maker_fees: 0.001,
+            taker_fees: 0.002,
+        };
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
         // 创建 Account
@@ -763,7 +774,7 @@ mod tests
         assert!(result.is_ok());
 
         // 情况2：模拟存在冲突的Perpetual仓位，注意这里 `side` 是 `Sell`
-        account_state.lock().await.positions.perpetual_pos = vec![create_test_perpetual_position(instrument.clone()),];
+        account_state.lock().await.positions.perpetual_pos = vec![create_test_perpetual_position(instrument.clone()), ];
 
         let result = account_state.lock().await.check_position_direction_conflict(&instrument, Side::Sell).await;
         assert!(result.is_err());
@@ -775,7 +786,7 @@ mod tests
         assert!(result.is_ok());
 
         // 情况4：模拟存在冲突的Future仓位，注意这里 `side` 是 `Sell`
-        account_state.lock().await.positions.futures_pos = vec![create_test_future_position_with_side(instrument_future.clone(), Side::Sell),];
+        account_state.lock().await.positions.futures_pos = vec![create_test_future_position_with_side(instrument_future.clone(), Side::Sell), ];
 
         let result = account_state.lock().await.check_position_direction_conflict(&instrument_future, Side::Buy).await;
         assert!(result.is_err());

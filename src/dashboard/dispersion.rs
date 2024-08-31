@@ -94,9 +94,11 @@ impl Range
     /// 返回初始化后的 `Range` 结构体。
     pub fn init(first_value: f64) -> Self
     {
-        Self { activated: false,
-               high: first_value,
-               low: first_value }
+        Self {
+            activated: false,
+            high: first_value,
+            low: first_value,
+        }
     }
 
     /// 给定数据集中的下一个值，迭代更新范围。

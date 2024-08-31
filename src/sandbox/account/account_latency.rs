@@ -1,7 +1,7 @@
 use rand::Rng;
-use std::time::{SystemTime, UNIX_EPOCH};
 // 引入随机数生成器
 use rand_distr::{Distribution, Normal};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 // 引入随机分布库，包括常态分布
 
@@ -27,10 +27,12 @@ impl AccountLatency
     /// 创建一个新的 `AccountLatency` 实例。
     pub fn new(fluctuation_mode: FluctuationMode, maximum: i64, minimum: i64) -> Self
     {
-        Self { fluctuation_mode,
-               maximum,
-               minimum,
-               current_value: minimum }
+        Self {
+            fluctuation_mode,
+            maximum,
+            minimum,
+            current_value: minimum,
+        }
     }
 }
 

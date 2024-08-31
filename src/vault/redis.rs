@@ -23,6 +23,7 @@ use redis::Connection;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::marker::PhantomData;
 
+
 /// 用于通过 new() 构造函数方法构造 [`RedisVault`] 的配置。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, Deserialize, Serialize)]
 pub struct Config
@@ -32,7 +33,8 @@ pub struct Config
 
 /// 使用泛型类型 `Statistic` 的 Redis 仓库，`Statistic` 必须实现 `PositionSummariser`、`Serialize` 和 `DeserializeOwned`。
 pub struct RedisVault<Statistic>
-    where Statistic: PositionSummariser + Serialize + DeserializeOwned
+where
+    Statistic: PositionSummariser + Serialize + DeserializeOwned,
 {
     config: AccountConfig,                     // 仓库的配置，存储在仓库中
     _statistic_marker: PhantomData<Statistic>, // 用于类型标记的幻象数据
@@ -40,7 +42,9 @@ pub struct RedisVault<Statistic>
     conn: Connection,
 }
 
-impl<Statistic> RedisVault<Statistic> where Statistic: PositionSummariser + Serialize + DeserializeOwned
+impl<Statistic> RedisVault<Statistic>
+where
+    Statistic: PositionSummariser + Serialize + DeserializeOwned,
 {
     /// 使用提供的 Redis 连接和配置构造新的 [`RedisVault`] 组件。
     ///
@@ -52,9 +56,11 @@ impl<Statistic> RedisVault<Statistic> where Statistic: PositionSummariser + Seri
     /// 返回一个新的 `RedisVault` 实例，该实例可以用于与 Redis 数据库交互。
     pub fn new(conn: Connection, config: AccountConfig) -> Self
     {
-        Self { config, // 存储提供的配置
-               _statistic_marker: PhantomData,
-               conn }
+        Self {
+            config, // 存储提供的配置
+            _statistic_marker: PhantomData,
+            conn,
+        }
     }
 
     /// 构建器模式，用于构造仓库。
@@ -98,20 +104,25 @@ impl<Statistic> RedisVault<Statistic> where Statistic: PositionSummariser + Seri
 /// RedisVault 的构建器，使用泛型类型 `Statistic`，`Statistic` 必须实现 `PositionSummariser`、`Serialize` 和 `DeserializeOwned`。
 #[derive(Default)]
 pub struct RedisVaultBuilder<Statistic>
-    where Statistic: PositionSummariser + Serialize + DeserializeOwned
+where
+    Statistic: PositionSummariser + Serialize + DeserializeOwned,
 {
     conn: Option<Connection>,                  // Redis 连接的可选值
     config: Option<AccountConfig>,             // 添加配置选项
     _statistic_marker: PhantomData<Statistic>, // 用于类型标记的幻象数据
 }
-impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser + Serialize + DeserializeOwned
+impl<Statistic> RedisVaultBuilder<Statistic>
+where
+    Statistic: PositionSummariser + Serialize + DeserializeOwned,
 {
     /// 构造新的 RedisVaultBuilder 实例。
     pub fn new() -> Self
     {
-        Self { conn: None,
-               config: None, // 初始化配置为 None
-               _statistic_marker: PhantomData }
+        Self {
+            conn: None,
+            config: None, // 初始化配置为 None
+            _statistic_marker: PhantomData,
+        }
     }
 
     /// 设置 Redis 连接。
@@ -131,9 +142,11 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
     /// 构建 RedisVault 实例。
     pub fn build(self) -> Result<RedisVault<Statistic>, ExecutionError>
     {
-        Ok(RedisVault { config: self.config.ok_or(RedisInitialisationError("config".to_string()))?, // 处理配置
-                        _statistic_marker: PhantomData,
-                        conn: self.conn.ok_or(RedisInitialisationError("connection".to_string()))? /* 处理连接 */ })
+        Ok(RedisVault {
+            config: self.config.ok_or(RedisInitialisationError("config".to_string()))?, // 处理配置
+            _statistic_marker: PhantomData,
+            conn: self.conn.ok_or(RedisInitialisationError("connection".to_string()))?, /* 处理连接 */
+        })
     }
 }
 

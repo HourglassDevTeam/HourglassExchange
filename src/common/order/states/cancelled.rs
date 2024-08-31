@@ -10,7 +10,9 @@ pub struct Cancelled
 }
 
 /// 允许从其他类型转换为 `Cancelled` 结构体，前提是这些类型可以被转换为 `OrderId`。
-impl<Id> From<Id> for Cancelled where Id: Into<OrderId>
+impl<Id> From<Id> for Cancelled
+where
+    Id: Into<OrderId>,
 {
     /// 将可以转换为 `OrderId` 的类型转换为 `Cancelled` 结构体。
     fn from(id: Id) -> Self
@@ -25,12 +27,14 @@ impl From<Order<Open>> for Order<Cancelled>
     /// 将 `Order<Open>` 转换为 `Order<Cancelled>`，保持订单的基本信息不变，只改变订单状态为取消。
     fn from(order: Order<Open>) -> Self
     {
-        Self { kind: order.kind,
-               exchange: order.exchange,
-               instrument: order.instrument.clone(),
-               cid: order.cid,
-               client_ts: order.client_ts,
-               side: order.side,
-               state: Cancelled { id: order.state.id } }
+        Self {
+            kind: order.kind,
+            exchange: order.exchange,
+            instrument: order.instrument.clone(),
+            cid: order.cid,
+            client_ts: order.client_ts,
+            side: order.side,
+            state: Cancelled { id: order.state.id },
+        }
     }
 }

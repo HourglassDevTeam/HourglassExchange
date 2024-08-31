@@ -27,10 +27,12 @@ impl Default for Drawdown
     /// 创建一个默认的 [`Drawdown`] 实例，所有字段初始化为默认值。
     fn default() -> Self
     {
-        Self { equity_range: Default::default(),
-               drawdown: 0.0,
-               start_time: Utc::now(),
-               duration: Duration::zero() }
+        Self {
+            equity_range: Default::default(),
+            drawdown: 0.0,
+            start_time: Utc::now(),
+            duration: Duration::zero(),
+        }
     }
 }
 
@@ -45,12 +47,16 @@ impl Drawdown
     /// 返回一个初始化的 `Drawdown` 实例。
     pub fn init(starting_equity: f64) -> Self
     {
-        Self { equity_range: Range { activated: true,
-                                     high: starting_equity,
-                                     low: starting_equity },
-               drawdown: 0.0,
-               start_time: Utc::now(),
-               duration: Duration::zero() }
+        Self {
+            equity_range: Range {
+                activated: true,
+                high: starting_equity,
+                low: starting_equity,
+            },
+            drawdown: 0.0,
+            start_time: Utc::now(),
+            duration: Duration::zero(),
+        }
     }
 
     /// 使用最新的权益点 [`EquitySnapshot`] 更新 [`Drawdown`]。如果 Drawdown 周期结束（投资从谷底恢复到高于之前的峰值），
@@ -89,10 +95,12 @@ impl Drawdown
             // D) drawdown 结束，权益达到新峰值（进入 A）
             | (false, true) => {
                 // 克隆上一个迭代的 Drawdown 以返回
-                let finished_drawdown = Drawdown { equity_range: self.equity_range,
-                                                   drawdown: self.drawdown,
-                                                   start_time: self.start_time,
-                                                   duration: self.duration };
+                let finished_drawdown = Drawdown {
+                    equity_range: self.equity_range,
+                    drawdown: self.drawdown,
+                    start_time: self.start_time,
+                    duration: self.duration,
+                };
 
                 // 清理 - 在下一个 drawdown 开始时重写 start_time
                 self.drawdown = 0.0; // 即等待新的峰值
@@ -180,10 +188,12 @@ impl Default for AvgDrawdown
     /// 创建一个默认的 [`AvgDrawdown`] 实例，所有字段初始化为默认值。
     fn default() -> Self
     {
-        Self { count: 0,
-               mean_drawdown: 0.0,
-               mean_duration_milliseconds: 0,
-               mean_duration: Duration::zero() }
+        Self {
+            count: 0,
+            mean_drawdown: 0.0,
+            mean_duration_milliseconds: 0,
+            mean_duration: Duration::zero(),
+        }
     }
 }
 

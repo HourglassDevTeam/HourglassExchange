@@ -19,7 +19,9 @@ pub struct ClientTrade
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct ClientTradeId(pub i64);
 
-impl<S> From<S> for ClientTradeId where S: Into<i64>
+impl<S> From<S> for ClientTradeId
+where
+    S: Into<i64>,
 {
     fn from(id: S) -> Self
     {

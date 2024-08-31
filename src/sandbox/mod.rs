@@ -2,7 +2,7 @@ use account::Account;
 use clickhouse::query::RowCursor;
 use mpsc::UnboundedReceiver;
 use std::fmt::Debug;
-use std::sync::{Arc};
+use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use warp::Filter;
 
@@ -64,23 +64,23 @@ impl SandBoxExchange
 
         // 创建 warp 路由
         let route = warp::path("event").and(warp::body::json()).map(move |network_event: NetworkEvent| {
-                                                                   let event_tx_clone = event_tx.clone();
+            let event_tx_clone = event_tx.clone();
 
-                                                                   // 异步处理网络事件并发送到通道
-                                                                   tokio::spawn(async move {
-                                                                       match network_event.parse_payload() {
-                                                                           | Ok(event) => {
-                                                                               // 发送事件到通道
-                                                                               if let Err(e) = event_tx_clone.send(event) {
-                                                                                   eprintln!("Failed to send event: {:?}", e);
-                                                                               }
-                                                                           }
-                                                                           | Err(e) => eprintln!("Failed to parse event: {}", e),
-                                                                       }
-                                                                   });
+            // 异步处理网络事件并发送到通道
+            tokio::spawn(async move {
+                match network_event.parse_payload() {
+                    | Ok(event) => {
+                        // 发送事件到通道
+                        if let Err(e) = event_tx_clone.send(event) {
+                            eprintln!("Failed to send event: {:?}", e);
+                        }
+                    }
+                    | Err(e) => eprintln!("Failed to parse event: {}", e),
+                }
+            });
 
-                                                                   warp::reply::reply()
-                                                               });
+            warp::reply::reply()
+        });
 
         // 启动 warp 服务器
         let warp_server = warp::serve(route).run(address);
@@ -100,10 +100,9 @@ impl SandBoxExchange
                 | SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.lock().await.fetch_orders_open(response_tx).await,
                 | SandBoxClientEvent::FetchBalances(response_tx) => self.account.lock().await.fetch_balances(response_tx).await,
                 // NOTE this is buggy. should return an open order or an error eventually, not pendings in the flight.
-                |   SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => {
-                  todo!()
-
-                },
+                | SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => {
+                    todo!()
+                }
                 | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.lock().await.cancel_orders(cancel_requests, response_tx).await,
                 | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.lock().await.cancel_orders_all(response_tx).await,
                 // | SandBoxClientEvent::FetchMarketEvent(market_event) => self.account.lock().await.match_orders(market_event).await,
@@ -117,7 +116,8 @@ impl Default for ExchangeInitiator
     fn default() -> Self
     {
         let (_tx, rx) = mpsc::unbounded_channel();
-        Self { event_sandbox_rx: Some(rx),
+        Self {
+            event_sandbox_rx: Some(rx),
             account: None,
             market_event_tx: None,
         }
@@ -145,8 +145,10 @@ impl ExchangeInitiator
 
     pub fn event_sandbox_rx(self, value: UnboundedReceiver<SandBoxClientEvent>) -> Self
     {
-        Self { event_sandbox_rx: Some(value),
-               ..self }
+        Self {
+            event_sandbox_rx: Some(value),
+            ..self
+        }
     }
 
     pub fn account(self, value: Arc<Mutex<Account>>) -> Self
@@ -154,13 +156,13 @@ impl ExchangeInitiator
         Self { account: Some(value), ..self }
     }
 
-    pub fn initiate(self,data_source:TradeEventSource) -> Result<SandBoxExchange, ExecutionError>
+    pub fn initiate(self, data_source: TradeEventSource) -> Result<SandBoxExchange, ExecutionError>
     {
         Ok(SandBoxExchange {
             data_source,
             event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
             market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
-            account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))?
+            account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))?,
         })
     }
 }
