@@ -60,7 +60,7 @@ async fn main() {
     // 2. Fetch initial Balances when there have been no balance changing events
     test_2_fetch_balances_and_check_same_as_initial(&client).await;
 
-    // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (usdt)
+    // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (TEST_QUOTE)
     // let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
     // let machine_id = generate_machine_id().unwrap();
     // let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId::new(timestamp, machine_id, 1));
@@ -180,7 +180,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 // ) {
 //     println!("[TEST] : Creating a limit buy order request.");
 //     let open_request = order_request_limit(
-//         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //         test_3_ids.cid.clone(),
 //         Side::Buy,
 //         100.0,
@@ -191,7 +191,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     let new_orders = client.open_orders(vec![open_request]).await;
 //
 //     let expected_new_order = open_order(
-//         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //         test_3_ids.cid.clone(),
 //         test_3_ids.id,
 //         Side::Buy,
@@ -206,12 +206,12 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     let current_px = 9_200.0;
 //     match event_account_rx.try_recv() {
 //         Ok(AccountEvent {
-//                kind: AccountEventKind::Balance(usdt_balance),
+//                kind: AccountEventKind::Balance(TEST_QUOTE_balance),
 //                ..
 //            }) => {
 //             println!("Account balance event received.");
-//             let expected = TokenBalance::new("usdt", Balance::new(10_000.0, 9_900.0, current_px));
-//             assert_eq!(usdt_balance, expected);
+//             let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 9_900.0, current_px));
+//             assert_eq!(TEST_QUOTE_balance, expected);
 //         }
 //         other => {
 //             panic!("Unexpected or missing balance event: {:?}", other);
@@ -252,7 +252,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 // ) {
 //     event_simulated_tx
 //         .send(SimulatedEvent::MarketTrade((
-//             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//             Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //             PublicTrade {
 //                 id: "test_4".to_string(),
 //                 side: Side::Sell,
@@ -279,7 +279,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 // ) {
 //     let cancelled = client
 //         .cancel_orders(vec![order_cancel_request(
-//             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//             Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //             test_3_ids.cid,
 //             Side::Buy,
 //             test_3_ids.id.clone(),
@@ -287,7 +287,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //         .await;
 //
 //     let expected_cancelled = order_cancelled(
-//         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //         test_3_ids.cid,
 //         Side::Buy,
 //         test_3_ids.id,
@@ -310,15 +310,15 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //         }
 //     }
 //
-//     // Check AccountEvent Balance for quote currency (usdt) has available balance increase
+//     // Check AccountEvent Balance for quote currency (TEST_QUOTE) has available balance increase
 //     match event_account_rx.try_recv() {
 //         Ok(AccountEvent {
-//             kind: AccountEventKind::Balance(usdt_balance),
+//             kind: AccountEventKind::Balance(TEST_QUOTE_balance),
 //             ..
 //         }) => {
-//             // Expected usdt Balance.available = 9_900 + (100.0 * 1.0)
-//             let expected = TokenBalance::new("usdt", Balance::new(10_000.0, 10_000.0));
-//             assert_eq!(usdt_balance, expected);
+//             // Expected TEST_QUOTE Balance.available = 9_900 + (100.0 * 1.0)
+//             let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 10_000.0));
+//             assert_eq!(TEST_QUOTE_balance, expected);
 //         }
 //         other => {
 //             panic!("try_recv() consumed unexpected: {:?}", other);
@@ -344,14 +344,14 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     let opened_orders = client
 //         .open_orders(vec![
 //             order_request_limit(
-//                 Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//                 Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //                 test_6_ids_1.cid,
 //                 Side::Buy,
 //                 100.0,
 //                 1.0,
 //             ),
 //             order_request_limit(
-//                 Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//                 Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //                 test_6_ids_2.cid,
 //                 Side::Buy,
 //                 200.0,
@@ -361,7 +361,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //         .await;
 //
 //     let expected_order_new_1 = open_order(
-//         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //         test_6_ids_1.cid,
 //         test_6_ids_1.id.clone(),
 //         Side::Buy,
@@ -371,7 +371,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     );
 //
 //     let expected_order_new_2 = open_order(
-//         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //         test_6_ids_2.cid,
 //         test_6_ids_2.id,
 //         Side::Buy,
@@ -387,12 +387,12 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     // Check AccountEvent Balance for first order - quote currency has available balance decrease
 //     match event_account_rx.try_recv() {
 //         Ok(AccountEvent {
-//             kind: AccountEventKind::Balance(usdt_balance),
+//             kind: AccountEventKind::Balance(TEST_QUOTE_balance),
 //             ..
 //         }) => {
-//             // Expected usdt Balance.available = 10_000 - (100.0 * 1.0)
-//             let expected = TokenBalance::new("usdt", Balance::new(10_000.0, 9_900.0));
-//             assert_eq!(usdt_balance, expected);
+//             // Expected TEST_QUOTE Balance.available = 10_000 - (100.0 * 1.0)
+//             let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 9_900.0));
+//             assert_eq!(TEST_QUOTE_balance, expected);
 //         }
 //         other => {
 //             panic!("try_recv() consumed unexpected: {:?}", other);
@@ -416,12 +416,12 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     // Check AccountEvent Balance for second order - quote currency has available balance decrease
 //     match event_account_rx.try_recv() {
 //         Ok(AccountEvent {
-//             kind: AccountEventKind::Balance(usdt_balance),
+//             kind: AccountEventKind::Balance(TEST_QUOTE_balance),
 //             ..
 //         }) => {
-//             // Expected usdt Balance.available = 9_900 - (200.0 * 1.0)
-//             let expected = TokenBalance::new("usdt", Balance::new(10_000.0, 9_700.0));
-//             assert_eq!(usdt_balance, expected);
+//             // Expected TEST_QUOTE Balance.available = 9_900 - (200.0 * 1.0)
+//             let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 9_700.0));
+//             assert_eq!(TEST_QUOTE_balance, expected);
 //         }
 //         other => {
 //             panic!("try_recv() consumed unexpected: {:?}", other);
@@ -460,7 +460,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     // Send matching MarketEvent
 //     event_simulated_tx
 //         .send(SimulatedEvent::MarketTrade((
-//             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//             Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //             PublicTrade {
 //                 id: "test_7".to_string(),
 //                 side: Side::Sell,
@@ -481,17 +481,17 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //             // Base & Quote SymbolBalances should be updated
 //             assert_eq!(balances.len(), 2);
 //
-//             // Base Balance first: expected btc { total: 10.0 + 1.0 - fees, available: 10.0 + 1.0 - fees }
-//             let btc_fees = 1.0 * fees_50_percent();
-//             let expected_btc = TokenBalance::new(
-//                 "btc",
-//                 Balance::new(10.0 + 1.0 - btc_fees, 10.0 + 1.0 - btc_fees),
+//             // Base Balance first: expected TEST_BASE { total: 10.0 + 1.0 - fees, available: 10.0 + 1.0 - fees }
+//             let TEST_BASE_fees = 1.0 * fees_50_percent();
+//             let expected_TEST_BASE = TokenBalance::new(
+//                 "TEST_BASE",
+//                 Balance::new(10.0 + 1.0 - TEST_BASE_fees, 10.0 + 1.0 - TEST_BASE_fees),
 //             );
-//             assert_eq!(balances[0], expected_btc);
+//             assert_eq!(balances[0], expected_TEST_BASE);
 //
-//             // Quote Balance second: expected usdt Balance { total: 10_000 - 200, available: 9_700 }
-//             let expected_usdt = TokenBalance::new("usdt", Balance::new(9_800.0, 9_700.0));
-//             assert_eq!(balances[1], expected_usdt);
+//             // Quote Balance second: expected TEST_QUOTE Balance { total: 10_000 - 200, available: 9_700 }
+//             let expected_TEST_QUOTE = TokenBalance::new("TEST_QUOTE", Balance::new(9_800.0, 9_700.0));
+//             assert_eq!(balances[1], expected_TEST_QUOTE);
 //         }
 //         other => {
 //             panic!("try_recv() consumed unexpected: {:?}", other);
@@ -507,11 +507,11 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //             let expected = Trade {
 //                 id: TradeId(1.to_string()),
 //                 order_id: OrderId(3.to_string()),
-//                 instrument: Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//                 instrument: Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //                 side: Side::Buy,
 //                 price: 200.0,
 //                 quantity: 1.0,
-//                 fees: SymbolFees::new("btc", 1.0 * fees_50_percent()),
+//                 fees: SymbolFees::new("TEST_BASE", 1.0 * fees_50_percent()),
 //             };
 //             assert_eq!(trade, expected);
 //         }
@@ -539,7 +539,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     assert_eq!(
 //         open_orders[0].clone(),
 //         open_order(
-//             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//             Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //             test_6_ids_1.cid,
 //             test_6_ids_1.id,
 //             Side::Buy,
@@ -560,14 +560,14 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     let opened_orders = client
 //         .open_orders(vec![
 //             order_request_limit(
-//                 Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//                 Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //                 test_9_ids_1.cid,
 //                 Side::Sell,
 //                 500.0,
 //                 1.0,
 //             ),
 //             order_request_limit(
-//                 Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//                 Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //                 test_9_ids_2.cid,
 //                 Side::Sell,
 //                 1000.0,
@@ -577,7 +577,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //         .await;
 //
 //     let expected_order_new_1 = open_order(
-//         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //         test_9_ids_1.cid,
 //         test_9_ids_1.id,
 //         Side::Sell,
@@ -587,7 +587,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     );
 //
 //     let expected_order_new_2 = open_order(
-//         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //         test_9_ids_2.cid,
 //         test_9_ids_2.id,
 //         Side::Sell,
@@ -603,12 +603,12 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     // Check AccountEvent Balance for first order - quote currency has available balance decrease
 //     match event_account_rx.try_recv() {
 //         Ok(AccountEvent {
-//             kind: AccountEventKind::Balance(btc_balance),
+//             kind: AccountEventKind::Balance(TEST_BASE_balance),
 //             ..
 //         }) => {
-//             // Expected btc Balance.available = 10.5 - 1.0
-//             let expected = TokenBalance::new("btc", Balance::new(10.5, 10.5 - 1.0));
-//             assert_eq!(btc_balance, expected);
+//             // Expected TEST_BASE Balance.available = 10.5 - 1.0
+//             let expected = TokenBalance::new("TEST_BASE", Balance::new(10.5, 10.5 - 1.0));
+//             assert_eq!(TEST_BASE_balance, expected);
 //         }
 //         other => {
 //             panic!(
@@ -638,12 +638,12 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     // Check AccountEvent Balance for second order - quote currency has available balance decrease
 //     match event_account_rx.try_recv() {
 //         Ok(AccountEvent {
-//             kind: AccountEventKind::Balance(btc_balance),
+//             kind: AccountEventKind::Balance(TEST_BASE_balance),
 //             ..
 //         }) => {
-//             // Expected btc Balance.available = 9.5 - 1.0
-//             let expected = TokenBalance::new("btc", Balance::new(10.5, 9.5 - 1.0));
-//             assert_eq!(btc_balance, expected);
+//             // Expected TEST_BASE Balance.available = 9.5 - 1.0
+//             let expected = TokenBalance::new("TEST_BASE", Balance::new(10.5, 9.5 - 1.0));
+//             assert_eq!(TEST_BASE_balance, expected);
 //         }
 //         other => {
 //             panic!(
@@ -691,7 +691,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     // Send MarketEvent that fully matches one order and partially matches another
 //     event_simulated_tx
 //         .send(SimulatedEvent::MarketTrade((
-//             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//             Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //             PublicTrade {
 //                 id: "test_10".to_string(),
 //                 side: Side::Buy,
@@ -714,15 +714,15 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //             // Base & Quote SymbolBalances should be updated
 //             assert_eq!(balances.len(), 2);
 //
-//             // Base Balance first: expected btc Balance { total: 10.5 - 1.0, available: 8.5 }
-//             let expected_btc = TokenBalance::new("btc", Balance::new(10.5 - 1.0, 8.5));
-//             assert_eq!(balances[0], expected_btc);
+//             // Base Balance first: expected TEST_BASE Balance { total: 10.5 - 1.0, available: 8.5 }
+//             let expected_TEST_BASE = TokenBalance::new("TEST_BASE", Balance::new(10.5 - 1.0, 8.5));
+//             assert_eq!(balances[0], expected_TEST_BASE);
 //
 //             // Quote Balance second:
-//             // Expected usdt increase = (500 * 1.0) - (500 * 1.0 * 0.5) = 500 - 250 = 250
-//             // expected usdt Balance { total: 9_800 + 250, available: 9_700 + 250 }
-//             let expected_usdt = TokenBalance::new("usdt", Balance::new(10_050.0, 9_950.0));
-//             assert_eq!(balances[1], expected_usdt);
+//             // Expected TEST_QUOTE increase = (500 * 1.0) - (500 * 1.0 * 0.5) = 500 - 250 = 250
+//             // expected TEST_QUOTE Balance { total: 9_800 + 250, available: 9_700 + 250 }
+//             let expected_TEST_QUOTE = TokenBalance::new("TEST_QUOTE", Balance::new(10_050.0, 9_950.0));
+//             assert_eq!(balances[1], expected_TEST_QUOTE);
 //         }
 //         other => {
 //             panic!(
@@ -740,11 +740,11 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //             let expected = Trade {
 //                 id: TradeId(2.to_string()),
 //                 order_id: OrderId(4.to_string()),
-//                 instrument: Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//                 instrument: Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //                 side: Side::Sell,
 //                 price: 500.0,
 //                 quantity: 1.0,
-//                 fees: SymbolFees::new("usdt", first_full_fill_fees),
+//                 fees: SymbolFees::new("TEST_QUOTE", first_full_fill_fees),
 //             };
 //             assert_eq!(trade, expected);
 //         }
@@ -768,18 +768,18 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //             // Base & Quote SymbolBalances should be updated
 //             assert_eq!(balances.len(), 2);
 //
-//             // btc { total: 9.0, available: 8.5 } 0.5 left in partially filled trade
+//             // TEST_BASE { total: 9.0, available: 8.5 } 0.5 left in partially filled trade
 //
-//             // Base Balance first: expected btc Balance { total: 9.5 - 0.5, available: 8.5 }
-//             let expected_btc = TokenBalance::new("btc", Balance::new(9.5 - 0.5, 8.5));
-//             assert_eq!(balances[0], expected_btc);
+//             // Base Balance first: expected TEST_BASE Balance { total: 9.5 - 0.5, available: 8.5 }
+//             let expected_TEST_BASE = TokenBalance::new("TEST_BASE", Balance::new(9.5 - 0.5, 8.5));
+//             assert_eq!(balances[0], expected_TEST_BASE);
 //
 //             // Quote Balance second:
-//             // Expected usdt increase = (1000 * 0.5) - (1000 * 0.5 * 0.5) = 500 - 250 = 250
-//             // expected usdt Balance { total: 10_050 + 250, available: 9_950 + 250 }
-//             let expected_usdt =
-//                 TokenBalance::new("usdt", Balance::new(10_050.0 + 250.0, 9_950.0 + 250.0));
-//             assert_eq!(balances[1], expected_usdt);
+//             // Expected TEST_QUOTE increase = (1000 * 0.5) - (1000 * 0.5 * 0.5) = 500 - 250 = 250
+//             // expected TEST_QUOTE Balance { total: 10_050 + 250, available: 9_950 + 250 }
+//             let expected_TEST_QUOTE =
+//                 TokenBalance::new("TEST_QUOTE", Balance::new(10_050.0 + 250.0, 9_950.0 + 250.0));
+//             assert_eq!(balances[1], expected_TEST_QUOTE);
 //         }
 //         other => {
 //             panic!(
@@ -797,11 +797,11 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //             let expected = Trade {
 //                 id: TradeId(3.to_string()),
 //                 order_id: OrderId(5.to_string()),
-//                 instrument: Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//                 instrument: Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //                 side: Side::Sell,
 //                 price: 1000.0,
 //                 quantity: 0.5,
-//                 fees: SymbolFees::new("usdt", second_partial_fill_fees),
+//                 fees: SymbolFees::new("TEST_QUOTE", second_partial_fill_fees),
 //             };
 //             assert_eq!(trade, expected);
 //         }
@@ -838,14 +838,14 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     let expected_cancelled = vec![
 //         order_cancelled(
 //             // Bids are cancelled first
-//             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//             Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //             test_6_ids_1.cid,
 //             Side::Buy,
 //             test_6_ids_1.id,
 //         ),
 //         order_cancelled(
 //             // Asks are cancelled second
-//             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//             Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //             test_9_ids_2.cid,
 //             Side::Sell,
 //             test_9_ids_2.id,
@@ -885,16 +885,16 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //
 //             // Bids are cancelled first, so balance is updated first
 //             // test_6_order_cid_1, Side::Buy, price=100.0, quantity=1.0
-//             // Therefore, usdt Balance { total: 10_300, available: 10_200 + (100 * 1)
-//             let expected_usdt =
-//                 TokenBalance::new("usdt", Balance::new(10_300.0, 10_200.0 + 100.0));
-//             assert_eq!(balances[0], expected_usdt);
+//             // Therefore, TEST_QUOTE Balance { total: 10_300, available: 10_200 + (100 * 1)
+//             let expected_TEST_QUOTE =
+//                 TokenBalance::new("TEST_QUOTE", Balance::new(10_300.0, 10_200.0 + 100.0));
+//             assert_eq!(balances[0], expected_TEST_QUOTE);
 //
 //             // Asks are cancelled second, so balance is updated first
 //             // test_9_order_cid_2, Side::Sell, price=1000.0, quantity=1.0, filled=0.5
-//             // Therefore, btc Balance { total: 9.0, available: 8.5 + 0.5 }
-//             let expected_btc = TokenBalance::new("btc", Balance::new(9.0, 8.5 + 0.5));
-//             assert_eq!(balances[1], expected_btc);
+//             // Therefore, TEST_BASE Balance { total: 9.0, available: 8.5 + 0.5 }
+//             let expected_TEST_BASE = TokenBalance::new("TEST_BASE", Balance::new(9.0, 8.5 + 0.5));
+//             assert_eq!(balances[1], expected_TEST_BASE);
 //         }
 //         other => {
 //             panic!(
@@ -932,14 +932,14 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     let opened_orders = client
 //         .open_orders(vec![
 //             order_request_limit(
-//                 Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//                 Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //                 test_13_ids_1.cid,
 //                 Side::Buy,
 //                 1_000_000_000.0,
 //                 1.0,
 //             ),
 //             order_request_limit(
-//                 Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//                 Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //                 test_13_ids_2.cid,
 //                 Side::Sell,
 //                 1000.0,
@@ -948,9 +948,9 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //         ])
 //         .await;
 //
-//     let expected_order_new_1 = Err(ExecutionError::InsufficientBalance(token::from("usdt")));
+//     let expected_order_new_1 = Err(ExecutionError::InsufficientBalance(token::from("TEST_QUOTE")));
 //     let expected_order_new_2 = open_order(
-//         Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //         test_13_ids_2.cid,
 //         test_13_ids_2.id,
 //         Side::Sell,
@@ -963,17 +963,17 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     assert_eq!(opened_orders[0].clone(), expected_order_new_1);
 //     assert_eq!(opened_orders[1].clone().unwrap(), expected_order_new_2);
 //
-//     // Note: First order failed to due usdt InsufficientBalance, so don't expect any AccountEvents
+//     // Note: First order failed to due TEST_QUOTE InsufficientBalance, so don't expect any AccountEvents
 //
 //     // Check AccountEvent Balance for second order - quote currency has available balance decrease
 //     match event_account_rx.try_recv() {
 //         Ok(AccountEvent {
-//             kind: AccountEventKind::Balance(btc_balance),
+//             kind: AccountEventKind::Balance(TEST_BASE_balance),
 //             ..
 //         }) => {
-//             // Expected btc Balance.available = 9.0 - 1.0
-//             let expected = TokenBalance::new("btc", Balance::new(9.0, 9.0 - 1.0));
-//             assert_eq!(btc_balance, expected);
+//             // Expected TEST_BASE Balance.available = 9.0 - 1.0
+//             let expected = TokenBalance::new("TEST_BASE", Balance::new(9.0, 9.0 - 1.0));
+//             assert_eq!(TEST_BASE_balance, expected);
 //         }
 //         other => {
 //             panic!(
@@ -1017,7 +1017,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 //     let cid = ClientOrderId(Uuid::new_v4());
 //     let cancelled = client
 //         .cancel_orders(vec![order_cancel_request(
-//             Instrument::from(("btc", "usdt", InstrumentKind::Perpetual)),
+//             Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
 //             cid,
 //             Side::Buy,
 //             OrderId::from("order will not be found"),

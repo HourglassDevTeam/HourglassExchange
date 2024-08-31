@@ -210,8 +210,8 @@ impl Account
 
         for request in open_requests {
             let processed_request = match self.config.execution_mode {
+                // 如果是回测模式，则通过 AccountOrders 的方法给订单添加模拟延迟
                 SandboxMode::Backtest => {
-                    // NOTE 如果是回测模式，则通过 AccountOrders 的方法给订单添加模拟延迟
                     self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await
                 }
                 _ => request, // 实时模式下直接使用原始请求
