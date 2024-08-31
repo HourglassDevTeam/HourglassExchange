@@ -1,41 +1,40 @@
 use std::{
     collections::HashMap,
-    sync::{atomic::AtomicI64, Arc, Weak},
+    sync::{Arc, atomic::AtomicI64, Weak},
     time::Duration,
 };
-use clickhouse::query::RowCursor;
+
 use tokio::sync::{mpsc, Mutex};
-use unilink_execution::common::event::AccountEvent;
-use unilink_execution::sandbox::sandbox_client::SandBoxClientEvent;
-use unilink_execution::sandbox::{SandBoxExchange};
-use unilink_execution::test_utils::{create_test_account, create_test_account_config};
-use unilink_execution::test_utils::create_test_account_orders;
+use uuid::Uuid;
+
 use unilink_execution::{
     common::{
         balance::Balance
         ,
-        instrument::{kind::InstrumentKind, Instrument},
+        instrument::{Instrument, kind::InstrumentKind},
         order::{
             identification::{client_order_id::ClientOrderId, OrderId},
+            Order,
             order_instructions::OrderInstruction,
-            states::{open::Open, request_open::RequestOpen},
-            Order, OrderRole,
+            OrderRole, states::{open::Open, request_open::RequestOpen},
         },
         position::AccountPositions,
-        token::Token,
         Side,
+        token::Token,
     },
+    Exchange,
     sandbox::account::{
+        Account,
         account_latency::{AccountLatency, FluctuationMode},
         account_orders::AccountOrders,
         account_states::AccountState,
-        Account,
     },
-    Exchange,
 };
-use uuid::Uuid;
 use unilink_execution::common::order::states::cancelled::Cancelled;
 use unilink_execution::common::order::states::request_cancel::RequestCancel;
+use unilink_execution::sandbox::sandbox_client::SandBoxClientEvent;
+use unilink_execution::sandbox::SandBoxExchange;
+use unilink_execution::test_utils::{create_test_account, create_test_account_config};
 
 pub async fn run_default_exchange(
     event_simulated_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
@@ -56,16 +55,20 @@ pub async fn run_default_exchange(
 }
 
 /// 设置延迟为50ms
+#[allow(dead_code)]
 pub fn latency_50ms() -> Duration {
     Duration::from_millis(50)
 }
 
 /// 设置交易手续费为0.5%
+#[allow(dead_code)]
 pub fn fees_50_percent() -> f64 {
     0.5
 }
 
+
 /// 定义沙箱交易所支持的Instrument
+#[allow(dead_code)]
 pub fn instruments() -> Vec<Instrument> {
     vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))]
 }
@@ -172,6 +175,7 @@ where
 }
 
 /// 创建订单取消请求
+#[allow(dead_code)]
 pub fn order_cancel_request<I, Id>(
     instrument: I,
     cid: ClientOrderId,
@@ -194,6 +198,7 @@ where
 }
 
 /// 创建取消的订单
+#[allow(dead_code)]
 pub fn order_cancelled<I, Id>(
     instrument: I,
     cid: ClientOrderId,

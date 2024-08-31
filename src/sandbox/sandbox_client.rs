@@ -1,20 +1,18 @@
 use async_trait::async_trait;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
-use tokio::sync::{mpsc, mpsc::UnboundedReceiver, oneshot};
+use tokio::sync::{mpsc,  oneshot};
 
 use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrdersOpen, OpenOrders};
 
 use crate::{
     common::{
         balance::TokenBalance,
-        datafeed::market_event::MarketEvent,
         order::{
             states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel},
             Order,
         },
     },
-    sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
     AccountEvent, ClientExecution, Exchange, ExecutionError, RequestOpen,
 };
 
@@ -22,7 +20,7 @@ use crate::{
 pub struct SandBoxClient
 {
     pub request_tx: UnboundedSender<SandBoxClientEvent>, // NOTE 这是向模拟交易所端发送信号的发射器。注意指令格式是SandBoxClientEvent
-    pub market_event_rx: UnboundedReceiver<MarketEvent<MarketTrade>>,
+    // pub market_event_rx: UnboundedReceiver<MarketEvent<MarketTrade>>,
 }
 
 
@@ -49,16 +47,16 @@ pub enum SandBoxClientEvent
 impl ClientExecution for SandBoxClient
 {
     const CLIENT_KIND: Exchange = Exchange::SandBox;
-    type Config = (UnboundedSender<SandBoxClientEvent>, UnboundedReceiver<MarketEvent<MarketTrade>>);
+    type Config = UnboundedSender<SandBoxClientEvent>;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self {
         // 从 config 元组中解构出 request_tx 和 market_event_rx
-        let (request_tx, market_event_rx) = config;
+        let request_tx = config;
 
         // 使用 request_tx 和 market_event_rx 初始化 SandBoxClient
         Self {
             request_tx,
-            market_event_rx,
+            // market_event_rx,
         }
     }
 
