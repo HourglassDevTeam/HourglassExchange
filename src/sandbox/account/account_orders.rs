@@ -190,9 +190,6 @@ impl AccountOrders
     /// - 返回一个包含预测时间戳的待处理订单 (`Order<RequestOpen>`)。
     pub async fn process_backtest_requestopen_with_a_simulated_latency(&mut self, order: Order<RequestOpen>) -> Order<RequestOpen>
     {
-        // 生成一个新的 RequestId
-        let request_id = self.generate_request_id(&order);
-
         // 从预定义的延迟值数组中选择一个延迟值
         let latency = self.get_random_latency();
         let adjusted_client_ts = order.timestamp + latency;
@@ -203,7 +200,7 @@ impl AccountOrders
             exchange: order.exchange,
             instrument: order.instrument,
             cid: order.cid,
-            timestamp: order.timestamp,
+            timestamp: adjusted_client_ts,
             side: order.side,
             state: RequestOpen {
                 reduce_only: order.state.reduce_only,
