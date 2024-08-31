@@ -1,7 +1,7 @@
 use account::Account;
 use mpsc::UnboundedReceiver;
 use std::fmt::Debug;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc};
 use warp::Filter;
 
 use crate::{
@@ -22,6 +22,7 @@ pub mod ws_trade;
 //     RealTime(ChannelReceiver<MarketEvent<MarketTrade>>),
 //     Backtest(std::vec::IntoIter<MarketEvent<MarketTrade>>),
 // }
+
 
 #[derive(Debug)]
 pub struct SandBoxExchange
@@ -98,16 +99,16 @@ impl SandBoxExchange
                 // NOTE this is buggy. should return an open order or an error eventually, not pendings in the flight.
                 |   SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => {
                     println!("Processing OpenOrders event.");
-                    // Creating market event receiver NOTE this may well be the buggy part as market_event_tx was not utilised properlly.
-                    let (_market_event_tx, market_event_rx) = oneshot::channel();
-                    // Process requests into opens
-                    self.account.process_requests_into_opens(
-                        open_requests,
-                        response_tx,
-                        market_event_rx
-                    ).await;
-                    println!("OpenOrders event processed, awaiting market events.");
-                    // In a real scenario, the market_event_tx would be used to send market events
+                    // 处理请求，将其转换为 pending 状态的订单
+                    let pending_orders = match self.account.process_requests_into_pendings(open_requests).await {
+                        Ok(orders) => orders,
+                        Err(e) => {
+                            let _ = response_tx.send(vec![Err(e)]);
+                            return;
+                        }
+                    };
+                    // 在合适的地方执行account的match_orders(&mut self, market_event: MarketEvent<MarketTrade>)，不断匹配时间戳和是的trade，匹配到马上开单停止匹配，并把open 订单发送回客户端
+
                 },
                 | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.cancel_orders(cancel_requests, response_tx).await,
                 | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.cancel_orders_all(response_tx).await,
