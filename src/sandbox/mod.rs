@@ -1,7 +1,7 @@
 use account::Account;
 use mpsc::UnboundedReceiver;
 use std::fmt::Debug;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use warp::Filter;
 
 use crate::{
@@ -18,9 +18,16 @@ pub mod sandbox_orderbook;
 pub mod utils;
 pub mod ws_trade;
 
+// enum TradeEventSource {
+//     RealTime(ChannelReceiver<MarketEvent<MarketTrade>>),
+//     Backtest(std::vec::IntoIter<MarketEvent<MarketTrade>>),
+// }
+
 #[derive(Debug)]
 pub struct SandBoxExchange
 {
+    /// data_source could be added here as a daughter struct with variants.
+    /// pub data_source: TradeEventSource,
     pub event_sandbox_rx: UnboundedReceiver<SandBoxClientEvent>,
     pub account: Account,
 }
@@ -92,9 +99,13 @@ impl SandBoxExchange
                 |   SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => {
                     println!("Processing OpenOrders event.");
                     // Creating market event receiver NOTE this may well be the buggy part as market_event_tx was not utilised properlly.
-                    let (_market_event_tx, market_event_rx) = mpsc::unbounded_channel();
+                    let (_market_event_tx, market_event_rx) = oneshot::channel();
                     // Process requests into opens
-                    self.account.process_requests_into_opens(open_requests, response_tx, market_event_rx).await;
+                    self.account.process_requests_into_opens(
+                        open_requests,
+                        response_tx,
+                        market_event_rx
+                    ).await;
                     println!("OpenOrders event processed, awaiting market events.");
                     // In a real scenario, the market_event_tx would be used to send market events
                 },
