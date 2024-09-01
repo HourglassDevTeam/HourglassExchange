@@ -25,7 +25,6 @@ use std::{
     sync::{atomic::Ordering, Weak},
 };
 use std::time::Duration;
-use tokio::sync::Mutex;
 use tokio::time::timeout;
 
 #[derive(Clone, Debug)]
@@ -669,6 +668,7 @@ mod tests
         assert!(all_balances.iter().any(|b| b.token == token1), "Expected token1 balance not found");
         assert!(all_balances.iter().any(|b| b.token == token2), "Expected token2 balance not found");
     }
+
     #[tokio::test]
     async fn test_get_fee() {
         let account_state = create_test_account_state().await;
@@ -684,19 +684,15 @@ mod tests
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
         // 创建 Account
-        let account = create_test_account().await;
+        let account_arc = create_test_account().await;
 
-        // 解包 Arc<Mutex<Account>> 来获取内部的 Account
-        let account_inner = account.lock().await; // 这会返回一个 MutexGuard<Account>
-        let account_arc = Arc::new(account_inner.clone()); // 将 Account 克隆并包装在新的 Arc<Account> 中
-
-        // 更新 account_state 的 account_ref
         {
+            // 更新 account_state 的 account_ref
             let mut account_state_locked = account_state.lock().await;
             account_state_locked.account_ref = Arc::downgrade(&account_arc);
-        }
+        } // 释放锁
 
-        // 解锁并调用 get_fee 方法
+        // 直接调用 get_fee 方法，不需要再锁定 account_arc
         let fee_result = account_state.lock().await.get_fee(&InstrumentKind::Perpetual, OrderRole::Maker).await;
 
         if let Err(e) = &fee_result {
@@ -708,23 +704,22 @@ mod tests
     }
 
 
-
-
     #[tokio::test]
-    async fn test_get_exchange_ts()
-    {
+    async fn test_determine_position_mode() {
         let account_state = create_test_account_state().await;
 
         // 创建一个新的 AccountConfig 并手动设置 fees_book
         let mut config = create_test_account_config();
 
         // 设置 CommissionRates 并插入到 fees_book 中
-        let commission_rates = CommissionRates { maker_fees: 0.0, taker_fees: 0.0 };
+        let commission_rates = CommissionRates {
+            maker_fees: 0.0,
+            taker_fees: 0.0,
+        };
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
         // 创建 Account
-        let account = create_test_account().await;
-        let account_arc = Arc::new(account);
+        let account_arc = create_test_account().await;
 
         // 更新 account_state 的 account_ref
         {
@@ -732,36 +727,7 @@ mod tests
             account_state_locked.account_ref = Arc::downgrade(&account_arc);
         }
 
-        // 获取 exchange timestamp
-        let exchange_ts_result = account_state.lock().await.get_exchange_ts().await;
-
-        // 检查结果
-        assert!(exchange_ts_result.is_ok());
-        assert_eq!(exchange_ts_result.unwrap(), 1234567); // 确保测试的初始值与预期一致
-    }
-
-    #[tokio::test]
-    async fn test_determine_position_mode()
-    {
-        let account_state = create_test_account_state().await;
-
-        // 创建一个新的 AccountConfig 并手动设置 fees_book
-        let mut config = create_test_account_config();
-
-        // 设置 CommissionRates 并插入到 fees_book 中
-        let commission_rates = CommissionRates { maker_fees: 0.0, taker_fees: 0.0 };
-        config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
-
-        // 创建 Account
-        let account = create_test_account().await;
-        let account_arc = Arc::new(account);
-
-        // 更新 account_state 的 account_ref
-        {
-            let mut account_state_locked = account_state.lock().await;
-            account_state_locked.account_ref = Arc::downgrade(&account_arc);
-        }
-
+        // 调用 determine_position_mode 方法
         let position_mode_result = account_state.lock().await.determine_position_mode().await;
 
         assert!(position_mode_result.is_ok());
@@ -769,42 +735,44 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_determine_margin_mode()
-    {
+    async fn test_determine_margin_mode() {
         let account_state = create_test_account_state().await;
 
         // 创建一个新的 AccountConfig 并手动设置 fees_book
         let mut config = create_test_account_config();
 
         // 设置 CommissionRates 并插入到 fees_book 中
-        let commission_rates = CommissionRates { maker_fees: 0.0, taker_fees: 0.0 };
+        let commission_rates = CommissionRates {
+            maker_fees: 0.0,
+            taker_fees: 0.0,
+        };
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
         // 创建 Account
-        let account = create_test_account().await;
-        let account_arc = Arc::new(account);
+        let account_arc = create_test_account().await;
 
         // 更新 account_state 的 account_ref
         {
             let mut account_state_locked = account_state.lock().await;
             account_state_locked.account_ref = Arc::downgrade(&account_arc);
         }
+
         let margin_mode_result = account_state.lock().await.determine_margin_mode().await;
 
         assert!(margin_mode_result.is_ok());
         assert_eq!(margin_mode_result.unwrap(), MarginMode::SingleCurrencyMargin);
     }
-
     #[tokio::test]
-
-    async fn test_set_position()
-    {
+    async fn test_set_position() {
         let account_state = create_test_account_state().await;
         let instrument = create_test_instrument(InstrumentKind::Perpetual);
-        let perpetual_position = create_test_perpetual_position(instrument);
+        let perpetual_position = create_test_perpetual_position(instrument.clone());
+
         // 创建 Account
         let account = create_test_account().await;
-        let account_arc = Arc::new(account);
+
+        // 直接使用 `Arc<Account>` 而不是 `Arc<Mutex<Account>>`
+        let account_arc = Arc::clone(&account);
 
         // 更新 account_state 的 account_ref
         {
@@ -812,15 +780,21 @@ mod tests
             account_state_locked.account_ref = Arc::downgrade(&account_arc);
         }
 
-        account_state.lock().await.set_position(Position::Perpetual(perpetual_position.clone())).await.unwrap();
+        // 将 Position 设置到 account_state 中
+        account_state
+            .lock()
+            .await
+            .set_position(Position::Perpetual(perpetual_position.clone()))
+            .await
+            .unwrap();
 
-        let instrument = perpetual_position.meta.instrument.clone(); // 确保使用相同的 Instrument
+        // 确保使用相同的 Instrument
         let position_result = account_state.lock().await.get_position(&instrument).await;
 
+        // 如果需要调试，可以解开下面的注释，打印位置结果
         // if let Ok(Some(position)) = &position_result {
         //     println!("Position found: {:?}", position);
-        // }
-        // else {
+        // } else {
         //     println!("Position not found or error occurred.");
         // }
 

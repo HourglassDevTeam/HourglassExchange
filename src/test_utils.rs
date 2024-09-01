@@ -180,8 +180,7 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
     account_state_arc
 }
 
-
-pub async fn create_test_account() -> Arc<Mutex<Account>> {
+pub async fn create_test_account() -> Arc<Account> {
     let leverage_rate = 1.0;
     let mut balances = HashMap::new();
     balances.insert(Token::from("TEST_BASE"), Balance::new(10.0, 10.0, 1.0));
@@ -216,23 +215,21 @@ pub async fn create_test_account() -> Arc<Mutex<Account>> {
 
     let machine_id = generate_machine_id().unwrap();
 
-    // 预先创建空的 AccountState，然后再初始化 Account
+    // 创建 AccountState 实例
     let account_state = AccountState {
         balances,
         positions,
         account_ref: Weak::new(), // 先初始化为空的 Weak
     };
 
-    let account_state_arc = Arc::new(Mutex::new(account_state));
-
-    // 创建 Account 实例，并将其包裹在 Arc<Mutex<...>> 中
-    let account = Arc::new(Mutex::new(Account {
+    // 创建 Account 实例，并将其包裹在 Arc<Account> 中
+    let account = Arc::new(Account {
         current_session: Uuid::new_v4(),
         machine_id,
         exchange_timestamp: AtomicI64::new(1234567),
         account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
         config: Arc::new(account_config),
-        states: account_state_arc.clone(),
+        states: Arc::new(Mutex::new(account_state)),
         orders: Arc::new(RwLock::new(
             AccountOrders::new(
                 machine_id,
@@ -245,20 +242,17 @@ pub async fn create_test_account() -> Arc<Mutex<Account>> {
                 },
             ).await,
         )),
-    }));
-
-    // 解包 account 的 Mutex，提取 Arc<Account>
-    let account_arc = Arc::clone(&account);
-    let account_unwrapped = Arc::new(account_arc.lock().await.clone());
+    });
 
     // 更新 account_ref，使其指向 Weak<Account>
     {
-        let mut account_state_locked = account_state_arc.lock().await;
-        account_state_locked.account_ref = Arc::downgrade(&account_unwrapped);
+        let mut account_state_locked = account.states.lock().await;
+        account_state_locked.account_ref = Arc::downgrade(&account);
     }
 
     account
 }
+
 /// 创建一个测试用的 `PerpetualPosition` 实例。
 pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPosition
 {
