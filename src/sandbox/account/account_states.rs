@@ -668,7 +668,6 @@ mod tests
         assert!(all_balances.iter().any(|b| b.token == token1), "Expected token1 balance not found");
         assert!(all_balances.iter().any(|b| b.token == token2), "Expected token2 balance not found");
     }
-
     #[tokio::test]
     async fn test_get_fee() {
         let account_state = create_test_account_state().await;
@@ -684,7 +683,7 @@ mod tests
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
         // 创建 Account
-        let account_arc = create_test_account().await;
+        let account_arc = Arc::new(create_test_account().await);
 
         {
             // 更新 account_state 的 account_ref
@@ -703,7 +702,6 @@ mod tests
         assert_eq!(fee_result.unwrap(), 0.001); // 确保你检查的是插入的 perpetual_open 费率
     }
 
-
     #[tokio::test]
     async fn test_determine_position_mode() {
         let account_state = create_test_account_state().await;
@@ -719,7 +717,7 @@ mod tests
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
         // 创建 Account
-        let account_arc = create_test_account().await;
+        let account_arc = Arc::new(create_test_account().await);
 
         // 更新 account_state 的 account_ref
         {
@@ -733,7 +731,6 @@ mod tests
         assert!(position_mode_result.is_ok());
         assert_eq!(position_mode_result.unwrap(), PositionDirectionMode::NetMode);
     }
-
     #[tokio::test]
     async fn test_determine_margin_mode() {
         let account_state = create_test_account_state().await;
@@ -749,7 +746,7 @@ mod tests
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
         // 创建 Account
-        let account_arc = create_test_account().await;
+        let account_arc = Arc::new(create_test_account().await);
 
         // 更新 account_state 的 account_ref
         {
@@ -762,17 +759,15 @@ mod tests
         assert!(margin_mode_result.is_ok());
         assert_eq!(margin_mode_result.unwrap(), MarginMode::SingleCurrencyMargin);
     }
+
     #[tokio::test]
     async fn test_set_position() {
         let account_state = create_test_account_state().await;
         let instrument = create_test_instrument(InstrumentKind::Perpetual);
         let perpetual_position = create_test_perpetual_position(instrument.clone());
 
-        // 创建 Account
-        let account = create_test_account().await;
-
-        // 直接使用 `Arc<Account>` 而不是 `Arc<Mutex<Account>>`
-        let account_arc = Arc::clone(&account);
+        // 创建 Account 并将其包装在 Arc 中
+        let account_arc = Arc::new(create_test_account().await);
 
         // 更新 account_state 的 account_ref
         {

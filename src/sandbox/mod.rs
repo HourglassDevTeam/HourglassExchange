@@ -147,9 +147,9 @@ impl ExchangeInitiator
         }
     }
 
-    pub fn account(self, value: Arc<Mutex<Account>>) -> Self
-    {
-        Self { account: Some(value), ..self }
+    pub fn account(self, value: Account) -> Self {
+        let arc_mutex_account = Arc::new(tokio::sync::Mutex::new(value));
+        Self { account: Some(arc_mutex_account), ..self }
     }
 
     pub fn initiate(self) -> Result<SandBoxExchange, ExecutionError> {
@@ -192,17 +192,15 @@ mod tests
 
     #[tokio::test]
     async fn initiator_should_set_account() {
-        let account = create_test_account().await;
-        let arc_mutex_account = Arc::new(tokio::sync::Mutex::new(Arc::try_unwrap(account).expect("Arc unwrap failed")));
-        let initiator = ExchangeInitiator::new().account(arc_mutex_account);
+        let account = create_test_account().await; // `create_test_account` returns an `Account`
+        let initiator = ExchangeInitiator::new().account(account);
         assert!(initiator.account.is_some());
     }
 
     #[tokio::test]
     async fn initiator_should_return_error_if_event_sandbox_rx_is_missing() {
-        let account = create_test_account().await;
-        let arc_mutex_account = Arc::new(tokio::sync::Mutex::new(Arc::try_unwrap(account).unwrap())); // 解包原始的 Arc<Account>
-        let initiator = ExchangeInitiator::new().account(arc_mutex_account);
+        let account = create_test_account().await; // `create_test_account` returns an `Account`
+        let initiator = ExchangeInitiator::new().account(account);
         let result = initiator.initiate();
         assert!(result.is_err());
     }
@@ -216,18 +214,18 @@ mod tests
         let result = initiator.initiate();
         assert!(result.is_err());
     }
-
     #[tokio::test]
     async fn run_online_should_return_if_port_is_in_use() {
         // 占用端口 3030
         let _listener = TcpListener::bind("127.0.0.1:3030").unwrap();
 
         let (_tx, rx) = mpsc::unbounded_channel();
-        let account = create_test_account().await;
-        let account = Arc::new(tokio::sync::Mutex::new(Arc::try_unwrap(account).unwrap())); // 将 Account 包装在 Mutex 中
+        let account = create_test_account().await; // `create_test_account` returns an `Account`
+        let account = Arc::new(tokio::sync::Mutex::new(account)); // Wrap `Account` directly in `Arc<Mutex<Account>>`
         let exchange = SandBoxExchange { event_sandbox_rx: rx, account };
         let address = ([127, 0, 0, 1], 3030);
         assert!(is_port_in_use(address));
         exchange.run_online().await;
     }
+
 }

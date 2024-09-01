@@ -40,11 +40,10 @@ pub async fn run_default_exchange(
 ) {
     // Build and run the Sandbox Exchange
     let account = create_test_account().await; // Create the Account
-    let arc_mutex_account = Arc::new(tokio::sync::Mutex::new(account)); // Wrap it in Arc<Mutex<Account>>
 
     let sandbox_exchange = SandBoxExchange::initiator()
         .event_sandbox_rx(event_simulated_rx)
-        .account(arc_mutex_account) // Use the wrapped account
+        .account(account) // Pass the Account directly
         .initiate() // Use `initiate` instead of `build` for `SandBoxExchange`
         .expect("failed to build SandBoxExchange");
 
