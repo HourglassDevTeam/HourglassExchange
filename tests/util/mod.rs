@@ -35,15 +35,16 @@ use unilink_execution::common::order::states::request_cancel::RequestCancel;
 use unilink_execution::sandbox::sandbox_client::SandBoxClientEvent;
 use unilink_execution::sandbox::SandBoxExchange;
 use unilink_execution::test_utils::{create_test_account, create_test_account_config};
-
 pub async fn run_default_exchange(
     event_simulated_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
 ) {
     // Build and run the Sandbox Exchange
+    let account = create_test_account().await; // Create the Account
+    let arc_mutex_account = Arc::new(tokio::sync::Mutex::new(account)); // Wrap it in Arc<Mutex<Account>>
+
     let sandbox_exchange = SandBoxExchange::initiator()
         .event_sandbox_rx(event_simulated_rx)
-        // .market_event_tx(None)
-        .account(create_test_account().await) // 直接使用 create_test_account().await
+        .account(arc_mutex_account) // Use the wrapped account
         .initiate() // Use `initiate` instead of `build` for `SandBoxExchange`
         .expect("failed to build SandBoxExchange");
 
@@ -53,6 +54,7 @@ pub async fn run_default_exchange(
     sandbox_exchange.run_local().await;
     println!("Sandbox exchange is running");
 }
+
 
 /// 设置延迟为50ms
 #[allow(dead_code)]
@@ -72,7 +74,6 @@ pub fn fees_50_percent() -> f64 {
 pub fn instruments() -> Vec<Instrument> {
     vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))]
 }
-/// 初始化沙箱交易所账户余额
 pub async fn initial_balances() -> Arc<Mutex<AccountState>> {
     // 初始化账户余额
     let mut balances = HashMap::new();
@@ -91,9 +92,11 @@ pub async fn initial_balances() -> Arc<Mutex<AccountState>> {
         positions,
         account_ref: Weak::new(),
     };
+
+    // 包装 AccountState 实例在 Arc<Mutex<...>> 中
     let account_state_arc = Arc::new(Mutex::new(account_state));
 
-    // 模拟环境中的 `Account`
+    // 创建 Account 实例，并将其包装在 Arc<Mutex<...>> 中
     let account = Arc::new(Mutex::new(Account {
         current_session: Uuid::new_v4(),
         machine_id: 0,
@@ -109,15 +112,19 @@ pub async fn initial_balances() -> Arc<Mutex<AccountState>> {
         }).await)),
     }));
 
-    // 更新 `account_ref` 以指向 `Account`
+    // 将 `Arc<Mutex<Account>>` 转换为 `Arc<Account>`
+    let account_arc = Arc::clone(&account);
+    let account_unwrapped = Arc::new(account_arc.lock().await.clone());
+
+    // 获取 Account 的锁定版本并将其传递给 `Arc::downgrade`
     {
         let mut account_state_locked = account_state_arc.lock().await;
-        account_state_locked.account_ref = Arc::downgrade(&account);
+        account_state_locked.account_ref = Arc::downgrade(&account_unwrapped);
     }
 
-    // 直接返回 `Arc<Mutex<AccountState>>`
     account_state_arc
 }
+
 /// 创建限价订单请求
 pub fn order_request_limit<I>(
     instrument: I,

@@ -179,8 +179,7 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
 
     account_state_arc
 }
-
-pub async fn create_test_account() -> Arc<Account> {
+pub async fn create_test_account() -> Account {
     let leverage_rate = 1.0;
     let mut balances = HashMap::new();
     balances.insert(Token::from("TEST_BASE"), Balance::new(10.0, 10.0, 1.0));
@@ -250,8 +249,10 @@ pub async fn create_test_account() -> Arc<Account> {
         account_state_locked.account_ref = Arc::downgrade(&account);
     }
 
-    account
+    // 直接返回 Account（从 Arc 中解包）
+    Arc::try_unwrap(account).expect("Failed to unwrap Arc")
 }
+
 
 /// 创建一个测试用的 `PerpetualPosition` 实例。
 pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPosition

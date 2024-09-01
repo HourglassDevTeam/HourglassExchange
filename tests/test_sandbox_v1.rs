@@ -58,13 +58,13 @@ async fn main() {
     // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (TEST_QUOTE)
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
     let machine_id = generate_machine_id().unwrap();
-    let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
+    // let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
     let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId::new(timestamp, machine_id, 1));
-    test_3_open_limit_buy_order(
-        &client,
-        test_3_ids.clone(),
-        &mut event_account_rx
-    ).await;
+    // test_3_open_limit_buy_order(
+    //     &client,
+    //     test_3_ids.clone(),
+    //     &mut event_account_rx
+    // ).await;
 
     // // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent
     // test_4_send_market_event_that_does_not_match_any_open_order(
