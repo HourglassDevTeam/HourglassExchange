@@ -154,6 +154,8 @@ fn assert_balance_equal_ignore_time(actual: &Balance, expected: &Balance) {
 
 async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient) {
     let actual_balances = client.fetch_balances().await.unwrap();
+    // println!("actual balances: {:?}", actual_balances);
+    // NOTE seems that fetch_balances is working.so that the response_rx should be working.
     let initial_balances = initial_balances().await;
     let initial_balances_locked = initial_balances.lock().await;
 
@@ -181,7 +183,8 @@ async fn test_3_open_limit_buy_order(
         1.0,    // size
     );
 
-    println!("Sending order request via SandBoxClient.");
+    println!("Sending order request via SandBoxClient : {:?}", open_request);
+
     let new_orders = client.open_orders(vec![open_request]).await;
 
     let expected_new_order = open_order(

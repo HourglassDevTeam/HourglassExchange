@@ -222,6 +222,7 @@ impl Account
                 let processed_request = match self.config.execution_mode {
                     // 如果是回测模式，则通过 AccountOrders 的方法给订单添加模拟延迟
                     SandboxMode::Backtest => {
+                        println!("Processing backtest request: {:?}", request);
                         self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await
                     }
                     _ => request, // 实时模式下直接使用原始请求
@@ -243,6 +244,8 @@ impl Account
                         }
                     }
                 };
+
+                println!("current_price: {:?}", current_price);  // Debug log
 
                 // 执行开单请求，将 `current_price` 传递给 `process_request_open_into_open_atomically` 方法
                 let open_result = self.atomic_open(current_price, processed_request).await;
@@ -303,16 +306,16 @@ impl Account
     pub async fn atomic_open(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError>
     {
         Self::validate_order_instruction(order.kind)?;
-
+        // println!("atomic_open: {:?}", order);
         // 提前声明所需的变量
         let order_role = {
             let orders_guard = self.orders.read().await; // 使用读锁来判断订单角色
             orders_guard.determine_maker_taker(&order, current_price)?
         };
-
+        // println!("order_role: {:?}", order_role);
         // 计算所需的可用余额，尽量避免锁操作
         let (token, required_balance) = self.required_available_balance(&order, current_price).await;
-
+        // println!("required_balance: {:?}", required_balance);
         // 检查余额是否充足，并在锁定后更新订单
         self.states.lock().await.has_sufficient_available_balance(token, required_balance)?;
 
@@ -322,11 +325,12 @@ impl Account
             orders_guard.get_ins_orders_mut(&open_order.instrument)?.add_order_open(open_order.clone());
             open_order
         };
-
-        // 应用订单变更并发送事件
+        // println!("open_order: {:?}", open_order);
+        // 应用订单变更并发送事件 NOTE test3 failed because of this line.
         let balance_event = self.states.lock().await.apply_open_order_changes(&open_order, required_balance).await?;
+        // println!("balance_event: {:?}",balance_event);
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
-
+        // println!("exchange_timestamp: {:?}",exchange_timestamp);
         self.account_event_tx
             .send(balance_event)
             .expect("[UniLink_Execution] : Client offline - Failed to send AccountEvent::Balance");

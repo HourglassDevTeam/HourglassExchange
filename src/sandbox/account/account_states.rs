@@ -311,10 +311,13 @@ impl AccountState
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub async fn apply_open_order_changes(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExecutionError>
     {
+        println!("[UniLink_Execution] : apply_open_order_changes");
         if let Some(account) = self.account_ref.upgrade() {
+            println!("account: {:?}", account); // NOTE test3 failed because of this line. data is locked.
             let position_mode = self.determine_position_mode().await?;
+            println!("position_mode: {:?}", position_mode);
             let position_margin_mode = account.lock().await.config.position_margin_mode.clone();
-
+            println!("position_mode: {:?}", position_mode);
             // 前置检查 InstrumentKind 和 NetMode 方向
             match open.instrument.kind {
                 | InstrumentKind::Spot => {
