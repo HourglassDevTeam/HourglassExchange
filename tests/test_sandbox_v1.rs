@@ -58,13 +58,9 @@ async fn main() {
     // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (TEST_QUOTE)
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
     let machine_id = generate_machine_id().unwrap();
-    // let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
+    let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
     let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId::new(timestamp, machine_id, 1));
-    // test_3_open_limit_buy_order(
-    //     &client,
-    //     test_3_ids.clone(),
-    //     &mut event_account_rx
-    // ).await;
+    test_3_open_limit_buy_order(&client, test_3_ids.clone(), &mut event_account_rx).await;
 
     // // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent
     // test_4_send_market_event_that_does_not_match_any_open_order(
@@ -173,7 +169,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
 async fn test_3_open_limit_buy_order(
     client: &SandBoxClient,
     test_3_ids: Ids,
-    _event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
     let open_request = order_request_limit(
         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
@@ -198,9 +194,11 @@ async fn test_3_open_limit_buy_order(
     );
 
     assert_eq!(new_orders.len(), 1);
-    assert_eq!(new_orders[0].as_ref().unwrap(), &expected_new_order);
 
-    // 使用实际的价格来确保一致性
+    // NOTE buggy here
+    assert_eq!(new_orders[0].as_ref().unwrap(), &expected_new_order);
+    // //
+    // // 使用实际的价格来确保一致性
     // let current_px = 100.0;  // 与订单中的价格匹配
     //
     // match event_account_rx.recv().await {
