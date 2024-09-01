@@ -8,13 +8,11 @@ use std::{
     },
     time::{SystemTime, UNIX_EPOCH},
 };
-use tokio::time::Duration;
 use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
-use tokio::time::timeout;
 use tracing::warn;
 use uuid::Uuid;
 
@@ -201,77 +199,51 @@ impl Account
     /// `open_orders` 执行开单操作。
     /// `atomic_open` 尝试以原子操作方式打开一个订单，确保在验证和更新账户余额后安全地打开订单。
     /// `required_available_balance` 计算打开订单所需的可用余额，用于验证账户中是否有足够的资金执行订单。
-
     pub async fn open_orders(
         &mut self,
         open_requests: Vec<Order<RequestOpen>>,
         response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>,
     ) -> Result<(), ExecutionError> {
-        println!("Starting to process open orders");  // Debug log
+        let mut open_results = Vec::new();
 
-        // 设置超时时间
-        let timeout_duration = Duration::from_secs(1);  // 设置为2秒或你需要的时间
-
-        // 使用timeout封装open orders处理逻辑
-        let open_results = timeout(timeout_duration, async {
-            let mut open_results = Vec::new();
-
-            for request in open_requests {
-                println!("Processing request: {:?}", request);  // Debug log
-
-                let processed_request = match self.config.execution_mode {
-                    // 如果是回测模式，则通过 AccountOrders 的方法给订单添加模拟延迟
-                    SandboxMode::Backtest => {
-                        println!("Processing backtest request: {:?}", request);
-                        self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await
-                    }
-                    _ => request, // 实时模式下直接使用原始请求
-                };
-
-                // 获取该订单所需的 `Token` 的 `Balance`
-                let current_price = {
-                    let states = self.states.lock().await;
-                    match processed_request.side {
-                        Side::Buy => {
-                            let token = &processed_request.instrument.base;
-                            let balance = states.balance(token)?;
-                            balance.current_price
-                        }
-                        Side::Sell => {
-                            let token = &processed_request.instrument.quote;
-                            let balance = states.balance(token)?;
-                            balance.current_price
-                        }
-                    }
-                };
-
-                println!("current_price: {:?}", current_price);  // Debug log
-
-                // 执行开单请求，将 `current_price` 传递给 `process_request_open_into_open_atomically` 方法
-                let open_result = self.atomic_open(current_price, processed_request).await;
-                println!("Open result: {:?}", open_result);  // Debug log
-                open_results.push(open_result);
-            }
-
-            Ok(open_results) as Result<Vec<_>, ExecutionError>
-        }).await;
-
-        match open_results {
-            Ok(result) => {
-                // 这里解包 Result，确保传递给 send 的是 Vec
-                if let Err(e) = response_tx.send(result?) {
-                    return Err(ExecutionError::SandBox(format!(
-                        "Failed to send open order results: {:?}",
-                        e
-                    )));
+        for request in open_requests {
+            let processed_request = match self.config.execution_mode {
+                SandboxMode::Backtest => {
+                    self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await
                 }
-                Ok(())
-            }
-            Err(_) => {
-                Err(ExecutionError::SandBox("Order processing timed out".to_string()))
-            }
+                _ => request, // 实时模式下直接使用原始请求
+            };
+
+            let current_price = {
+                let states = self.states.lock().await;
+                match processed_request.side {
+                    Side::Buy => {
+                        let token = &processed_request.instrument.base;
+                        let balance = states.balance(token)?;
+                        balance.current_price
+                    }
+                    Side::Sell => {
+                        let token = &processed_request.instrument.quote;
+                        let balance = states.balance(token)?;
+                        balance.current_price
+                    }
+                }
+            };
+
+            let open_result = self.atomic_open(current_price, processed_request).await;
+            open_results.push(open_result);
         }
+
+        if let Err(e) = response_tx.send(open_results) {
+            return Err(ExecutionError::SandBox(format!(
+                "Failed to send open order results: {:?}",
+                e
+            )));
+        }
+
+        Ok(())
     }
+
 
     pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&Token, f64)
     {

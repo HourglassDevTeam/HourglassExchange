@@ -24,14 +24,16 @@ use std::{
     ops::{Deref, DerefMut},
     sync::{atomic::Ordering, Weak},
 };
+use std::time::Duration;
 use tokio::sync::Mutex;
+use tokio::time::timeout;
 
 #[derive(Clone, Debug)]
 pub struct AccountState
 {
     pub balances: HashMap<Token, Balance>,
     pub positions: AccountPositions,
-    pub account_ref: Weak<Mutex<Account>>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
+    pub account_ref: Weak<Account>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
 }
 
 impl PartialEq for AccountState
@@ -68,12 +70,10 @@ impl AccountState
             .get_mut(token)
             .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {token}")))
     }
-
     pub async fn get_fee(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
-            // 先获取锁定的 Account 实例
-            let account_guard = account.lock().await;
-            let commission_rates = account_guard.config
+            // 直接访问 account 的 config 字段
+            let commission_rates = account.config
                 .fees_book
                 .get(instrument_kind)
                 .cloned()
@@ -88,12 +88,10 @@ impl AccountState
         }
     }
 
-
     pub async fn get_exchange_ts(&self) -> Result<i64, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
-            // 锁定 Account，并在新的作用域中使用锁定的结果
-            let account_guard = account.lock().await;
-            let exchange_ts = account_guard.exchange_timestamp.load(Ordering::SeqCst);
+            // 直接访问 account 的 exchange_timestamp 字段
+            let exchange_ts = account.exchange_timestamp.load(Ordering::SeqCst);
             Ok(exchange_ts)
         } else {
             Err(ExecutionError::SandBox("Account reference is not set".to_string()))
@@ -120,26 +118,24 @@ impl AccountState
 
     async fn determine_position_mode(&self) -> Result<PositionDirectionMode, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
-            // 锁定 Account，并在新的作用域中使用锁定的结果
-            let account_guard = account.lock().await;
-            let position_mode = account_guard.config.position_mode.clone();
+            // 直接访问 account 的 config 字段
+            let position_mode = account.config.position_mode.clone();
             Ok(position_mode)
-        } else {
-            Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
-        }}
-
-    /// 判断Account的当前保证金模式。
-    #[allow(dead_code)]
-    async fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError> {
-        if let Some(account) = self.account_ref.upgrade() {
-            // 先获取锁定的 Account 实例
-            let account_guard = account.lock().await;
-            Ok(account_guard.config.margin_mode.clone())
         } else {
             Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
     }
 
+    /// 判断Account的当前保证金模式。
+    #[allow(dead_code)]
+    async fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError> {
+        if let Some(account) = self.account_ref.upgrade() {
+            // 直接访问 account 的 config 字段
+            Ok(account.config.margin_mode.clone())
+        } else {
+            Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
+        }
+    }
     /// 获取指定 `Instrument` 的仓位
     pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<Position>, ExecutionError>
     {
@@ -309,64 +305,107 @@ impl AccountState
 
     /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
-    pub async fn apply_open_order_changes(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExecutionError>
-    {
-        println!("[UniLink_Execution] : apply_open_order_changes");
-        if let Some(account) = self.account_ref.upgrade() {
-            println!("account: {:?}", account); // NOTE test3 failed because of this line. data is locked.
-            let position_mode = self.determine_position_mode().await?;
-            println!("position_mode: {:?}", position_mode);
-            let position_margin_mode = account.lock().await.config.position_margin_mode.clone();
-            println!("position_mode: {:?}", position_mode);
-            // 前置检查 InstrumentKind 和 NetMode 方向
+    pub async fn apply_open_order_changes(
+        &mut self,
+        open: &Order<Open>,
+        required_balance: f64,
+    ) -> Result<AccountEvent, ExecutionError> {
+        println!(
+            "[UniLink_Execution] : Starting apply_open_order_changes: {:?}, with balance: {:?}",
+            open,
+            required_balance
+        );
+
+        // 设置超时时间
+        let timeout_duration = Duration::from_secs(2); // 根据需要调整超时时间
+
+        // 使用timeout封装处理逻辑
+        let result = timeout(timeout_duration, async {
+            // 提前获取并释放锁
+            let (position_mode, position_margin_mode) = {
+                let account_arc = match self.account_ref.upgrade() {
+                    Some(account_arc) => account_arc,
+                    None => {
+                        return Err(ExecutionError::SandBox(
+                            "[UniLink_Execution] : Account reference is not set".to_string(),
+                        ));
+                    }
+                };
+
+                // 访问 Account 的 config
+                let config = &account_arc.config;
+
+                (
+                    config.position_mode.clone(),
+                    config.position_margin_mode.clone(),
+                )
+            };
+
+            println!(
+                "[UniLink_Execution] : Retrieved position_mode: {:?}, position_margin_mode: {:?}",
+                position_mode,
+                position_margin_mode
+            );
+
+            // 检查并处理订单逻辑
             match open.instrument.kind {
-                | InstrumentKind::Spot => {
+                InstrumentKind::Spot => {
                     todo!("[UniLink_Execution] : Spot handling is not implemented yet");
                 }
-                | InstrumentKind::CryptoOption => {
+                InstrumentKind::CryptoOption => {
                     todo!("[UniLink_Execution] : Option handling is not implemented yet");
                 }
-                | InstrumentKind::CommodityFuture => {
+                InstrumentKind::CommodityFuture => {
                     todo!("[UniLink_Execution] : Commodity future handling is not implemented yet");
                 }
-                | InstrumentKind::CommodityOption => {
-                    todo!("[UniLink_Execution] : Crypto option handling is not implemented yet");
+                InstrumentKind::CommodityOption => {
+                    todo!("[UniLink_Execution] : Commodity option handling is not implemented yet");
                 }
-                | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
+                InstrumentKind::Perpetual
+                | InstrumentKind::Future
+                | InstrumentKind::CryptoLeveragedToken => {
                     if position_mode == PositionDirectionMode::NetMode {
-                        self.check_position_direction_conflict(&open.instrument, open.side).await?;
+                        self.check_position_direction_conflict(&open.instrument, open.side)
+                            .await?;
                     }
                 }
             }
 
-            // 更新余额，根据不同的 PositionMarginMode 处理
-            match (open.instrument.kind, position_margin_mode) {
-                | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Cross) => {
-                    // FIXME: NOTE this is DEMONSTRATIVE AND PROBLEMATIC and the common pool is yet to be built.
-                    // Cross margin: apply the required balance to a common pool
-                    todo!("Handle Cross Margin")
+            // 计算并应用余额变化
+            match (
+                open.instrument.kind,
+                position_margin_mode,
+            ) {
+                (
+                    InstrumentKind::Perpetual
+                    | InstrumentKind::Future
+                    | InstrumentKind::CryptoLeveragedToken,
+                    PositionMarginMode::Cross,
+                ) => {
+                    todo!("Handle Cross Margin");
                 }
-                | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Isolated) => {
-                    // Isolated margin: apply changes to the specific position's margin
-                    match open.side {
-                        | Side::Buy => {
-                            let delta = BalanceDelta {
-                                total: 0.0,
-                                available: -required_balance,
-                            };
-                            self.apply_balance_delta(&open.instrument.quote, delta);
-                        }
-                        | Side::Sell => {
-                            let delta = BalanceDelta {
-                                total: 0.0,
-                                available: -required_balance,
-                            };
-                            self.apply_balance_delta(&open.instrument.base, delta);
-                        }
+                (
+                    InstrumentKind::Perpetual
+                    | InstrumentKind::Future
+                    | InstrumentKind::CryptoLeveragedToken,
+                    PositionMarginMode::Isolated,
+                ) => match open.side {
+                    Side::Buy => {
+                        let delta = BalanceDelta {
+                            total: 0.0,
+                            available: -required_balance,
+                        };
+                        self.apply_balance_delta(&open.instrument.quote, delta);
                     }
-                }
-                // 其他情况下，继续处理，当前返回错误
-                | (_, _) => {
+                    Side::Sell => {
+                        let delta = BalanceDelta {
+                            total: 0.0,
+                            available: -required_balance,
+                        };
+                        self.apply_balance_delta(&open.instrument.base, delta);
+                    }
+                },
+                (_, _) => {
                     return Err(ExecutionError::SandBox(format!(
                         "[UniLink_Execution] : Unsupported InstrumentKind or PositionMarginMode for open order: {:?}",
                         open.instrument.kind
@@ -374,21 +413,37 @@ impl AccountState
                 }
             };
 
+            // 获取更新后的余额并返回结果
             let updated_balance = match open.side {
-                | Side::Buy => *self.balance(&open.instrument.quote)?,
-                | Side::Sell => *self.balance(&open.instrument.base)?,
+                Side::Buy => *self.balance(&open.instrument.quote)?,
+                Side::Sell => *self.balance(&open.instrument.base)?,
             };
 
             Ok(AccountEvent {
-                exchange_timestamp: self.get_exchange_ts().await.expect("[UniLink_Execution] : Failed to get exchange timestamp"),
+                exchange_timestamp: self
+                    .get_exchange_ts()
+                    .await
+                    .expect("[UniLink_Execution] : Failed to get exchange timestamp"),
                 exchange: Exchange::SandBox,
-                kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)),
+                kind: AccountEventKind::Balance(TokenBalance::new(
+                    open.instrument.quote.clone(),
+                    updated_balance,
+                )),
             })
-        } else {
-            Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
+        })
+            .await;
+
+        // 处理超时情况
+        match result {
+            Ok(res) => res,
+            Err(_) => {
+                println!("[UniLink_Execution] : apply_open_order_changes timed out");
+                Err(ExecutionError::SandBox(
+                    "apply_open_order_changes timed out".to_string(),
+                ))
+            }
         }
     }
-
     /// 当client取消[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub fn apply_cancel_order_changes(&mut self, cancelled: &Order<Open>) -> TokenBalance
@@ -615,8 +670,7 @@ mod tests
         assert!(all_balances.iter().any(|b| b.token == token2), "Expected token2 balance not found");
     }
     #[tokio::test]
-    async fn test_get_fee()
-    {
+    async fn test_get_fee() {
         let account_state = create_test_account_state().await;
 
         // 创建一个新的 AccountConfig 并手动设置 fees_book
@@ -631,13 +685,17 @@ mod tests
 
         // 创建 Account
         let account = create_test_account().await;
-        let account_arc = Arc::new(account);
+
+        // 解包 Arc<Mutex<Account>> 来获取内部的 Account
+        let account_inner = account.lock().await; // 这会返回一个 MutexGuard<Account>
+        let account_arc = Arc::new(account_inner.clone()); // 将 Account 克隆并包装在新的 Arc<Account> 中
 
         // 更新 account_state 的 account_ref
         {
             let mut account_state_locked = account_state.lock().await;
             account_state_locked.account_ref = Arc::downgrade(&account_arc);
         }
+
         // 解锁并调用 get_fee 方法
         let fee_result = account_state.lock().await.get_fee(&InstrumentKind::Perpetual, OrderRole::Maker).await;
 
@@ -648,6 +706,9 @@ mod tests
         assert!(fee_result.is_ok());
         assert_eq!(fee_result.unwrap(), 0.001); // 确保你检查的是插入的 perpetual_open 费率
     }
+
+
+
 
     #[tokio::test]
     async fn test_get_exchange_ts()

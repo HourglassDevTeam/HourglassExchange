@@ -124,15 +124,16 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen>
         },
     }
 }
+
 pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
-    // Create a mock balance map and populate it
+    // 创建初始余额
     let mut balances = HashMap::new();
-    // Define tokens for testing
     let token1 = Token::from("TEST_BASE");
     let token2 = Token::from("TEST_QUOTE");
     balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
     balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
 
+    // 创建初始持仓
     let positions = AccountPositions {
         margin_pos: Vec::new(),
         perpetual_pos: Vec::new(),
@@ -140,15 +141,17 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
         option_pos: Vec::new(),
     };
 
+    // 创建 AccountState 实例，先不设置 account_ref
     let account_state = AccountState {
         balances: balances.clone(),
         positions: positions.clone(),
-        account_ref: Weak::new(),
+        account_ref: Weak::new(),  // 初始为空的 Weak
     };
 
+    // 包装 AccountState 实例在 Arc<Mutex<...>> 中
     let account_state_arc = Arc::new(Mutex::new(account_state));
 
-    // 包装 Account 实例在 Arc<Mutex<...>> 中
+    // 创建 Account 实例，并将其包装在 Arc<Mutex<...>> 中
     let account = Arc::new(Mutex::new(Account {
         current_session: Uuid::new_v4(),
         machine_id: 0,
@@ -164,14 +167,19 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
         }).await)),
     }));
 
-    // 更新 `account_ref` 以指向 `Account`
+    // 将 `Arc<Mutex<Account>>` 转换为 `Arc<Account>`
+    let account_arc = Arc::clone(&account);
+    let account_unwrapped = Arc::new(account_arc.lock().await.clone());
+
+    // 获取 Account 的锁定版本并将其传递给 `Arc::downgrade`
     {
         let mut account_state_locked = account_state_arc.lock().await;
-        account_state_locked.account_ref = Arc::downgrade(&account);
+        account_state_locked.account_ref = Arc::downgrade(&account_unwrapped);
     }
 
     account_state_arc
 }
+
 
 pub async fn create_test_account() -> Arc<Mutex<Account>> {
     let leverage_rate = 1.0;
@@ -239,15 +247,18 @@ pub async fn create_test_account() -> Arc<Mutex<Account>> {
         )),
     }));
 
-    // 更新 account_ref，使其指向 Weak<Mutex<Account>>
+    // 解包 account 的 Mutex，提取 Arc<Account>
+    let account_arc = Arc::clone(&account);
+    let account_unwrapped = Arc::new(account_arc.lock().await.clone());
+
+    // 更新 account_ref，使其指向 Weak<Account>
     {
         let mut account_state_locked = account_state_arc.lock().await;
-        account_state_locked.account_ref = Arc::downgrade(&account);
+        account_state_locked.account_ref = Arc::downgrade(&account_unwrapped);
     }
 
     account
 }
-
 /// 创建一个测试用的 `PerpetualPosition` 实例。
 pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPosition
 {

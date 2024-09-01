@@ -132,11 +132,10 @@ mod tests
     async fn test_fetch_orders_open() {
         // 创建通道，用于请求和响应通信
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
-        let (_market_event_tx, market_event_rx) = mpsc::unbounded_channel(); // 添加 market_event_rx 通道
 
         let client = SandBoxClient {
             request_tx: request_tx.clone(),
-            market_event_rx, // 这里添加 market_event_rx
+            // market_event_rx, // 这里添加 market_event_rx
         };
 
         // 启动一个异步任务来调用客户端的 fetch_orders_open 方法
@@ -299,13 +298,13 @@ mod tests
     {
         // 创建一个模拟的 SandBoxClientEvent 发射器和接收器
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
-        let (_market_event_tx, market_event_rx) = mpsc::unbounded_channel();
+        // let (_market_event_tx, market_event_rx) = mpsc::unbounded_channel();
         let (_response_tx, _response_rx) = oneshot::channel::<Result<Vec<Order<Cancelled>>, ExecutionError>>();
 
         // 初始化 SandBoxClient
         let client = SandBoxClient {
             request_tx: request_tx.clone(),
-            market_event_rx, // 添加 market_event_rx
+            // market_event_rx, // 添加 market_event_rx
         };
 
         // 启动一个异步任务来调用客户端的 cancel_orders_all 方法
