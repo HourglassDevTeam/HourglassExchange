@@ -190,7 +190,7 @@ mod tests
     #[tokio::test]
     async fn initiator_should_set_account() {
         let account = create_test_account().await;
-        let account = Arc::new(tokio::sync::Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
+        let account = Arc::new(Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
         let initiator = ExchangeInitiator::new().account(account.clone());
         assert!(initiator.account.is_some());
     }
@@ -198,7 +198,7 @@ mod tests
     #[tokio::test]
     async fn initiator_should_return_error_if_event_sandbox_rx_is_missing() {
         let account = create_test_account().await;
-        let account = Arc::new(tokio::sync::Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
+        let account = Arc::new(Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
         let initiator = ExchangeInitiator::new().account(account.clone());
         let result = initiator.initiate();
         assert!(result.is_err());
@@ -219,7 +219,7 @@ mod tests
 
         let (_tx, rx) = mpsc::unbounded_channel();
         let account = create_test_account().await;
-        let account = Arc::new(tokio::sync::Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
+        let account = Arc::new(Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
         let exchange = SandBoxExchange { event_sandbox_rx: rx, account };
         let address = "127.0.0.1:3030".parse().unwrap(); // Convert to a SocketAddr
         assert!(is_port_in_use(address));
