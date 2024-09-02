@@ -167,19 +167,14 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
         }).await)),
     }));
 
-    // 将 `Arc<Mutex<Account>>` 转换为 `Arc<Account>`
-    let account_arc = Arc::clone(&account);
-    let account_unwrapped = Arc::new(account_arc.lock().await.clone());
-
-    // 获取 Account 的锁定版本并将其传递给 `Arc::downgrade`
+    // 手动更新 account_state 的 account_ref，确保类型匹配
     {
         let mut account_state_locked = account_state_arc.lock().await;
-        account_state_locked.account_ref = Arc::downgrade(&account_unwrapped);
+        account_state_locked.account_ref = Arc::downgrade(&account);
     }
 
     account_state_arc
 }
-
 pub async fn create_test_account() -> Account {
     let leverage_rate = 1.0;
     let mut balances = HashMap::new();

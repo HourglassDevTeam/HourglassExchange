@@ -25,6 +25,7 @@ use std::{
     sync::{atomic::Ordering, Weak},
 };
 use std::time::Duration;
+use tokio::sync::Mutex;
 use tokio::time::timeout;
 
 #[derive(Clone, Debug)]
@@ -32,7 +33,7 @@ pub struct AccountState
 {
     pub balances: HashMap<Token, Balance>,
     pub positions: AccountPositions,
-    pub account_ref: Weak<Account>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
+    pub account_ref: Weak<Mutex<Account>>, // NOTE :如果不使用弱引用，可能会导致循环引用和内存泄漏。
 }
 
 impl PartialEq for AccountState
@@ -72,7 +73,7 @@ impl AccountState
     pub async fn get_fee(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             // 直接访问 account 的 config 字段
-            let commission_rates = account.config
+            let commission_rates = account.lock().await.config
                 .fees_book
                 .get(instrument_kind)
                 .cloned()
@@ -90,7 +91,7 @@ impl AccountState
     pub async fn get_exchange_ts(&self) -> Result<i64, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             // 直接访问 account 的 exchange_timestamp 字段
-            let exchange_ts = account.exchange_timestamp.load(Ordering::SeqCst);
+            let exchange_ts = account.lock().await.exchange_timestamp.load(Ordering::SeqCst);
             Ok(exchange_ts)
         } else {
             Err(ExecutionError::SandBox("Account reference is not set".to_string()))
@@ -118,7 +119,7 @@ impl AccountState
     async fn determine_position_mode(&self) -> Result<PositionDirectionMode, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             // 直接访问 account 的 config 字段
-            let position_mode = account.config.position_mode.clone();
+            let position_mode = account.lock().await.config.position_mode.clone();
             Ok(position_mode)
         } else {
             Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
@@ -130,7 +131,7 @@ impl AccountState
     async fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError> {
         if let Some(account) = self.account_ref.upgrade() {
             // 直接访问 account 的 config 字段
-            Ok(account.config.margin_mode.clone())
+            Ok(account.lock().await.config.margin_mode.clone())
         } else {
             Err(ExecutionError::SandBox("[UniLink_Execution] : Account reference is not set".to_string()))
         }
@@ -328,7 +329,7 @@ impl AccountState
                 }
             };
 
-            let config = &account_arc.config;
+            let config = &account_arc.lock().await.config;
 
             let (position_mode, position_margin_mode) = (
                 config.position_mode.clone(),
@@ -669,8 +670,8 @@ mod tests
         };
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
-        // 创建 Account
-        let account_arc = Arc::new(create_test_account().await);
+        // 创建 Account 并包装在 Arc<Mutex<Account>> 中
+        let account_arc = Arc::new(Mutex::new(create_test_account().await));
 
         {
             // 更新 account_state 的 account_ref
@@ -703,8 +704,8 @@ mod tests
         };
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
-        // 创建 Account
-        let account_arc = Arc::new(create_test_account().await);
+        // 创建 Account 并包装在 Arc<Mutex<Account>> 中
+        let account_arc = Arc::new(Mutex::new(create_test_account().await));
 
         // 更新 account_state 的 account_ref
         {
@@ -732,8 +733,8 @@ mod tests
         };
         config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
-        // 创建 Account
-        let account_arc = Arc::new(create_test_account().await);
+        // 创建 Account 并将其包装在 Arc<Mutex<Account>> 中
+        let account_arc = Arc::new(Mutex::new(create_test_account().await));
 
         // 更新 account_state 的 account_ref
         {
@@ -753,8 +754,8 @@ mod tests
         let instrument = create_test_instrument(InstrumentKind::Perpetual);
         let perpetual_position = create_test_perpetual_position(instrument.clone());
 
-        // 创建 Account 并将其包装在 Arc 中
-        let account_arc = Arc::new(create_test_account().await);
+        // 创建 Account 并将其包装在 Arc<Mutex<Account>> 中
+        let account_arc = Arc::new(Mutex::new(create_test_account().await));
 
         // 更新 account_state 的 account_ref
         {
@@ -773,58 +774,132 @@ mod tests
         // 确保使用相同的 Instrument
         let position_result = account_state.lock().await.get_position(&instrument).await;
 
-        // 如果需要调试，可以解开下面的注释，打印位置结果
-        // if let Ok(Some(position)) = &position_result {
-        //     println!("Position found: {:?}", position);
-        // } else {
-        //     println!("Position not found or error occurred.");
-        // }
-
         assert!(position_result.is_ok());
         assert!(position_result.unwrap().is_some());
     }
 
-
     #[tokio::test]
-    async fn test_check_position_direction_conflict()
-    {
+    async fn test_upgrade_account_ref() {
+        // 创建 AccountState 实例
         let account_state = create_test_account_state().await;
-        let instrument = create_test_instrument(InstrumentKind::Perpetual);
 
-        // 情况1：没有冲突的情况下调用
-        let result = account_state.lock().await.check_position_direction_conflict(&instrument, Side::Buy).await;
-        assert!(result.is_ok());
+        // 创建 Account 实例，并将其包裹在 Arc<Mutex<Account>> 中
+        let account_arc = Arc::new(Mutex::new(create_test_account().await));
 
-        // 情况2：模拟存在冲突的Perpetual仓位，注意这里 `side` 是 `Sell`
-        account_state.lock().await.positions.perpetual_pos = vec![create_test_perpetual_position(instrument.clone()), ];
+        // 手动更新 account_state 的 account_ref
+        {
+            let mut account_state_locked = account_state.lock().await;
+            account_state_locked.account_ref = Arc::downgrade(&account_arc);
+        }
 
-        let result = account_state.lock().await.check_position_direction_conflict(&instrument, Side::Sell).await;
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ExecutionError::InvalidDirection);
-
-        // 情况3：模拟不存在冲突的Future仓位
-        let instrument_future = create_test_instrument(InstrumentKind::Future);
-        let result = account_state.lock().await.check_position_direction_conflict(&instrument_future, Side::Buy).await;
-        assert!(result.is_ok());
-
-        // 情况4：模拟存在冲突的Future仓位，注意这里 `side` 是 `Sell`
-        account_state.lock().await.positions.futures_pos = vec![create_test_future_position_with_side(instrument_future.clone(), Side::Sell), ];
-
-        let result = account_state.lock().await.check_position_direction_conflict(&instrument_future, Side::Buy).await;
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ExecutionError::InvalidDirection);
-
-        // 情况5：其他 InstrumentKind 还没有实现，因此我们只需要检查它们是否返回未实现的错误
-        let instrument_spot = create_test_instrument(InstrumentKind::Spot);
-        let result = account_state.lock().await.check_position_direction_conflict(&instrument_spot, Side::Buy).await;
-        assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
-
-        let instrument_commodity_future = create_test_instrument(InstrumentKind::CommodityFuture);
-        let result = account_state.lock().await.check_position_direction_conflict(&instrument_commodity_future, Side::Buy).await;
-        assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
-
-        let instrument_commodity_option = create_test_instrument(InstrumentKind::CommodityOption);
-        let result = account_state.lock().await.check_position_direction_conflict(&instrument_commodity_option, Side::Buy).await;
-        assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
+        // 测试 account_ref 是否能够成功升级
+        {
+            let state = account_state.lock().await;
+            match state.account_ref.upgrade() {
+                Some(upgraded_account) => {
+                    let upgraded_account = upgraded_account.lock().await;
+                    println!("Successfully upgraded account_ref!");
+                    // 验证升级后的 account_ref 是否指向正确的 Account 实例
+                    assert_eq!(upgraded_account.machine_id, account_arc.lock().await.machine_id);
+                    println!("machine_id is correct and matches the original account.");
+                }
+                None => {
+                    println!("Failed to upgrade account_ref, it is None.");
+                    panic!("account_ref upgrade failed!");
+                }
+            }
+        }
     }
-}
+    #[tokio::test]
+    async fn test_downgrade_and_upgrade_account_ref() {
+        // 创建 AccountState 实例
+        let account_state = create_test_account_state().await;
+
+        // 创建 Account 实例，并将其包裹在 Arc<Mutex<Account>> 中
+        let account_arc = Arc::new(Mutex::new(create_test_account().await));
+
+        // 手动将 account_arc 降级为 Weak
+        let weak_account = Arc::downgrade(&account_arc);
+
+        // 测试升级降级后的 Weak 是否能够成功升级
+        match weak_account.upgrade() {
+            Some(upgraded_account) => {
+                let upgraded_account = upgraded_account.lock().await;
+                println!("Successfully upgraded from Weak to Arc!");
+                // 验证升级后的 account_ref 是否指向正确的 Account 实例
+                assert_eq!(upgraded_account.machine_id, account_arc.lock().await.machine_id);
+                println!("machine_id is correct and matches the original account.");
+            }
+            None => {
+                println!("Failed to upgrade from Weak, it is None.");
+                panic!("account_ref upgrade failed!");
+            }
+        }
+
+        // 手动更新 account_state 的 account_ref
+        {
+            let mut account_state_locked = account_state.lock().await;
+            account_state_locked.account_ref = weak_account.clone();
+        }
+
+        // 再次测试 account_ref 是否能够成功升级
+        {
+            let state = account_state.lock().await;
+            match state.account_ref.upgrade() {
+                Some(upgraded_account) => {
+                    let upgraded_account = upgraded_account.lock().await;
+                    println!("Successfully upgraded account_ref from AccountState!");
+                    // 验证升级后的 account_ref 是否指向正确的 Account 实例
+                    assert_eq!(upgraded_account.machine_id, account_arc.lock().await.machine_id);
+                    println!("machine_id is correct and matches the original account.");
+                }
+                None => {
+                    println!("Failed to upgrade account_ref from AccountState, it is None.");
+                    panic!("account_ref upgrade from AccountState failed!");
+                }
+            }
+        }
+    }
+    #[tokio::test]
+        async fn test_check_position_direction_conflict()
+        {
+            let account_state = create_test_account_state().await;
+            let instrument = create_test_instrument(InstrumentKind::Perpetual);
+
+            // 情况1：没有冲突的情况下调用
+            let result = account_state.lock().await.check_position_direction_conflict(&instrument, Side::Buy).await;
+            assert!(result.is_ok());
+
+            // 情况2：模拟存在冲突的Perpetual仓位，注意这里 `side` 是 `Sell`
+            account_state.lock().await.positions.perpetual_pos = vec![create_test_perpetual_position(instrument.clone()), ];
+
+            let result = account_state.lock().await.check_position_direction_conflict(&instrument, Side::Sell).await;
+            assert!(result.is_err());
+            assert_eq!(result.unwrap_err(), ExecutionError::InvalidDirection);
+
+            // 情况3：模拟不存在冲突的Future仓位
+            let instrument_future = create_test_instrument(InstrumentKind::Future);
+            let result = account_state.lock().await.check_position_direction_conflict(&instrument_future, Side::Buy).await;
+            assert!(result.is_ok());
+
+            // 情况4：模拟存在冲突的Future仓位，注意这里 `side` 是 `Sell`
+            account_state.lock().await.positions.futures_pos = vec![create_test_future_position_with_side(instrument_future.clone(), Side::Sell), ];
+
+            let result = account_state.lock().await.check_position_direction_conflict(&instrument_future, Side::Buy).await;
+            assert!(result.is_err());
+            assert_eq!(result.unwrap_err(), ExecutionError::InvalidDirection);
+
+            // 情况5：其他 InstrumentKind 还没有实现，因此我们只需要检查它们是否返回未实现的错误
+            let instrument_spot = create_test_instrument(InstrumentKind::Spot);
+            let result = account_state.lock().await.check_position_direction_conflict(&instrument_spot, Side::Buy).await;
+            assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
+
+            let instrument_commodity_future = create_test_instrument(InstrumentKind::CommodityFuture);
+            let result = account_state.lock().await.check_position_direction_conflict(&instrument_commodity_future, Side::Buy).await;
+            assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
+
+            let instrument_commodity_option = create_test_instrument(InstrumentKind::CommodityOption);
+            let result = account_state.lock().await.check_position_direction_conflict(&instrument_commodity_option, Side::Buy).await;
+            assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
+        }
+    }
