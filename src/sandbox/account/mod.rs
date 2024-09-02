@@ -59,8 +59,8 @@ pub struct Account
 //       Statistic: Initialiser + PositionSummariser,
 {
     pub current_session: Uuid,
-    pub machine_id: u64,
-    pub exchange_timestamp: AtomicI64,
+    pub machine_id: u64, // 机器ID
+    pub exchange_timestamp: AtomicI64, // 交易所时间戳
     pub account_event_tx: UnboundedSender<AccountEvent>, // 帐户事件发送器
     pub config: Arc<AccountConfig>,                      // 帐户配置
     pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
