@@ -3,8 +3,8 @@
 use crate::dashboard::summary::pnl::PnLReturnSummary;
 use serde::{Deserialize, Serialize};
 
-
-pub trait Ratio {
+pub trait Ratio
+{
     /// 初始化比率，使用无风险收益率作为输入。
     fn init(risk_free_return: f64) -> Self;
     /// 计算比率的核心方法。
@@ -12,147 +12,158 @@ pub trait Ratio {
     /// 获取每日交易次数。
     fn trades_per_day(&self) -> f64;
     /// 计算日内比率。
-    fn daily(&self) -> f64 {
+    fn daily(&self) -> f64
+    {
         calculate_daily(self.ratio(), self.trades_per_day())
     }
     /// 计算年化比率，使用指定的交易天数。
-    fn annual(&self, trading_days: u32) -> f64 {
+    fn annual(&self, trading_days: u32) -> f64
+    {
         calculate_annual(self.ratio(), self.trades_per_day(), trading_days)
     }
 }
 
 /// Sharpe Ratio 的结构体，表示每单位风险的超额收益。
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct SharpeRatio {
+pub struct SharpeRatio
+{
     pub risk_free_return: f64,
     pub trades_per_day: f64,
     pub sharpe_ratio_per_trade: f64,
 }
 
-impl Ratio for SharpeRatio {
-    fn init(risk_free_return: f64) -> Self {
-        Self {
-            risk_free_return,
-            sharpe_ratio_per_trade: 0.0,
-            trades_per_day: 0.0,
-        }
+impl Ratio for SharpeRatio
+{
+    fn init(risk_free_return: f64) -> Self
+    {
+        Self { risk_free_return,
+               sharpe_ratio_per_trade: 0.0,
+               trades_per_day: 0.0 }
     }
 
-    fn ratio(&self) -> f64 {
+    fn ratio(&self) -> f64
+    {
         self.sharpe_ratio_per_trade
     }
 
-    fn trades_per_day(&self) -> f64 {
+    fn trades_per_day(&self) -> f64
+    {
         self.trades_per_day
     }
 }
 
-impl SharpeRatio {
+impl SharpeRatio
+{
     /// 使用 PnLReturnSummary 更新 Sharpe Ratio。
     ///
     /// # 参数
     /// - `pnl_returns`: PnL 返回的摘要，用于计算比率。
-    pub fn update(&mut self, pnl_returns: &PnLReturnSummary) {
+    pub fn update(&mut self, pnl_returns: &PnLReturnSummary)
+    {
         // 更新每日交易次数
         self.trades_per_day = pnl_returns.trades_per_day;
 
         // 计算每笔交易的 Sharpe Ratio
         self.sharpe_ratio_per_trade = match pnl_returns.total.dispersion.std_dev == 0.0 {
-            true => 0.0,
-            false => {
-                (pnl_returns.total.mean - self.risk_free_return)
-                    / pnl_returns.total.dispersion.std_dev
-            }
+            | true => 0.0,
+            | false => (pnl_returns.total.mean - self.risk_free_return) / pnl_returns.total.dispersion.std_dev,
         };
     }
 }
 
 /// Sortino Ratio 的结构体，类似于 Sharpe Ratio，但只考虑向下波动的风险。
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct SortinoRatio {
+pub struct SortinoRatio
+{
     pub risk_free_return: f64,
     pub trades_per_day: f64,
     pub sortino_ratio_per_trade: f64,
 }
 
-impl Ratio for SortinoRatio {
-    fn init(risk_free_return: f64) -> Self {
-        Self {
-            risk_free_return,
-            trades_per_day: 0.0,
-            sortino_ratio_per_trade: 0.0,
-        }
+impl Ratio for SortinoRatio
+{
+    fn init(risk_free_return: f64) -> Self
+    {
+        Self { risk_free_return,
+               trades_per_day: 0.0,
+               sortino_ratio_per_trade: 0.0 }
     }
 
-    fn ratio(&self) -> f64 {
+    fn ratio(&self) -> f64
+    {
         self.sortino_ratio_per_trade
     }
 
-    fn trades_per_day(&self) -> f64 {
+    fn trades_per_day(&self) -> f64
+    {
         self.trades_per_day
     }
 }
 
-impl SortinoRatio {
+impl SortinoRatio
+{
     /// 使用 PnLReturnSummary 更新 Sortino Ratio。
     ///
     /// # 参数
     /// - `pnl_returns`: PnL 返回的摘要，用于计算比率。
-    pub fn update(&mut self, pnl_returns: &PnLReturnSummary) {
+    pub fn update(&mut self, pnl_returns: &PnLReturnSummary)
+    {
         // 更新每日交易次数
         self.trades_per_day = pnl_returns.trades_per_day;
 
         // 计算每笔交易的 Sortino Ratio
         self.sortino_ratio_per_trade = match pnl_returns.losses.dispersion.std_dev == 0.0 {
-            true => 0.0,
-            false => {
-                (pnl_returns.total.mean - self.risk_free_return)
-                    / pnl_returns.losses.dispersion.std_dev
-            }
+            | true => 0.0,
+            | false => (pnl_returns.total.mean - self.risk_free_return) / pnl_returns.losses.dispersion.std_dev,
         };
     }
 }
 
 /// Calmar Ratio 的结构体，用于衡量投资组合的回撤风险与回报的关系。
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct CalmarRatio {
+pub struct CalmarRatio
+{
     pub risk_free_return: f64,
     pub trades_per_day: f64,
     pub calmar_ratio_per_trade: f64,
 }
 
-impl Ratio for CalmarRatio {
-    fn init(risk_free_return: f64) -> Self {
-        Self {
-            risk_free_return,
-            trades_per_day: 0.0,
-            calmar_ratio_per_trade: 0.0,
-        }
+impl Ratio for CalmarRatio
+{
+    fn init(risk_free_return: f64) -> Self
+    {
+        Self { risk_free_return,
+               trades_per_day: 0.0,
+               calmar_ratio_per_trade: 0.0 }
     }
 
-    fn ratio(&self) -> f64 {
+    fn ratio(&self) -> f64
+    {
         self.calmar_ratio_per_trade
     }
 
-    fn trades_per_day(&self) -> f64 {
+    fn trades_per_day(&self) -> f64
+    {
         self.trades_per_day
     }
 }
 
-impl CalmarRatio {
+impl CalmarRatio
+{
     /// 使用 PnLReturnSummary 和最大回撤更新 Calmar Ratio。
     ///
     /// # 参数
     /// - `pnl_returns`: PnL 返回的摘要，用于计算比率。
     /// - `max_drawdown`: 最大回撤值。
-    pub fn update(&mut self, pnl_returns: &PnLReturnSummary, max_drawdown: f64) {
+    pub fn update(&mut self, pnl_returns: &PnLReturnSummary, max_drawdown: f64)
+    {
         // 更新每日交易次数
         self.trades_per_day = pnl_returns.trades_per_day;
 
         // 计算每笔交易的 Calmar Ratio
         self.calmar_ratio_per_trade = match max_drawdown == 0.0 {
-            true => 0.0,
-            false => (pnl_returns.total.mean - self.risk_free_return) / max_drawdown.abs(),
+            | true => 0.0,
+            | false => (pnl_returns.total.mean - self.risk_free_return) / max_drawdown.abs(),
         };
     }
 }
@@ -165,7 +176,8 @@ impl CalmarRatio {
 ///
 /// # 返回
 /// 返回计算得到的日内比率。
-pub fn calculate_daily(ratio_per_trade: f64, trades_per_day: f64) -> f64 {
+pub fn calculate_daily(ratio_per_trade: f64, trades_per_day: f64) -> f64
+{
     ratio_per_trade * trades_per_day.sqrt()
 }
 
@@ -178,11 +190,11 @@ pub fn calculate_daily(ratio_per_trade: f64, trades_per_day: f64) -> f64 {
 ///
 /// # 返回
 /// 返回计算得到的年化比率。
-pub fn calculate_annual(ratio_per_trade: f64, trades_per_day: f64, trading_days: u32) -> f64 {
+pub fn calculate_annual(ratio_per_trade: f64, trades_per_day: f64, trading_days: u32) -> f64
+{
     calculate_daily(ratio_per_trade, trades_per_day) * (trading_days as f64).sqrt()
 }
 
-//
 // #[cfg(test)]
 // mod tests {
 //     use super::*;

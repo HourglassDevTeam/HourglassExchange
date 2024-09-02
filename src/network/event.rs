@@ -83,7 +83,6 @@ use crate::{
 use serde::Deserialize;
 use tokio::sync::oneshot;
 
-
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct NetworkEvent
@@ -154,19 +153,15 @@ mod tests
         let event_type = "OpenOrders";
 
         // 2. 构建 payload
-        let orders = vec![Order {
-            kind: OrderInstruction::Limit,                                         // 订单类型，例如限价单
-            exchange: Exchange::Binance,                                           // 交易所名称
-            instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual), // 交易对
-            timestamp: chrono::Utc::now().timestamp_millis(),                      // 客户端下单时间戳
-            cid: ClientOrderId(Option::from("OJBK".to_string())),                  // 客户端订单 ID
-            side: Side::Buy,                                                       // 买卖方向
-            state: RequestOpen {
-                reduce_only: false, // 非减仓订单
-                price: 50000.0,     // 下单价格
-                size: 1.0           /* 下单数量 */
-            }
-        }];
+        let orders = vec![Order { kind: OrderInstruction::Limit,                                         // 订单类型，例如限价单
+                                  exchange: Exchange::Binance,                                           // 交易所名称
+                                  instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual), // 交易对
+                                  timestamp: chrono::Utc::now().timestamp_millis(),                      // 客户端下单时间戳
+                                  cid: ClientOrderId(Option::from("OJBK".to_string())),                  // 客户端订单 ID
+                                  side: Side::Buy,                                                       // 买卖方向
+                                  state: RequestOpen { reduce_only: false, // 非减仓订单
+                                                       price: 50000.0,     // 下单价格
+                                                       size: 1.0           /* 下单数量 */ } }];
 
         // 序列化 orders 为 JSON 字符串
         let payload = serde_json::to_string(&orders).expect("Failed to serialize orders");
@@ -176,14 +171,12 @@ mod tests
         let destination = Ipv4Addr::new(192, 168, 110, 130).to_string(); // 假设这是服务器的 IP
 
         // 4. 创建 NetworkEvent
-        let network_event = NetworkEvent {
-            event_type: event_type.to_string(),
-            payload: payload.clone(),
-            timestamp: chrono::Utc::now().timestamp(),
-            source,
-            destination,
-            event_id: Uuid::new_v4().to_string(),
-        };
+        let network_event = NetworkEvent { event_type: event_type.to_string(),
+                                           payload: payload.clone(),
+                                           timestamp: chrono::Utc::now().timestamp(),
+                                           source,
+                                           destination,
+                                           event_id: Uuid::new_v4().to_string() };
 
         // 验证 `NetworkEvent` 的各个字段
         assert_eq!(network_event.event_type, event_type);
@@ -202,7 +195,8 @@ mod tests
             assert_eq!(parsed_orders[0].instrument.base, "BTC".into());
             assert_eq!(parsed_orders[0].instrument.quote, "USDT".into());
             assert_eq!(parsed_orders[0].state.price, 50000.0);
-        } else {
+        }
+        else {
             panic!("Failed to parse OpenOrders event");
         }
     }
@@ -211,14 +205,12 @@ mod tests
     #[test]
     fn test_unknown_event_type()
     {
-        let network_event = NetworkEvent {
-            event_type: "UnknownEvent".to_string(),
-            payload: "".to_string(),
-            timestamp: chrono::Utc::now().timestamp(),
-            source: "192.168.110.95".to_string(),
-            destination: "192.168.110.130".to_string(),
-            event_id: Uuid::new_v4().to_string(),
-        };
+        let network_event = NetworkEvent { event_type: "UnknownEvent".to_string(),
+                                           payload: "".to_string(),
+                                           timestamp: chrono::Utc::now().timestamp(),
+                                           source: "192.168.110.95".to_string(),
+                                           destination: "192.168.110.130".to_string(),
+                                           event_id: Uuid::new_v4().to_string() };
 
         let parsed_event = network_event.parse_payload();
         assert!(parsed_event.is_err());

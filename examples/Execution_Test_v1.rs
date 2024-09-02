@@ -90,6 +90,7 @@
 //         current_date += ChronoDuration::days(1);
 //     }
 // }
-fn main() {
+fn main()
+{
     println!("Hello, world!");
 }

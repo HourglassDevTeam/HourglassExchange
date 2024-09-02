@@ -1,58 +1,92 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, atomic::AtomicI64, Weak},
+    sync::{atomic::AtomicI64, Arc, Weak},
     time::Duration,
 };
-
+use tokio::sync;
 use tokio::sync::{mpsc, Mutex};
+use tokio::time::timeout;
 use uuid::Uuid;
 
-use unilink_execution::{
-    common::{
-        balance::Balance
-        ,
-        instrument::{Instrument, kind::InstrumentKind},
-        order::{
-            identification::{client_order_id::ClientOrderId, OrderId},
-            Order,
-            order_instructions::OrderInstruction,
-            OrderRole, states::{open::Open, request_open::RequestOpen},
-        },
-        position::AccountPositions,
-        Side,
-        token::Token,
-    },
-    Exchange,
-    sandbox::account::{
-        Account,
-        account_latency::{AccountLatency, FluctuationMode},
-        account_orders::AccountOrders,
-        account_states::AccountState,
-    },
-};
 use unilink_execution::common::order::states::cancelled::Cancelled;
 use unilink_execution::common::order::states::request_cancel::RequestCancel;
 use unilink_execution::sandbox::sandbox_client::SandBoxClientEvent;
 use unilink_execution::sandbox::SandBoxExchange;
 use unilink_execution::test_utils::{create_test_account, create_test_account_config};
-pub async fn run_default_exchange(
-    event_simulated_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
+use unilink_execution::{
+    common::{
+        balance::Balance
+        ,
+        instrument::{kind::InstrumentKind, Instrument},
+        order::{
+            identification::{client_order_id::ClientOrderId, OrderId},
+            order_instructions::OrderInstruction,
+            states::{open::Open, request_open::RequestOpen},
+            Order, OrderRole,
+        },
+        position::AccountPositions,
+        token::Token,
+        Side,
+    },
+    sandbox::account::{
+        account_latency::{AccountLatency, FluctuationMode},
+        account_orders::AccountOrders,
+        Account,
+    },
+    Exchange,
+};
+use unilink_execution::common::event::AccountEvent;
+
+pub async fn run_sample_exchange(
+    event_account_tx: mpsc::UnboundedSender<AccountEvent>,
+    event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
 ) {
-    // Build and run the Sandbox Exchange
-    let account = create_test_account().await; // Create the Account
+    // 创建初始余额
+    let mut balances = HashMap::new();
+    let token1 = Token::from("TEST_BASE");
+    let token2 = Token::from("TEST_QUOTE");
+    balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
+    balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
 
+    // 创建初始持仓
+    let positions = AccountPositions {
+        margin_pos: Vec::new(),
+        perpetual_pos: Vec::new(),
+        futures_pos: Vec::new(),
+        option_pos: Vec::new(),
+    };
+
+
+    // 创建 Account 实例，并将其包装在 Arc<Mutex<...>> 中
+    let account_arc = Arc::new(Mutex::new(Account {
+        current_session: Uuid::new_v4(),
+        machine_id: 0,
+        exchange_timestamp: AtomicI64::new(1234567),
+        account_event_tx: event_account_tx,
+        config: Arc::new(create_test_account_config()),
+        orders: Arc::new(sync::RwLock::new(AccountOrders::new(0, vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))], AccountLatency {
+            fluctuation_mode: FluctuationMode::Sine,
+            maximum: 0,
+            minimum: 0,
+            current_value: 0,
+        }).await)),
+        balances,
+        positions,
+    }));
+
+
+    // 创建并初始化 SandBoxExchange
     let sandbox_exchange = SandBoxExchange::initiator()
-        .event_sandbox_rx(event_simulated_rx)
-        .account(account) // Pass the Account wrapped in Arc<Mutex<Account>>
-        .initiate() // Use `initiate` instead of `build` for `SandBoxExchange`
+        .event_sandbox_rx(event_sandbox_rx)
+        .account(account_arc)
+        .initiate()
         .expect("failed to build SandBoxExchange");
+    println!("[run_default_exchange] : Sandbox exchange built successfully");
 
-    println!("Sandbox exchange built successfully");
-
-    // Run the exchange locally or online
     sandbox_exchange.run_local().await;
-    println!("Sandbox exchange is running");
+    println!("[run_default_exchange] : Sandbox exchange run successfully on local mode.");
 }
+
 
 /// 设置延迟为50ms
 #[allow(dead_code)]
@@ -69,58 +103,14 @@ pub fn fees_50_percent() -> f64 {
 
 /// 定义沙箱交易所支持的Instrument
 #[allow(dead_code)]
-pub fn instruments() -> Vec<Instrument> {
-    vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))]
-}
-pub async fn initial_balances() -> Arc<Mutex<AccountState>> {
+pub async fn initial_balances() ->HashMap<Token, Balance> {
     // 初始化账户余额
     let mut balances = HashMap::new();
-    balances.insert(Token::from("TEST_BASE"), Balance::new(10.0, 10.0, 1.0));
-    balances.insert(Token::from("TEST_QUOTE"), Balance::new(10_000.0, 10_000.0, 1.0));
-
-    let positions = AccountPositions {
-        margin_pos: Vec::new(),
-        perpetual_pos: Vec::new(),
-        futures_pos: Vec::new(),
-        option_pos: Vec::new(),
-    };
-
-    let account_state = AccountState {
-        balances,
-        positions,
-        account_ref: Weak::new(),
-    };
-
-    // 包装 AccountState 实例在 Arc<Mutex<...>> 中
-    let account_state_arc = Arc::new(Mutex::new(account_state));
-
-    // 创建 Account 实例，并将其包装在 Arc<Mutex<...>> 中
-    let account = Arc::new(Mutex::new(Account {
-        current_session: Uuid::new_v4(),
-        machine_id: 0,
-        exchange_timestamp: AtomicI64::new(1234567),
-        account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-        config: Arc::new(create_test_account_config()),
-        states: account_state_arc.clone(),
-        orders: Arc::new(tokio::sync::RwLock::new(AccountOrders::new(0, vec![], AccountLatency {
-            fluctuation_mode: FluctuationMode::Sine,
-            maximum: 0,
-            minimum: 0,
-            current_value: 0,
-        }).await)),
-    }));
-
-    // 将 `Arc<Mutex<Account>>` 转换为 `Arc<Account>`
-    let account_arc = Arc::clone(&account);
-    let account_unwrapped = Arc::new(account_arc.lock().await.clone());
-
-    // 获取 Account 的锁定版本并将其传递给 `Arc::downgrade`
-    {
-        let mut account_state_locked = account_state_arc.lock().await;
-        account_state_locked.account_ref = Arc::downgrade(&account_unwrapped);
-    }
-
-    account_state_arc
+    let token1 = Token::from("TEST_BASE");
+    let token2 = Token::from("TEST_QUOTE");
+    balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
+    balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
+    balances
 }
 
 /// 创建限价订单请求
@@ -174,7 +164,7 @@ where
             price,
             size: quantity,
             filled_quantity: filled,
-            order_role: OrderRole::Taker,
+            order_role: OrderRole::Maker,
         },
     }
 }

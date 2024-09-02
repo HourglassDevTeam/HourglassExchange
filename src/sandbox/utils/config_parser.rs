@@ -99,7 +99,8 @@ mod tests
         // 清理临时文件
         if config_path.exists() {
             fs::remove_file(config_path).expect("Failed to remove test config file");
-        } else {
+        }
+        else {
             eprintln!("File not found: {:?}", config_path);
         }
 
@@ -114,15 +115,11 @@ mod tests
         assert_eq!(config.commission_level, CommissionLevel::Lv2);
         assert_eq!(config.account_leverage_rate, 100.0);
         assert_eq!(config.fees_book.get(&InstrumentKind::Spot).cloned(),
-                   Some(CommissionRates {
-                       maker_fees: 0.001,
-                       taker_fees: 0.002
-                   }));
+                   Some(CommissionRates { maker_fees: 0.001,
+                                          taker_fees: 0.002 }));
         assert_eq!(config.fees_book.get(&InstrumentKind::Perpetual).cloned(),
-                   Some(CommissionRates {
-                       maker_fees: 0.0005,
-                       taker_fees: 0.001
-                   }));
+                   Some(CommissionRates { maker_fees: 0.0005,
+                                          taker_fees: 0.001 }));
     }
 
     /// 测试配置文件缺失的情况

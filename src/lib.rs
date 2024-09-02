@@ -19,11 +19,11 @@ use tokio::sync::mpsc;
 
 mod binance;
 pub mod common;
+pub mod dashboard;
 pub mod error;
 pub mod network;
 pub mod okex;
 pub mod sandbox;
-pub mod dashboard;
 pub mod test_utils;
 pub mod vault;
 

@@ -16,7 +16,6 @@ use prettytable::{Cell, Row, Table};
 /// - `PositionSummariser` 特性定义了一个更新和生成交易仓位摘要的接口。通过实现这个接口，可以在处理一组交易仓位时快速生成统计数据。
 /// - `TableBuilder` 特性定义了一套接口，用于生成表格标题、行数据以及完整表格。它还支持将多个表格合并为一个表格。
 /// - `combine` 函数用于合并多个表格生成器，生成一个包含所有行数据的完整表格。
-///
 
 ///  用于初始化结构体的接口，要求实现者能够通过配置进行初始化。
 pub trait Initialiser
@@ -107,23 +106,22 @@ pub trait TableBuilder
 /// # 返回
 /// 返回包含所有行数据的合并表格。
 pub fn combine<Iter, T>(builders: Iter) -> Table
-where
-    Iter: IntoIterator<Item=(String, T)>,
-    T: TableBuilder,
+    where Iter: IntoIterator<Item = (String, T)>,
+          T: TableBuilder
 {
     builders.into_iter().enumerate().fold(Table::new(), |mut table, (index, (id, builder))| {
-        // 使用第一个生成器设置表格标题
-        if index == 0 {
-            let mut titles = builder.titles();
-            titles.insert_cell(0, Cell::new(""));
-            table.set_titles(titles);
-        }
+                                        // 使用第一个生成器设置表格标题
+                                        if index == 0 {
+                                            let mut titles = builder.titles();
+                                            titles.insert_cell(0, Cell::new(""));
+                                            table.set_titles(titles);
+                                        }
 
-        // 为每个生成器添加行数据
-        let mut row = builder.row();
-        row.insert_cell(0, Cell::new(&id));
-        table.add_row(row);
+                                        // 为每个生成器添加行数据
+                                        let mut row = builder.row();
+                                        row.insert_cell(0, Cell::new(&id));
+                                        table.add_row(row);
 
-        table
-    })
+                                        table
+                                    })
 }

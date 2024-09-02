@@ -54,10 +54,12 @@ impl ClientOrderId
         if let Some(ref id) = custom_id {
             if Self::validate_id_format(id) {
                 Ok(ClientOrderId(Some(id.clone())))
-            } else {
+            }
+            else {
                 Err("Invalid ClientOrderId format".into())
             }
-        } else {
+        }
+        else {
             // If no custom ID is provided, return `None`.
             Ok(ClientOrderId(None))
         }

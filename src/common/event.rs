@@ -60,11 +60,9 @@ mod tests
     #[test]
     fn account_event_should_serialize_and_deserialize_correctly()
     {
-        let event = AccountEvent {
-            exchange_timestamp: 1627845123,
-            exchange: Exchange::Binance,
-            kind: AccountEventKind::OrdersOpen(vec![]),
-        };
+        let event = AccountEvent { exchange_timestamp: 1627845123,
+                                   exchange: Exchange::Binance,
+                                   kind: AccountEventKind::OrdersOpen(vec![]) };
         let serialized = serde_json::to_string(&event).unwrap();
         let deserialized: AccountEvent = serde_json::from_str(&serialized).unwrap();
         assert_eq!(event, deserialized);

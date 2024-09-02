@@ -31,20 +31,16 @@ pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f6
     match order.instrument.kind {
         // 针对现货交易的费用计算
         | InstrumentKind::Spot => {
-            let spot_fees = SpotFees {
-                maker_fee: fees_percent * trade_quantity, // 制造流动性的费率计算
-                taker_fee: fees_percent * trade_quantity, /* 消耗流动性的费率计算 */
-            };
+            let spot_fees = SpotFees { maker_fee: fees_percent * trade_quantity, // 制造流动性的费率计算
+                                       taker_fee: fees_percent * trade_quantity  /* 消耗流动性的费率计算 */ };
             InstrumentFees::new(order.instrument.kind, Fees::Spot(spot_fees))
         }
 
         // 针对永续合约的费用计算
         | InstrumentKind::Perpetual => {
-            let perpetual_fees = PerpetualFees {
-                maker_fee: fees_percent * trade_quantity,   // 开仓费率计算
-                taker_fee: fees_percent * trade_quantity,   // 平仓费率计算
-                funding_fee: fees_percent * trade_quantity, /* 资金费率计算 */
-            };
+            let perpetual_fees = PerpetualFees { maker_fee: fees_percent * trade_quantity,   // 开仓费率计算
+                                                 taker_fee: fees_percent * trade_quantity,   // 平仓费率计算
+                                                 funding_fee: fees_percent * trade_quantity  /* 资金费率计算 */ };
             InstrumentFees::new(order.instrument.kind, Fees::Perpetual(perpetual_fees))
         }
 
@@ -136,7 +132,8 @@ impl InstrumentOrders
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            } else {
+            }
+            else {
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_bid.state.filled_quantity += trade_quantity;
@@ -186,7 +183,8 @@ impl InstrumentOrders
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            } else {
+            }
+            else {
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_ask.state.filled_quantity += trade_quantity;
@@ -205,15 +203,13 @@ impl InstrumentOrders
     {
         let fee = trade_quantity * order.state.price * fees_percent;
 
-        Ok(ClientTrade {
-            trade_id: self.batch_id.into(), // NOTE trade_id 现在本质上是InstrumentOrders的一个counter生成的
-            client_order_id: order.state.id.clone(),
-            instrument: order.instrument.clone(),
-            side: order.side,
-            price: order.state.price,
-            quantity: trade_quantity,
-            fees: fee,
-        })
+        Ok(ClientTrade { trade_id: self.batch_id.into(), // NOTE trade_id 现在本质上是InstrumentOrders的一个counter生成的
+                         client_order_id: order.state.id.clone(),
+                         instrument: order.instrument.clone(),
+                         side: order.side,
+                         price: order.state.price,
+                         quantity: trade_quantity,
+                         fees: fee })
     }
 
     /// 计算所有未成交买单和卖单的总数。

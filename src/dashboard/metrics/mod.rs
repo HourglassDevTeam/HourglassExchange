@@ -21,14 +21,17 @@ use serde::Serialize;
 /// - **时间序列分析**：`EquitySnapshot` 可以作为时间序列数据的一部分，用于分析权益值随时间变化的趋势，从而帮助做出更好的投资决策。
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct EquitySnapshot {
+pub struct EquitySnapshot
+{
     pub time: DateTime<Utc>,
     pub total: f64,
 }
 
-impl Default for EquitySnapshot {
+impl Default for EquitySnapshot
+{
     /// 默认构造函数，初始化 `EquitySnapshot`，将 `time` 设置为当前时间，`total` 初始化为 `0.0`。
-    fn default() -> Self {
+    fn default() -> Self
+    {
         Self { time: Utc::now(), total: 0.0 }
     }
 }

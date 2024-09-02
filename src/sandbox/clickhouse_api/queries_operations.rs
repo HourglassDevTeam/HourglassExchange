@@ -120,40 +120,41 @@ impl ClickHouseClient
 
     pub async fn get_table_names(&self, database: &str) -> Vec<String>
     {
-        let table_names_query = format!("SHOW TABLES FROM {database}", );
+        let table_names_query = format!("SHOW TABLES FROM {database}",);
         println!("[UniLinkExecution] : Trying to retrieve table names within database : {:}", database);
         self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
-            eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
+                                                                                          eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
 
-            vec![]
-        })
+                                                                                          vec![]
+                                                                                      })
     }
 
     pub async fn get_union_table_names(&self, database: &str) -> Vec<String>
     {
-        let table_names_query = format!("SHOW TABLES FROM {database} LIKE '%union%'", );
+        let table_names_query = format!("SHOW TABLES FROM {database} LIKE '%union%'",);
         println!("[UniLinkExecution] : Trying to retrieve table names within the database that contain 'union': {:?}",
                  table_names_query);
         self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
-            eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
+                                                                                          eprintln!("[UniLinkExecution] : Error loading table names: {:?}", e);
 
-            vec![]
-        })
+                                                                                          vec![]
+                                                                                      })
     }
 
     pub async fn get_tables_for_date(&self, table_names: &[String], date: &str) -> Vec<String>
     {
         // 筛选出指定日期的表名
         let tables_for_date: Vec<String> = table_names.par_iter()
-            .filter(|table_name| {
-                if let Some(table_date) = extract_date(table_name) {
-                    table_date == date
-                } else {
-                    false
-                }
-            })
-            .cloned()
-            .collect();
+                                                      .filter(|table_name| {
+                                                          if let Some(table_date) = extract_date(table_name) {
+                                                              table_date == date
+                                                          }
+                                                          else {
+                                                              false
+                                                          }
+                                                      })
+                                                      .cloned()
+                                                      .collect();
         tables_for_date
     }
 
@@ -169,29 +170,29 @@ impl ClickHouseClient
         let total_tables = table_names.len();
 
         table_names.par_iter().enumerate().for_each(|(i, table_name)| {
-            let select_query = ClickHouseQueryBuilder::new().select("exchange, symbol, id, side, price, timestamp, amount") // Select required fields
-                .from(database, table_name) // Format the table name with database
-                .build(); // Build the individual query
+                                              let select_query = ClickHouseQueryBuilder::new().select("exchange, symbol, id, side, price, timestamp, amount") // Select required fields
+                                                                                              .from(database, table_name) // Format the table name with database
+                                                                                              .build(); // Build the individual query
 
-            let mut queries_lock = queries.lock().unwrap();
-            queries_lock.push(select_query);
+                                              let mut queries_lock = queries.lock().unwrap();
+                                              queries_lock.push(select_query);
 
-            // 如果启用进度汇报，每处理完一个表就汇报一次进度
-            if report_progress {
-                let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
-                println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
-            }
-        });
+                                              // 如果启用进度汇报，每处理完一个表就汇报一次进度
+                                              if report_progress {
+                                                  let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
+                                                  println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
+                                              }
+                                          });
 
         let queries = Arc::try_unwrap(queries).expect("Failed to unwrap Arc").into_inner().unwrap();
         let union_all_query = queries.join(" UNION ALL ");
 
         // 假设你要创建的表使用MergeTree引擎并按timestamp排序 NOTE this ought to be replaced with ReplacingMergeTree Engine in due course.
         let final_query = format!(
-            "CREATE TABLE {}.{} ENGINE = ReplacingMergeTree() \
+                                  "CREATE TABLE {}.{} ENGINE = ReplacingMergeTree() \
         PARTITION BY toYYYYMMDD(toDate(timestamp)) \
         ORDER BY  (timestamp,id) AS {}",
-            database, new_table_name, union_all_query
+                                  database, new_table_name, union_all_query
         );
 
         if report_progress {
@@ -214,9 +215,9 @@ impl ClickHouseClient
         // let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         let query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount")
-            .from(&database_name, &table_name)
-            .order("timestamp", Some("DESC"))
-            .build();
+                                                 .from(&database_name, &table_name)
+                                                 .order("timestamp", Some("DESC"))
+                                                 .build();
 
         println!("[UniLinkExecution] : Constructed query {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<MarketTrade>().await?;
@@ -229,10 +230,10 @@ impl ClickHouseClient
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
         // let full_table_path = format!("{}.{}", database_name, table_name);
         let query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount")
-            .from(&database_name, &table_name)
-            .order("timestamp", Some("DESC"))
-            .limit(1)
-            .build();
+                                                 .from(&database_name, &table_name)
+                                                 .order("timestamp", Some("DESC"))
+                                                 .limit(1)
+                                                 .build();
         println!("[UniLinkExecution] : Constructed query :  {}", query);
         let trade_data = self.client.read().await.query(&query).fetch_one::<MarketTrade>().await?;
         Ok(trade_data)
@@ -257,9 +258,9 @@ impl ClickHouseClient
 
         // 使用 ClickHouseQueryBuilder 构造查询语句
         let query = ClickHouseQueryBuilder::new().select("exchange, symbol, side, price, timestamp, amount")
-            .from(&database_name, &table_name)
-            .order("timestamp", Some("DESC"))
-            .build();
+                                                 .from(&database_name, &table_name)
+                                                 .order("timestamp", Some("DESC"))
+                                                 .build();
 
         // println!("[UniLinkExecution] : Constructed query {}", query);
 
@@ -278,9 +279,9 @@ impl ClickHouseClient
 
         // 使用 ClickHouseQueryBuilder 构造查询语句
         let query = ClickHouseQueryBuilder::new().select("exchange, symbol, side, price, timestamp, amount")
-            .from(&database_name, &table_name)
-            .order("timestamp", Some("DESC"))
-            .build();
+                                                 .from(&database_name, &table_name)
+                                                 .order("timestamp", Some("DESC"))
+                                                 .build();
 
         println!("[UniLinkExecution] : Constructed query {}", query);
 
@@ -351,20 +352,20 @@ impl ClickHouseClient
         let total_tables = additional_table_names.len();
 
         additional_table_names.par_iter().enumerate().for_each(|(i, table_name)| {
-            let select_query =
-                ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount") // Select required fields
-                    .from(database, table_name) // Format the table name with database
-                    .build(); // Build the individual query
+                                                         let select_query =
+                                                             ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount") // Select required fields
+                                                                                          .from(database, table_name) // Format the table name with database
+                                                                                          .build(); // Build the individual query
 
-            let mut queries_lock = queries.lock().unwrap();
-            queries_lock.push(select_query);
+                                                         let mut queries_lock = queries.lock().unwrap();
+                                                         queries_lock.push(select_query);
 
-            // 如果启用进度汇报，每处理完一个表就汇报一次进度
-            if report_progress {
-                let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
-                println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
-            }
-        });
+                                                         // 如果启用进度汇报，每处理完一个表就汇报一次进度
+                                                         if report_progress {
+                                                             let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
+                                                             println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
+                                                         }
+                                                     });
 
         let queries = Arc::try_unwrap(queries).expect("Failed to unwrap Arc").into_inner().unwrap();
         let union_all_query = queries.join(" UNION DISTINCT ");
