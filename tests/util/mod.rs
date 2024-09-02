@@ -12,7 +12,7 @@ use unilink_execution::common::order::states::cancelled::Cancelled;
 use unilink_execution::common::order::states::request_cancel::RequestCancel;
 use unilink_execution::sandbox::sandbox_client::SandBoxClientEvent;
 use unilink_execution::sandbox::SandBoxExchange;
-use unilink_execution::test_utils::{create_test_account, create_test_account_config, create_test_account_state};
+use unilink_execution::test_utils::{create_test_account, create_test_account_config};
 use unilink_execution::{
     common::{
         balance::Balance
@@ -31,7 +31,6 @@ use unilink_execution::{
     sandbox::account::{
         account_latency::{AccountLatency, FluctuationMode},
         account_orders::AccountOrders,
-        account_states::AccountState,
         Account,
     },
     Exchange,
@@ -63,13 +62,14 @@ pub async fn run_default_exchange(
         exchange_timestamp: AtomicI64::new(1234567),
         account_event_tx: mpsc::unbounded_channel().0,
         config: Arc::new(create_test_account_config()),
-        states: account_state_arc.clone(),
         orders: Arc::new(sync::RwLock::new(AccountOrders::new(0, vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))], AccountLatency {
             fluctuation_mode: FluctuationMode::Sine,
             maximum: 0,
             minimum: 0,
             current_value: 0,
         }).await)),
+        balances,
+        positions,
     }));
 
 
@@ -101,53 +101,14 @@ pub fn fees_50_percent() -> f64 {
 
 /// 定义沙箱交易所支持的Instrument
 #[allow(dead_code)]
-pub async fn initial_balances() -> Arc<Mutex<AccountState>> {
+pub async fn initial_balances() ->HashMap<Token, Balance> {
     // 初始化账户余额
     let mut balances = HashMap::new();
     let token1 = Token::from("TEST_BASE");
     let token2 = Token::from("TEST_QUOTE");
     balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
     balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
-
-    let positions = AccountPositions {
-        margin_pos: Vec::new(),
-        perpetual_pos: Vec::new(),
-        futures_pos: Vec::new(),
-        option_pos: Vec::new(),
-    };
-
-    let account_state = AccountState {
-        balances,
-        positions,
-        account_ref: Weak::new(),
-    };
-
-    // 包装 AccountState 实例在 Arc<Mutex<...>> 中
-    let account_state_arc = Arc::new(Mutex::new(account_state));
-
-    // 创建 Account 实例，并将其包装在 Arc<Mutex<...>> 中
-    let account = Arc::new(Mutex::new(Account {
-        current_session: Uuid::new_v4(),
-        machine_id: 0,
-        exchange_timestamp: AtomicI64::new(1234567),
-        account_event_tx: mpsc::unbounded_channel().0,
-        config: Arc::new(create_test_account_config()),
-        states: account_state_arc.clone(),
-        orders: Arc::new(sync::RwLock::new(AccountOrders::new(0, vec![], AccountLatency {
-            fluctuation_mode: FluctuationMode::Sine,
-            maximum: 0,
-            minimum: 0,
-            current_value: 0,
-        }).await)),
-    }));
-
-    // 将 `Arc<Mutex<Account>>` 的弱引用赋给 account_ref
-    {
-        let mut account_state_locked = account_state_arc.lock().await;
-        account_state_locked.account_ref = Arc::downgrade(&account);
-    }
-
-    account_state_arc
+    balances
 }
 
 /// 创建限价订单请求
