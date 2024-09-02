@@ -202,7 +202,7 @@ async fn test_3_open_limit_buy_order(
         1.0,
         0.0,
     );
-    println!("expected_new_order: {:?}", expected_new_order);
+    println!("[test_3_open_limit_buy_order] : expected_new_order: {:?}", expected_new_order);
 
 
     // NOTE buggy here

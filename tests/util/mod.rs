@@ -72,7 +72,7 @@ pub async fn run_default_exchange(
         exchange_timestamp: AtomicI64::new(1234567),
         account_event_tx: mpsc::unbounded_channel().0,
         config: Arc::new(create_test_account_config()),
-        states: account_state_arc,
+        states: account_state_arc.clone(),
         orders: Arc::new(sync::RwLock::new(AccountOrders::new(0, vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))], AccountLatency {
             fluctuation_mode: FluctuationMode::Sine,
             maximum: 0,
@@ -81,6 +81,13 @@ pub async fn run_default_exchange(
         }).await)),
     }));
 
+    // 设置 account_ref
+    {
+        let mut account_state_locked = account_state_arc.lock().await;
+        account_state_locked.account_ref = Arc::downgrade(&account_arc);
+        println!("[run_default_exchange] : Account reference successfully set.");
+    }
+
     // 创建并初始化 SandBoxExchange
     let sandbox_exchange = SandBoxExchange::initiator()
         .event_sandbox_rx(event_sandbox_rx)
@@ -88,6 +95,7 @@ pub async fn run_default_exchange(
         .initiate()
         .expect("failed to build SandBoxExchange");
     println!("[run_default_exchange] : Sandbox exchange built successfully");
+
     sandbox_exchange.run_local().await;
     println!("[run_default_exchange] : Sandbox exchange run successfully");
 }

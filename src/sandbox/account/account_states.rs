@@ -316,7 +316,7 @@ impl AccountState
             required_balance
         );
 
-        let timeout_duration = Duration::from_secs(2);
+        let timeout_duration = Duration::from_secs(1);
         let result = timeout(timeout_duration, async {
             let account_arc = match self.account_ref.upgrade() {
                 Some(account_arc) => {
