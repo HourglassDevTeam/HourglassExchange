@@ -39,21 +39,28 @@ pub async fn run_default_exchange(
     event_simulated_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
 ) {
     // 创建 Account 实例
-    let account = create_test_account().await;
-
-    // 将 Account 包装在 Arc 中
-    let arc_account = Arc::new(account);
+    let arc_account = Arc::new(create_test_account().await);
 
     // 手动更新 account_ref
     {
         let mut account_state_locked = arc_account.states.lock().await;
         account_state_locked.account_ref = Arc::downgrade(&arc_account);
+
+        // 检查 strong_count 和 weak_count
+        println!(
+            "Account reference set. Strong count: {}, Weak count: {}",
+            Arc::strong_count(&arc_account),
+            Arc::weak_count(&arc_account)
+        );
     } // 释放锁
+
+    // 尝试解包 Arc<Account> 来获取 Account 实例
+    let account = Arc::try_unwrap(arc_account).unwrap_or_else(|arc| (*arc).clone());
 
     // 创建并初始化 SandBoxExchange
     let sandbox_exchange = SandBoxExchange::initiator()
         .event_sandbox_rx(event_simulated_rx)
-        .account(Arc::try_unwrap(arc_account).expect("Failed to unwrap Arc<Account>")) // 传递 Account 实例
+        .account(account) // 传递解包后的 Account 实例
         .initiate() // 使用 initiate 初始化 SandBoxExchange
         .expect("failed to build SandBoxExchange");
 
@@ -63,8 +70,6 @@ pub async fn run_default_exchange(
     sandbox_exchange.run_local().await;
     println!("Sandbox exchange is running");
 }
-
-
 
 /// 设置延迟为50ms
 #[allow(dead_code)]

@@ -315,30 +315,25 @@ impl AccountState
             required_balance
         );
 
-        // 设置超时时间
-        let timeout_duration = Duration::from_secs(2); // 根据需要调整超时时间
+        let timeout_duration = Duration::from_secs(2);
 
-        // 使用timeout封装处理逻辑
         let result = timeout(timeout_duration, async {
-            // 提前获取并释放锁
-            let (position_mode, position_margin_mode) = {
-                let account_arc = match self.account_ref.upgrade() {
-                    Some(account_arc) => account_arc,
-                    None => {
-                        return Err(ExecutionError::SandBox(
-                            "[UniLink_Execution] : Account reference is not set".to_string(),
-                        ));
-                    }
-                };
-
-                // 访问 Account 的 config
-                let config = &account_arc.config;
-
-                (
-                    config.position_mode.clone(),
-                    config.position_margin_mode.clone(),
-                )
+            let account_arc = match self.account_ref.upgrade() {
+                Some(account_arc) => account_arc,
+                None => {
+                    eprintln!("Failed to upgrade account_ref, it is None.");
+                    return Err(ExecutionError::SandBox(
+                        "[UniLink_Execution] : Account reference is not set".to_string(),
+                    ));
+                }
             };
+
+            let config = &account_arc.config;
+
+            let (position_mode, position_margin_mode) = (
+                config.position_mode.clone(),
+                config.position_margin_mode.clone(),
+            );
 
             println!(
                 "[UniLink_Execution] : Retrieved position_mode: {:?}, position_margin_mode: {:?}",
@@ -346,7 +341,6 @@ impl AccountState
                 position_margin_mode
             );
 
-            // 检查并处理订单逻辑
             match open.instrument.kind {
                 InstrumentKind::Spot => {
                     todo!("[UniLink_Execution] : Spot handling is not implemented yet");
@@ -370,7 +364,6 @@ impl AccountState
                 }
             }
 
-            // 计算并应用余额变化
             match (
                 open.instrument.kind,
                 position_margin_mode,
@@ -412,7 +405,6 @@ impl AccountState
                 }
             };
 
-            // 获取更新后的余额并返回结果
             let updated_balance = match open.side {
                 Side::Buy => *self.balance(&open.instrument.quote)?,
                 Side::Sell => *self.balance(&open.instrument.base)?,
@@ -432,15 +424,13 @@ impl AccountState
         })
             .await;
 
-        // 处理超时情况
         result.unwrap_or_else(|_| {
             println!("[UniLink_Execution] : apply_open_order_changes timed out");
             Err(ExecutionError::SandBox(
                 "apply_open_order_changes timed out".to_string(),
             ))
         })
-    }
-    /// 当client取消[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
+    }    /// 当client取消[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub fn apply_cancel_order_changes(&mut self, cancelled: &Order<Open>) -> TokenBalance
     {
