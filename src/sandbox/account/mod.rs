@@ -673,16 +673,16 @@ impl Account
     pub async fn atomic_open(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError>
     {
         Self::validate_order_instruction(order.kind)?;
-        // println!("atomic_open: {:?}", order);
+        println!("atomic_open: {:?}", order);
         // 提前声明所需的变量
         let order_role = {
             let orders_guard = self.orders.read().await; // 使用读锁来判断订单角色
             orders_guard.determine_maker_taker(&order, current_price)?
         };
-        // println!("order_role: {:?}", order_role);
+        println!("order_role: {:?}", order_role);
         // 计算所需的可用余额，尽量避免锁操作
         let (token, required_balance) = self.required_available_balance(&order, current_price).await;
-        // println!("required_balance: {:?}", required_balance);
+        println!("required_balance: {:?}", required_balance);
         // 检查余额是否充足，并在锁定后更新订单
         self.has_sufficient_available_balance(token, required_balance)?;
 
@@ -692,12 +692,12 @@ impl Account
             orders_guard.get_ins_orders_mut(&open_order.instrument)?.add_order_open(open_order.clone());
             open_order
         };
-        // println!("open_order: {:?}", open_order);
+        println!("open_order: {:?}", open_order);
         // 应用订单变更并发送事件 NOTE test3 failed because of this line.
         let balance_event = self.apply_open_order_changes(&open_order, required_balance).await?;
-        // println!("balance_event: {:?}",balance_event);
+        println!("balance_event: {:?}",balance_event);
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
-        // println!("exchange_timestamp: {:?}",exchange_timestamp);
+        println!("exchange_timestamp: {:?}",exchange_timestamp);
         self.account_event_tx
             .send(balance_event)
             .expect("[UniLinkExecution] : Client offline - Failed to send AccountEvent::Balance");
