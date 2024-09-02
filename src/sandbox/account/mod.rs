@@ -894,12 +894,12 @@ impl Account
     pub async fn process_cancel_request_into_cancelled_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError>
     {
         Self::validate_order_request_cancel(&request)?;
-        println!("[process_cancel_request_into_cancelled_atomic]: now trying to cancel {:?}", request);
         // 首先使用读锁来查找并验证订单是否存在，同时减少写锁的持有时间
         let removed_order = {
             let orders_guard = self.orders.read().await;
             let mut orders = orders_guard.get_ins_orders_mut(&request.instrument)?;
-
+            println!("[process_cancel_request_into_cancelled_atomic]: found orders: {:?}", *orders);
+            println!("[process_cancel_request_into_cancelled_atomic]: now trying to cancel {:?}", request);
             // 查找并移除订单，这里使用写锁来修改订单集合
             match request.side {
                 | Side::Buy => {
