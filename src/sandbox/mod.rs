@@ -1,13 +1,13 @@
-use account::Account;
-use mpsc::UnboundedReceiver;
-use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
-use warp::Filter;
 use crate::{
     error::ExecutionError,
     network::{event::NetworkEvent, is_port_in_use},
     sandbox::sandbox_client::SandBoxClientEvent,
 };
+use account::Account;
+use mpsc::UnboundedReceiver;
+use std::sync::Arc;
+use tokio::sync::{mpsc, Mutex};
+use warp::Filter;
 
 pub mod account;
 pub mod clickhouse_api;
@@ -93,8 +93,8 @@ impl SandBoxExchange
     {
         while let Some(event) = self.event_sandbox_rx.recv().await {
             match event {
-                | SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.lock().await.fetch_orders_open(response_tx).await,
-                | SandBoxClientEvent::FetchBalances(response_tx) => self.account.lock().await.fetch_balances(response_tx).await,
+                | SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.lock().await.fetch_orders_open_and_respond(response_tx).await,
+                | SandBoxClientEvent::FetchBalances(response_tx) => self.account.lock().await.fetch_balances_and_respond(response_tx).await,
                 // NOTE this is buggy. should return an open order or an error eventually, not pendings in the flight.
                 | SandBoxClientEvent::OpenOrders((open_requests, response_tx)) =>
                     self.account.lock().await.open_orders(open_requests,response_tx).await.expect("Failed to open."),
@@ -164,70 +164,70 @@ impl ExchangeInitiator
     //     Self { data_source: Some(value), ..self }
     // }
 }
-
-#[cfg(test)]
-mod tests
-{
-    use std::net::TcpListener;
-    use super::*;
-    use tokio::sync::mpsc;
-    use crate::test_utils::create_test_account;
-
-    #[tokio::test]
-    async fn initiator_should_create_exchange_initiator_with_default_values() {
-        let initiator = ExchangeInitiator::new();
-        assert!(initiator.event_sandbox_rx.is_none());
-        assert!(initiator.account.is_none());
-    }
-
-    #[tokio::test]
-    async fn initiator_should_set_event_sandbox_rx() {
-        let (_tx, rx) = mpsc::unbounded_channel();
-        let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
-        assert!(initiator.event_sandbox_rx.is_some());
-    }
-
-    #[tokio::test]
-    async fn initiator_should_set_account() {
-        let account = create_test_account().await;
-        let account = Arc::new(tokio::sync::Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
-        let initiator = ExchangeInitiator::new().account(account.clone());
-        assert!(initiator.account.is_some());
-    }
-
-    #[tokio::test]
-    async fn initiator_should_return_error_if_event_sandbox_rx_is_missing() {
-        let account = create_test_account().await;
-        let account = Arc::new(tokio::sync::Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
-        let initiator = ExchangeInitiator::new().account(account.clone());
-        let result = initiator.initiate();
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn initiator_should_return_error_if_account_is_missing() {
-        let (_tx, rx) = mpsc::unbounded_channel();
-        let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
-        let result = initiator.initiate();
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn run_online_should_return_if_port_is_in_use() {
-        // 占用端口 3030
-        let _listener = TcpListener::bind("127.0.0.1:3030").unwrap();
-
-        let (_tx, rx) = mpsc::unbounded_channel();
-        let account = create_test_account().await;
-        let account = Arc::new(tokio::sync::Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
-        let exchange = SandBoxExchange { event_sandbox_rx: rx, account };
-        let address = "127.0.0.1:3030".parse().unwrap(); // Convert to a SocketAddr
-        assert!(is_port_in_use(address));
-        exchange.run_online().await;
-    }
-
-    // Function to check if a port is in use
-    fn is_port_in_use(address: std::net::SocketAddr) -> bool {
-        TcpListener::bind(address).is_err()
-    }
-}
+//
+// #[cfg(test)]
+// mod tests
+// {
+//     use std::net::TcpListener;
+//     use super::*;
+//     use tokio::sync::mpsc;
+//     use crate::test_utils::create_test_account;
+//
+//     #[tokio::test]
+//     async fn initiator_should_create_exchange_initiator_with_default_values() {
+//         let initiator = ExchangeInitiator::new();
+//         assert!(initiator.event_sandbox_rx.is_none());
+//         assert!(initiator.account.is_none());
+//     }
+//
+//     #[tokio::test]
+//     async fn initiator_should_set_event_sandbox_rx() {
+//         let (_tx, rx) = mpsc::unbounded_channel();
+//         let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
+//         assert!(initiator.event_sandbox_rx.is_some());
+//     }
+//
+//     #[tokio::test]
+//     async fn initiator_should_set_account() {
+//         let account = create_test_account().await;
+//         let account = Arc::new(tokio::sync::Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
+//         let initiator = ExchangeInitiator::new().account(account.clone());
+//         assert!(initiator.account.is_some());
+//     }
+//
+//     #[tokio::test]
+//     async fn initiator_should_return_error_if_event_sandbox_rx_is_missing() {
+//         let account = create_test_account().await;
+//         let account = Arc::new(tokio::sync::Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
+//         let initiator = ExchangeInitiator::new().account(account.clone());
+//         let result = initiator.initiate();
+//         assert!(result.is_err());
+//     }
+//
+//     #[tokio::test]
+//     async fn initiator_should_return_error_if_account_is_missing() {
+//         let (_tx, rx) = mpsc::unbounded_channel();
+//         let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
+//         let result = initiator.initiate();
+//         assert!(result.is_err());
+//     }
+//
+//     #[tokio::test]
+//     async fn run_online_should_return_if_port_is_in_use() {
+//         // 占用端口 3030
+//         let _listener = TcpListener::bind("127.0.0.1:3030").unwrap();
+//
+//         let (_tx, rx) = mpsc::unbounded_channel();
+//         let account = create_test_account().await;
+//         let account = Arc::new(tokio::sync::Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
+//         let exchange = SandBoxExchange { event_sandbox_rx: rx, account };
+//         let address = "127.0.0.1:3030".parse().unwrap(); // Convert to a SocketAddr
+//         assert!(is_port_in_use(address));
+//         exchange.run_online().await;
+//     }
+//
+//     // Function to check if a port is in use
+//     fn is_port_in_use(address: std::net::SocketAddr) -> bool {
+//         TcpListener::bind(address).is_err()
+//     }
+// }

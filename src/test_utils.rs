@@ -25,7 +25,6 @@ use crate::{
         account_config::{AccountConfig, CommissionLevel, CommissionRates, MarginMode, SandboxMode},
         account_latency::{AccountLatency, FluctuationMode},
         account_orders::AccountOrders,
-        account_states::AccountState,
         Account,
     },
     Exchange,
@@ -33,10 +32,10 @@ use crate::{
 use rand::Rng;
 use std::{
     collections::HashMap,
-    sync::{atomic::AtomicI64, Arc, Weak},
+    sync::{atomic::AtomicI64, Arc},
     time::{SystemTime, UNIX_EPOCH},
 };
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// 创建一个测试用的 `Instrument` 实例。
@@ -125,56 +124,8 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen>
     }
 }
 
-pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
-    // 创建初始余额
-    let mut balances = HashMap::new();
-    let token1 = Token::from("TEST_BASE");
-    let token2 = Token::from("TEST_QUOTE");
-    balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
-    balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
 
-    // 创建初始持仓
-    let positions = AccountPositions {
-        margin_pos: Vec::new(),
-        perpetual_pos: Vec::new(),
-        futures_pos: Vec::new(),
-        option_pos: Vec::new(),
-    };
 
-    // 创建 AccountState 实例，先不设置 account_ref
-    let account_state = AccountState {
-        balances: balances.clone(),
-        positions: positions.clone(),
-        account_ref: Weak::new(),  // 初始为空的 Weak
-    };
-
-    // 包装 AccountState 实例在 Arc<Mutex<...>> 中
-    let account_state_arc = Arc::new(Mutex::new(account_state));
-
-    // 创建 Account 实例，并将其包装在 Arc<Mutex<...>> 中
-    let account = Arc::new(Mutex::new(Account {
-        current_session: Uuid::new_v4(),
-        machine_id: 0,
-        exchange_timestamp: AtomicI64::new(1234567),
-        account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-        config: Arc::new(create_test_account_config()),
-        states: account_state_arc.clone(),
-        orders: Arc::new(tokio::sync::RwLock::new(AccountOrders::new(0, vec![], AccountLatency {
-            fluctuation_mode: FluctuationMode::Sine,
-            maximum: 0,
-            minimum: 0,
-            current_value: 0,
-        }).await)),
-    }));
-
-    // 手动更新 account_state 的 account_ref，确保类型匹配
-    {
-        let mut account_state_locked = account_state_arc.lock().await;
-        account_state_locked.account_ref = Arc::downgrade(&account);
-    }
-
-    account_state_arc
-}
 pub async fn create_test_account() -> Account {
     let leverage_rate = 1.0;
     let mut balances = HashMap::new();
@@ -210,13 +161,6 @@ pub async fn create_test_account() -> Account {
 
     let machine_id = generate_machine_id().unwrap();
 
-    // 创建 AccountState 实例
-    let account_state = AccountState {
-        balances,
-        positions,
-        account_ref: Weak::new(), // 先初始化为空的 Weak
-    };
-
     // 创建 Account 实例，并将其包裹在 Arc<Account> 中
     Account {
         current_session: Uuid::new_v4(),
@@ -224,7 +168,8 @@ pub async fn create_test_account() -> Account {
         exchange_timestamp: AtomicI64::new(1234567),
         account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
         config: Arc::new(account_config),
-        states: Arc::new(Mutex::new(account_state)),
+        balances,
+        positions,
         orders: Arc::new(RwLock::new(
             AccountOrders::new(
                 machine_id,
@@ -239,6 +184,7 @@ pub async fn create_test_account() -> Account {
         )),
     }
 }
+
 
 
 /// 创建一个测试用的 `PerpetualPosition` 实例。
