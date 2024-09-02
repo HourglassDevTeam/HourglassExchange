@@ -189,8 +189,8 @@ async fn test_3_open_limit_buy_order(
         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),
         Side::Buy,
-        100.0,  // price
-        1.0,    // size
+        100.0,
+        1.0,
     );
 
     println!("[test_3_open_limit_buy_order] : Sending order request via SandBoxClient : {:?}", open_request);

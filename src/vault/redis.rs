@@ -16,12 +16,13 @@
 use crate::error::ExecutionError;
 use crate::{
     error::ExecutionError::RedisInitialisationError,
-    sandbox::account::account_config::{AccountConfig, SandboxMode},
+    sandbox::account::account_config::SandboxMode,
     vault::summariser::PositionSummariser,
 };
 use redis::Connection;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::marker::PhantomData;
+
 
 /// 用于通过 new() 构造函数方法构造 [`RedisVault`] 的配置。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, Deserialize, Serialize)]
@@ -34,7 +35,7 @@ pub struct Config
 pub struct RedisVault<Statistic>
     where Statistic: PositionSummariser + Serialize + DeserializeOwned
 {
-    config: AccountConfig,                     // 仓库的配置，存储在仓库中
+    sandbox_mode: SandboxMode,                     // 仓库的配置，存储在仓库中
     _statistic_marker: PhantomData<Statistic>, // 用于类型标记的幻象数据
     #[allow(dead_code)]
     conn: Connection,
@@ -46,13 +47,14 @@ impl<Statistic> RedisVault<Statistic> where Statistic: PositionSummariser + Seri
     ///
     /// # 参数
     /// - `conn`: 与 Redis 数据库的连接。
-    /// - `config`: 用于配置仓库的 `AccountConfig` 对象。
+    /// - `config`: 用于配置仓库的 `SandboxMode` 对象。
     ///
     /// # 返回
     /// 返回一个新的 `RedisVault` 实例，该实例可以用于与 Redis 数据库交互。
-    pub fn new(conn: Connection, config: AccountConfig) -> Self
+    pub fn new(conn: Connection, config: SandboxMode) -> Self
     {
-        Self { config, // 存储提供的配置
+        Self {
+            sandbox_mode: config, // 存储提供的配置
                _statistic_marker: PhantomData,
                conn }
     }
@@ -84,7 +86,7 @@ impl<Statistic> RedisVault<Statistic> where Statistic: PositionSummariser + Seri
     /// 该方法检查当前配置的执行模式，并基于此执行不同的操作。
     pub fn perform_action_based_on_mode(&self)
     {
-        match self.config.execution_mode {
+        match self.sandbox_mode {
             | SandboxMode::Backtest => {
                 todo!()
             }
@@ -101,7 +103,7 @@ pub struct RedisVaultBuilder<Statistic>
     where Statistic: PositionSummariser + Serialize + DeserializeOwned
 {
     conn: Option<Connection>,                  // Redis 连接的可选值
-    config: Option<AccountConfig>,             // 添加配置选项
+    config: Option<SandboxMode>,             // 添加配置选项
     _statistic_marker: PhantomData<Statistic>, // 用于类型标记的幻象数据
 }
 impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser + Serialize + DeserializeOwned
@@ -122,7 +124,7 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
     }
 
     /// 设置配置。
-    pub fn config(mut self, value: AccountConfig) -> Self
+    pub fn config(mut self, value: SandboxMode) -> Self
     {
         self.config = Some(value);
         self
@@ -131,7 +133,8 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
     /// 构建 RedisVault 实例。
     pub fn build(self) -> Result<RedisVault<Statistic>, ExecutionError>
     {
-        Ok(RedisVault { config: self.config.ok_or(RedisInitialisationError("config".to_string()))?, // 处理配置
+        Ok(RedisVault {
+            sandbox_mode: self.config.ok_or(RedisInitialisationError("config".to_string()))?, // 处理配置
                         _statistic_marker: PhantomData,
                         conn: self.conn.ok_or(RedisInitialisationError("connection".to_string()))? /* 处理连接 */ })
     }
