@@ -1051,6 +1051,8 @@ mod tests
 {
     use super::*;
     use crate::common::order::{identification::OrderId, states::request_open::RequestOpen};
+    use crate::common::position::position_meta::PositionMeta;
+    use crate::test_utils::create_test_account;
 
     #[tokio::test]
     async fn test_validate_order_request_open()
@@ -1106,6 +1108,125 @@ mod tests
             ..cancel_order.clone()
         };
         assert!(Account::validate_order_request_cancel(&invalid_cancel_order).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_balance() {
+        let account = create_test_account().await;
+
+        let token = Token::from("TEST_BASE");
+        let balance = account.get_balance(&token).unwrap();
+        assert_eq!(balance.total, 10.0);
+        assert_eq!(balance.available, 10.0);
+    }
+
+    #[tokio::test]
+    async fn test_get_balance_mut() {
+        let mut account = create_test_account().await;
+
+        let token = Token::from("TEST_BASE");
+        let balance = account.get_balance_mut(&token).unwrap();
+        assert_eq!(balance.total, 10.0);
+        assert_eq!(balance.available, 10.0);
+    }
+
+    #[tokio::test]
+    async fn test_get_fee() {
+        let account = create_test_account();
+        todo!()
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_balances() {
+        let account = create_test_account().await;
+
+        let all_balances = account.get_balances().await;
+
+        assert_eq!(all_balances.len(), 2, "Expected 2 balances but got {}", all_balances.len());
+
+        assert!(all_balances.iter().any(|b| b.token == Token::from("TEST_BASE")), "Expected TEST_BASE balance not found");
+        assert!(all_balances.iter().any(|b| b.token == Token::from("TEST_QUOTE")), "Expected TEST_QUOTE balance not found");
+    }
+    #[tokio::test]
+    async fn test_get_position_none() {
+        let account = create_test_account().await;
+
+        let instrument = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual));
+        let position = account.get_position(&instrument).await.unwrap();
+        assert!(position.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_has_sufficient_available_balance() {
+        let account = create_test_account().await;
+
+        let token = Token::from("TEST_BASE");
+        let result = account.has_sufficient_available_balance(&token, 5.0);
+        assert!(result.is_ok());
+
+        let result = account.has_sufficient_available_balance(&token, 15.0);
+        assert!(result.is_err());
+    }
+
+
+    #[tokio::test]
+    async fn test_apply_balance_delta() {
+        let mut account = create_test_account().await;
+
+        let token = Token::from("TEST_BASE");
+        let delta = BalanceDelta::new(0.0, -10.0);
+
+        let balance = account.apply_balance_delta(&token, delta);
+
+        assert_eq!(balance.total, 10.0);
+        assert_eq!(balance.available, 0.0);
+    }
+
+
+
+    #[tokio::test]
+    async fn test_apply_open_order_changes() {
+        let mut account = create_test_account().await;
+
+        let instrument = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual));
+        let open_order_request = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: instrument.clone(),
+            timestamp: 1625247600000,
+            cid: ClientOrderId(Some("validCID123".into())),
+            side: Side::Buy,
+            state: RequestOpen {
+                price: 1.0,
+                size: 2.0,
+                reduce_only: false,
+            },
+        };
+
+        // 将订单状态从 RequestOpen 转换为 Open
+        let open_order = Order {
+            kind: open_order_request.kind,
+            exchange: open_order_request.exchange,
+            instrument: open_order_request.instrument.clone(),
+            timestamp: open_order_request.timestamp,
+            cid: open_order_request.cid.clone(),
+            side: open_order_request.side,
+            state: Open {
+                id: OrderId::new(0, 0, 0), // 使用一个新的 OrderId
+                price: open_order_request.state.price,
+                size: open_order_request.state.size,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Maker,
+            },
+        };
+
+        let required_balance = 2.0; // 模拟需要的余额
+
+        let result = account.apply_open_order_changes(&open_order, required_balance).await;
+        assert!(result.is_ok());
+
+        let balance = account.get_balance(&Token::from("TEST_QUOTE")).unwrap();
+        assert_eq!(balance.available, 9998.0); // 原始余额是 10,000.0，减去 2.0 后应该是 9998.0
     }
 
 }
