@@ -251,7 +251,7 @@ impl Account
         }
     }
 
-    pub fn determine_position_mode(&self) -> Result<PositionDirectionMode, ExecutionError> {
+    pub fn determine_position_direction_mode(&self) -> Result<PositionDirectionMode, ExecutionError> {
 
            let position_mode = self.config.position_mode.clone();
            Ok(position_mode)
@@ -1051,8 +1051,7 @@ mod tests
 {
     use super::*;
     use crate::common::order::{identification::OrderId, states::request_open::RequestOpen};
-    use crate::common::position::position_meta::PositionMeta;
-    use crate::test_utils::create_test_account;
+    use crate::test_utils::{create_test_account, create_test_future_position_with_side, create_test_perpetual_position};
 
     #[tokio::test]
     async fn test_validate_order_request_open()
@@ -1133,8 +1132,35 @@ mod tests
     #[tokio::test]
     async fn test_get_fee() {
         let account = create_test_account();
-        todo!()
+        let fee = account.await.get_fee(&InstrumentKind::Perpetual, OrderRole::Maker).await.unwrap();
+        assert_eq!(fee, 0.001);
     }
+
+    #[tokio::test]
+    async fn test_determine_position_mode() {
+        let account = create_test_account().await;
+        let position_mode = account.determine_position_direction_mode().unwrap();
+        assert_eq!(position_mode, PositionDirectionMode::NetMode);
+    }
+
+    #[tokio::test]
+    async fn test_determine_position_margin_mode() {
+        let account = create_test_account().await;
+        let position_margin_mode = account.determine_margin_mode().unwrap();
+        assert_eq!(position_margin_mode, MarginMode::SingleCurrencyMargin);
+        assert_ne!(position_margin_mode, MarginMode::SimpleMode);
+    }
+
+        #[tokio::test]
+        async fn test_set_position() {
+        let mut account = create_test_account().await;
+        let instrument = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual));
+        let perpetual_position = create_test_perpetual_position(instrument.clone());
+        account.set_position(Position::Perpetual(perpetual_position)).await.unwrap();
+        let position_result = account.get_position(&instrument).await;
+        assert!(position_result.is_ok());
+        assert!(position_result.unwrap().is_some());
+        }
 
     #[tokio::test]
     async fn test_fetch_all_balances() {
@@ -1227,6 +1253,50 @@ mod tests
 
         let balance = account.get_balance(&Token::from("TEST_QUOTE")).unwrap();
         assert_eq!(balance.available, 9998.0); // 原始余额是 10,000.0，减去 2.0 后应该是 9998.0
+    }
+
+    #[tokio::test]
+    async fn test_check_position_direction_conflict() {
+        let mut account = create_test_account().await;
+
+        // 情况1：没有冲突的情况下调用
+        let instrument = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual));
+        let result = account.check_position_direction_conflict(&instrument, Side::Buy).await;
+        assert!(result.is_ok());
+
+        // 情况2：模拟存在冲突的Perpetual仓位，注意这里 `side` 是 `Sell`
+        let perpetual_position = create_test_perpetual_position(instrument.clone());
+        account.positions.perpetual_pos.push(perpetual_position);
+
+        let result = account.check_position_direction_conflict(&instrument, Side::Sell).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ExecutionError::InvalidDirection);
+
+        // 情况3：模拟不存在冲突的Future仓位
+        let instrument_future = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Future));
+        let result = account.check_position_direction_conflict(&instrument_future, Side::Buy).await;
+        assert!(result.is_ok());
+
+        // 情况4：模拟存在冲突的Future仓位，注意这里 `side` 是 `Sell`
+        let future_position = create_test_future_position_with_side(instrument_future.clone(), Side::Sell);
+        account.positions.futures_pos.push(future_position);
+
+        let result = account.check_position_direction_conflict(&instrument_future, Side::Buy).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ExecutionError::InvalidDirection);
+
+        // 情况5：其他 InstrumentKind 还没有实现，因此我们只需要检查它们是否返回未实现的错误
+        let instrument_spot = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Spot));
+        let result = account.check_position_direction_conflict(&instrument_spot, Side::Buy).await;
+        assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
+
+        let instrument_commodity_future = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::CommodityFuture));
+        let result = account.check_position_direction_conflict(&instrument_commodity_future, Side::Buy).await;
+        assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
+
+        let instrument_commodity_option = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::CommodityOption));
+        let result = account.check_position_direction_conflict(&instrument_commodity_option, Side::Buy).await;
+        assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
     }
 
 }
