@@ -164,7 +164,7 @@ where
             price,
             size: quantity,
             filled_quantity: filled,
-            order_role: OrderRole::Taker,
+            order_role: OrderRole::Maker,
         },
     }
 }

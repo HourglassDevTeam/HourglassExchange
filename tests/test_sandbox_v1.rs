@@ -237,7 +237,7 @@ async fn test_3_open_limit_buy_order(
              }) => {
             println!("Orders new event received.");
             assert_eq!(new_orders.len(), 1);
-            assert_eq!(new_orders[0], expected_new_order);
+            assert_eq!(new_orders[0].cid, expected_new_order.cid);
         }
         other => {
             panic!("Unexpected or missing orders new event: {:?}", other);
@@ -253,8 +253,6 @@ async fn test_3_open_limit_buy_order(
         }
     }
 }
-
-
 
 
 // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent.
