@@ -35,8 +35,10 @@ use unilink_execution::{
     },
     Exchange,
 };
+use unilink_execution::common::event::AccountEvent;
 
 pub async fn run_default_exchange(
+    event_account_tx: mpsc::UnboundedSender<AccountEvent>,
     event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
 ) {
     // 创建初始余额
@@ -60,7 +62,7 @@ pub async fn run_default_exchange(
         current_session: Uuid::new_v4(),
         machine_id: 0,
         exchange_timestamp: AtomicI64::new(1234567),
-        account_event_tx: mpsc::unbounded_channel().0,
+        account_event_tx: event_account_tx,
         config: Arc::new(create_test_account_config()),
         orders: Arc::new(sync::RwLock::new(AccountOrders::new(0, vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))], AccountLatency {
             fluctuation_mode: FluctuationMode::Sine,

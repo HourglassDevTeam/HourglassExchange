@@ -698,15 +698,15 @@ impl Account
         println!("balance_event: {:?}",balance_event);
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
         println!("exchange_timestamp: {:?}",exchange_timestamp);
-        // self.account_event_tx
-        //     .send(balance_event)
-        //     .expect("[UniLinkExecution] : Client offline - Failed to send AccountEvent::Balance");
-        //
-        // self.account_event_tx
-        //     .send(AccountEvent { exchange_timestamp,
-        //                          exchange: Exchange::SandBox,
-        //                          kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
-        //     .expect("[UniLinkExecution] : Client offline - Failed to send AccountEvent::Trade");
+        self.account_event_tx
+            .send(balance_event)
+            .expect("[UniLinkExecution] : Client offline - Failed to send AccountEvent::Balance");
+
+        self.account_event_tx
+            .send(AccountEvent { exchange_timestamp,
+                                 exchange: Exchange::SandBox,
+                                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
+            .expect("[UniLinkExecution] : Client offline - Failed to send AccountEvent::Trade");
         Ok(open_order)
     }
 
