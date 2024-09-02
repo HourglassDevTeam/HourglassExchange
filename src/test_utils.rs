@@ -179,6 +179,7 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
 
     account_state_arc
 }
+
 pub async fn create_test_account() -> Account {
     let leverage_rate = 1.0;
     let mut balances = HashMap::new();
@@ -222,7 +223,7 @@ pub async fn create_test_account() -> Account {
     };
 
     // 创建 Account 实例，并将其包裹在 Arc<Account> 中
-    let account = Arc::new(Account {
+    Account {
         current_session: Uuid::new_v4(),
         machine_id,
         exchange_timestamp: AtomicI64::new(1234567),
@@ -241,16 +242,7 @@ pub async fn create_test_account() -> Account {
                 },
             ).await,
         )),
-    });
-
-    // 更新 account_ref，使其指向 Weak<Account>
-    {
-        let mut account_state_locked = account.states.lock().await;
-        account_state_locked.account_ref = Arc::downgrade(&account);
     }
-
-    // 直接返回 Account（从 Arc 中解包）
-    Arc::try_unwrap(account).expect("Failed to unwrap Arc")
 }
 
 

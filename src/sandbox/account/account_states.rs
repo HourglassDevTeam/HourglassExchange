@@ -433,15 +433,12 @@ impl AccountState
             .await;
 
         // 处理超时情况
-        match result {
-            Ok(res) => res,
-            Err(_) => {
-                println!("[UniLink_Execution] : apply_open_order_changes timed out");
-                Err(ExecutionError::SandBox(
-                    "apply_open_order_changes timed out".to_string(),
-                ))
-            }
-        }
+        result.unwrap_or_else(|_| {
+            println!("[UniLink_Execution] : apply_open_order_changes timed out");
+            Err(ExecutionError::SandBox(
+                "apply_open_order_changes timed out".to_string(),
+            ))
+        })
     }
     /// 当client取消[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。

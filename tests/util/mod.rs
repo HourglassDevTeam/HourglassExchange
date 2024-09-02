@@ -38,21 +38,32 @@ use unilink_execution::test_utils::{create_test_account, create_test_account_con
 pub async fn run_default_exchange(
     event_simulated_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
 ) {
-    // Build and run the Sandbox Exchange
-    let account = create_test_account().await; // Create the Account
+    // 创建 Account 实例
+    let account = create_test_account().await;
 
+    // 将 Account 包装在 Arc 中
+    let arc_account = Arc::new(account);
+
+    // 手动更新 account_ref
+    {
+        let mut account_state_locked = arc_account.states.lock().await;
+        account_state_locked.account_ref = Arc::downgrade(&arc_account);
+    } // 释放锁
+
+    // 创建并初始化 SandBoxExchange
     let sandbox_exchange = SandBoxExchange::initiator()
         .event_sandbox_rx(event_simulated_rx)
-        .account(account) // Pass the Account directly
-        .initiate() // Use `initiate` instead of `build` for `SandBoxExchange`
+        .account(Arc::try_unwrap(arc_account).expect("Failed to unwrap Arc<Account>")) // 传递 Account 实例
+        .initiate() // 使用 initiate 初始化 SandBoxExchange
         .expect("failed to build SandBoxExchange");
 
     println!("Sandbox exchange built successfully");
 
-    // Run the exchange locally or online
+    // 运行交易所（本地或在线）
     sandbox_exchange.run_local().await;
     println!("Sandbox exchange is running");
 }
+
 
 
 /// 设置延迟为50ms
