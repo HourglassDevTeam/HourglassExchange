@@ -66,6 +66,7 @@ pub struct Account
     pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
     pub balances: HashMap<Token, Balance>, // 帐户余额
     pub positions: AccountPositions,       // 帐户持仓
+    // pub vault: Vault,
 }
 
 // 手动实现 Clone trait
@@ -165,7 +166,7 @@ impl Account
     }
 
 
-    /// [PART0] positions and balances.
+    /// [PART 1] handle positions and balances.
     pub async fn get_balances(&self) -> Vec<TokenBalance>
     {
         self.balances.clone().into_iter().map(|(token, balance)| TokenBalance::new(token, balance)).collect()
@@ -239,6 +240,35 @@ impl Account
             .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {token}")))
     }
 
+    pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&Token, f64)
+    {
+        match order.instrument.kind {
+            | InstrumentKind::Spot => match order.side {
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size),
+                | Side::Sell => (&order.instrument.base, order.state.size),
+            },
+            | InstrumentKind::Perpetual => match order.side {
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
+                | Side::Sell => (&order.instrument.base, order.state.size * self.config.account_leverage_rate),
+            },
+            | InstrumentKind::Future => match order.side {
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
+                | Side::Sell => (&order.instrument.base, order.state.size * self.config.account_leverage_rate),
+            },
+            | InstrumentKind::CryptoOption => {
+                todo!("CryptoOption is not supported yet")
+            }
+            | InstrumentKind::CryptoLeveragedToken => {
+                todo!("CryptoLeveragedToken is not supported yet")
+            }
+            | InstrumentKind::CommodityOption => {
+                todo!("CommodityOption is not supported yet")
+            }
+            | InstrumentKind::CommodityFuture => {
+                todo!("CommodityFuture is not supported yet")
+            }
+        }
+    }
     /// 判断client是否有足够的可用[`Balance`]来执行[`Order<RequestOpen>`]。
     pub fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExecutionError>
     {
@@ -587,13 +617,10 @@ pub fn apply_cancel_order_changes(&mut self, cancelled: &Order<Open>) -> TokenBa
 
         *base_balance
     }
-    /// [PART 2]
-    pub async fn fetch_orders_open_and_respond(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>) {
-        let orders = self.orders.read().await.fetch_all();
-        respond(response_tx, Ok(orders));
-    }
 
-    /// [PART 1]
+
+
+    /// [PART 2] 杂项方法。
     /// `get_fee` 是获取手续费的方法，用于获取 maker 和 taker 手续费
     /// `get_exchange_ts` 是获取当前时间戳的方法
     /// `update_exchange_timestamp` 是基本的时间戳更新方法，用于更新 `exchange_timestamp` 值。
@@ -640,9 +667,16 @@ pub fn apply_cancel_order_changes(&mut self, cancelled: &Order<Open>) -> TokenBa
 
 
     /// [PART 3]
+    /// `fetch_orders_open_and_respond` 从 `open_orders` 读取所有订单，并将其作为 `response_tx` 发送。
     /// `open_orders` 执行开单操作。
     /// `atomic_open` 尝试以原子操作方式打开一个订单，确保在验证和更新账户余额后安全地打开订单。
     /// `required_available_balance` 计算打开订单所需的可用余额，用于验证账户中是否有足够的资金执行订单。
+
+    pub async fn fetch_orders_open_and_respond(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>) {
+        let orders = self.orders.read().await.fetch_all();
+        respond(response_tx, Ok(orders));
+    }
+
     pub async fn open_orders(
         &mut self,
         open_requests: Vec<Order<RequestOpen>>,
@@ -686,36 +720,6 @@ pub fn apply_cancel_order_changes(&mut self, cancelled: &Order<Open>) -> TokenBa
     }
 
 
-
-    pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&Token, f64)
-    {
-        match order.instrument.kind {
-            | InstrumentKind::Spot => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size),
-                | Side::Sell => (&order.instrument.base, order.state.size),
-            },
-            | InstrumentKind::Perpetual => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
-                | Side::Sell => (&order.instrument.base, order.state.size * self.config.account_leverage_rate),
-            },
-            | InstrumentKind::Future => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
-                | Side::Sell => (&order.instrument.base, order.state.size * self.config.account_leverage_rate),
-            },
-            | InstrumentKind::CryptoOption => {
-                todo!("CryptoOption is not supported yet")
-            }
-            | InstrumentKind::CryptoLeveragedToken => {
-                todo!("CryptoLeveragedToken is not supported yet")
-            }
-            | InstrumentKind::CommodityOption => {
-                todo!("CommodityOption is not supported yet")
-            }
-            | InstrumentKind::CommodityFuture => {
-                todo!("CommodityFuture is not supported yet")
-            }
-        }
-    }
 
     pub async fn atomic_open(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError>
     {
