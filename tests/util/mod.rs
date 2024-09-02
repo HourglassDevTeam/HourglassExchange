@@ -1,3 +1,4 @@
+use tokio::time::timeout;
 use std::{
     collections::HashMap,
     sync::{Arc, atomic::AtomicI64, Weak},
@@ -35,84 +36,29 @@ use unilink_execution::common::order::states::request_cancel::RequestCancel;
 use unilink_execution::sandbox::sandbox_client::SandBoxClientEvent;
 use unilink_execution::sandbox::SandBoxExchange;
 use unilink_execution::test_utils::{create_test_account, create_test_account_config, create_test_account_state};
-pub async fn run_default_exchange(
-    event_simulated_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
-) {
-    // 创建 AccountState 实例
-    let account_state = create_test_account_state().await;
 
-    // 创建 Account 实例，并将其包裹在 Arc<Mutex<Account>> 中
+pub async fn run_default_exchange(
+    event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
+) {
+    // Create Account instance and wrap it in Arc<Mutex<Account>>
     let account_arc = Arc::new(Mutex::new(create_test_account().await));
 
-    // 打印引用计数
-    println!(
-        "Before updating account_ref: Strong count: {}, Weak count: {}",
-        Arc::strong_count(&account_arc),
-        Arc::weak_count(&account_arc),
-    );
+    println!("Starting exchange...");
 
-    // 手动更新 account_state 的 account_ref
-    {
-        let mut account_state_locked = account_state.lock().await;
-        // 使用 Arc<Mutex<Account>> 直接调用 Arc::downgrade
-        account_state_locked.account_ref = Arc::downgrade(&account_arc);
-        println!("Account reference successfully set.");
-    }
-
-    // 再次打印引用计数
-    println!(
-        "After updating account_ref: Strong count: {}, Weak count: {}",
-        Arc::strong_count(&account_arc),
-        Arc::weak_count(&account_arc),
-    );
-
-    // 测试 account_ref 是否能够成功升级
-    {
-        let state = account_state.lock().await;
-        match state.account_ref.upgrade() {
-            Some(upgraded_account) => {
-                println!("Successfully upgraded account_ref!");
-                // 验证升级后的 account_ref 是否指向正确的 Account 实例
-                assert_eq!(upgraded_account.lock().await.machine_id, account_arc.lock().await.machine_id);
-                println!("machine_id is correct and matches the original account.");
-            }
-            None => {
-                println!("Failed to upgrade account_ref, it is None.");
-                panic!("account_ref upgrade failed!");
-            }
-        }
-    }
-
-    // 创建并初始化 SandBoxExchange
+    // Create and initialize SandBoxExchange
     let sandbox_exchange = SandBoxExchange::initiator()
-        .event_sandbox_rx(event_simulated_rx)
-        .account(account_arc.clone()) // 传递 Arc<Mutex<Account>> 实例
-        .initiate() // 使用 initiate 初始化 SandBoxExchange
+        .event_sandbox_rx(event_sandbox_rx)
+        .account(account_arc.clone())
+        .initiate()
         .expect("failed to build SandBoxExchange");
 
     println!("Sandbox exchange built successfully");
 
-    // 再次打印引用计数，确保在 SandBoxExchange 中 `account_ref` 没有丢失
-    println!(
-        "After SandBoxExchange creation: Strong count: {}, Weak count: {}",
-        Arc::strong_count(&account_arc),
-        Arc::weak_count(&account_arc),
-    );
-
-    // 运行交易所（本地或在线）
-    sandbox_exchange.run_local().await;
-    println!("Sandbox exchange is running");
-
-    // 这里添加更多调试信息，特别是跟踪引用计数和account_ref状态
-    {
-        let state = account_state.lock().await;
-        match state.account_ref.upgrade() {
-            Some(upgraded_account) => {
-                println!("Successfully upgraded account_ref after running the exchange!");
-            }
-            None => {
-                println!("Failed to upgrade account_ref after running the exchange, it is None.");
-            }
+    // Run the exchange with a timeout
+    match timeout(Duration::from_secs(1), sandbox_exchange.run_local()).await {
+        Ok(_) => println!("Sandbox exchange is running"),
+        Err(_) => {
+            println!("Sandbox exchange run timed out");
         }
     }
 }

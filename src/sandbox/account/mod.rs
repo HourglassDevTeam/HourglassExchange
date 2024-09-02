@@ -1,3 +1,4 @@
+use tokio::time::Instant;
 /// FIXME respond function is not used in some of the functions.
 
 use std::{
@@ -19,7 +20,7 @@ use uuid::Uuid;
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
 use account_states::AccountState;
-
+use tokio::time::{timeout, Duration};
 use crate::common::datafeed::market_event::MarketEvent;
 use crate::{
     common::{
@@ -177,9 +178,11 @@ impl Account
         Ok(())
     }
 
-    pub async fn fetch_orders_open(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>)
-    {
+
+    pub async fn fetch_orders_open(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>) {
+        println!("Attempting to read orders...");
         let orders = self.orders.read().await.fetch_all();
+        println!("Orders fetched: {:?}", orders);
         respond(response_tx, Ok(orders)); // 是否要模拟延迟
     }
 

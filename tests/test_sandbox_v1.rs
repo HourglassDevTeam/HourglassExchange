@@ -1,8 +1,8 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // use redis::Commands;
 use tokio::sync::mpsc;
-
+use tokio::time::timeout;
 use unilink_execution::ClientExecution;
 use unilink_execution::common::balance::{Balance};
 use unilink_execution::common::event::{AccountEvent};
@@ -53,14 +53,14 @@ async fn main() {
     test_1_fetch_initial_orders_and_check_empty(&client).await;
 
     // 2. Fetch initial Balances when there have been no balance changing events
-    // test_2_fetch_balances_and_check_same_as_initial(&client).await;
+    test_2_fetch_balances_and_check_same_as_initial(&client).await;
 
     // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (TEST_QUOTE)
-    // let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
-    // let machine_id = generate_machine_id().unwrap();
-    // let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
-    // let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId::new(timestamp, machine_id, 1));
-    // test_3_open_limit_buy_order(&client, test_3_ids.clone(), &mut event_account_rx).await;
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
+    let machine_id = generate_machine_id().unwrap();
+    let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
+    let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId::new(timestamp, machine_id, 1));
+    test_3_open_limit_buy_order(&client, test_3_ids.clone(), &mut event_account_rx).await;
 
     // // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent
     // test_4_send_market_event_that_does_not_match_any_open_order(
@@ -136,8 +136,20 @@ async fn main() {
 
 // 1. Fetch initial OpenOrders when we have no open Orders.
 async fn test_1_fetch_initial_orders_and_check_empty(client: &SandBoxClient) {
-    let initial_orders = client.fetch_orders_open().await.unwrap();
-    assert!(initial_orders.is_empty());
+    println!("Fetching initial open orders...");
+    let initial_orders_result = client.fetch_orders_open().await;
+
+    // 打印返回结果
+    match &initial_orders_result {
+        Ok(initial_orders) => {
+            println!("Fetched orders: {:?}", initial_orders);
+            assert!(initial_orders.is_empty(), "Expected no open orders, but found some.");
+        }
+        Err(e) => {
+            println!("Failed to fetch open orders: {:?}", e);
+            panic!("Error occurred while fetching open orders.");
+        }
+    }
 }
 
 // 自定义比较函数，忽略 time 字段
@@ -150,7 +162,7 @@ fn assert_balance_equal_ignore_time(actual: &Balance, expected: &Balance) {
 
 async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient) {
     let actual_balances = client.fetch_balances().await.unwrap();
-    // println!("actual balances: {:?}", actual_balances);
+    println!("actual balances: {:?}", actual_balances);
     // NOTE seems that fetch_balances is working.so that the response_rx should be working.
     let initial_balances = initial_balances().await;
     let initial_balances_locked = initial_balances.lock().await;
@@ -166,34 +178,35 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
     }
 }
 
-// async fn test_3_open_limit_buy_order(
-//     client: &SandBoxClient,
-//     test_3_ids: Ids,
-//     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
-// ) {
-//     let open_request = order_request_limit(
-//         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
-//         test_3_ids.cid.clone(),
-//         Side::Buy,
-//         100.0,  // price
-//         1.0,    // size
-//     );
-//
-//     println!("Sending order request via SandBoxClient : {:?}", open_request);
-    //
-    // let new_orders = client.open_orders(vec![open_request]).await;
-    //
-    // let expected_new_order = open_order(
-    //     Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
-    //     test_3_ids.cid.clone(),
-    //     test_3_ids.id,
-    //     Side::Buy,
-    //     100.0,
-    //     1.0,
-    //     0.0,
-    // );
-    //
-    // assert_eq!(new_orders.len(), 1);
+async fn test_3_open_limit_buy_order(
+    client: &SandBoxClient,
+    test_3_ids: Ids,
+    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+) {
+    let open_request = order_request_limit(
+        Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+        test_3_ids.cid.clone(),
+        Side::Buy,
+        100.0,  // price
+        1.0,    // size
+    );
+
+    println!("Sending order request via SandBoxClient : {:?}", open_request);
+
+    let new_orders = client.open_orders(vec![open_request]).await;
+
+    let expected_new_order = open_order(
+        Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+        test_3_ids.cid.clone(),
+        test_3_ids.id,
+        Side::Buy,
+        100.0,
+        1.0,
+        0.0,
+    );
+    println!("new_orders: {:?}", new_orders);
+    println!("expected_new_order: {:?}", expected_new_order);
+
 
     // NOTE buggy here
     // assert_eq!(new_orders[0].as_ref().unwrap(), &expected_new_order);
@@ -237,7 +250,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
     //         panic!("Unexpected additional account event: {:?}", other);
     //     }
     // }
-// }
+}
 
 
 
