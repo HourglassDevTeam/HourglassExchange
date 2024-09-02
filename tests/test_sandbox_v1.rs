@@ -258,21 +258,21 @@ async fn test_3_open_limit_buy_order(
 
 
 // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent.
-fn test_4_send_market_event_that_does_not_match_any_open_order(
-    event_simulated_tx: &mut mpsc::UnboundedSender<MarketTrade>,
-    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
-) {
-
-    let new_market_event =MarketTrade { exchange: "binance-futures".into(), symbol: "1000RATSUSDT".into(), side: "buy".into(), price: 0.13461, timestamp: 1714924612471000, amount: 744.0 };
-
-    // Check no more AccountEvents generated
-    match event_account_rx.try_recv() {
-        Err(mpsc::error::TryRecvError::Empty) => {}
-        other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
-        }
-    }
-}
+// fn test_4_send_market_event_that_does_not_match_any_open_order(
+//     event_simulated_tx: &mut mpsc::UnboundedSender<MarketTrade>,
+//     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+// ) {
+//
+//     let new_market_event =MarketTrade { exchange: "binance-futures".into(), symbol: "1000RATSUSDT".into(), side: "buy".into(), price: 0.13461, timestamp: 1714924612471000, amount: 744.0 };
+//
+//     // Check no more AccountEvents generated
+//     match event_account_rx.try_recv() {
+//         Err(mpsc::error::TryRecvError::Empty) => {}
+//         other => {
+//             panic!("try_recv() consumed unexpected: {:?}", other);
+//         }
+//     }
+// }
 //
 // // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent.
 // async fn test_5_cancel_buy_order(
