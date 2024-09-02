@@ -12,5 +12,5 @@ pub struct MarketEvent<Data>
     pub received_time: i64,     // 接收到数据的时间戳
     pub exchange: Exchange,     // 交易所信息
     pub instrument: Instrument, // 交易工具信息
-    pub kind: Data,             // 事件的具体类型 `WsTrade` / `ClickhousePublicTrade` / `ClientTrade` 等
+    pub kind: Data,             // 事件的具体类型 `WsTrade` / `MarketTrade` / `ClientTrade` 等
 }
