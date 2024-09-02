@@ -317,10 +317,11 @@ impl AccountState
         );
 
         let timeout_duration = Duration::from_secs(2);
-
         let result = timeout(timeout_duration, async {
             let account_arc = match self.account_ref.upgrade() {
-                Some(account_arc) => account_arc,
+                Some(account_arc) => {
+                    println!("[UniLink_Execution] : Account reference is set");
+                    account_arc },
                 None => {
                     eprintln!("Failed to upgrade account_ref, it is None.");
                     return Err(ExecutionError::SandBox(
