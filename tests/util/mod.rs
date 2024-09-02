@@ -43,7 +43,7 @@ pub async fn run_default_exchange(
 
     let sandbox_exchange = SandBoxExchange::initiator()
         .event_sandbox_rx(event_simulated_rx)
-        .account(account) // Pass the Account directly
+        .account(account) // Pass the Account wrapped in Arc<Mutex<Account>>
         .initiate() // Use `initiate` instead of `build` for `SandBoxExchange`
         .expect("failed to build SandBoxExchange");
 
@@ -53,7 +53,6 @@ pub async fn run_default_exchange(
     sandbox_exchange.run_local().await;
     println!("Sandbox exchange is running");
 }
-
 
 /// 设置延迟为50ms
 #[allow(dead_code)]

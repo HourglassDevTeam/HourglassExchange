@@ -178,8 +178,8 @@ pub async fn create_test_account_state() -> Arc<Mutex<AccountState>> {
     }
 
     account_state_arc
-}
-pub async fn create_test_account() -> Account {
+}pub async fn create_test_account() -> Account {
+    let machine_id = generate_machine_id().unwrap();
     let leverage_rate = 1.0;
     let mut balances = HashMap::new();
     balances.insert(Token::from("TEST_BASE"), Balance::new(10.0, 10.0, 1.0));
@@ -205,30 +205,26 @@ pub async fn create_test_account() -> Account {
         .fees_book
         .insert(InstrumentKind::Perpetual, commission_rates);
 
-    let positions = AccountPositions {
-        margin_pos: Vec::new(),
-        perpetual_pos: Vec::new(),
-        futures_pos: Vec::new(),
-        option_pos: Vec::new(),
-    };
-
-    let machine_id = generate_machine_id().unwrap();
-
-    // 创建 AccountState 实例
-    let account_state = AccountState {
+    // 1. 创建 AccountState 实例并包裹在 Arc<Mutex<...>> 中
+    let account_state_arc = Arc::new(Mutex::new(AccountState {
         balances,
-        positions,
-        account_ref: Weak::new(), // 先初始化为空的 Weak
-    };
+        positions: AccountPositions {
+            margin_pos: Vec::new(),
+            perpetual_pos: Vec::new(),
+            futures_pos: Vec::new(),
+            option_pos: Vec::new(),
+        },
+        account_ref: Weak::new(), // 初始化为空的 Weak
+    }));
 
-    // 创建 Account 实例，并将其包裹在 Arc<Account> 中
-    let account = Arc::new(Account {
+    // 2. 创建一个临时的 Account 实例，但不设置 account_ref
+    let account = Account {
         current_session: Uuid::new_v4(),
         machine_id,
         exchange_timestamp: AtomicI64::new(1234567),
         account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
         config: Arc::new(account_config),
-        states: Arc::new(Mutex::new(account_state)),
+        states: account_state_arc.clone(),
         orders: Arc::new(RwLock::new(
             AccountOrders::new(
                 machine_id,
@@ -241,17 +237,21 @@ pub async fn create_test_account() -> Account {
                 },
             ).await,
         )),
-    });
+    };
 
-    // 更新 account_ref，使其指向 Weak<Account>
+    // 3. 现在我们已经有了 Account 实例，将它包裹在 Arc 中
+    let arc_account = Arc::new(account);
+
+    // 4. 手动设置 AccountState 中的 account_ref
     {
-        let mut account_state_locked = account.states.lock().await;
-        account_state_locked.account_ref = Arc::downgrade(&account);
+        let mut account_state_locked = arc_account.states.lock().await;
+        account_state_locked.account_ref = Arc::downgrade(&arc_account);
     }
 
-    // 直接返回 Account（从 Arc 中解包）
-    Arc::try_unwrap(account).expect("Failed to unwrap Arc")
+    // 5. 使用 Arc::try_unwrap 来解包 Arc 并返回 Account 实例
+    Arc::try_unwrap(arc_account).expect("Failed to unwrap Arc")
 }
+
 
 
 /// 创建一个测试用的 `PerpetualPosition` 实例。
