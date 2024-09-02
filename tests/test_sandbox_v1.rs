@@ -253,7 +253,7 @@ async fn test_3_open_limit_buy_order(
 }
 
 
-// 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent.
+// 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent. NOTE this one is likely buggy as it does not use the open order.
 fn test_4_send_market_event_that_does_not_match_any_open_order(
     event_simulated_tx: &mut UnboundedSender<SandBoxClientEvent>,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
