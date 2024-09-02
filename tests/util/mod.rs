@@ -37,7 +37,7 @@ use unilink_execution::{
 };
 use unilink_execution::common::event::AccountEvent;
 
-pub async fn run_default_exchange(
+pub async fn run_sample_exchange(
     event_account_tx: mpsc::UnboundedSender<AccountEvent>,
     event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
 ) {

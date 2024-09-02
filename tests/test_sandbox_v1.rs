@@ -17,7 +17,7 @@ use unilink_execution::common::Side;
 use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 use unilink_execution::sandbox::sandbox_client::{SandBoxClient, SandBoxClientEvent};
 
-use crate::util::{initial_balances, open_order, order_cancel_request, order_cancelled, order_request_limit, run_default_exchange};
+use crate::util::{initial_balances, open_order, order_cancel_request, order_cancelled, order_request_limit, run_sample_exchange};
 
 mod util;
 
@@ -43,20 +43,20 @@ async fn main() {
     let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
 
     // 创建并运行 SimulatedExchange
-    tokio::spawn(run_default_exchange(event_account_tx,request_rx));
+    tokio::spawn(run_sample_exchange(event_account_tx, request_rx));
 
     // 初始化 SandBoxClient，用于与交易所进行交互
     let client = SandBoxClient {
         request_tx: request_tx.clone(),
     };
 
-    // 1. Fetch initial OpenOrders when we have no open Orders
+    // 1. 获取初始的未成交订单列表，检查当前没有未成交订单
     // test_1_fetch_initial_orders_and_check_empty(&client).await;
 
-    // 2. Fetch initial Balances when there have been no balance changing events
+    // 2. 获取初始的余额信息，检查当前没有发生任何余额变化事件
     // test_2_fetch_balances_and_check_same_as_initial(&client).await;
 
-    // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (TEST_QUOTE)
+    // 3. 下达限价买单，并检查是否为报价货币（TEST_QUOTE）发送了 AccountEvent 余额事件
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
     let machine_id = generate_machine_id().unwrap();
     let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId::new(timestamp, machine_id, 1));
@@ -66,7 +66,7 @@ async fn main() {
         &mut event_account_rx
     ).await;
 
-    // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent
+    // 4. 发送一个不匹配任何未成交订单的市场事件，并检查是否没有发送 AccountEvent
     test_4_send_market_event_that_does_not_match_any_open_order(
         &mut request_tx,
         &mut event_account_rx,
