@@ -136,17 +136,14 @@ async fn main() {
 
 // 1. Fetch initial OpenOrders when we have no open Orders.
 async fn test_1_fetch_initial_orders_and_check_empty(client: &SandBoxClient) {
-    println!("Fetching initial open orders...");
     let initial_orders_result = client.fetch_orders_open().await;
 
     // 打印返回结果
     match &initial_orders_result {
         Ok(initial_orders) => {
-            println!("Fetched orders: {:?}", initial_orders);
             assert!(initial_orders.is_empty(), "Expected no open orders, but found some.");
         }
         Err(e) => {
-            println!("Failed to fetch open orders: {:?}", e);
             panic!("Error occurred while fetching open orders.");
         }
     }
