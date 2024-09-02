@@ -2,6 +2,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // use redis::Commands;
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::timeout;
 use unilink_execution::ClientExecution;
 use unilink_execution::common::balance::{Balance, TokenBalance};
@@ -14,12 +15,9 @@ use unilink_execution::common::order::identification::machine_id::generate_machi
 use unilink_execution::common::order::identification::OrderId;
 use unilink_execution::common::Side;
 use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
-use unilink_execution::sandbox::sandbox_client::SandBoxClient;
+use unilink_execution::sandbox::sandbox_client::{SandBoxClient, SandBoxClientEvent};
 
-use crate::util::{
-    initial_balances, open_order
-    , order_request_limit, run_default_exchange,
-};
+use crate::util::{initial_balances, open_order, order_cancel_request, order_cancelled, order_request_limit, run_default_exchange};
 
 mod util;
 
@@ -41,7 +39,7 @@ impl Ids {
 #[tokio::test]
 async fn main() {
     // 创建通道用于发送和接收事件
-    let (request_tx, mut request_rx) = mpsc::unbounded_channel();
+    let (mut request_tx, mut request_rx) = mpsc::unbounded_channel();
     let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
 
     // 创建并运行 SimulatedExchange
@@ -69,10 +67,10 @@ async fn main() {
     ).await;
 
     // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent
-    // test_4_send_market_event_that_does_not_match_any_open_order(
-    //     &mut event_simulated_tx,
-    //     &mut event_account_rx,
-    // );
+    test_4_send_market_event_that_does_not_match_any_open_order(
+        &mut request_tx,
+        &mut event_account_rx,
+    );
 
     // // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent
     // test_5_cancel_buy_order(&client, test_3_ids, &mut event_account_rx).await;
@@ -256,22 +254,22 @@ async fn test_3_open_limit_buy_order(
 
 
 // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent.
-// fn test_4_send_market_event_that_does_not_match_any_open_order(
-//     event_simulated_tx: &mut mpsc::UnboundedSender<MarketTrade>,
-//     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
-// ) {
-//
-//     let new_market_event =MarketTrade { exchange: "binance-futures".into(), symbol: "1000RATSUSDT".into(), side: "buy".into(), price: 0.13461, timestamp: 1714924612471000, amount: 744.0 };
-//
-//     // Check no more AccountEvents generated
-//     match event_account_rx.try_recv() {
-//         Err(mpsc::error::TryRecvError::Empty) => {}
-//         other => {
-//             panic!("try_recv() consumed unexpected: {:?}", other);
-//         }
-//     }
-// }
-//
+fn test_4_send_market_event_that_does_not_match_any_open_order(
+    event_simulated_tx: &mut UnboundedSender<SandBoxClientEvent>,
+    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+) {
+
+    let new_market_event =MarketTrade { exchange: "binance-futures".into(), symbol: "1000RATSUSDT".into(), side: "buy".into(), price: 0.13461, timestamp: 1714924612471000, amount: 744.0 };
+
+    // Check no more AccountEvents generated
+    match event_account_rx.try_recv() {
+        Err(mpsc::error::TryRecvError::Empty) => {}
+        other => {
+            panic!("try_recv() consumed unexpected: {:?}", other);
+        }
+    }
+}
+
 // // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent.
 // async fn test_5_cancel_buy_order(
 //     client: &SandBoxClient,
