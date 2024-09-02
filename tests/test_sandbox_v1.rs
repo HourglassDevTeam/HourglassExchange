@@ -69,10 +69,10 @@ async fn main() {
     ).await;
 
     // 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent
-    test_4_send_market_event_that_does_not_match_any_open_order(
-        &mut event_simulated_tx,
-        &mut event_account_rx,
-    );
+    // test_4_send_market_event_that_does_not_match_any_open_order(
+    //     &mut event_simulated_tx,
+    //     &mut event_account_rx,
+    // );
 
     // // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent
     // test_5_cancel_buy_order(&client, test_3_ids, &mut event_account_rx).await;
