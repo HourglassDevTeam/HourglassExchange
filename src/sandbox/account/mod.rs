@@ -52,7 +52,6 @@ pub mod account_config;
 pub mod account_latency;
 pub mod account_market_feed;
 pub mod account_orders;
-pub mod account_states;
 
 #[derive(Debug)]
 pub struct Account
