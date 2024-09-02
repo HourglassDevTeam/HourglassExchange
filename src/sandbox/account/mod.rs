@@ -180,9 +180,7 @@ impl Account
 
 
     pub async fn fetch_orders_open(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>) {
-        println!("Attempting to read orders...");
         let orders = self.orders.read().await.fetch_all();
-        println!("Orders fetched: {:?}", orders);
         respond(response_tx, Ok(orders)); // 是否要模拟延迟
     }
 

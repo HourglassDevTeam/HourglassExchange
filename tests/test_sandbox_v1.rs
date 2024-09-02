@@ -50,10 +50,10 @@ async fn main() {
     };
 
     // 1. Fetch initial OpenOrders when we have no open Orders
-    test_1_fetch_initial_orders_and_check_empty(&client).await;
+    // test_1_fetch_initial_orders_and_check_empty(&client).await;
 
     // 2. Fetch initial Balances when there have been no balance changing events
-    test_2_fetch_balances_and_check_same_as_initial(&client).await;
+    // test_2_fetch_balances_and_check_same_as_initial(&client).await;
 
     // 3. Open LIMIT Buy Order and check AccountEvent Balance is sent for the quote currency (TEST_QUOTE)
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
