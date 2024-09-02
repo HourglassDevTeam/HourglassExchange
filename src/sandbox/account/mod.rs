@@ -428,13 +428,13 @@ impl Account
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub async fn apply_open_order_changes(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExecutionError>
     {
-        println!("[UniLinkExecution] : Starting apply_open_order_changes: {:?}, with balance: {:?}", open, required_balance);
+        // println!("[UniLinkExecution] : Starting apply_open_order_changes: {:?}, with balance: {:?}", open, required_balance);
 
         // 配置从直接访问 `self.config` 获取
         let (position_mode, position_margin_mode) = (self.config.position_mode.clone(), self.config.position_margin_mode.clone());
 
-        println!("[UniLinkExecution] : Retrieved position_mode: {:?}, position_margin_mode: {:?}",
-                 position_mode, position_margin_mode);
+        // println!("[UniLinkExecution] : Retrieved position_mode: {:?}, position_margin_mode: {:?}",
+        //          position_mode, position_margin_mode);
 
         // 根据不同的 InstrumentKind 进行处理
         match open.instrument.kind {
