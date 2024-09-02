@@ -209,7 +209,7 @@ async fn test_3_open_limit_buy_order(
 
 
     // NOTE buggy here
-    // assert_eq!(new_orders[0].as_ref().unwrap(), &expected_new_order);
+    assert_eq!(new_orders[0].as_ref().unwrap(), &expected_new_order);
     // //
     // // 使用实际的价格来确保一致性
     // let current_px = 100.0;  // 与订单中的价格匹配

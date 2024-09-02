@@ -40,29 +40,42 @@ use unilink_execution::test_utils::{create_test_account, create_test_account_con
 pub async fn run_default_exchange(
     event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
 ) {
-    // Create Account instance and wrap it in Arc<Mutex<Account>>
+    // 创建 AccountState 实例
+    let account_state = create_test_account_state().await;
+
+    // 创建 Account 实例，并将其包裹在 Arc<Mutex<Account>> 中
     let account_arc = Arc::new(Mutex::new(create_test_account().await));
 
-    println!("Starting exchange...");
+    // 打印引用计数
+    println!(
+        "Before updating account_ref: Strong count: {}, Weak count: {}",
+        Arc::strong_count(&account_arc),
+        Arc::weak_count(&account_arc),
+    );
 
-    // Create and initialize SandBoxExchange
+    // 手动更新 account_state 的 account_ref
+    {
+        let mut account_state_locked = account_state.lock().await;
+        account_state_locked.account_ref = Arc::downgrade(&account_arc);
+        println!("Account reference successfully set.");
+    }
+
+    // 再次打印引用计数
+    println!(
+        "After updating account_ref: Strong count: {}, Weak count: {}",
+        Arc::strong_count(&account_arc),
+        Arc::weak_count(&account_arc),
+    );
+
+    // 创建并初始化 SandBoxExchange
     let sandbox_exchange = SandBoxExchange::initiator()
         .event_sandbox_rx(event_sandbox_rx)
-        .account(account_arc.clone())
+        .account(account_arc)
         .initiate()
         .expect("failed to build SandBoxExchange");
-
     println!("Sandbox exchange built successfully");
-
-    // Run the exchange with a timeout
-    match timeout(Duration::from_secs(1), sandbox_exchange.run_local()).await {
-        Ok(_) => println!("Sandbox exchange is running"),
-        Err(_) => {
-            println!("Sandbox exchange run timed out");
-        }
-    }
+    sandbox_exchange.run_local().await
 }
-
 /// 设置延迟为50ms
 #[allow(dead_code)]
 pub fn latency_50ms() -> Duration {
