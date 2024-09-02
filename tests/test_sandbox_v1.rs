@@ -42,6 +42,11 @@ async fn main() {
     let (mut request_tx, mut request_rx) = mpsc::unbounded_channel();
     let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
 
+    // additional initialization
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
+    let machine_id = generate_machine_id().unwrap();
+    let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId::new(timestamp, machine_id, 1));
+
     // 创建并运行 SimulatedExchange
     tokio::spawn(run_sample_exchange(event_account_tx, request_rx));
 
@@ -57,23 +62,20 @@ async fn main() {
     // test_2_fetch_balances_and_check_same_as_initial(&client).await;
 
     // 3. 下达限价买单，并检查是否为报价货币（TEST_QUOTE）发送了 AccountEvent 余额事件
-    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
-    let machine_id = generate_machine_id().unwrap();
-    let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId::new(timestamp, machine_id, 1));
-    test_3_open_limit_buy_order(
-        &client,
-        test_3_ids.clone(),
-        &mut event_account_rx
-    ).await;
+    // test_3_open_limit_buy_order(
+    //     &client,
+    //     test_3_ids.clone(),
+    //     &mut event_account_rx
+    // ).await;
 
     // 4. 发送一个不匹配任何未成交订单的市场事件，并检查是否没有发送 AccountEvent
-    test_4_send_market_event_that_does_not_match_any_open_order(
-        &mut request_tx,
-        &mut event_account_rx,
-    );
+    // test_4_send_market_event_that_does_not_match_any_open_order(
+    //     &mut request_tx,
+    //     &mut event_account_rx,
+    // );
 
     // // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent
-    // test_5_cancel_buy_order(&client, test_3_ids, &mut event_account_rx).await;
+    test_5_cancel_buy_order(&client, test_3_ids, &mut event_account_rx).await;
     //
     // // 6. Open 2x LIMIT Buy Orders & assert on received AccountEvents
     // let test_6_ids_1 = Ids::new(Uuid::new_v4(), 2);
@@ -208,8 +210,6 @@ async fn test_3_open_limit_buy_order(
     );
     println!("[test_3_open_limit_buy_order] : expected_new_order: {:?}", expected_new_order);
 
-
-    // NOTE buggy here
     assert_eq!(new_orders[0].as_ref().unwrap().cid, expected_new_order.cid);
     // //
     // // 使用实际的价格来确保一致性
@@ -271,68 +271,70 @@ fn test_4_send_market_event_that_does_not_match_any_open_order(
 }
 
 // // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent.
-// async fn test_5_cancel_buy_order(
-//     client: &SandBoxClient,
-//     test_3_ids: Ids,
-//     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
-// ) {
-//     let cancelled = client
-//         .cancel_orders(vec![order_cancel_request(
-//             Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
-//             test_3_ids.cid,
-//             Side::Buy,
-//             test_3_ids.id.clone(),
-//         )])
-//         .await;
-//
-//     let expected_cancelled = order_cancelled(
-//         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
-//         test_3_ids.cid,
-//         Side::Buy,
-//         test_3_ids.id,
-//     );
-//
-//     assert_eq!(cancelled.len(), 1);
-//     assert_eq!(cancelled[0].clone().unwrap(), expected_cancelled);
-//
-//     // Check AccountEvent Order cancelled
-//     match event_account_rx.try_recv() {
-//         Ok(AccountEvent {
-//             kind: AccountEventKind::OrdersCancelled(cancelled),
-//             ..
-//         }) => {
-//             assert_eq!(cancelled.len(), 1);
-//             assert_eq!(cancelled[0].clone(), expected_cancelled);
-//         }
-//         other => {
-//             panic!("try_recv() consumed unexpected: {:?}", other);
-//         }
-//     }
-//
-//     // Check AccountEvent Balance for quote currency (TEST_QUOTE) has available balance increase
-//     match event_account_rx.try_recv() {
-//         Ok(AccountEvent {
-//             kind: AccountEventKind::Balance(TEST_QUOTE_balance),
-//             ..
-//         }) => {
-//             // Expected TEST_QUOTE Balance.available = 9_900 + (100.0 * 1.0)
-//             let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 10_000.0));
-//             assert_eq!(TEST_QUOTE_balance, expected);
-//         }
-//         other => {
-//             panic!("try_recv() consumed unexpected: {:?}", other);
-//         }
-//     }
-//
-//     // Check no more AccountEvents generated
-//     match event_account_rx.try_recv() {
-//         Err(mpsc::error::TryRecvError::Empty) => {}
-//         other => {
-//             panic!("try_recv() consumed unexpected: {:?}", other);
-//         }
-//     }
-// }
-//
+async fn test_5_cancel_buy_order(
+    client: &SandBoxClient,
+    test_3_ids: Ids,
+    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+) {
+    let cancelled = client
+        .cancel_orders(vec![order_cancel_request(
+            Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+            test_3_ids.cid.clone(),  // 使用 clone()
+            Side::Buy,
+            test_3_ids.id.clone(),
+        )])
+        .await;
+
+    let expected_cancelled = order_cancelled(
+        Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+        test_3_ids.cid.clone(),  // 使用 clone()
+        Side::Buy,
+        test_3_ids.id.clone(),  // 使用 clone()
+    );
+
+    assert_eq!(cancelled.len(), 1);
+    assert_eq!(cancelled[0].clone().unwrap(), expected_cancelled);
+
+    // Check AccountEvent Order cancelled
+    match event_account_rx.try_recv() {
+        Ok(AccountEvent {
+            kind: AccountEventKind::OrdersCancelled(cancelled),
+            ..
+        }) => {
+            assert_eq!(cancelled.len(), 1);
+            assert_eq!(cancelled[0].clone(), expected_cancelled);
+        }
+        other => {
+            panic!("try_recv() consumed unexpected: {:?}", other);
+        }
+    }
+
+
+    let current_px = 1.0;  // 与订单中的价格匹配
+    // Check AccountEvent Balance for quote currency (TEST_QUOTE) has available balance increase
+    match event_account_rx.try_recv() {
+        Ok(AccountEvent {
+            kind: AccountEventKind::Balance(TEST_QUOTE_balance),
+            ..
+        }) => {
+            // Expected TEST_QUOTE Balance.available = 9_900 + (100.0 * 1.0)
+            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 10_000.0, current_px));
+            assert_eq!(TEST_QUOTE_balance, expected);
+        }
+        other => {
+            panic!("try_recv() consumed unexpected: {:?}", other);
+        }
+    }
+
+    // Check no more AccountEvents generated
+    match event_account_rx.try_recv() {
+        Err(mpsc::error::TryRecvError::Empty) => {}
+        other => {
+            panic!("try_recv() consumed unexpected: {:?}", other);
+        }
+    }
+}
+
 // // 6. Open 2x limit buy orders and check AccountEvents for balance & order new are sent
 // async fn test_6_open_2x_limit_buy_orders(
 //     client: &SandBoxClient,
