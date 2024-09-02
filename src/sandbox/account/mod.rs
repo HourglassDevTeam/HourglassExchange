@@ -64,8 +64,8 @@ pub struct Account
     pub account_event_tx: UnboundedSender<AccountEvent>, // 帐户事件发送器
     pub config: Arc<AccountConfig>,                      // 帐户配置
     pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
-    pub balances: HashMap<Token, Balance>, // 从 AccountState 移过来
-    pub positions: AccountPositions,       // 从 AccountState 移过来
+    pub balances: HashMap<Token, Balance>, // 帐户余额
+    pub positions: AccountPositions,       // 帐户持仓
 }
 
 // 手动实现 Clone trait
