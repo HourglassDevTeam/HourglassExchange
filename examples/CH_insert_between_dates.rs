@@ -30,16 +30,16 @@ async fn main()
 
         // 过滤符合当前日期的 additional_table
         let filtered_table_names: Vec<String> = table_names.par_iter()
-            .filter(|table_name| {
-                if let Some(date_str) = extract_date(table_name) {
-                    if let Ok(table_date) = NaiveDate::parse_from_str(&date_str, "%Y_%m_%d") {
-                        return table_date == current_date && !table_name.contains("union");
-                    }
-                }
-                false
-            })
-            .cloned()
-            .collect();
+                                                           .filter(|table_name| {
+                                                               if let Some(date_str) = extract_date(table_name) {
+                                                                   if let Ok(table_date) = NaiveDate::parse_from_str(&date_str, "%Y_%m_%d") {
+                                                                       return table_date == current_date && !table_name.contains("union");
+                                                                   }
+                                                               }
+                                                               false
+                                                           })
+                                                           .cloned()
+                                                           .collect();
 
         // 如果有符合的表，调用 insert_into_unioned_table 方法
         if !filtered_table_names.is_empty() {
@@ -52,7 +52,8 @@ async fn main()
             println!("\n[NOTE] : End of the list.\n");
             client.insert_into_unioned_table(&database, &target_table_name, &filtered_table_names, true).await.unwrap();
             current_date += Duration::days(1);
-        } else {
+        }
+        else {
             println!("[UniLinkExecution] : No tables found for the date: {}", current_date);
             current_date += Duration::days(1);
         }

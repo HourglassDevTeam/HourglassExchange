@@ -1,104 +1,91 @@
-use tokio::time::timeout;
 use std::{
     collections::HashMap,
-    sync::{Arc, atomic::AtomicI64, Weak},
+    sync::{atomic::AtomicI64, Arc, Weak},
     time::Duration,
 };
 use tokio::sync;
 use tokio::sync::{mpsc, Mutex};
+use tokio::time::timeout;
 use uuid::Uuid;
 
-use unilink_execution::{
-    common::{
-        balance::Balance
-        ,
-        instrument::{Instrument, kind::InstrumentKind},
-        order::{
-            identification::{client_order_id::ClientOrderId, OrderId},
-            Order,
-            order_instructions::OrderInstruction,
-            OrderRole, states::{open::Open, request_open::RequestOpen},
-        },
-        position::AccountPositions,
-        Side,
-        token::Token,
-    },
-    Exchange,
-    sandbox::account::{
-        Account,
-        account_latency::{AccountLatency, FluctuationMode},
-        account_orders::AccountOrders,
-        account_states::AccountState,
-    },
-};
 use unilink_execution::common::order::states::cancelled::Cancelled;
 use unilink_execution::common::order::states::request_cancel::RequestCancel;
 use unilink_execution::sandbox::sandbox_client::SandBoxClientEvent;
 use unilink_execution::sandbox::SandBoxExchange;
 use unilink_execution::test_utils::{create_test_account, create_test_account_config, create_test_account_state};
-//
-// pub async fn run_default_exchange(
-//     event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
-// ) {
-//     // 创建初始余额
-//     let mut balances = HashMap::new();
-//     let token1 = Token::from("TEST_BASE");
-//     let token2 = Token::from("TEST_QUOTE");
-//     balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
-//     balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
-//
-//     // 创建初始持仓
-//     let positions = AccountPositions {
-//         margin_pos: Vec::new(),
-//         perpetual_pos: Vec::new(),
-//         futures_pos: Vec::new(),
-//         option_pos: Vec::new(),
-//     };
-//
-//     // 创建 AccountState 实例，先不设置 account_ref
-//     let account_state = AccountState {
-//         balances: balances.clone(),
-//         positions: positions.clone(),
-//         account_ref: Weak::new(),  // 初始为空的 Weak
-//     };
-//
-//     // 包装 AccountState 实例在 Arc<Mutex<...>> 中
-//     let account_state_arc = Arc::new(Mutex::new(account_state));
-//
-//     // 创建 Account 实例，并将其包装在 Arc<Mutex<...>> 中
-//     let account_arc = Arc::new(Mutex::new(Account {
-//         current_session: Uuid::new_v4(),
-//         machine_id: 0,
-//         exchange_timestamp: AtomicI64::new(1234567),
-//         account_event_tx: mpsc::unbounded_channel().0,
-//         config: Arc::new(create_test_account_config()),
-//         states: account_state_arc.clone(),
-//         orders: Arc::new(sync::RwLock::new(AccountOrders::new(0, vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))], AccountLatency {
-//             fluctuation_mode: FluctuationMode::Sine,
-//             maximum: 0,
-//             minimum: 0,
-//             current_value: 0,
-//         }).await)),
-//     }));
-//
-//     // 设置 account_ref
-//     {
-//         let mut account_state_locked = account_state_arc.lock().await;
-//         account_state_locked.account_ref = Arc::downgrade(&account_arc);
-//         println!("[run_default_exchange] : Account reference successfully set.");
-//     }
-//
-//     // 创建并初始化 SandBoxExchange
-//     let sandbox_exchange = SandBoxExchange::initiator()
-//         .event_sandbox_rx(event_sandbox_rx)
-//         .account(account_arc)
-//         .initiate()
-//         .expect("failed to build SandBoxExchange");
-//     println!("[run_default_exchange] : Sandbox exchange built successfully");
-//
-//     sandbox_exchange.run_local().await;
-//     println!("[run_default_exchange] : Sandbox exchange run successfully");
-// }
+use unilink_execution::{
+    common::{
+        balance::Balance
+        ,
+        instrument::{kind::InstrumentKind, Instrument},
+        order::{
+            identification::{client_order_id::ClientOrderId, OrderId},
+            order_instructions::OrderInstruction,
+            states::{open::Open, request_open::RequestOpen},
+            Order, OrderRole,
+        },
+        position::AccountPositions,
+        token::Token,
+        Side,
+    },
+    sandbox::account::{
+        account_latency::{AccountLatency, FluctuationMode},
+        account_orders::AccountOrders,
+        account_states::AccountState,
+        Account,
+    },
+    Exchange,
+};
+
+pub async fn run_default_exchange(
+    event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
+) {
+    // 创建初始余额
+    let mut balances = HashMap::new();
+    let token1 = Token::from("TEST_BASE");
+    let token2 = Token::from("TEST_QUOTE");
+    balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
+    balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
+
+    // 创建初始持仓
+    let positions = AccountPositions {
+        margin_pos: Vec::new(),
+        perpetual_pos: Vec::new(),
+        futures_pos: Vec::new(),
+        option_pos: Vec::new(),
+    };
+
+
+    // 创建 Account 实例，并将其包装在 Arc<Mutex<...>> 中
+    let account_arc = Arc::new(Mutex::new(Account {
+        current_session: Uuid::new_v4(),
+        machine_id: 0,
+        exchange_timestamp: AtomicI64::new(1234567),
+        account_event_tx: mpsc::unbounded_channel().0,
+        config: Arc::new(create_test_account_config()),
+        states: account_state_arc.clone(),
+        orders: Arc::new(sync::RwLock::new(AccountOrders::new(0, vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))], AccountLatency {
+            fluctuation_mode: FluctuationMode::Sine,
+            maximum: 0,
+            minimum: 0,
+            current_value: 0,
+        }).await)),
+    }));
+
+
+    // 创建并初始化 SandBoxExchange
+    let sandbox_exchange = SandBoxExchange::initiator()
+        .event_sandbox_rx(event_sandbox_rx)
+        .account(account_arc)
+        .initiate()
+        .expect("failed to build SandBoxExchange");
+    println!("[run_default_exchange] : Sandbox exchange built successfully");
+
+    sandbox_exchange.run_local().await;
+    println!("[run_default_exchange] : Sandbox exchange run successfully");
+}
+
+
 /// 设置延迟为50ms
 #[allow(dead_code)]
 pub fn latency_50ms() -> Duration {

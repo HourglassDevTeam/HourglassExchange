@@ -45,8 +45,7 @@
 
 /// 计算下一个均值。
 pub fn update_mean<T>(mut prev_mean: T, next_value: T, count: T) -> T
-where
-    T: Copy + std::ops::Sub<Output=T> + std::ops::Div<Output=T> + std::ops::AddAssign,
+    where T: Copy + std::ops::Sub<Output = T> + std::ops::Div<Output = T> + std::ops::AddAssign
 {
     prev_mean += (next_value - prev_mean) / count;
     prev_mean
@@ -91,36 +90,24 @@ mod tests
             count: f64,
         }
 
-        let inputs = vec![Input {
-            prev_mean: 0.0,
-            next_value: 0.1,
-            count: 1.0
-        },
-                          Input {
-                              prev_mean: 0.1,
-                              next_value: -0.2,
-                              count: 2.0
-                          },
-                          Input {
-                              prev_mean: -0.05,
-                              next_value: -0.05,
-                              count: 3.0
-                          },
-                          Input {
-                              prev_mean: -0.05,
-                              next_value: 0.2,
-                              count: 4.0
-                          },
-                          Input {
-                              prev_mean: 0.0125,
-                              next_value: 0.15,
-                              count: 5.0
-                          },
-                          Input {
-                              prev_mean: 0.04,
-                              next_value: -0.17,
-                              count: 6.0
-                          }, ];
+        let inputs = vec![Input { prev_mean: 0.0,
+                                  next_value: 0.1,
+                                  count: 1.0 },
+                          Input { prev_mean: 0.1,
+                                  next_value: -0.2,
+                                  count: 2.0 },
+                          Input { prev_mean: -0.05,
+                                  next_value: -0.05,
+                                  count: 3.0 },
+                          Input { prev_mean: -0.05,
+                                  next_value: 0.2,
+                                  count: 4.0 },
+                          Input { prev_mean: 0.0125,
+                                  next_value: 0.15,
+                                  count: 5.0 },
+                          Input { prev_mean: 0.04,
+                                  next_value: -0.17,
+                                  count: 6.0 },];
 
         let expected = vec![0.1, -0.05, -0.05, 0.0125, 0.04, 0.05];
 
@@ -143,65 +130,47 @@ mod tests
             new_mean: f64,
         }
 
-        let inputs = vec![ // dataset_1 = [10, 100, -10]
-                           Input {
-                               prev_m: 0.0,
-                               prev_mean: 0.0,
-                               new_value: 10.0,
-                               new_mean: 10.0
-                           },
-                           Input {
-                               prev_m: 0.0,
-                               prev_mean: 10.0,
-                               new_value: 100.0,
-                               new_mean: 55.0
-                           },
-                           Input {
-                               prev_m: 4050.0,
-                               prev_mean: 55.0,
-                               new_value: -10.0,
-                               new_mean: (100.0 / 3.0)
-                           },
-                           // dataset_2 = [-5, -50, -1000]
-                           Input {
-                               prev_m: 0.0,
-                               prev_mean: 0.0,
-                               new_value: -5.0,
-                               new_mean: -5.0
-                           },
-                           Input {
-                               prev_m: 0.0,
-                               prev_mean: -5.0,
-                               new_value: -50.0,
-                               new_mean: (-55.0 / 2.0)
-                           },
-                           Input {
-                               prev_m: 1012.5,
-                               prev_mean: (-55.0 / 2.0),
-                               new_value: -1000.0,
-                               new_mean: (-1055.0 / 3.0)
-                           },
-                           // dataset_3 = [90000, -90000, 0]
-                           Input {
-                               prev_m: 0.0,
-                               prev_mean: 0.0,
-                               new_value: 90000.0,
-                               new_mean: 90000.0
-                           },
-                           Input {
-                               prev_m: 0.0,
-                               prev_mean: 90000.0,
-                               new_value: -90000.0,
-                               new_mean: 0.0
-                           },
-                           Input {
-                               prev_m: 16200000000.0,
-                               prev_mean: 0.0,
-                               new_value: 0.0,
-                               new_mean: 0.0
-                           }, ];
+        let inputs = vec![// dataset_1 = [10, 100, -10]
+                          Input { prev_m: 0.0,
+                                  prev_mean: 0.0,
+                                  new_value: 10.0,
+                                  new_mean: 10.0 },
+                          Input { prev_m: 0.0,
+                                  prev_mean: 10.0,
+                                  new_value: 100.0,
+                                  new_mean: 55.0 },
+                          Input { prev_m: 4050.0,
+                                  prev_mean: 55.0,
+                                  new_value: -10.0,
+                                  new_mean: (100.0 / 3.0) },
+                          // dataset_2 = [-5, -50, -1000]
+                          Input { prev_m: 0.0,
+                                  prev_mean: 0.0,
+                                  new_value: -5.0,
+                                  new_mean: -5.0 },
+                          Input { prev_m: 0.0,
+                                  prev_mean: -5.0,
+                                  new_value: -50.0,
+                                  new_mean: (-55.0 / 2.0) },
+                          Input { prev_m: 1012.5,
+                                  prev_mean: (-55.0 / 2.0),
+                                  new_value: -1000.0,
+                                  new_mean: (-1055.0 / 3.0) },
+                          // dataset_3 = [90000, -90000, 0]
+                          Input { prev_m: 0.0,
+                                  prev_mean: 0.0,
+                                  new_value: 90000.0,
+                                  new_mean: 90000.0 },
+                          Input { prev_m: 0.0,
+                                  prev_mean: 90000.0,
+                                  new_value: -90000.0,
+                                  new_mean: 0.0 },
+                          Input { prev_m: 16200000000.0,
+                                  prev_mean: 0.0,
+                                  new_value: 0.0,
+                                  new_mean: 0.0 },];
 
-        let expected = vec![0.0, 4050.0, 20600.0 / 3.0, 0.0, 1012.5, 1894550.0 / 3.0, 0.0, 16200000000.0, 16200000000.0, ];
+        let expected = vec![0.0, 4050.0, 20600.0 / 3.0, 0.0, 1012.5, 1894550.0 / 3.0, 0.0, 16200000000.0, 16200000000.0,];
 
         for (input, expected) in inputs.iter().zip(expected.into_iter()) {
             let actual_m = update_variance_accumulator(input.prev_m, input.prev_mean, input.new_value, input.new_mean);
@@ -214,8 +183,8 @@ mod tests
     fn calculate_sample_variance()
     {
         // fn calculate_sample_variance(recurrence_relation_m: f64, count: u64) -> f64
-        let inputs = vec![(0.0, 1), (1050.0, 5), (1012.5, 123223), (16200000000.0, 3), (99999.9999, 23232), ];
-        let expected = vec![0.0, 262.5, (675.0 / 82148.0), 8100000000.0, 4.304592996427187, ];
+        let inputs = vec![(0.0, 1), (1050.0, 5), (1012.5, 123223), (16200000000.0, 3), (99999.9999, 23232),];
+        let expected = vec![0.0, 262.5, (675.0 / 82148.0), 8100000000.0, 4.304592996427187,];
 
         for (input, expected) in inputs.iter().zip(expected.into_iter()) {
             let actual_variance = compute_sample_variance(input.0, input.1);
@@ -227,8 +196,8 @@ mod tests
     fn calculate_population_variance()
     {
         // fn calculate_population_variance(recurrence_relation_m: f64, count: u64) -> f64
-        let inputs = vec![(0.0, 1), (1050.0, 5), (1012.5, 123223), (16200000000.0, 3), (99999.9999, 23232), ];
-        let expected = vec![0.0, 210.0, (1012.5 / 123223.0), 5400000000.0, 4.304407709194215, ];
+        let inputs = vec![(0.0, 1), (1050.0, 5), (1012.5, 123223), (16200000000.0, 3), (99999.9999, 23232),];
+        let expected = vec![0.0, 210.0, (1012.5 / 123223.0), 5400000000.0, 4.304407709194215,];
 
         for (input, expected) in inputs.iter().zip(expected.into_iter()) {
             let actual_variance = compute_population_variance(input.0, input.1);

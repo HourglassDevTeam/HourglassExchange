@@ -45,15 +45,15 @@ impl<Statistic> PositionHandler for InMemoryVault<Statistic>
     fn get_open_positions(&mut self, _session_id: Uuid, exchange: Exchange, instrument: Instrument) -> Result<Vec<Position>, VaultError>
     {
         Ok(self.open_positions
-            .values()
-            .filter(|position| match position {
-                | Position::Perpetual(pos) => pos.meta.exchange == exchange && pos.meta.instrument == instrument,
-                | Position::LeveragedToken(pos) => pos.meta.exchange == exchange && pos.meta.instrument == instrument,
-                | Position::Future(pos) => pos.meta.exchange == exchange && pos.meta.instrument == instrument,
-                | Position::Option(pos) => pos.meta.exchange == exchange && pos.meta.instrument == instrument,
-            })
-            .cloned()
-            .collect())
+               .values()
+               .filter(|position| match position {
+                   | Position::Perpetual(pos) => pos.meta.exchange == exchange && pos.meta.instrument == instrument,
+                   | Position::LeveragedToken(pos) => pos.meta.exchange == exchange && pos.meta.instrument == instrument,
+                   | Position::Future(pos) => pos.meta.exchange == exchange && pos.meta.instrument == instrument,
+                   | Position::Option(pos) => pos.meta.exchange == exchange && pos.meta.instrument == instrument,
+               })
+               .cloned()
+               .collect())
     }
 
     fn remove_position(&mut self, position_id: &PositionId) -> Result<Option<Position>, VaultError>
@@ -113,11 +113,9 @@ impl<Statistic> InMemoryVault<Statistic>
     /// 构建一个新的 [`InMemoryVault`] 组件。
     pub fn new() -> Self
     {
-        Self {
-            open_positions: HashMap::new(),
-            closed_positions: HashMap::new(),
-            current_balances: HashMap::new(),
-            statistics: HashMap::new(),
-        }
+        Self { open_positions: HashMap::new(),
+               closed_positions: HashMap::new(),
+               current_balances: HashMap::new(),
+               statistics: HashMap::new() }
     }
 }

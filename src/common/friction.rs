@@ -63,13 +63,10 @@ impl InstrumentFees
 {
     /// 构造一个新的 [`InstrumentFees`]。
     pub fn new<S>(instrument: S, fees: Fees) -> Self
-    where
-        S: Into<InstrumentKind>,
+        where S: Into<InstrumentKind>
     {
-        Self {
-            instrument_kind: instrument.into(),
-            fees,
-        }
+        Self { instrument_kind: instrument.into(),
+               fees }
     }
 }
 
@@ -99,11 +96,9 @@ mod tests
     #[test]
     fn perpetual_fees_should_serialize_and_deserialize_correctly()
     {
-        let fees = PerpetualFees {
-            maker_fee: 0.1,
-            taker_fee: 0.2,
-            funding_fee: 0.01,
-        };
+        let fees = PerpetualFees { maker_fee: 0.1,
+                                   taker_fee: 0.2,
+                                   funding_fee: 0.01 };
         let serialized = serde_json::to_string(&fees).unwrap();
         let deserialized: PerpetualFees = serde_json::from_str(&serialized).unwrap();
         assert_eq!(fees, deserialized);
@@ -112,11 +107,9 @@ mod tests
     #[test]
     fn future_fees_should_serialize_and_deserialize_correctly()
     {
-        let fees = FutureFees {
-            maker_fee: 0.1,
-            taker_fee: 0.2,
-            funding_fee: 0.01,
-        };
+        let fees = FutureFees { maker_fee: 0.1,
+                                taker_fee: 0.2,
+                                funding_fee: 0.01 };
         let serialized = serde_json::to_string(&fees).unwrap();
         let deserialized: FutureFees = serde_json::from_str(&serialized).unwrap();
         assert_eq!(fees, deserialized);
@@ -135,17 +128,13 @@ mod tests
     fn fees_should_serialize_and_deserialize_correctly()
     {
         let fees_variants = vec![Fees::Spot(SpotFees { maker_fee: 0.1, taker_fee: 0.2 }),
-                                 Fees::Perpetual(PerpetualFees {
-                                     maker_fee: 0.1,
-                                     taker_fee: 0.2,
-                                     funding_fee: 0.01
-                                 }),
-                                 Fees::Future(FutureFees {
-                                     maker_fee: 0.1,
-                                     taker_fee: 0.2,
-                                     funding_fee: 0.01
-                                 }),
-                                 Fees::Option(OptionFees { trade_fee: 0.1 }), ];
+                                 Fees::Perpetual(PerpetualFees { maker_fee: 0.1,
+                                                                 taker_fee: 0.2,
+                                                                 funding_fee: 0.01 }),
+                                 Fees::Future(FutureFees { maker_fee: 0.1,
+                                                           taker_fee: 0.2,
+                                                           funding_fee: 0.01 }),
+                                 Fees::Option(OptionFees { trade_fee: 0.1 }),];
         for fees in fees_variants {
             let serialized = serde_json::to_string(&fees).unwrap();
             let deserialized: Fees = serde_json::from_str(&serialized).unwrap();

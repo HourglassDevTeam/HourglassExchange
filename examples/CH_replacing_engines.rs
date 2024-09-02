@@ -27,23 +27,24 @@ async fn main()
 
         // 筛选出当日的 `union` 表
         let union_tables: Vec<String> = table_names.par_iter()
-            .filter(|table_name| {
-                if table_name.contains("union") {
-                    if let Some(table_date) = unilink_execution::sandbox::utils::chrono_operations::extract_date(table_name) {
-                        if let Ok(parsed_date) = NaiveDate::parse_from_str(&table_date, "%Y_%m_%d") {
-                            return parsed_date == current_date;
-                        }
-                    }
-                }
-                false
-            })
-            .cloned()
-            .collect();
+                                                   .filter(|table_name| {
+                                                       if table_name.contains("union") {
+                                                           if let Some(table_date) = unilink_execution::sandbox::utils::chrono_operations::extract_date(table_name) {
+                                                               if let Ok(parsed_date) = NaiveDate::parse_from_str(&table_date, "%Y_%m_%d") {
+                                                                   return parsed_date == current_date;
+                                                               }
+                                                           }
+                                                       }
+                                                       false
+                                                   })
+                                                   .cloned()
+                                                   .collect();
 
         if union_tables.is_empty() {
             // 没有找到当日的 union 表，发送通知
             println!("[UniLinkExecution] : No union tables found for date: {}", date_str);
-        } else {
+        }
+        else {
             for table_name in union_tables {
                 let new_table_name = format!("{}_replacing", table_name);
                 let database = database.clone();

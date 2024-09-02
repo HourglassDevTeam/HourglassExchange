@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
-use tokio::sync::{mpsc,  oneshot};
+use tokio::sync::{mpsc, oneshot};
 
 use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrdersOpen, OpenOrders};
 
@@ -19,10 +19,9 @@ use crate::{
 #[derive(Debug)]
 pub struct SandBoxClient
 {
-    pub request_tx: UnboundedSender<SandBoxClientEvent>, // NOTE 这是向模拟交易所端发送信号的发射器。注意指令格式是SandBoxClientEvent
-    // pub market_event_rx: UnboundedReceiver<MarketEvent<MarketTrade>>,
+    pub request_tx: UnboundedSender<SandBoxClientEvent>, /* NOTE 这是向模拟交易所端发送信号的发射器。注意指令格式是SandBoxClientEvent
+                                                          * pub market_event_rx: UnboundedReceiver<MarketEvent<MarketTrade>>, */
 }
-
 
 // NOTE 模拟交易所客户端可向模拟交易所发送的命令
 // 定义类型别名以简化复杂的类型
@@ -46,18 +45,18 @@ pub enum SandBoxClientEvent
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    const CLIENT_KIND: Exchange = Exchange::SandBox;
     type Config = UnboundedSender<SandBoxClientEvent>;
 
-    async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self {
+    const CLIENT_KIND: Exchange = Exchange::SandBox;
+
+    async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
+    {
         // 从 config 元组中解构出 request_tx 和 market_event_rx
         let request_tx = config;
 
         // 使用 request_tx 和 market_event_rx 初始化 SandBoxClient
-        Self {
-            request_tx,
-            // market_event_rx,
-        }
+        Self { request_tx
+               /* market_event_rx, */ }
     }
 
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>
@@ -69,7 +68,7 @@ impl ClientExecution for SandBoxClient
             .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to send FetchOrdersOpen request");
         // 从模拟交易所接收开放订单的响应。
         response_rx.await
-            .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive FetchOrdersOpen response")
+                   .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive FetchOrdersOpen response")
     }
 
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>
@@ -81,7 +80,7 @@ impl ClientExecution for SandBoxClient
             .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to send FetchBalances request");
         // 从模拟交易所接收账户余额的响应。
         response_rx.await
-            .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive FetchBalances response")
+                   .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive FetchBalances response")
     }
 
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>
@@ -93,7 +92,7 @@ impl ClientExecution for SandBoxClient
             .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to send OpenOrders request");
         // 从模拟交易所接收开启订单的响应。
         response_rx.await
-            .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive OpenOrders response")
+                   .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive OpenOrders response")
     }
 
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>>
@@ -105,7 +104,7 @@ impl ClientExecution for SandBoxClient
             .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to send CancelOrders request");
         // 从模拟交易所接收取消订单的响应。
         response_rx.await
-            .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive CancelOrders response")
+                   .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive CancelOrders response")
     }
 
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>
@@ -118,7 +117,7 @@ impl ClientExecution for SandBoxClient
             .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to send CancelOrdersAll request");
         // 从模拟交易所接收取消所有订单的响应。
         response_rx.await
-            .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive CancelOrdersAll response")
+                   .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive CancelOrdersAll response")
     }
 }
 #[cfg(test)]
@@ -129,13 +128,12 @@ mod tests
     use super::*;
 
     #[tokio::test]
-    async fn test_fetch_orders_open() {
+    async fn test_fetch_orders_open()
+    {
         // 创建通道，用于请求和响应通信
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
 
-        let client = SandBoxClient {
-            request_tx: request_tx.clone(),
-        };
+        let client = SandBoxClient { request_tx: request_tx.clone() };
 
         // 启动一个异步任务来调用客户端的 fetch_orders_open 方法
         let client_task = tokio::spawn(async move {
@@ -154,7 +152,8 @@ mod tests
             // 使用 oneshot 通道的发送者发送一个模拟的响应
             // 这里模拟返回一个空的订单列表
             let _ = tx.send(Ok(vec![]));
-        } else {
+        }
+        else {
             // 如果接收到的事件不是预期的 FetchOrdersOpen 类型，使用 panic 使测试失败
             panic!("Received unexpected event type");
         }
@@ -162,7 +161,6 @@ mod tests
         // 等待客户端任务完成，确保 fetch_orders_open 方法已成功执行
         client_task.await.expect("Client task should complete successfully");
     }
-
 
     #[tokio::test]
     async fn test_cancel_orders_all()
@@ -173,9 +171,7 @@ mod tests
         let (_response_tx, _response_rx) = oneshot::channel::<Result<Vec<Order<Cancelled>>, ExecutionError>>();
 
         // 初始化 SandBoxClient
-        let client = SandBoxClient {
-            request_tx: request_tx.clone(),
-        };
+        let client = SandBoxClient { request_tx: request_tx.clone() };
 
         // 启动一个异步任务来调用客户端的 cancel_orders_all 方法
         let client_task = tokio::spawn(async move {
@@ -196,10 +192,12 @@ mod tests
             // 发送响应，并确认是否成功发送
             if tx.send(response).is_ok() {
                 println!("Response sent successfully");
-            } else {
+            }
+            else {
                 println!("Failed to send CancelOrdersAll response");
             }
-        } else {
+        }
+        else {
             panic!("Did not receive CancelOrdersAll event");
         }
 

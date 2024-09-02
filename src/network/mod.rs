@@ -37,7 +37,7 @@ mod tests
         let port = listener.local_addr().unwrap().port();
         // 关闭监听器，以释放端口
         drop(listener); // 关闭监听器，释放端口
-        // 检查该端口是否被占用，期望返回 false
+                        // 检查该端口是否被占用，期望返回 false
         assert!(!is_port_in_use(([127, 0, 0, 1], port)));
     }
 

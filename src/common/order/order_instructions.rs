@@ -25,7 +25,7 @@ impl Display for OrderInstruction
             | OrderInstruction::FillOrKill => "fill_or_kill",
             | OrderInstruction::GoodTilCancelled => "good_til_cancelled",
             | OrderInstruction::PostOnly => "post_only",
-            OrderInstruction::Cancel => "cancel_request",
+            | OrderInstruction::Cancel => "cancel_request",
         })
     }
 }

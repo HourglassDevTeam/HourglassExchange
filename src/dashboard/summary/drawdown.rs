@@ -1,9 +1,12 @@
-use crate::common::position::Position;
-use crate::dashboard::metrics::EquitySnapshot;
-use crate::dashboard::summary::PositionSummariser;
-use crate::dashboard::{
-    metrics::drawdown::{AvgDrawdown, Drawdown, MaxDrawdown},
-    summary::TableBuilder,
+use crate::{
+    common::position::Position,
+    dashboard::{
+        metrics::{
+            drawdown::{AvgDrawdown, Drawdown, MaxDrawdown},
+            EquitySnapshot,
+        },
+        summary::{PositionSummariser, TableBuilder},
+    },
 };
 /// `DrawdownSummary` 模块用于计算和跟踪投资组合或交易策略中的最大回撤、平均回撤以及它们的持续时间。
 ///
@@ -30,7 +33,6 @@ use crate::dashboard::{
 ///
 /// # 用途
 /// 该模块特别适用于量化交易和投资组合管理中的风险评估。通过跟踪并分析回撤，投资者可以更好地理解他们的策略在不同市场条件下的表现，并做出相应的调整，以优化回报与风险的平衡。
-
 use chrono::Utc;
 use prettytable::{row, Row};
 use serde::{Deserialize, Serialize};
@@ -43,32 +45,25 @@ pub struct DrawdownSummary
     pub max_drawdown: MaxDrawdown,
 }
 
-
 /// FIXME 这里的time到底输入历史时间戳还是实时时间戳？？？
-impl PositionSummariser for DrawdownSummary {
-    fn update(&mut self, position: &Position) {
+impl PositionSummariser for DrawdownSummary
+{
+    fn update(&mut self, position: &Position)
+    {
         // 通过模式匹配获取不同头寸类型的 `exit_balance` 和时间戳，并构造 `EquitySnapshot`
         let equity_point = match position {
             // 如果是 Perpetual 类型头寸
-            Position::Perpetual(pos) => EquitySnapshot {
-                time: Utc::now(), // NOTE 暂时使用当前时间或从 `pos.meta` 获取时间戳
-                total: pos.meta.exit_balance.balance.total,
-            },
+            | Position::Perpetual(pos) => EquitySnapshot { time: Utc::now(), // NOTE 暂时使用当前时间或从 `pos.meta` 获取时间戳
+                                                           total: pos.meta.exit_balance.balance.total },
             // 如果是 LeveragedToken 类型头寸
-            Position::LeveragedToken(pos) => EquitySnapshot {
-                time: Utc::now(), // NOTE 暂时使用当前时间或从 `pos.meta` 获取时间戳
-                total: pos.meta.exit_balance.balance.total,
-            },
+            | Position::LeveragedToken(pos) => EquitySnapshot { time: Utc::now(), // NOTE 暂时使用当前时间或从 `pos.meta` 获取时间戳
+                                                                total: pos.meta.exit_balance.balance.total },
             // 如果是 Future 类型头寸
-            Position::Future(pos) => EquitySnapshot {
-                time: Utc::now(), // NOTE 暂时使用当前时间或从 `pos.meta` 获取时间戳
-                total: pos.meta.exit_balance.balance.total,
-            },
+            | Position::Future(pos) => EquitySnapshot { time: Utc::now(), // NOTE 暂时使用当前时间或从 `pos.meta` 获取时间戳
+                                                        total: pos.meta.exit_balance.balance.total },
             // 如果是 Option 类型头寸
-            Position::Option(pos) => EquitySnapshot {
-                time: Utc::now(), // NOTE 暂时使用当前时间或从 `pos.meta` 获取时间戳
-                total: pos.meta.exit_balance.balance.total,
-            },
+            | Position::Option(pos) => EquitySnapshot { time: Utc::now(), // NOTE 暂时使用当前时间或从 `pos.meta` 获取时间戳
+                                                        total: pos.meta.exit_balance.balance.total },
         };
 
         // 更新 DrawdownSummary
@@ -98,10 +93,8 @@ impl DrawdownSummary
 {
     pub fn new(starting_equity: f64) -> Self
     {
-        Self {
-            current_drawdown: Drawdown::init(starting_equity),
-            avg_drawdown: AvgDrawdown::init(),
-            max_drawdown: MaxDrawdown::init(),
-        }
+        Self { current_drawdown: Drawdown::init(starting_equity),
+               avg_drawdown: AvgDrawdown::init(),
+               max_drawdown: MaxDrawdown::init() }
     }
 }

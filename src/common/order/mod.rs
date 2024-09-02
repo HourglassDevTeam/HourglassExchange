@@ -51,19 +51,14 @@ mod tests
     #[test]
     fn request_open_should_be_comparable()
     {
-        let req1 = RequestOpen {
-            reduce_only: true,
-            price: 50.0,
-            size: 1.0,
-        };
-        let req2 = RequestOpen {
-            reduce_only: false,
-            price: 60.0,
-            size: 2.0,
-        };
+        let req1 = RequestOpen { reduce_only: true,
+                                 price: 50.0,
+                                 size: 1.0 };
+        let req2 = RequestOpen { reduce_only: false,
+                                 price: 60.0,
+                                 size: 2.0 };
         assert!(req1 < req2);
     }
-
 
     #[test]
     fn request_cancel_should_create_from_order_id()

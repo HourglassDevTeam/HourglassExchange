@@ -60,23 +60,23 @@ impl SandBoxExchange
 
         // 创建 warp 路由
         let route = warp::path("event").and(warp::body::json()).map(move |network_event: NetworkEvent| {
-            let event_tx_clone = event_tx.clone();
+                                                                   let event_tx_clone = event_tx.clone();
 
-            // 异步处理网络事件并发送到通道
-            tokio::spawn(async move {
-                match network_event.parse_payload() {
-                    | Ok(event) => {
-                        // 发送事件到通道
-                        if let Err(e) = event_tx_clone.send(event) {
-                            eprintln!("Failed to send event: {:?}", e);
-                        }
-                    }
-                    | Err(e) => eprintln!("Failed to parse event: {}", e),
-                }
-            });
+                                                                   // 异步处理网络事件并发送到通道
+                                                                   tokio::spawn(async move {
+                                                                       match network_event.parse_payload() {
+                                                                           | Ok(event) => {
+                                                                               // 发送事件到通道
+                                                                               if let Err(e) = event_tx_clone.send(event) {
+                                                                                   eprintln!("Failed to send event: {:?}", e);
+                                                                               }
+                                                                           }
+                                                                           | Err(e) => eprintln!("Failed to parse event: {}", e),
+                                                                       }
+                                                                   });
 
-            warp::reply::reply()
-        });
+                                                                   warp::reply::reply()
+                                                               });
 
         // 启动 warp 服务器
         let warp_server = warp::serve(route).run(address);
@@ -96,8 +96,7 @@ impl SandBoxExchange
                 | SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.lock().await.fetch_orders_open_and_respond(response_tx).await,
                 | SandBoxClientEvent::FetchBalances(response_tx) => self.account.lock().await.fetch_balances_and_respond(response_tx).await,
                 // NOTE this is buggy. should return an open order or an error eventually, not pendings in the flight.
-                | SandBoxClientEvent::OpenOrders((open_requests, response_tx)) =>
-                    self.account.lock().await.open_orders(open_requests,response_tx).await.expect("Failed to open."),
+                | SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => self.account.lock().await.open_orders(open_requests, response_tx).await.expect("Failed to open."),
                 | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.lock().await.cancel_orders(cancel_requests, response_tx).await,
                 | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.lock().await.cancel_orders_all(response_tx).await,
                 // | SandBoxClientEvent::FetchMarketEvent(market_event) => self.account.lock().await.match_orders(market_event).await,
@@ -111,12 +110,10 @@ impl Default for ExchangeInitiator
     fn default() -> Self
     {
         let (_tx, rx) = mpsc::unbounded_channel();
-        Self {
-            event_sandbox_rx: Some(rx),
-            account: None,
-            // market_event_tx: None,
-            // data_source: None,
-        }
+        Self { event_sandbox_rx: Some(rx),
+               account: None
+               /* market_event_tx: None,
+                * data_source: None, */ }
     }
 }
 pub struct ExchangeInitiator
@@ -131,32 +128,28 @@ impl ExchangeInitiator
 {
     pub fn new() -> Self
     {
-        Self {
-            event_sandbox_rx: None,
-            account: None,
-            // market_event_tx: None,
-            // data_source: None,
-        }
+        Self { event_sandbox_rx: None,
+               account: None
+               /* market_event_tx: None,
+                * data_source: None, */ }
     }
 
     pub fn event_sandbox_rx(self, value: UnboundedReceiver<SandBoxClientEvent>) -> Self
     {
-        Self {
-            event_sandbox_rx: Some(value),
-            ..self
-        }
+        Self { event_sandbox_rx: Some(value),
+               ..self }
     }
 
-    pub fn account(self, value: Arc<Mutex<Account>>) -> Self {
+    pub fn account(self, value: Arc<Mutex<Account>>) -> Self
+    {
         Self { account: Some(value), ..self }
     }
 
-    pub fn initiate(self) -> Result<SandBoxExchange, ExecutionError> {
-        Ok(SandBoxExchange {
-            event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
-            // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::InitiatorIncomplete("market_event_tx".to_string()))?,
-            account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))?,
-        })
+    pub fn initiate(self) -> Result<SandBoxExchange, ExecutionError>
+    {
+        Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
+                             // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::InitiatorIncomplete("market_event_tx".to_string()))?,
+                             account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
     }
 
     // pub fn trade_event_source(self, value: TradeEventSource) -> Self
@@ -168,27 +161,30 @@ impl ExchangeInitiator
 #[cfg(test)]
 mod tests
 {
-    use std::net::TcpListener;
     use super::*;
-    use tokio::sync::mpsc;
     use crate::test_utils::create_test_account;
+    use std::net::TcpListener;
+    use tokio::sync::mpsc;
 
     #[tokio::test]
-    async fn initiator_should_create_exchange_initiator_with_default_values() {
+    async fn initiator_should_create_exchange_initiator_with_default_values()
+    {
         let initiator = ExchangeInitiator::new();
         assert!(initiator.event_sandbox_rx.is_none());
         assert!(initiator.account.is_none());
     }
 
     #[tokio::test]
-    async fn initiator_should_set_event_sandbox_rx() {
+    async fn initiator_should_set_event_sandbox_rx()
+    {
         let (_tx, rx) = mpsc::unbounded_channel();
         let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
         assert!(initiator.event_sandbox_rx.is_some());
     }
 
     #[tokio::test]
-    async fn initiator_should_set_account() {
+    async fn initiator_should_set_account()
+    {
         let account = create_test_account().await;
         let account = Arc::new(Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
         let initiator = ExchangeInitiator::new().account(account.clone());
@@ -196,7 +192,8 @@ mod tests
     }
 
     #[tokio::test]
-    async fn initiator_should_return_error_if_event_sandbox_rx_is_missing() {
+    async fn initiator_should_return_error_if_event_sandbox_rx_is_missing()
+    {
         let account = create_test_account().await;
         let account = Arc::new(Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
         let initiator = ExchangeInitiator::new().account(account.clone());
@@ -205,7 +202,8 @@ mod tests
     }
 
     #[tokio::test]
-    async fn initiator_should_return_error_if_account_is_missing() {
+    async fn initiator_should_return_error_if_account_is_missing()
+    {
         let (_tx, rx) = mpsc::unbounded_channel();
         let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
         let result = initiator.initiate();
@@ -213,7 +211,8 @@ mod tests
     }
 
     #[tokio::test]
-    async fn run_online_should_return_if_port_is_in_use() {
+    async fn run_online_should_return_if_port_is_in_use()
+    {
         // 占用端口 3030
         let _listener = TcpListener::bind("127.0.0.1:3030").unwrap();
 
@@ -227,7 +226,8 @@ mod tests
     }
 
     // Function to check if a port is in use
-    fn is_port_in_use(address: std::net::SocketAddr) -> bool {
+    fn is_port_in_use(address: std::net::SocketAddr) -> bool
+    {
         TcpListener::bind(address).is_err()
     }
 }

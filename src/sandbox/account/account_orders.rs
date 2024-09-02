@@ -75,14 +75,12 @@ impl AccountOrders
     {
         let selectable_latencies = Self::generate_latencies(&mut account_latency).await;
 
-        Self {
-            machine_id,
-            order_counter: AtomicU64::new(0),
-            request_counter: AtomicU64::new(0),
-            instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
-            latency_generator: account_latency,
-            selectable_latencies,
-        }
+        Self { machine_id,
+               order_counter: AtomicU64::new(0),
+               request_counter: AtomicU64::new(0),
+               instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
+               latency_generator: account_latency,
+               selectable_latencies }
     }
 
     /// 生成一个新的 `RequestId`
@@ -196,21 +194,16 @@ impl AccountOrders
         let adjusted_client_ts = order.timestamp + latency;
 
         // 创建并返回新的 RequestOpen 订单
-        Order {
-            kind: order.kind,
-            exchange: order.exchange,
-            instrument: order.instrument,
-            cid: order.cid,
-            timestamp: adjusted_client_ts,
-            side: order.side,
-            state: RequestOpen {
-                reduce_only: order.state.reduce_only,
-                price: order.state.price,
-                size: order.state.size,
-            },
-        }
+        Order { kind: order.kind,
+                exchange: order.exchange,
+                instrument: order.instrument,
+                cid: order.cid,
+                timestamp: adjusted_client_ts,
+                side: order.side,
+                state: RequestOpen { reduce_only: order.state.reduce_only,
+                                     price: order.state.price,
+                                     size: order.state.size } }
     }
-
 
     /// 根据订单类型和当前市场价格，确定订单是 Maker 还是 Taker。
     ///
@@ -243,7 +236,9 @@ impl AccountOrders
             | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => Ok(OrderRole::Taker), // 立即成交或取消的订单总是 Taker
 
             | OrderInstruction::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
-            OrderInstruction::Cancel => { todo!() }
+            | OrderInstruction::Cancel => {
+                todo!()
+            }
         }
     }
 
@@ -274,14 +269,16 @@ impl AccountOrders
             | Side::Buy => {
                 if order.state.price >= current_price {
                     Ok(OrderRole::Maker)
-                } else {
+                }
+                else {
                     Ok(OrderRole::Taker)
                 }
             }
             | Side::Sell => {
                 if order.state.price <= current_price {
                     Ok(OrderRole::Maker)
-                } else {
+                }
+                else {
                     Ok(OrderRole::Taker)
                 }
             }
@@ -320,7 +317,8 @@ impl AccountOrders
             | Side::Buy => {
                 if order.state.price >= current_price {
                     Ok(OrderRole::Maker)
-                } else {
+                }
+                else {
                     Err(ExecutionError::OrderRejected("PostOnly order should be rejected".into()))
                     // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
@@ -328,7 +326,8 @@ impl AccountOrders
             | Side::Sell => {
                 if order.state.price <= current_price {
                     Ok(OrderRole::Maker)
-                } else {
+                }
+                else {
                     Err(ExecutionError::OrderRejected("PostOnly order should be rejected".into()))
                     // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
@@ -359,21 +358,17 @@ impl AccountOrders
         self.increment_order_counter();
 
         // 直接构建 Order<Open>
-        Order {
-            kind: request.kind,
-            exchange: request.exchange,
-            instrument: request.instrument,
-            cid: request.cid,
-            timestamp: request.timestamp,
-            side: request.side,
-            state: Open {
-                id: self.order_id(),
-                price: request.state.price,
-                size: request.state.size,
-                filled_quantity: 0.0,
-                order_role: role,
-            },
-        }
+        Order { kind: request.kind,
+                exchange: request.exchange,
+                instrument: request.instrument,
+                cid: request.cid,
+                timestamp: request.timestamp,
+                side: request.side,
+                state: Open { id: self.order_id(),
+                              price: request.state.price,
+                              size: request.state.size,
+                              filled_quantity: 0.0,
+                              order_role: role } }
     }
 
     /// 增加请求计数器的值。
@@ -411,8 +406,7 @@ mod tests
     use super::*;
     use crate::{
         common::instrument::{kind::InstrumentKind, Instrument},
-        sandbox::account::account_latency::{AccountLatency, FluctuationMode}
-        ,
+        sandbox::account::account_latency::{AccountLatency, FluctuationMode},
     };
     use std::sync::Arc;
     use tokio::sync::RwLock;
@@ -479,7 +473,6 @@ mod tests
         let orders = account_orders.fetch_all();
         assert!(orders.is_empty());
     }
-
 
     #[tokio::test]
     async fn test_increment_request_counter()
