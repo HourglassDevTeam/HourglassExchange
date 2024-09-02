@@ -256,6 +256,10 @@ impl Account
            Ok(position_mode)
     }
 
+    pub fn determine_position_margin_mode(&self) -> Result<PositionMarginMode, ExecutionError> {
+        let position_margin_mode = self.config.position_margin_mode.clone();
+        Ok(position_margin_mode)
+    }
 
     pub fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError> {
         let margin_mode = self.config.margin_mode.clone();
@@ -1143,11 +1147,19 @@ mod tests
     }
 
     #[tokio::test]
+    async fn test_determine_margin_mode() {
+        let account = create_test_account().await;
+        let margin_mode = account.determine_margin_mode().unwrap();
+        assert_eq!(margin_mode, MarginMode::SingleCurrencyMargin);
+        assert_ne!(margin_mode, MarginMode::MultiCurrencyMargin);
+    }
+
+        #[tokio::test]
     async fn test_determine_position_margin_mode() {
         let account = create_test_account().await;
-        let position_margin_mode = account.determine_margin_mode().unwrap();
-        assert_eq!(position_margin_mode, MarginMode::SingleCurrencyMargin);
-        assert_ne!(position_margin_mode, MarginMode::SimpleMode);
+        let position_margin_mode = account.determine_position_margin_mode().unwrap();
+        assert_eq!(position_margin_mode, PositionMarginMode::Isolated);
+        assert_ne!(position_margin_mode, PositionMarginMode::Cross);
     }
 
         #[tokio::test]
