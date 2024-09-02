@@ -180,6 +180,7 @@ async fn test_3_open_limit_buy_order(
     test_3_ids: Ids,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
+
     let open_request = order_request_limit(
         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),
@@ -188,10 +189,10 @@ async fn test_3_open_limit_buy_order(
         1.0,    // size
     );
 
-    println!("Sending order request via SandBoxClient : {:?}", open_request);
+    println!("[test_3_open_limit_buy_order] : Sending order request via SandBoxClient : {:?}", open_request);
 
     let new_orders = client.open_orders(vec![open_request]).await;
-
+    println!("[test_3_open_limit_buy_order]: {:?}", new_orders);
     let expected_new_order = open_order(
         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),
@@ -201,7 +202,6 @@ async fn test_3_open_limit_buy_order(
         1.0,
         0.0,
     );
-    println!("new_orders: {:?}", new_orders);
     println!("expected_new_order: {:?}", expected_new_order);
 
 

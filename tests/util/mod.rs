@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, atomic::AtomicI64, Weak},
     time::Duration,
 };
-
+use tokio::sync;
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
@@ -70,10 +70,10 @@ pub async fn run_default_exchange(
         current_session: Uuid::new_v4(),
         machine_id: 0,
         exchange_timestamp: AtomicI64::new(1234567),
-        account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+        account_event_tx: mpsc::unbounded_channel().0,
         config: Arc::new(create_test_account_config()),
-        states: account_state_arc.clone(),
-        orders: Arc::new(tokio::sync::RwLock::new(AccountOrders::new(0, vec![], AccountLatency {
+        states: account_state_arc,
+        orders: Arc::new(sync::RwLock::new(AccountOrders::new(0, vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))], AccountLatency {
             fluctuation_mode: FluctuationMode::Sine,
             maximum: 0,
             minimum: 0,
@@ -135,10 +135,10 @@ pub async fn initial_balances() -> Arc<Mutex<AccountState>> {
         current_session: Uuid::new_v4(),
         machine_id: 0,
         exchange_timestamp: AtomicI64::new(1234567),
-        account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+        account_event_tx: mpsc::unbounded_channel().0,
         config: Arc::new(create_test_account_config()),
         states: account_state_arc.clone(),
-        orders: Arc::new(tokio::sync::RwLock::new(AccountOrders::new(0, vec![], AccountLatency {
+        orders: Arc::new(sync::RwLock::new(AccountOrders::new(0, vec![], AccountLatency {
             fluctuation_mode: FluctuationMode::Sine,
             maximum: 0,
             minimum: 0,
