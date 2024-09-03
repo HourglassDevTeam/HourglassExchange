@@ -44,8 +44,8 @@ pub async fn run_sample_exchange(
 ) {
     // Creating initial balances
     let balances = DashMap::new();
-    let token1 = Token::from("TEST_BASE");
-    let token2 = Token::from("TEST_QUOTE");
+    let token1 = Token::from("ETH");
+    let token2 = Token::from("USDT");
     balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
     balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
 
@@ -57,7 +57,7 @@ pub async fn run_sample_exchange(
         option_pos: Vec::new(),
     };
 
-    let instrument = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual));
+    let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
     let account_orders = AccountOrders::new(0, vec![instrument.clone()], AccountLatency {
         fluctuation_mode: FluctuationMode::Sine,
         maximum: 10, // Example value
@@ -136,8 +136,8 @@ pub fn fees_50_percent() -> f64 {
 pub async fn initial_balances() ->HashMap<Token, Balance> {
     // 初始化账户余额
     let mut balances = HashMap::new();
-    let token1 = Token::from("TEST_BASE");
-    let token2 = Token::from("TEST_QUOTE");
+    let token1 = Token::from("ETH");
+    let token2 = Token::from("USDT");
     balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
     balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
     balances

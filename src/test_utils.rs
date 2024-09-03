@@ -74,8 +74,8 @@ pub fn create_test_order_open(side: Side, price: f64, size: f64) -> Order<Open>
 {
     Order { kind: OrderInstruction::Limit, // 假设测试订单使用限价订单类型
             exchange: Exchange::SandBox,   // 假设测试环境使用 SandBox 交易所
-            instrument: Instrument { base: Token::from("TEST_BASE"),   // 测试用基础货币
-                                     quote: Token::from("TEST_QUOTE"), // 测试用报价货币
+            instrument: Instrument { base: Token::from("ETH"),   // 测试用基础货币
+                                     quote: Token::from("USDT"), // 测试用报价货币
                                      kind: InstrumentKind::Perpetual   /* 测试用永续合约 */ },
             timestamp: 1625247600000,                       // 假设的客户端时间戳
             cid: ClientOrderId(Some("validCID123".into())), // 假设的客户端订单ID
@@ -113,8 +113,8 @@ pub async fn create_test_account() -> Account
 {
     let leverage_rate = 1.0;
     let balances = DashMap::new();
-    balances.insert(Token::from("TEST_BASE"), Balance::new(10.0, 10.0, 1.0));
-    balances.insert(Token::from("TEST_QUOTE"), Balance::new(10_000.0, 10_000.0, 1.0));
+    balances.insert(Token::from("ETH"), Balance::new(10.0, 10.0, 1.0));
+    balances.insert(Token::from("USDT"), Balance::new(10_000.0, 10_000.0, 1.0));
 
     let commission_rates = CommissionRates { maker_fees: 0.001,
                                              taker_fees: 0.002 };
@@ -146,7 +146,7 @@ pub async fn create_test_account() -> Account
               balances,
               positions,
               orders: Arc::new(RwLock::new(AccountOrders::new(machine_id,
-                                                              vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))],
+                                                              vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))],
                                                               AccountLatency { fluctuation_mode: FluctuationMode::Sine,
                                                                                maximum: 300,
                                                                                minimum: 0,

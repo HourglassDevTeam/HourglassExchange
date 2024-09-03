@@ -59,7 +59,7 @@ async fn main() {
     // 2. 获取初始的余额信息，检查当前没有发生任何余额变化事件
     test_2_fetch_balances_and_check_same_as_initial(&client).await;
 
-    // 3. 下达限价买单，并检查是否为报价货币（TEST_QUOTE）发送了 AccountEvent 余额事件
+    // 3. 下达限价买单，并检查是否为报价货币（USDT）发送了 AccountEvent 余额事件
     test_3_open_limit_buy_order(
         &client,
         test_3_ids.clone(),
@@ -183,7 +183,7 @@ async fn test_3_open_limit_buy_order(
     let actual_balances = client.fetch_balances().await.unwrap();
     println!("[test_3] : actual balances: {:?}", actual_balances);
     let open_request = order_request_limit(
-        Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+        Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),
         Side::Buy,
         100.0,
@@ -195,7 +195,7 @@ async fn test_3_open_limit_buy_order(
     let new_orders = client.open_orders(vec![open_request]).await;
     println!("[test_3] : {:?}", new_orders);
     let expected_new_order = open_order(
-        Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+        Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),
         test_3_ids.id,
         Side::Buy,
@@ -211,11 +211,11 @@ async fn test_3_open_limit_buy_order(
     let current_px = 1.0;  // 与订单中的价格匹配
     match event_sandbox_rx.recv().await {
         Some(AccountEvent {
-                 kind: AccountEventKind::Balance(TEST_QUOTE_balance),
+                 kind: AccountEventKind::Balance(USDT_balance),
                  ..
              }) => {
-            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(200.0, 149.0, current_px));
-            assert_balance_equal_ignore_time(&TEST_QUOTE_balance.balance, &expected.balance);
+            let expected = TokenBalance::new("USDT", Balance::new(200.0, 149.0, current_px));
+            assert_balance_equal_ignore_time(&USDT_balance.balance, &expected.balance);
         }
         other => {
             panic!("[test_3] : Unexpected or missing balance event: {:?}", other);
@@ -275,7 +275,7 @@ async fn test_5_cancel_buy_order(
 ) {
     let cancelled = client
         .cancel_orders(vec![order_cancel_request(
-            Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+            Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
             test_3_ids.cid.clone(),  // 使用 clone()
             Side::Buy,
             test_3_ids.id.clone(),
@@ -284,7 +284,7 @@ async fn test_5_cancel_buy_order(
 
     println!("[test_5] : {:?}", cancelled);
     let expected_cancelled = order_limit_cancelled(
-        Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+        Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),  // 使用 clone()
         Side::Buy,
         test_3_ids.id.clone(),  // 使用 clone()
@@ -310,16 +310,16 @@ async fn test_5_cancel_buy_order(
 
 
     let current_px = 1.0;  // 与订单中的价格匹配
-    // Check AccountEvent Balance for quote currency (TEST_QUOTE) has available balance increase
+    // Check AccountEvent Balance for quote currency (USDT) has available balance increase
     match event_sandbox_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::Balance(TEST_QUOTE_balance),
+            kind: AccountEventKind::Balance(USDT_balance),
             ..
         }) => {
-            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(200.0, 249.0, current_px));
+            let expected = TokenBalance::new("USDT", Balance::new(200.0, 249.0, current_px));
             println!("[test_5] : Balance event received.");
-            assert_eq!(TEST_QUOTE_balance.balance.total, expected.balance.total);
-            assert_eq!(TEST_QUOTE_balance.balance.available, expected.balance.available);
+            assert_eq!(USDT_balance.balance.total, expected.balance.total);
+            assert_eq!(USDT_balance.balance.available, expected.balance.available);
         }
         other => {
             panic!("try_recv() consumed unexpected: {:?}", other);
@@ -349,14 +349,14 @@ async fn test_6_open_2x_limit_buy_orders(
     let opened_orders = client
         .open_orders(vec![
             order_request_limit(
-                Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+                Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
                 test_6_ids_1.cid.clone(),
                 Side::Buy,
                 100.0,
                 1.0,
             ),
             order_request_limit(
-                Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+                Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
                 test_6_ids_2.cid.clone(),
                 Side::Buy,
                 200.0,
@@ -367,7 +367,7 @@ async fn test_6_open_2x_limit_buy_orders(
     println!("[test_6] : {:?}", opened_orders);
 
     let expected_order_new_1 = open_order(
-        Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+        Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
         test_6_ids_1.cid.clone(),
         test_6_ids_1.id.clone(),
         Side::Buy,
@@ -377,7 +377,7 @@ async fn test_6_open_2x_limit_buy_orders(
     );
 
     let expected_order_new_2 = open_order(
-        Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+        Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
         test_6_ids_2.cid.clone(),
         test_6_ids_2.id.clone(),
         Side::Buy,
@@ -397,12 +397,12 @@ async fn test_6_open_2x_limit_buy_orders(
     // Check AccountEvent Balance for first order - quote currency has available balance decrease
     match event_sandbox_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::Balance(TEST_QUOTE_balance),
+            kind: AccountEventKind::Balance(USDT_balance),
             ..
         }) => {
-            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(200.0, 148.0,current_px));
-            assert_eq!(TEST_QUOTE_balance.balance.total, expected.balance.total);
-            assert_eq!(TEST_QUOTE_balance.balance.available, expected.balance.available);
+            let expected = TokenBalance::new("USDT", Balance::new(200.0, 148.0,current_px));
+            assert_eq!(USDT_balance.balance.total, expected.balance.total);
+            assert_eq!(USDT_balance.balance.available, expected.balance.available);
         }
         other => {
             panic!("try_recv() consumed unexpected: {:?}", other);
@@ -426,13 +426,13 @@ async fn test_6_open_2x_limit_buy_orders(
     // Check AccountEvent Balance for second order - quote currency has available balance decrease
     match event_sandbox_rx.try_recv() {
         Ok(AccountEvent {
-            kind: AccountEventKind::Balance(TEST_QUOTE_balance),
+            kind: AccountEventKind::Balance(USDT_balance),
             ..
         }) => {
-            // Expected TEST_QUOTE Balance.available = 9_900 - (200.0 * 1.0)
-            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(200.0, 147.0,current_px));
-            assert_eq!(TEST_QUOTE_balance.balance.total, expected.balance.total);
-            assert_eq!(TEST_QUOTE_balance.balance.available, expected.balance.available);
+            // Expected USDT Balance.available = 9_900 - (200.0 * 1.0)
+            let expected = TokenBalance::new("USDT", Balance::new(200.0, 147.0,current_px));
+            assert_eq!(USDT_balance.balance.total, expected.balance.total);
+            assert_eq!(USDT_balance.balance.available, expected.balance.available);
         }
         other => {
             panic!("try_recv() consumed unexpected: {:?}", other);
