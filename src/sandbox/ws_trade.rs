@@ -10,7 +10,7 @@ use crate::{
         },
         token::Token,
     },
-    sandbox::clickhouse_api::datatype::clickhouse_trade_data::TardisTrade,
+    sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
     Exchange,
 };
 
@@ -52,9 +52,9 @@ impl MarketEvent<WsTrade>
 }
 
 // NOTE 这是按照Clickhouse中存储的数据类型构建的 WebsocketTrade 数据结构，回测选用。
-impl MarketEvent<TardisTrade>
+impl MarketEvent<MarketTrade>
 {
-    pub fn from_swap_trade_clickhouse(trade: TardisTrade, base: String, quote: String) -> Self
+    pub fn from_swap_trade_clickhouse(trade: MarketTrade, base: String, quote: String) -> Self
     {
         let exchange_time = trade.timestamp;
         let received_time = trade.timestamp; // NOTE 注意这是不对的 应该加上一个标准化的随机延迟。
@@ -73,9 +73,9 @@ impl MarketEvent<TardisTrade>
 }
 
 // 从 TradeDataFromClickhouse 到 WsTrade 的转换实现
-impl From<TardisTrade> for WsTrade
+impl From<MarketTrade> for WsTrade
 {
-    fn from(trade: TardisTrade) -> Self
+    fn from(trade: MarketTrade) -> Self
     {
         WsTrade { instId: trade.symbol,
                   side: trade.side,
@@ -104,7 +104,7 @@ pub fn parse_base_and_quote(symbol: &str) -> (String, String)
 #[allow(dead_code)]
 impl WsTrade
 {
-    pub(crate) fn from_ref(trade: &TardisTrade) -> Self
+    pub(crate) fn from_ref(trade: &MarketTrade) -> Self
     {
         WsTrade { // 这里假设 WsTrade 结构体字段和 TradeDataFromClickhouse 结构体字段对应
                   instId: trade.symbol.clone(),

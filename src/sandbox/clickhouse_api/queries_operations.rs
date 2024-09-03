@@ -13,7 +13,7 @@ use tokio::sync::RwLock;
 use crate::{
     common::Side,
     sandbox::{
-        clickhouse_api::{datatype::clickhouse_trade_data::TardisTrade, query_builder::ClickHouseQueryBuilder},
+        clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, query_builder::ClickHouseQueryBuilder},
         utils::chrono_operations::extract_date,
     },
 };
@@ -41,7 +41,7 @@ impl ClickHouseClient
     }
 }
 
-impl TardisTrade
+impl MarketTrade
 {
     /// 将 `side` 字符串解析为 `Side` 枚举
     pub fn parse_side(&self) -> Side
@@ -54,7 +54,7 @@ impl TardisTrade
     }
 }
 // 手动实现 Eq 和 PartialEq 特性
-impl PartialEq for TardisTrade
+impl PartialEq for MarketTrade
 {
     fn eq(&self, other: &Self) -> bool
     {
@@ -62,10 +62,10 @@ impl PartialEq for TardisTrade
     }
 }
 
-impl Eq for TardisTrade {}
+impl Eq for MarketTrade {}
 
 // 手动实现 PartialOrd 和 Ord 特性
-impl PartialOrd for TardisTrade
+impl PartialOrd for MarketTrade
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering>
     {
@@ -73,7 +73,7 @@ impl PartialOrd for TardisTrade
     }
 }
 
-impl Ord for TardisTrade
+impl Ord for MarketTrade
 {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering
     {
@@ -209,7 +209,7 @@ impl ClickHouseClient
         Ok(())
     }
 
-    pub async fn retrieve_all_trades(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<Vec<TardisTrade>, Error>
+    pub async fn retrieve_all_trades(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<Vec<MarketTrade>, Error>
     {
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         // let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
@@ -220,11 +220,11 @@ impl ClickHouseClient
                                                  .build();
 
         println!("[UniLinkExecution] : Constructed query {}", query);
-        let trade_datas = self.client.read().await.query(&query).fetch_all::<TardisTrade>().await?;
+        let trade_datas = self.client.read().await.query(&query).fetch_all::<MarketTrade>().await?;
         Ok(trade_datas)
     }
 
-    pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<TardisTrade, Error>
+    pub async fn retrieve_latest_trade(&self, exchange: &str, instrument: &str, date: &str, base: &str, quote: &str) -> Result<MarketTrade, Error>
     {
         let database_name = self.construct_database_name(exchange, instrument, "trades");
         let table_name = self.construct_table_name(exchange, instrument, "trades", date, base, quote);
@@ -235,22 +235,22 @@ impl ClickHouseClient
                                                  .limit(1)
                                                  .build();
         println!("[UniLinkExecution] : Constructed query :  {}", query);
-        let trade_data = self.client.read().await.query(&query).fetch_one::<TardisTrade>().await?;
+        let trade_data = self.client.read().await.query(&query).fetch_one::<MarketTrade>().await?;
         Ok(trade_data)
     }
 
-    pub async fn query_unioned_trade_table(&self, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<TardisTrade>, Error>
+    pub async fn query_unioned_trade_table(&self, exchange: &str, instrument: &str, channel: &str, date: &str) -> Result<Vec<MarketTrade>, Error>
     {
         let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
         let database = self.construct_database_name(exchange, instrument, "trades");
         let query = format!("SELECT exchange, symbol, side, price, timestamp, amount FROM {}.{} ORDER BY timestamp",
                             database, table_name);
         println!("[UniLinkExecution] : Executing query: {}", query);
-        let trade_datas = self.client.read().await.query(&query).fetch_all::<TardisTrade>().await?;
+        let trade_datas = self.client.read().await.query(&query).fetch_all::<MarketTrade>().await?;
         Ok(trade_datas)
     }
 
-    pub async fn cursor_public_trades<'a>(&'a self, exchange: &'a str, instrument: &'a str, date: &'a str, base: &'a str, quote: &'a str) -> Result<RowCursor<TardisTrade>>
+    pub async fn cursor_public_trades<'a>(&'a self, exchange: &'a str, instrument: &'a str, date: &'a str, base: &'a str, quote: &'a str) -> Result<RowCursor<MarketTrade>>
     {
         // 构造数据库名称和表名称
         let database_name = self.construct_database_name(exchange, instrument, "trades");
@@ -268,10 +268,10 @@ impl ClickHouseClient
         let client_ref = self.client.read().await;
 
         // 执行查询并获取游标
-        client_ref.query(&query).fetch::<TardisTrade>()
+        client_ref.query(&query).fetch::<MarketTrade>()
     }
 
-    pub async fn cursor_unioned_public_trades(&self, exchange: &str, instrument: &str, date: &str) -> Result<RowCursor<TardisTrade>>
+    pub async fn cursor_unioned_public_trades(&self, exchange: &str, instrument: &str, date: &str) -> Result<RowCursor<MarketTrade>>
     {
         // 构造数据库名称和表名称
         let database_name = self.construct_database_name(exchange, instrument, "trades");
@@ -289,7 +289,7 @@ impl ClickHouseClient
         let client_ref = self.client.read().await;
 
         // 执行查询并获取游标
-        client_ref.query(&query).fetch::<TardisTrade>()
+        client_ref.query(&query).fetch::<MarketTrade>()
     }
 
     pub async fn optimize_table(&self, table_path: &str) -> Result<(), Error>

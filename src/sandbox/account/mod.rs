@@ -38,7 +38,7 @@ use crate::{
     error::ExecutionError,
     sandbox::{
         account::account_config::{MarginMode, SandboxMode},
-        clickhouse_api::datatype::clickhouse_trade_data::TardisTrade,
+        clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
         instrument_orders::InstrumentOrders,
     },
     Exchange,
@@ -612,7 +612,7 @@ impl Account
     }
 
     /// 处理交易数据的方法
-    pub async fn handle_trade_data(&mut self, trade: TardisTrade) -> Result<(), ExecutionError>
+    pub async fn handle_trade_data(&mut self, trade: MarketTrade) -> Result<(), ExecutionError>
     {
         // 更新时间戳
         self.update_exchange_ts(trade.timestamp);
@@ -780,7 +780,7 @@ impl Account
         Ok(())
     }
 
-    pub async fn match_orders(&mut self, market_trade: &TardisTrade, instrument_kind: InstrumentKind) -> Vec<ClientTrade>
+    pub async fn match_orders(&mut self, market_trade: &MarketTrade, instrument_kind: InstrumentKind) -> Vec<ClientTrade>
     {
         let mut trades = Vec::new();
         // parse base from MarketTrade's symbol(which is formatted as base_quote)
