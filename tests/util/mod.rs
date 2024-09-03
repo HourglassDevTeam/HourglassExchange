@@ -114,7 +114,6 @@ pub async fn run_sample_exchange(
         .expect("Failed to build SandBoxExchange");
 
     // Running the exchange in local mode
-    println!("[run_default_exchange] : Sandbox exchange built successfully");
     sandbox_exchange.run_local().await;
     println!("[run_default_exchange] : Sandbox exchange run successfully on local mode.");
 }

@@ -159,7 +159,6 @@ fn assert_balance_equal_ignore_time(actual: &Balance, expected: &Balance) {
 #[allow(warnings)]
 async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient) {
     let actual_balances = client.fetch_balances().await.unwrap();
-    println!("actual balances: {:?}", actual_balances);
     // NOTE seems that fetch_balances is working.so that the response_rx should be working.
     let initial_balances = initial_balances().await;
 
@@ -181,7 +180,6 @@ async fn test_3_open_limit_buy_order(
     event_sandbox_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
     let actual_balances = client.fetch_balances().await.unwrap();
-    println!("actual balances: {:?}", actual_balances);
     let open_request = order_request_limit(
         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),
@@ -190,10 +188,7 @@ async fn test_3_open_limit_buy_order(
         1.0,
     );
 
-    println!("[test_3_open_limit_buy_order] : Sending order request via SandBoxClient : {:?}", open_request);
-
     let new_orders = client.open_orders(vec![open_request]).await;
-    println!("[test_3_open_limit_buy_order]: {:?}", new_orders);
     let expected_new_order = open_order(
         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),
@@ -203,7 +198,6 @@ async fn test_3_open_limit_buy_order(
         1.0,
         0.0,
     );
-    println!("[test_3_open_limit_buy_order] : expected_new_order: {:?}", expected_new_order);
 
     assert_eq!(new_orders[0].as_ref().unwrap().cid, expected_new_order.cid);
     // //
@@ -227,7 +221,6 @@ async fn test_3_open_limit_buy_order(
                  kind: AccountEventKind::OrdersNew(new_orders),
                  ..
              }) => {
-            println!("Orders new event received.");
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].cid, expected_new_order.cid);
         }
@@ -238,7 +231,7 @@ async fn test_3_open_limit_buy_order(
 
     match event_sandbox_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {
-            println!("No additional account events, as expected.");
+            println!("No more additional account events, as expected.");
         }
         other => {
             panic!("Unexpected additional account event: {:?}", other);
