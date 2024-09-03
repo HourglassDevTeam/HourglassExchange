@@ -34,6 +34,7 @@ pub enum OrderRole
 #[cfg(test)]
 mod tests
 {
+    use identification::OrderId;
     use super::*;
     use crate::common::order::states::{request_cancel::RequestCancel, request_open::RequestOpen};
 
@@ -63,7 +64,7 @@ mod tests
     #[test]
     fn request_cancel_should_create_from_order_id()
     {
-        let order_id = crate::common::order::identification::OrderId(123);
+        let order_id = OrderId(123);
         let cancel_request: RequestCancel = order_id.clone().into();
         assert_eq!(cancel_request.id, order_id);
     }
