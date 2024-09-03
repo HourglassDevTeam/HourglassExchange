@@ -156,7 +156,7 @@ where
         kind: OrderInstruction::Limit,
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
-        timestamp: chrono::Utc::now().timestamp_millis(), // 使用当前时间戳
+        timestamp:1233312345124, // 使用当前时间戳
         cid,
         side,
         state: RequestOpen {
