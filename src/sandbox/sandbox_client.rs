@@ -34,7 +34,7 @@ pub type RequestCancelOrders = (Vec<Order<RequestCancel>>, Sender<CancelOrderRes
 #[derive(Debug)]
 pub enum SandBoxClientEvent
 {
-    // FetchMarketEvent(MarketEvent<MarketTrade>),
+    // FetchMarketEvent(MarketTrade),
     FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExecutionError>>),
     FetchBalances(Sender<Result<Vec<TokenBalance>, ExecutionError>>),
     OpenOrders(RequestOpenOrders),
@@ -45,9 +45,9 @@ pub enum SandBoxClientEvent
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    type Config = UnboundedSender<SandBoxClientEvent>;
-
     const CLIENT_KIND: Exchange = Exchange::SandBox;
+
+    type Config = UnboundedSender<SandBoxClientEvent>;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {

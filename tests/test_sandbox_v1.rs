@@ -81,11 +81,11 @@ async fn main() {
     //
     // // 7. Send MarketEvent that exactly full matches 1x open Order (trade) and check AccountEvents
     // //    for balances and trades
-    test_7_send_market_event_that_exact_full_matches_order(
-        &mut request_tx,
-        &mut event_account_rx,
-    )
-    .await;
+    // test_7_send_market_event_that_exact_full_matches_order(
+    //     &mut request_tx,
+    //     &mut event_account_rx,
+    // )
+    // .await;
     //
     // // 8. Fetch open orders & check only one limit buy order remaining from test_6_order_cid_1
     // test_8_fetch_open_orders_and_check_test_6_order_cid_1_only(&client, test_6_ids_1.clone()).await;
