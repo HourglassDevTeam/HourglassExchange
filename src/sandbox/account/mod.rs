@@ -1,21 +1,3 @@
-use futures::future::join_all;
-use mpsc::UnboundedSender;
-use oneshot::Sender;
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
-/// FIXME respond function is not used in some of the functions.
-use std::{
-    fmt::Debug,
-    sync::{
-        atomic::{AtomicI64, Ordering},
-        Arc,
-    },
-    time::{SystemTime, UNIX_EPOCH},
-};
-use dashmap::DashMap;
-use tokio::sync::{mpsc, oneshot, RwLock};
-use tracing::warn;
-use uuid::Uuid;
-use dashmap::mapref::one::{Ref, RefMut as DashMapRefMut};
 use crate::{
     common::{
         balance::{Balance, BalanceDelta, TokenBalance},
@@ -45,6 +27,24 @@ use crate::{
 };
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
+use dashmap::mapref::one::{Ref, RefMut as DashMapRefMut};
+use dashmap::DashMap;
+use futures::future::join_all;
+use mpsc::UnboundedSender;
+use oneshot::Sender;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
+/// FIXME respond function is not used in some of the functions.
+use std::{
+    fmt::Debug,
+    sync::{
+        atomic::{AtomicI64, Ordering},
+        Arc,
+    },
+    time::{SystemTime, UNIX_EPOCH},
+};
+use tokio::sync::{mpsc, oneshot, RwLock};
+use tracing::warn;
+use uuid::Uuid;
 
 pub mod account_config;
 pub mod account_latency;
@@ -1343,34 +1343,4 @@ mod tests
         // 验证时间戳是否已更新
         assert_eq!(account.get_exchange_ts().unwrap(), 1625247600000);
     }
-
-
-    // NOTE 需要检查atomic_open的response的发送。maybe run the default sample exchange .
-    // #[tokio::test]
-    // async fn test_atomic_open() {
-    //     let mut account = create_test_account().await;
-    //
-    //     let order = Order {
-    //         kind: OrderInstruction::Limit,
-    //         exchange: Exchange::SandBox,
-    //         instrument: Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
-    //         timestamp: 1625247600000,
-    //         cid: ClientOrderId(Some("validCID123".into())),
-    //         side: Side::Buy,
-    //         state: RequestOpen {
-    //             price: 100.0,
-    //             size: 2.0,
-    //             reduce_only: false,
-    //         },
-    //     };
-    //
-    //     let result = account.atomic_open(100.0, order.clone()).await;
-    //     assert!(result.is_ok());
-    //
-    //     let open_order = result.unwrap();
-    //     assert_eq!(open_order.state.price, 100.0);
-    //     assert_eq!(open_order.state.size, 2.0);
-    //     assert_eq!(open_order.state.filled_quantity, 0.0);
-    //     assert_eq!(open_order.state.order_role, OrderRole::Maker);
-    // }
 }
