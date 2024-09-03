@@ -10,7 +10,7 @@ use crate::{
         trade::{ClientTrade, ClientTradeId},
         Side,
     },
-    error::ExecutionError,
+    error::ExchangeError,
     sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
 };
 
@@ -198,7 +198,7 @@ impl InstrumentOrders
 
     // 辅助函数：生成 ClientTrade
     // NOTE 直接生成 ClientTrade 事件而不生成 OrderFill（例如 FullyFill 或 PartialFill）在某些场景下是合理的，但也有一些需要注意的地方。
-    pub fn generate_client_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> Result<ClientTrade, ExecutionError>
+    pub fn generate_client_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> Result<ClientTrade, ExchangeError>
     {
         let fee = trade_quantity * order.state.price * fees_percent;
 

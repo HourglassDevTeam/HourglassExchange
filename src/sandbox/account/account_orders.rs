@@ -9,7 +9,7 @@ use crate::{
         },
         Side,
     },
-    error::ExecutionError,
+    error::ExchangeError,
     sandbox::{
         account::account_latency::{fluctuate_latency, AccountLatency},
         instrument_orders::InstrumentOrders,
@@ -147,12 +147,12 @@ impl AccountOrders
 
     /// 返回指定 [`Instrument`] 的 [`InstrumentOrders`] 的可变引用。
 
-    pub fn get_ins_orders_mut(&self, instrument: &Instrument) -> Result<RefMut<Instrument, InstrumentOrders>, ExecutionError>
+    pub fn get_ins_orders_mut(&self, instrument: &Instrument) -> Result<RefMut<Instrument, InstrumentOrders>, ExchangeError>
     {
         println!("[get_ins_orders_mut]: {:?}", instrument);
         self.instrument_orders_map
             .get_mut(instrument)
-            .ok_or_else(|| ExecutionError::SandBox(format!("Sandbox exchange is not configured for Instrument: {instrument}")))
+            .ok_or_else(|| ExchangeError::SandBox(format!("Sandbox exchange is not configured for Instrument: {instrument}")))
     }
 
     /// 为每个 [`Instrument`] 获取出价和要价 [`Order<Open>`]。
@@ -224,7 +224,7 @@ impl AccountOrders
     /// - 对于 `PostOnly` 类型的订单，调用 `determine_post_only_order_role` 来判断订单是否能作为 Maker，否则拒绝该订单。
     /// - 对于 `ImmediateOrCancel` 和 `FillOrKill` 类型的订单，总是返回 `OrderRole::Taker`，因为这些订单需要立即成交。
     /// - 对于 `GoodTilCancelled` 类型的订单，按照限价订单的逻辑来判断角色。
-    pub fn determine_maker_taker(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    pub fn determine_maker_taker(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>
     {
         match order.kind {
             | OrderInstruction::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
@@ -263,7 +263,7 @@ impl AccountOrders
     /// - 对于卖单 (`Side::Sell`):
     ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
     ///   - 否则，返回 `OrderRole::Taker`。
-    pub(crate) fn determine_limit_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    pub(crate) fn determine_limit_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>
     {
         match order.side {
             | Side::Buy => {
@@ -311,7 +311,7 @@ impl AccountOrders
     /// - 对于卖单 (`Side::Sell`):
     ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
     ///   - 否则，调用 `self.reject_post_only_order(order)` 拒绝订单，并返回错误。
-    pub(crate) fn determine_post_only_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    pub(crate) fn determine_post_only_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>
     {
         match order.side {
             | Side::Buy => {
@@ -319,7 +319,7 @@ impl AccountOrders
                     Ok(OrderRole::Maker)
                 }
                 else {
-                    Err(ExecutionError::OrderRejected("PostOnly order should be rejected".into()))
+                    Err(ExchangeError::OrderRejected("PostOnly order should be rejected".into()))
                     // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
             }
@@ -328,7 +328,7 @@ impl AccountOrders
                     Ok(OrderRole::Maker)
                 }
                 else {
-                    Err(ExecutionError::OrderRejected("PostOnly order should be rejected".into()))
+                    Err(ExchangeError::OrderRejected("PostOnly order should be rejected".into()))
                     // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
             }

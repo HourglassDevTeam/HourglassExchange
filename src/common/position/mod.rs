@@ -14,7 +14,7 @@ use crate::{
         trade::ClientTrade,
         Side,
     },
-    error::ExecutionError,
+    error::ExchangeError,
     sandbox::account::account_config::AccountConfig,
     Exchange,
 };
@@ -59,7 +59,7 @@ impl AccountPositions
                                               exchange_ts: i64,
                                               machine_id: u64,
                                               counter: u64)
-                                              -> Result<PerpetualPosition, ExecutionError>
+                                              -> Result<PerpetualPosition, ExchangeError>
     {
         let maker_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
         let taker_rate = config.get_taker_fee_rate(&trade.instrument.kind)?;
@@ -93,7 +93,7 @@ impl AccountPositions
                                                       .unrealised_pnl(0.0) // 初始化为 0.0
                                                       .realised_pnl(0.0) // 初始化为 0.0
                                                       .build()
-                                                      .map_err(|err| ExecutionError::SandBox(format!("Failed to build position meta: {}", err)))?;
+                                                      .map_err(|err| ExchangeError::SandBox(format!("Failed to build position meta: {}", err)))?;
 
         // 计算 liquidation_price
         let liquidation_price = if trade.side == Side::Buy {
@@ -111,7 +111,7 @@ impl AccountPositions
                                                           .liquidation_price(liquidation_price)
                                                           .margin(initial_margin) // NOTE DOUBLE CHECK
                                                           .build()
-                                                          .ok_or_else(|| ExecutionError::SandBox("Failed to build new position".to_string()))?;
+                                                          .ok_or_else(|| ExchangeError::SandBox("Failed to build new position".to_string()))?;
 
         Ok(new_position)
     }

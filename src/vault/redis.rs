@@ -13,9 +13,9 @@
 ///
 /// `PhantomData<Statistic>` 用于标记 `RedisVault` 和 `RedisVaultBuilder` 结构体中的 `Statistic` 泛型参数。
 /// 这意味着即使 `Statistic` 在运行时没有被直接使用，Rust 的类型系统仍然会确保在编译时检查这个泛型参数的类型安全性。
-use crate::error::ExecutionError;
+use crate::error::ExchangeError;
 use crate::{
-    error::ExecutionError::RedisInitialisationError,
+    error::ExchangeError::RedisInitialisationError,
     sandbox::account::account_config::SandboxMode,
     vault::summariser::PositionSummariser,
 };
@@ -131,7 +131,7 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
     }
 
     /// 构建 RedisVault 实例。
-    pub fn build(self) -> Result<RedisVault<Statistic>, ExecutionError>
+    pub fn build(self) -> Result<RedisVault<Statistic>, ExchangeError>
     {
         Ok(RedisVault {
             sandbox_mode: self.config.ok_or(RedisInitialisationError("config".to_string()))?, // 处理配置

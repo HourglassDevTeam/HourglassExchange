@@ -1,5 +1,5 @@
 use crate::{
-    error::ExecutionError,
+    error::ExchangeError,
     network::{event::NetworkEvent, is_port_in_use},
     sandbox::sandbox_client::SandBoxClientEvent,
 };
@@ -145,11 +145,11 @@ impl ExchangeInitiator
         Self { account: Some(value), ..self }
     }
 
-    pub fn initiate(self) -> Result<SandBoxExchange, ExecutionError>
+    pub fn initiate(self) -> Result<SandBoxExchange, ExchangeError>
     {
-        Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
+        Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExchangeError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
                              // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::InitiatorIncomplete("market_event_tx".to_string()))?,
-                             account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
+                             account: self.account.ok_or_else(|| ExchangeError::InitiatorIncomplete("account".to_string()))? })
     }
 
     // pub fn trade_event_source(self, value: TradeEventSource) -> Self

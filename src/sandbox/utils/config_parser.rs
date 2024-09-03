@@ -1,4 +1,4 @@
-use crate::{error::ExecutionError, sandbox::account::account_config::AccountConfig};
+use crate::{error::ExchangeError, sandbox::account::account_config::AccountConfig};
 use std::{fs, path::Path};
 
 /// 读取配置文件，并返回`AccountConfig`结构体实例。
@@ -9,41 +9,41 @@ use std::{fs, path::Path};
 /// - `ExecutionError::ConfigMissing`: 如果配置文件 `config.toml` 不存在。
 /// - `ExecutionError::ConfigParseError`: 如果TOML解析失败。
 /// - `ExecutionError::InternalError`: 如果读取文件时发生IO错误。
-pub fn read_config_file() -> Result<AccountConfig, ExecutionError>
+pub fn read_config_file() -> Result<AccountConfig, ExchangeError>
 {
     // 配置文件的路径
     let config_path = Path::new("config.toml");
 
     // 检查配置文件是否存在
     if !config_path.exists() {
-        return Err(ExecutionError::ConfigMissing("config.toml not found in the project root directory".to_string()));
+        return Err(ExchangeError::ConfigMissing("config.toml not found in the project root directory".to_string()));
     }
 
     // 读取配置文件内容
-    let config_content = fs::read_to_string(config_path).map_err(ExecutionError::from)?;
+    let config_content = fs::read_to_string(config_path).map_err(ExchangeError::from)?;
 
     // 解析TOML文件并转换为`AccountConfig`结构体
-    let config: AccountConfig = toml::from_str(&config_content).map_err(ExecutionError::from)?;
+    let config: AccountConfig = toml::from_str(&config_content).map_err(ExchangeError::from)?;
 
     // 返回解析后的配置
     Ok(config)
 }
 
 // 将`std::io::Error`转换为自定义的`ExecutionError`
-impl From<std::io::Error> for ExecutionError
+impl From<std::io::Error> for ExchangeError
 {
     fn from(err: std::io::Error) -> Self
     {
-        ExecutionError::InternalError(format!("IO error: {}", err))
+        ExchangeError::InternalError(format!("IO error: {}", err))
     }
 }
 
 // 将TOML解析错误转换为自定义的`ExecutionError`
-impl From<toml::de::Error> for ExecutionError
+impl From<toml::de::Error> for ExchangeError
 {
     fn from(err: toml::de::Error) -> Self
     {
-        ExecutionError::ConfigParseError(format!("TOML error: {}", err))
+        ExchangeError::ConfigParseError(format!("TOML error: {}", err))
     }
 }
 
@@ -135,7 +135,7 @@ mod tests
 
         // 调用函数并检查结果
         let config_result = read_config_file();
-        assert!(matches!(config_result, Err(ExecutionError::ConfigMissing(_))),
+        assert!(matches!(config_result, Err(ExchangeError::ConfigMissing(_))),
                 "Expected ConfigMissing error, got {:?}",
                 config_result);
 

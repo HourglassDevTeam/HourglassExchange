@@ -35,7 +35,7 @@ use crate::{
         trade::ClientTrade,
         Side,
     },
-    error::ExecutionError,
+    error::ExchangeError,
     sandbox::{
         account::account_config::{MarginMode, SandboxMode},
         clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
@@ -167,26 +167,26 @@ impl Account
         self.balances.clone().into_iter().map(|(token, balance)| TokenBalance::new(token, balance)).collect()
     }
 
-    pub async fn fetch_balances_and_respond(&self, response_tx: Sender<Result<Vec<TokenBalance>, ExecutionError>>)
+    pub async fn fetch_balances_and_respond(&self, response_tx: Sender<Result<Vec<TokenBalance>, ExchangeError>>)
     {
         let balances = self.get_balances().await;
         respond(response_tx, Ok(balances));
     }
 
-    pub async fn fetch_positions_and_respond(&self, response_tx: Sender<Result<AccountPositions, ExecutionError>>)
+    pub async fn fetch_positions_and_respond(&self, response_tx: Sender<Result<AccountPositions, ExchangeError>>)
     {
         let positions = self.positions.clone();
         respond(response_tx, Ok(positions));
     }
 
     /// 获取指定 `Instrument` 的仓位
-    pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<Position>, ExecutionError>
+    pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>
     {
         let positions = &self.positions; // 获取锁
 
         match instrument.kind {
             | InstrumentKind::Spot => {
-                return Err(ExecutionError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)));
+                return Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)));
             }
             | InstrumentKind::Perpetual => {
                 let perpetual_positions = &positions.perpetual_pos;
@@ -221,19 +221,19 @@ impl Account
     }
 
     /// 返回指定[`Token`]的[`Balance`]的引用。
-    pub fn get_balance(&self, token: &Token) -> Result<Ref<Token, Balance>, ExecutionError> {
+    pub fn get_balance(&self, token: &Token) -> Result<Ref<Token, Balance>, ExchangeError> {
         self.balances
             .get(token)
-            .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {:?}", token)))
+            .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for Token: {:?}", token)))
     }
 
 
 
     /// 返回指定[`Token`]的[`Balance`]的可变引用。
-    pub fn get_balance_mut(&mut self, token: &Token) -> Result<DashMapRefMut<'_, Token, Balance>, ExecutionError> {
+    pub fn get_balance_mut(&mut self, token: &Token) -> Result<DashMapRefMut<'_, Token, Balance>, ExchangeError> {
         self.balances
             .get_mut(token)
-            .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {:?}", token)))
+            .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for Token: {:?}", token)))
     }
 
     pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&Token, f64)
@@ -267,37 +267,37 @@ impl Account
     }
 
     /// 判断client是否有足够的可用[`Balance`]来执行[`Order<RequestOpen>`]。
-    pub fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExecutionError>
+    pub fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExchangeError>
     {
         let available = self.get_balance(token)?.available;
         if available >= required_balance {
             Ok(())
         }
         else {
-            Err(ExecutionError::InsufficientBalance(token.clone()))
+            Err(ExchangeError::InsufficientBalance(token.clone()))
         }
     }
 
-    pub fn determine_position_direction_mode(&self) -> Result<PositionDirectionMode, ExecutionError>
+    pub fn determine_position_direction_mode(&self) -> Result<PositionDirectionMode, ExchangeError>
     {
         let position_mode = self.config.position_mode.clone();
         Ok(position_mode)
     }
 
-    pub fn determine_position_margin_mode(&self) -> Result<PositionMarginMode, ExecutionError>
+    pub fn determine_position_margin_mode(&self) -> Result<PositionMarginMode, ExchangeError>
     {
         let position_margin_mode = self.config.position_margin_mode.clone();
         Ok(position_margin_mode)
     }
 
-    pub fn determine_margin_mode(&self) -> Result<MarginMode, ExecutionError>
+    pub fn determine_margin_mode(&self) -> Result<MarginMode, ExchangeError>
     {
         let margin_mode = self.config.margin_mode.clone();
         Ok(margin_mode)
     }
 
     /// 更新指定 `Instrument` 的仓位
-    pub async fn set_position(&mut self, position: Position) -> Result<(), ExecutionError>
+    pub async fn set_position(&mut self, position: Position) -> Result<(), ExchangeError>
     {
         match position {
             | Position::Perpetual(pos) => self.set_perpetual_position(pos).await,
@@ -320,7 +320,7 @@ impl Account
     /// # 返回值
     ///
     /// 如果更新成功，返回 `Ok(())`，否则返回一个 `ExecutionError`。
-    async fn set_perpetual_position(&mut self, pos: PerpetualPosition) -> Result<(), ExecutionError>
+    async fn set_perpetual_position(&mut self, pos: PerpetualPosition) -> Result<(), ExchangeError>
     {
         // 获取账户的锁，确保在更新仓位信息时没有并发访问的问题
         let positions = &mut self.positions;
@@ -342,26 +342,26 @@ impl Account
     }
 
     /// 更新 FuturePosition 的方法（占位符）
-    async fn set_future_position(&mut self, _pos: FuturePosition) -> Result<(), ExecutionError>
+    async fn set_future_position(&mut self, _pos: FuturePosition) -> Result<(), ExchangeError>
     {
         todo!("[UniLinkExecution] : Updating Future positions is not yet implemented")
     }
 
     /// 更新 OptionPosition 的方法（占位符）
-    async fn set_option_position(&mut self, _pos: OptionPosition) -> Result<(), ExecutionError>
+    async fn set_option_position(&mut self, _pos: OptionPosition) -> Result<(), ExchangeError>
     {
         todo!("[UniLinkExecution] : Updating Option positions is not yet implemented")
     }
 
     /// 更新 LeveragedTokenPosition 的方法（占位符）
-    async fn set_leveraged_token_position(&mut self, _pos: LeveragedTokenPosition) -> Result<(), ExecutionError>
+    async fn set_leveraged_token_position(&mut self, _pos: LeveragedTokenPosition) -> Result<(), ExchangeError>
     {
         todo!("[UniLinkExecution] : Updating Leveraged Token positions is not yet implemented")
     }
 
     /// 检查在 AccountPositions 中是否已经存在该 instrument 的某个仓位
     /// 需要首先从 open 订单中确定 InstrumentKind，因为仓位类型各不相同
-    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExecutionError>
+    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExchangeError>
     {
         let positions_lock = &self.positions; // 获取锁
 
@@ -373,25 +373,25 @@ impl Account
         Ok(false)
     }
 
-    async fn check_position_direction_conflict(&self, instrument: &Instrument, side: Side) -> Result<(), ExecutionError>
+    async fn check_position_direction_conflict(&self, instrument: &Instrument, side: Side) -> Result<(), ExchangeError>
     {
         let positions_lock = &self.positions;
 
         match instrument.kind {
             | InstrumentKind::Spot => {
-                return Err(ExecutionError::NotImplemented("Spot position conflict check not implemented".into()));
+                return Err(ExchangeError::NotImplemented("Spot position conflict check not implemented".into()));
             }
             | InstrumentKind::CommodityOption => {
-                return Err(ExecutionError::NotImplemented("CommodityOption position conflict check not implemented".into()));
+                return Err(ExchangeError::NotImplemented("CommodityOption position conflict check not implemented".into()));
             }
             | InstrumentKind::CommodityFuture => {
-                return Err(ExecutionError::NotImplemented("CommodityFuture position conflict check not implemented".into()));
+                return Err(ExchangeError::NotImplemented("CommodityFuture position conflict check not implemented".into()));
             }
             | InstrumentKind::Perpetual => {
                 let perpetual_positions = &positions_lock.perpetual_pos;
                 for pos in perpetual_positions {
                     if pos.meta.instrument == *instrument && pos.meta.side != side {
-                        return Err(ExecutionError::InvalidDirection);
+                        return Err(ExchangeError::InvalidDirection);
                     }
                 }
             }
@@ -399,7 +399,7 @@ impl Account
                 let futures_positions = &positions_lock.futures_pos;
                 for pos in futures_positions {
                     if pos.meta.instrument == *instrument && pos.meta.side != side {
-                        return Err(ExecutionError::InvalidDirection);
+                        return Err(ExchangeError::InvalidDirection);
                     }
                 }
             }
@@ -407,7 +407,7 @@ impl Account
                 let option_positions = &positions_lock.option_pos;
                 for pos in option_positions {
                     if pos.meta.instrument == *instrument && pos.meta.side != side {
-                        return Err(ExecutionError::InvalidDirection);
+                        return Err(ExchangeError::InvalidDirection);
                     }
                 }
             }
@@ -415,7 +415,7 @@ impl Account
                 let margin_positions = &positions_lock.margin_pos;
                 for pos in margin_positions {
                     if pos.meta.instrument == *instrument && pos.meta.side != side {
-                        return Err(ExecutionError::InvalidDirection);
+                        return Err(ExchangeError::InvalidDirection);
                     }
                 }
             }
@@ -425,7 +425,7 @@ impl Account
 
     /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
-    pub async fn apply_open_order_changes(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExecutionError>
+    pub async fn apply_open_order_changes(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExchangeError>
     {
         // println!("[UniLinkExecution] : Starting apply_open_order_changes: {:?}, with balance: {:?}", open, required_balance);
 
@@ -474,7 +474,7 @@ impl Account
                 }
             },
             | (_, _) => {
-                return Err(ExecutionError::SandBox(format!(
+                return Err(ExchangeError::SandBox(format!(
                     "[UniLinkExecution] : Unsupported InstrumentKind or PositionMarginMode for open order: {:?}",
                     open.instrument.kind
                 )));
@@ -513,7 +513,7 @@ impl Account
     }
 
     /// 从交易中更新余额并返回 [`AccountEvent`]
-    pub async fn apply_trade_changes(&mut self, trade: &ClientTrade) -> Result<AccountEvent, ExecutionError>
+    pub async fn apply_trade_changes(&mut self, trade: &ClientTrade) -> Result<AccountEvent, ExchangeError>
     {
         let Instrument { base, quote, kind, .. } = &trade.instrument;
         let fee = trade.fees; // 直接从 TradeEvent 中获取费用
@@ -580,14 +580,14 @@ impl Account
     /// `update_exchange_timestamp` 是基本的时间戳更新方法，用于更新 `exchange_timestamp` 值。
     /// `generate_request_id` 生成请求id。
 
-    pub async fn get_fee(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExecutionError>
+    pub async fn get_fee(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExchangeError>
     {
         // 直接访问 account 的 config 字段
         let commission_rates = self.config
                                    .fees_book
                                    .get(instrument_kind)
                                    .cloned()
-                                   .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
+                                   .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
 
         match role {
             | OrderRole::Maker => Ok(commission_rates.maker_fees),
@@ -595,7 +595,7 @@ impl Account
         }
     }
 
-    pub fn get_exchange_ts(&self) -> Result<i64, ExecutionError>
+    pub fn get_exchange_ts(&self) -> Result<i64, ExchangeError>
     {
         // 直接访问 account 的 exchange_timestamp 字段
         let exchange_ts = self.exchange_timestamp.load(Ordering::SeqCst);
@@ -612,7 +612,7 @@ impl Account
     }
 
     /// 处理交易数据的方法
-    pub async fn handle_trade_data(&mut self, trade: MarketTrade) -> Result<(), ExecutionError>
+    pub async fn handle_trade_data(&mut self, trade: MarketTrade) -> Result<(), ExchangeError>
     {
         // 更新时间戳
         self.update_exchange_ts(trade.timestamp);
@@ -626,7 +626,7 @@ impl Account
     /// `atomic_open` 尝试以原子操作方式打开一个订单，确保在验证和更新账户余额后安全地打开订单。
     /// `required_available_balance` 计算打开订单所需的可用余额，用于验证账户中是否有足够的资金执行订单。
 
-    pub async fn fetch_orders_open_and_respond(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExecutionError>>)
+    pub async fn fetch_orders_open_and_respond(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExchangeError>>)
     {
         let orders = self.orders.read().await.fetch_all();
         respond(response_tx, Ok(orders));
@@ -634,8 +634,8 @@ impl Account
 
     pub async fn open_orders(&mut self,
                              open_requests: Vec<Order<RequestOpen>>,
-                             response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExecutionError>>>)
-                             -> Result<(), ExecutionError>
+                             response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExchangeError>>>)
+                             -> Result<(), ExchangeError>
     {
         let mut open_results = Vec::new();
 
@@ -658,30 +658,30 @@ impl Account
                 }
             };
 
-            let open_result = self.atomic_open(current_price, processed_request).await;
+            let open_result = self.attempt_atomic_open(current_price, processed_request).await;
             open_results.push(open_result);
         }
 
         if let Err(e) = response_tx.send(open_results) {
-            return Err(ExecutionError::SandBox(format!("Failed to send open order results: {:?}", e)));
+            return Err(ExchangeError::SandBox(format!("Failed to send open order results: {:?}", e)));
         }
 
         Ok(())
     }
 
-    pub async fn atomic_open(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExecutionError>
+    pub async fn attempt_atomic_open(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError>
     {
         Self::validate_order_instruction(order.kind)?;
-        println!("atomic_open: {:?}", order);
+        println!("[attempt_atomic_open]: {:?}", order);
         // 提前声明所需的变量
         let order_role = {
             let orders_guard = self.orders.read().await; // 使用读锁来判断订单角色
             orders_guard.determine_maker_taker(&order, current_price)?
         };
-        println!("order_role: {:?}", order_role);
+        println!("[attempt_atomic_open]: order_role: {:?}", order_role);
         // 计算所需的可用余额，尽量避免锁操作
         let (token, required_balance) = self.required_available_balance(&order, current_price).await;
-        println!("required_balance: {:?}", required_balance);
+        println!("[attempt_atomic_open]: required_balance: {:?}", required_balance);
         // 检查余额是否充足，并在锁定后更新订单
         self.has_sufficient_available_balance(token, required_balance)?;
 
@@ -691,21 +691,22 @@ impl Account
             orders_guard.get_ins_orders_mut(&open_order.instrument)?.add_order_open(open_order.clone());
             open_order
         };
-        println!("open_order: {:?}", open_order);
+        println!("[attempt_atomic_open]: open_order: {:?}", open_order);
         // 应用订单变更并发送事件 NOTE test3 failed because of this line.
         let balance_event = self.apply_open_order_changes(&open_order, required_balance).await?;
-        println!("balance_event: {:?}",balance_event);
+        println!("[attempt_atomic_open]: balance_event: {:?}",balance_event);
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
-        println!("exchange_timestamp: {:?}",exchange_timestamp);
+        println!("[attempt_atomic_open]: exchange_timestamp: {:?}",exchange_timestamp);
+
         self.account_event_tx
             .send(balance_event)
-            .expect("[UniLinkExecution] : Client offline - Failed to send AccountEvent::Balance");
+            .expect("[attempt_atomic_open]: Client offline - Failed to send AccountEvent::Balance");
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
                                  exchange: Exchange::SandBox,
                                  kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
-            .expect("[UniLinkExecution] : Client offline - Failed to send AccountEvent::Trade");
+            .expect("[attempt_atomic_open]:  Client offline - Failed to send AccountEvent::Trade");
         Ok(open_order)
     }
 
@@ -716,7 +717,7 @@ impl Account
     /// `get_orders_for_instrument` 获取与特定金融工具相关的订单，用于进一步的订单匹配操作。
     /// `determine_fees_percent` 根据金融工具类型和订单方向确定适用的费用百分比。
 
-    pub fn validate_order_instruction(kind: OrderInstruction) -> Result<(), ExecutionError>
+    pub fn validate_order_instruction(kind: OrderInstruction) -> Result<(), ExchangeError>
     {
         match kind {
             | OrderInstruction::Market
@@ -730,17 +731,17 @@ impl Account
         }
     }
 
-    pub fn validate_order_request_open(order: &Order<RequestOpen>) -> Result<(), ExecutionError>
+    pub fn validate_order_request_open(order: &Order<RequestOpen>) -> Result<(), ExchangeError>
     {
         // 检查是否提供了有效的 ClientOrderId
         if let Some(cid) = &order.cid.0 {
             if cid.trim().is_empty() {
-                return Err(ExecutionError::InvalidRequestOpen("ClientOrderId is empty".into()));
+                return Err(ExchangeError::InvalidRequestOpen("ClientOrderId is empty".into()));
             }
 
             // 使用 validate_id_format 验证 ID 格式
             if !ClientOrderId::validate_id_format(cid) {
-                return Err(ExecutionError::InvalidRequestOpen(format!("Invalid ClientOrderId format: {}", cid)));
+                return Err(ExchangeError::InvalidRequestOpen(format!("Invalid ClientOrderId format: {}", cid)));
             }
         }
 
@@ -749,32 +750,32 @@ impl Account
 
         // 检查价格是否合法（应为正数）
         if order.state.price <= 0.0 {
-            return Err(ExecutionError::InvalidRequestOpen(format!("Invalid price: {}", order.state.price)));
+            return Err(ExchangeError::InvalidRequestOpen(format!("Invalid price: {}", order.state.price)));
         }
 
         // 检查数量是否合法（应为正数）
         if order.state.size <= 0.0 {
-            return Err(ExecutionError::InvalidRequestOpen(format!("Invalid size: {}", order.state.size)));
+            return Err(ExchangeError::InvalidRequestOpen(format!("Invalid size: {}", order.state.size)));
         }
 
         // 检查基础货币和报价货币是否相同
         if order.instrument.base == order.instrument.quote {
-            return Err(ExecutionError::InvalidRequestOpen(format!("Base and Quote tokens must be different: {}", order.instrument.base)));
+            return Err(ExchangeError::InvalidRequestOpen(format!("Base and Quote tokens must be different: {}", order.instrument.base)));
         }
 
         Ok(())
     }
 
-    pub fn validate_order_request_cancel(order: &Order<RequestCancel>) -> Result<(), ExecutionError>
+    pub fn validate_order_request_cancel(order: &Order<RequestCancel>) -> Result<(), ExchangeError>
     {
         // 检查是否提供了有效的 OrderId
         if order.state.id.value() == 0 {
-            return Err(ExecutionError::InvalidRequestCancel("OrderId is missing or invalid".into()));
+            return Err(ExchangeError::InvalidRequestCancel("OrderId is missing or invalid".into()));
         }
 
         // 检查基础货币和报价货币是否相同
         if order.instrument.base == order.instrument.quote {
-            return Err(ExecutionError::InvalidRequestCancel("Base and Quote tokens must be different".into()));
+            return Err(ExchangeError::InvalidRequestCancel("Base and Quote tokens must be different".into()));
         }
 
         Ok(())
@@ -882,7 +883,7 @@ impl Account
     /// `cancel_orders` 处理一组订单取消请求，异步执行取消操作，并将结果发送回调用者。
     /// `try_cancel_order_atomic` 尝试以原子操作方式取消一个订单，确保在取消订单后更新账户余额，并发送取消事件。
     /// `cancel_orders_all` 取消所有打开的订单，发送取消结果给调用者，并处理可能的错误情况。
-    pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExecutionError>>>)
+    pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExchangeError>>>)
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
                                                             let mut this = self.clone();
@@ -894,7 +895,7 @@ impl Account
         response_tx.send(cancel_results).unwrap_or(());
     }
 
-    pub async fn process_cancel_request_into_cancelled_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExecutionError>
+    pub async fn process_cancel_request_into_cancelled_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExchangeError>
     {
         Self::validate_order_request_cancel(&request)?;
         // 首先使用读锁来查找并验证订单是否存在，同时减少写锁的持有时间
@@ -909,14 +910,14 @@ impl Account
                     let index = orders.bids
                                       .par_iter()
                                       .position_any(|bid| bid.state.id == request.state.id)
-                                      .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                                      .ok_or(ExchangeError::OrderNotFound(request.cid))?;
                     orders.bids.remove(index)
                 }
                 | Side::Sell => {
                     let index = orders.asks
                                       .par_iter()
                                       .position_any(|ask| ask.state.id == request.state.id)
-                                      .ok_or(ExecutionError::OrderNotFound(request.cid))?;
+                                      .ok_or(ExchangeError::OrderNotFound(request.cid))?;
                     orders.asks.remove(index)
                 }
             }
@@ -947,7 +948,7 @@ impl Account
         Ok(cancelled)
     }
 
-    pub async fn cancel_orders_all(&mut self, response_tx: Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>)
+    pub async fn cancel_orders_all(&mut self, response_tx: Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>)
     {
         // 获取所有打开的订单
         let orders_to_cancel = {
@@ -979,7 +980,7 @@ impl Account
                                                       });
             }
             | Err(_) => {
-                response_tx.send(Err(ExecutionError::InternalError("Failed to receive cancel results".to_string())))
+                response_tx.send(Err(ExchangeError::InternalError("Failed to receive cancel results".to_string())))
                            .unwrap_or_else(|_| {
                                eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all error response");
                            });
@@ -1291,7 +1292,7 @@ mod tests
 
         let result = account.check_position_direction_conflict(&instrument, Side::Sell).await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ExecutionError::InvalidDirection);
+        assert_eq!(result.unwrap_err(), ExchangeError::InvalidDirection);
 
         // 情况3：模拟不存在冲突的Future仓位
         let instrument_future = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Future));
@@ -1304,20 +1305,20 @@ mod tests
 
         let result = account.check_position_direction_conflict(&instrument_future, Side::Buy).await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ExecutionError::InvalidDirection);
+        assert_eq!(result.unwrap_err(), ExchangeError::InvalidDirection);
 
         // 情况5：其他 InstrumentKind 还没有实现，因此我们只需要检查它们是否返回未实现的错误
         let instrument_spot = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Spot));
         let result = account.check_position_direction_conflict(&instrument_spot, Side::Buy).await;
-        assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
+        assert!(matches!(result, Err(ExchangeError::NotImplemented(_))));
 
         let instrument_commodity_future = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::CommodityFuture));
         let result = account.check_position_direction_conflict(&instrument_commodity_future, Side::Buy).await;
-        assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
+        assert!(matches!(result, Err(ExchangeError::NotImplemented(_))));
 
         let instrument_commodity_option = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::CommodityOption));
         let result = account.check_position_direction_conflict(&instrument_commodity_option, Side::Buy).await;
-        assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
+        assert!(matches!(result, Err(ExchangeError::NotImplemented(_))));
     }
 
 

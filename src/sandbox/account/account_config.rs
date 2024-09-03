@@ -3,7 +3,7 @@ use crate::{
         instrument::kind::InstrumentKind,
         position::{PositionDirectionMode, PositionMarginMode},
     },
-    error::ExecutionError,
+    error::ExchangeError,
     sandbox::utils::config_parser::read_config_file,
 };
 use serde::{Deserialize, Serialize};
@@ -87,25 +87,25 @@ impl CommissionRatesInitiator
 
 impl AccountConfig
 {
-    pub fn new() -> Result<AccountConfig, ExecutionError>
+    pub fn new() -> Result<AccountConfig, ExchangeError>
     {
         read_config_file()
     }
 
-    pub fn get_maker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
+    pub fn get_maker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExchangeError>
     {
         self.fees_book
             .get(instrument_kind)
             .map(|rates| rates.maker_fees)
-            .ok_or_else(|| ExecutionError::SandBox(format!("Open fee rate for {:?} not found", instrument_kind)))
+            .ok_or_else(|| ExchangeError::SandBox(format!("Open fee rate for {:?} not found", instrument_kind)))
     }
 
-    pub fn get_taker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
+    pub fn get_taker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExchangeError>
     {
         self.fees_book
             .get(instrument_kind)
             .map(|rates| rates.taker_fees)
-            .ok_or_else(|| ExecutionError::SandBox(format!("Close fee rate for {:?} not found", instrument_kind)))
+            .ok_or_else(|| ExchangeError::SandBox(format!("Close fee rate for {:?} not found", instrument_kind)))
     }
 }
 

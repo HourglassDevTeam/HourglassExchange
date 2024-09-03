@@ -11,7 +11,7 @@ use crate::common::{
 
 /// 执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
-pub enum ExecutionError
+pub enum ExchangeError
 {
     /// 缺少属性，无法构建组件。
     #[error("[UniLinkExecution] : Unable to construct component due to missing property: {0}")]
