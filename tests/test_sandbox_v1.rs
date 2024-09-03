@@ -40,7 +40,7 @@ async fn main() {
     let (event_sandbox_tx, mut event_sandbox_rx) = mpsc::unbounded_channel();
     let ( mut request_tx,  request_rx) = mpsc::unbounded_channel();
 
-    // additional initialization
+    // 给定测试用的timestamp和machine_id和IDs
     let timestamp = 1234124124124123u64;
     let machine_id = generate_machine_id().unwrap();
     let test_3_ids = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
