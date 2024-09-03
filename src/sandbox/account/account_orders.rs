@@ -335,7 +335,8 @@ impl AccountOrders
         }
     }
 
-    // /// 拒绝不符合条件的 PostOnly 订单，并将其从待处理订单注册表中移除。
+    // NOTE need to be reimplemented.
+    // / 拒绝不符合条件的 PostOnly 订单，并将其从待处理订单注册表中移除。
     // ///
     // /// 当一个 PostOnly 订单的价格不符合条件时（例如，买单价格低于市场价格，或卖单价格高于市场价格），
     // /// 该函数将拒绝此订单，并将其从 `pending_registry` 中删除。
