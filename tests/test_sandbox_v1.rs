@@ -16,7 +16,7 @@ use unilink_execution::sandbox::sandbox_client::{SandBoxClient, SandBoxClientEve
 use crate::util::{initial_balances, open_order, order_cancel_request, order_limit_cancelled, order_request_limit, run_sample_exchange};
 
 mod util;
-
+#[allow(warnings)]
 #[derive(Clone)]
 struct Ids {
     cid: ClientOrderId,
@@ -31,9 +31,10 @@ impl Ids {
         }
     }
 }
-
+#[allow(warnings)]
 #[tokio::test]
 async fn main() {
+    #[allow(warnings)]
     // 创建通道用于发送和接收事件
     let (event_sandbox_tx, mut event_sandbox_rx) = mpsc::unbounded_channel();
     let ( mut request_tx,  request_rx) = mpsc::unbounded_channel();
@@ -130,7 +131,7 @@ async fn main() {
     // // 14. Fail to cancel limit order with OrderNotFound using incorrect OrderId
     // test_14_fail_to_cancel_limit_with_order_not_found(&client).await;
 }
-
+#[allow(warnings)]
 // 1. Fetch initial OpenOrders when we have no open Orders.
 async fn test_1_fetch_initial_orders_and_check_empty(client: &SandBoxClient) {
     let initial_orders_result = client.fetch_orders_open().await;
@@ -145,6 +146,8 @@ async fn test_1_fetch_initial_orders_and_check_empty(client: &SandBoxClient) {
         }
     }
 }
+#[allow(warnings)]
+
 // 自定义比较函数，忽略 time 字段
 fn assert_balance_equal_ignore_time(actual: &Balance, expected: &Balance) {
     assert_eq!(actual.current_price, expected.current_price, "current_price mismatch");
@@ -152,7 +155,7 @@ fn assert_balance_equal_ignore_time(actual: &Balance, expected: &Balance) {
     assert_eq!(actual.available, expected.available, "available mismatch");
 }
 
-
+#[allow(warnings)]
 async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient) {
     let actual_balances = client.fetch_balances().await.unwrap();
     println!("actual balances: {:?}", actual_balances);
@@ -170,6 +173,7 @@ async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
     }
 }
 
+#[allow(warnings)]
 async fn test_3_open_limit_buy_order(
     client: &SandBoxClient,
     test_3_ids: Ids,
@@ -241,7 +245,7 @@ async fn test_3_open_limit_buy_order(
     }
 }
 
-
+#[allow(warnings)]
 // 4. 发送一个不匹配任何未完成订单的 MarketTrade，并检查是否没有发送 AccountEvents。注意，这一部分可能存在问题，因为它没有使用`new_market_trade`。
 // NOTE 其次还要检查一下available的数值处理是否正确。
 fn test_4_send_market_trade_that_does_not_match_any_open_order(
@@ -259,6 +263,7 @@ fn test_4_send_market_trade_that_does_not_match_any_open_order(
         }
     }
 }
+#[allow(warnings)]
 
 // // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent.
 async fn test_5_cancel_buy_order(
@@ -324,6 +329,7 @@ async fn test_5_cancel_buy_order(
         }
     }
 }
+#[allow(warnings)]
 
 // 6. 开两个 2 倍杠杆的限价买单，并检查是否发送了关于余额和新订单的 AccountEvents
 async fn test_6_open_2x_limit_buy_orders(
