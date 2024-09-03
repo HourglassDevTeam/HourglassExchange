@@ -2,7 +2,7 @@ use std::fs;
 use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 
 // Define the path to the JSON file
-const DATA_HISTORIC_TRADES: &str = "tests/util/trades_for_test.json";
+const DATA_HISTORIC_TRADES: &str = "tests/util/sample_trades.json";
 
 // Define a function to load the JSON and convert it to Vec<MarketTrade>
 fn load_json_market_trade() -> Vec<MarketTrade> {
