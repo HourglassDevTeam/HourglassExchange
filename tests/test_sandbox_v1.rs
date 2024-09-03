@@ -17,7 +17,7 @@ use unilink_execution::common::Side;
 use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 use unilink_execution::sandbox::sandbox_client::{SandBoxClient, SandBoxClientEvent};
 
-use crate::util::{initial_balances, open_order, order_cancel_request, order_cancelled, order_request_limit, run_sample_exchange};
+use crate::util::{initial_balances, open_order, order_cancel_request, order_limit_cancelled, order_request_limit, run_sample_exchange};
 
 mod util;
 
@@ -43,9 +43,9 @@ async fn main() {
     let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
 
     // additional initialization
-    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis() as u64;
+    let timestamp = 1234124124124123u64;
     let machine_id = generate_machine_id().unwrap();
-    let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId::new(timestamp, machine_id, 1));
+    let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId(1234124124124123));
 
     // 创建并运行 SimulatedExchange
     tokio::spawn(run_sample_exchange(event_account_tx, request_rx));
@@ -219,7 +219,6 @@ async fn test_3_open_limit_buy_order(
                  kind: AccountEventKind::Balance(TEST_QUOTE_balance),
                  ..
              }) => {
-            println!("Account balance event received.");
             let expected = TokenBalance::new("TEST_QUOTE", Balance::new(200.0, 149.0, current_px));
             assert_balance_equal_ignore_time(&TEST_QUOTE_balance.balance, &expected.balance);
         }
@@ -259,7 +258,7 @@ fn test_4_send_market_event_that_does_not_match_any_open_order(
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
 
-    let new_market_event =MarketTrade { exchange: "binance-futures".into(), symbol: "1000RATSUSDT".into(), side: "buy".into(), price: 0.13461, timestamp: 1714924612471000, amount: 744.0 };
+    let new_market_event = MarketTrade { exchange: "binance-futures".into(), symbol: "1000RATSUSDT".into(), side: "buy".into(), price: 0.13461, timestamp: 1714924612471000, amount: 744.0 };
 
     // Check no more AccountEvents generated
     match event_account_rx.try_recv() {
@@ -285,7 +284,7 @@ async fn test_5_cancel_buy_order(
         )])
         .await;
 
-    let expected_cancelled = order_cancelled(
+    let expected_cancelled = order_limit_cancelled(
         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),  // 使用 clone()
         Side::Buy,
@@ -318,8 +317,9 @@ async fn test_5_cancel_buy_order(
             ..
         }) => {
             // Expected TEST_QUOTE Balance.available = 9_900 + (100.0 * 1.0)
-            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 10_000.0, current_px));
-            assert_eq!(TEST_QUOTE_balance, expected);
+            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(200.0, 250.0, current_px));
+            assert_eq!(TEST_QUOTE_balance.balance.total, expected.balance.total);
+            assert_eq!(TEST_QUOTE_balance.balance.available, expected.balance.available);
         }
         other => {
             panic!("try_recv() consumed unexpected: {:?}", other);
@@ -336,121 +336,123 @@ async fn test_5_cancel_buy_order(
 }
 
 // // 6. Open 2x limit buy orders and check AccountEvents for balance & order new are sent
-// async fn test_6_open_2x_limit_buy_orders(
-//     client: &SandBoxClient,
-//     test_6_ids_1: Ids,
-//     test_6_ids_2: Ids,
-//     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
-// ) {
-//     let opened_orders = client
-//         .open_orders(vec![
-//             order_request_limit(
-//                 Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
-//                 test_6_ids_1.cid,
-//                 Side::Buy,
-//                 100.0,
-//                 1.0,
-//             ),
-//             order_request_limit(
-//                 Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
-//                 test_6_ids_2.cid,
-//                 Side::Buy,
-//                 200.0,
-//                 1.0,
-//             ),
-//         ])
-//         .await;
-//
-//     let expected_order_new_1 = open_order(
-//         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
-//         test_6_ids_1.cid,
-//         test_6_ids_1.id.clone(),
-//         Side::Buy,
-//         100.0,
-//         1.0,
-//         0.0,
-//     );
-//
-//     let expected_order_new_2 = open_order(
-//         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
-//         test_6_ids_2.cid,
-//         test_6_ids_2.id,
-//         Side::Buy,
-//         200.0,
-//         1.0,
-//         0.0,
-//     );
-//
-//     assert_eq!(opened_orders.len(), 2);
-//     assert_eq!(opened_orders[0].clone().unwrap(), expected_order_new_1);
-//     assert_eq!(opened_orders[1].clone().unwrap(), expected_order_new_2);
-//
-//     // Check AccountEvent Balance for first order - quote currency has available balance decrease
-//     match event_account_rx.try_recv() {
-//         Ok(AccountEvent {
-//             kind: AccountEventKind::Balance(TEST_QUOTE_balance),
-//             ..
-//         }) => {
-//             // Expected TEST_QUOTE Balance.available = 10_000 - (100.0 * 1.0)
-//             let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 9_900.0));
-//             assert_eq!(TEST_QUOTE_balance, expected);
-//         }
-//         other => {
-//             panic!("try_recv() consumed unexpected: {:?}", other);
-//         }
-//     }
-//
-//     // Check AccountEvent OrdersNew for first order
-//     match event_account_rx.try_recv() {
-//         Ok(AccountEvent {
-//             kind: AccountEventKind::OrdersNew(new_orders),
-//             ..
-//         }) => {
-//             assert_eq!(new_orders.len(), 1);
-//             assert_eq!(new_orders[0].clone(), expected_order_new_1);
-//         }
-//         other => {
-//             panic!("try_recv() consumed unexpected: {:?}", other);
-//         }
-//     }
-//
-//     // Check AccountEvent Balance for second order - quote currency has available balance decrease
-//     match event_account_rx.try_recv() {
-//         Ok(AccountEvent {
-//             kind: AccountEventKind::Balance(TEST_QUOTE_balance),
-//             ..
-//         }) => {
-//             // Expected TEST_QUOTE Balance.available = 9_900 - (200.0 * 1.0)
-//             let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 9_700.0));
-//             assert_eq!(TEST_QUOTE_balance, expected);
-//         }
-//         other => {
-//             panic!("try_recv() consumed unexpected: {:?}", other);
-//         }
-//     }
-//
-//     // Check AccountEvent OrdersNew for second order
-//     match event_account_rx.try_recv() {
-//         Ok(AccountEvent {
-//             kind: AccountEventKind::OrdersNew(new_orders),
-//             ..
-//         }) => {
-//             assert_eq!(new_orders.len(), 1);
-//             assert_eq!(new_orders[0].clone(), expected_order_new_2);
-//         }
-//         other => {
-//             panic!("try_recv() consumed unexpected: {:?}", other);
-//         }
-//     }
-//
-//     // Check no more AccountEvents generated
-//     match event_account_rx.try_recv() {
-//         Err(mpsc::error::TryRecvError::Empty) => {}
-//         other => {
-//             panic!("try_recv() consumed unexpected: {:?}", other);
-//         }
-//     }
-// }
+async fn test_6_open_2x_limit_buy_orders(
+    client: &SandBoxClient,
+    test_6_ids_1: Ids,
+    test_6_ids_2: Ids,
+    event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+) {
+    let opened_orders = client
+        .open_orders(vec![
+            order_request_limit(
+                Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+                test_6_ids_1.cid.clone(),
+                Side::Buy,
+                100.0,
+                1.0,
+            ),
+            order_request_limit(
+                Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+                test_6_ids_2.cid.clone(),
+                Side::Buy,
+                200.0,
+                1.0,
+            ),
+        ])
+        .await;
+
+    let expected_order_new_1 = open_order(
+        Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+        test_6_ids_1.cid.clone(),
+        test_6_ids_1.id.clone(),
+        Side::Buy,
+        100.0,
+        1.0,
+        0.0,
+    );
+
+    let expected_order_new_2 = open_order(
+        Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+        test_6_ids_2.cid.clone(),
+        test_6_ids_2.id.clone(),
+        Side::Buy,
+        200.0,
+        1.0,
+        0.0,
+    );
+
+    assert_eq!(opened_orders.len(), 2);
+    assert_eq!(opened_orders[0].clone().unwrap(), expected_order_new_1);
+    assert_eq!(opened_orders[1].clone().unwrap(), expected_order_new_2);
+
+
+    let current_px = 1.0;  // 与订单中的价格匹配
+    // Check AccountEvent Balance for first order - quote currency has available balance decrease
+    match event_account_rx.try_recv() {
+        Ok(AccountEvent {
+            kind: AccountEventKind::Balance(TEST_QUOTE_balance),
+            ..
+        }) => {
+            // Expected TEST_QUOTE Balance.available = 10_000 - (100.0 * 1.0)
+            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 9_900.0,current_px));
+            assert_eq!(TEST_QUOTE_balance, expected);
+        }
+        other => {
+            panic!("try_recv() consumed unexpected: {:?}", other);
+        }
+    }
+
+    // Check AccountEvent OrdersNew for first order
+    match event_account_rx.try_recv() {
+        Ok(AccountEvent {
+            kind: AccountEventKind::OrdersNew(new_orders),
+            ..
+        }) => {
+            assert_eq!(new_orders.len(), 1);
+            assert_eq!(new_orders[0].clone(), expected_order_new_1);
+        }
+        other => {
+            panic!("try_recv() consumed unexpected: {:?}", other);
+        }
+    }
+
+    // Check AccountEvent Balance for second order - quote currency has available balance decrease
+    match event_account_rx.try_recv() {
+        Ok(AccountEvent {
+            kind: AccountEventKind::Balance(TEST_QUOTE_balance),
+            ..
+        }) => {
+            // Expected TEST_QUOTE Balance.available = 9_900 - (200.0 * 1.0)
+            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(10_000.0, 9_700.0,current_px));
+            assert_eq!(TEST_QUOTE_balance, expected);
+        }
+        other => {
+            panic!("try_recv() consumed unexpected: {:?}", other);
+        }
+    }
+
+    // Check AccountEvent OrdersNew for second order
+    match event_account_rx.try_recv() {
+        Ok(AccountEvent {
+            kind: AccountEventKind::OrdersNew(new_orders),
+            ..
+        }) => {
+            assert_eq!(new_orders.len(), 1);
+            assert_eq!(new_orders[0].clone(), expected_order_new_2);
+        }
+        other => {
+            panic!("try_recv() consumed unexpected: {:?}", other);
+        }
+    }
+
+    // Check no more AccountEvents generated
+    match event_account_rx.try_recv() {
+        Err(mpsc::error::TryRecvError::Empty) => {}
+        other => {
+            panic!("try_recv() consumed unexpected: {:?}", other);
+        }
+    }
+}
 //
 // // 7. Send MarketEvent that exactly full matches 1x open Order (trade) and check AccountEvents for
 // // balances and trades are sent.

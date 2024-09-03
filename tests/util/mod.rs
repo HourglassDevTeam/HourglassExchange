@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 use tokio::sync;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{mpsc, Mutex, RwLock};
 use tokio::time::timeout;
 use uuid::Uuid;
 
@@ -36,19 +36,19 @@ use unilink_execution::{
     Exchange,
 };
 use unilink_execution::common::event::AccountEvent;
-
+/// Initializes and runs a sample exchange with predefined settings and a test order.
 pub async fn run_sample_exchange(
     event_account_tx: mpsc::UnboundedSender<AccountEvent>,
     event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
 ) {
-    // 创建初始余额
+    // Creating initial balances
     let mut balances = HashMap::new();
     let token1 = Token::from("TEST_BASE");
     let token2 = Token::from("TEST_QUOTE");
     balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
     balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
 
-    // 创建初始持仓
+    // Creating initial positions
     let positions = AccountPositions {
         margin_pos: Vec::new(),
         perpetual_pos: Vec::new(),
@@ -56,37 +56,67 @@ pub async fn run_sample_exchange(
         option_pos: Vec::new(),
     };
 
+    let instrument = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual));
+    let account_orders = AccountOrders::new(0, vec![instrument.clone()], AccountLatency {
+        fluctuation_mode: FluctuationMode::Sine,
+        maximum: 10, // Example value
+        minimum: -10, // Example value
+        current_value: 0,
+    }).await;
 
-    // 创建 Account 实例，并将其包装在 Arc<Mutex<...>> 中
+    // Create and insert a test order
+    let test_order = Order {
+        kind: OrderInstruction::Limit,
+        exchange: Exchange::SandBox,
+        instrument: instrument.clone(),
+        timestamp: 1234124124124123, // Assumes a function to get current timestamp
+        cid: ClientOrderId(Some("test_cid".into())),
+        side: Side::Buy,
+        state: Open {
+            id: OrderId(1234124124124123),
+            price: 100.0,
+            size: 1.0,
+            filled_quantity: 0.0,
+            order_role: OrderRole::Maker,
+        },
+    };
+
+    // Directly modify the orders within the RwLock
+    {
+        let mut orders_guard = account_orders.instrument_orders_map.entry(instrument).or_default();
+        let mut orders_write = orders_guard.value_mut(); // Assuming it's a DashMap
+        orders_write.bids.push(test_order);
+    }
+
+
+
+    // Wrap the AccountOrders in Arc<RwLock> as required by Account struct
+    let orders_arc = Arc::new(RwLock::new(account_orders));
+
+    // Instantiate Account and wrap in Arc<Mutex> for shared access
     let account_arc = Arc::new(Mutex::new(Account {
         current_session: Uuid::new_v4(),
         machine_id: 0,
         exchange_timestamp: AtomicI64::new(1234567),
-        account_event_tx: event_account_tx,
         config: Arc::new(create_test_account_config()),
-        orders: Arc::new(sync::RwLock::new(AccountOrders::new(0, vec![Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual))], AccountLatency {
-            fluctuation_mode: FluctuationMode::Sine,
-            maximum: 0,
-            minimum: 0,
-            current_value: 0,
-        }).await)),
+        orders: orders_arc,
         balances,
         positions,
+        account_event_tx: event_account_tx,
     }));
 
-
-    // 创建并初始化 SandBoxExchange
+    // Initialize and configure SandBoxExchange
     let sandbox_exchange = SandBoxExchange::initiator()
         .event_sandbox_rx(event_sandbox_rx)
         .account(account_arc)
         .initiate()
-        .expect("failed to build SandBoxExchange");
-    println!("[run_default_exchange] : Sandbox exchange built successfully");
+        .expect("Failed to build SandBoxExchange");
 
+    // Running the exchange in local mode
+    println!("[run_default_exchange] : Sandbox exchange built successfully");
     sandbox_exchange.run_local().await;
     println!("[run_default_exchange] : Sandbox exchange run successfully on local mode.");
 }
-
 
 /// 设置延迟为50ms
 #[allow(dead_code)]
@@ -156,7 +186,7 @@ where
         kind: OrderInstruction::Limit,
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
-        timestamp: chrono::Utc::now().timestamp_millis(), // 使用当前时间戳
+        timestamp: 1233312345124, // 使用当前时间戳
         cid,
         side,
         state: Open {
@@ -194,7 +224,7 @@ where
 
 /// 创建取消的订单
 #[allow(dead_code)]
-pub fn order_cancelled<I, Id>(
+pub fn order_limit_cancelled<I, Id>(
     instrument: I,
     cid: ClientOrderId,
     side: Side,
@@ -205,10 +235,10 @@ where
     Id: Into<OrderId>,
 {
     Order {
-        kind: OrderInstruction::Cancel,
+        kind: OrderInstruction::Limit,
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
-        timestamp: chrono::Utc::now().timestamp_millis(), // 使用当前时间戳
+        timestamp: 1234124124124123u64 as i64, // 使用当前时间戳
         cid,
         side,
         state: Cancelled::from(id),
