@@ -1,28 +1,28 @@
 use std::fs;
 use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 
-// Define the path to the JSON file
+// 定义JSON文件的路径
 const DATA_HISTORIC_TRADES: &str = "tests/util/sample_trades.json";
 
-// Define a function to load the JSON and convert it to Vec<MarketTrade>
+// 定义一个函数来加载JSON并将其转换为Vec<MarketTrade>
 fn load_json_market_trade() -> Vec<MarketTrade> {
-    let trades_data = fs::read_to_string(DATA_HISTORIC_TRADES).expect("failed to read file");
+    // 读取文件内容
+    let trades_data = fs::read_to_string(DATA_HISTORIC_TRADES).expect("读取文件失败");
 
-    // Deserialize directly into Vec<MarketTrade>
-    let trades: Vec<MarketTrade> = serde_json::from_str(&trades_data).expect("failed to parse trades data");
+    // 直接将字符串反序列化为Vec<MarketTrade>
+    let trades: Vec<MarketTrade> = serde_json::from_str(&trades_data).expect("解析交易数据失败");
 
     trades
 }
 
-
-// Define the test
+// 定义测试
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_load_json_market_trade() {
-        // Set up the expected data
+        // 设置预期数据
         let expected_trades = vec![
             MarketTrade {
                 exchange: "binance-futures".to_string(),
@@ -58,20 +58,20 @@ mod tests {
             },
         ];
 
-        // Load the data using the function
+        // 使用函数加载数据
         let actual_trades = load_json_market_trade();
 
-        // Print the results with line spacing
-        for trade in &expected_trades {
-            println!("actual_trades : {:?}", trade);
-            println!(); // Add a blank line between trades
+        // 要实现交替打印实际加载的数据和预期数据，我们可以使用迭代器来同时遍历两个向量。
+        // 这里提供了一种方法，通过使用zip函数结合迭代器来交替打印实际和预期的交易数据。
+        // 如果两个向量的长度不一致，zip将会停在较短的向量结束时。以下是修改后的打印部分代码：
+        // 打印实际加载的数据和预期数据
+        for (actual_trade, expected_trade) in actual_trades.iter().zip(expected_trades.iter()) {
+            println!("-------------------------------------------------------------------------------------------------------------------------------------------------------------"); // 在每对交易之间添加空行以增加可读性
+            println!("实际交易 : {:?}", actual_trade);
+            println!("预期交易 : {:?}", expected_trade);
         }
-        // Print the results with line spacing
-        for expected_trade in &expected_trades {
-            println!("expected_trades : {:?}", expected_trade);
-            println!(); // Add a blank line between trades
-        }
-
+        println!("-------------------------------------------------------------------------------------------------------------------------------------------------------------"); // 在每对交易之间添加空行以增加可读性
+        // 断言实际数据与预期数据相等
         assert_eq!(actual_trades, expected_trades);
 
     }
