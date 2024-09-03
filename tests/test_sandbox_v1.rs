@@ -76,11 +76,11 @@ async fn main() {
     test_5_cancel_buy_order(&client, test_3_ids, &mut event_sandbox_rx).await;
     //
     // // 6. Open 2x LIMIT Buy Orders & assert on received AccountEvents
-    // let test_6_ids_1 = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
-    // let test_6_ids_2 = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
-    // test_6_open_2x_limit_buy_orders(&client, test_6_ids_1.clone(), test_6_ids_2, &mut event_sandbox_rx,)
-    // .await;
-    //
+    let test_6_ids_1 = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
+    let test_6_ids_2 = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
+    test_6_open_2x_limit_buy_orders(&client, test_6_ids_1.clone(), test_6_ids_2, &mut event_sandbox_rx,)
+    .await;
+
     // // 7. Send MarketEvent that exactly full matches 1x open Order (trade) and check AccountEvents
     // //    for balances and trades
     // test_7_send_market_trade_that_exact_full_matches_order(
@@ -159,6 +159,7 @@ fn assert_balance_equal_ignore_time(actual: &Balance, expected: &Balance) {
 #[allow(warnings)]
 async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient) {
     let actual_balances = client.fetch_balances().await.unwrap();
+    println!("[test_2] : actual balances: {:?}", actual_balances);
     // NOTE seems that fetch_balances is working.so that the response_rx should be working.
     let initial_balances = initial_balances().await;
 
@@ -180,6 +181,7 @@ async fn test_3_open_limit_buy_order(
     event_sandbox_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
     let actual_balances = client.fetch_balances().await.unwrap();
+    println!("[test_3] : actual balances: {:?}", actual_balances);
     let open_request = order_request_limit(
         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),
@@ -188,7 +190,10 @@ async fn test_3_open_limit_buy_order(
         1.0,
     );
 
+    println!("[test_3] : Sending order request via SandBoxClient : {:?}", open_request);
+
     let new_orders = client.open_orders(vec![open_request]).await;
+    println!("[test_3] : {:?}", new_orders);
     let expected_new_order = open_order(
         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),
@@ -198,6 +203,7 @@ async fn test_3_open_limit_buy_order(
         1.0,
         0.0,
     );
+    println!("[test_3] : expected_new_order: {:?}", expected_new_order);
 
     assert_eq!(new_orders[0].as_ref().unwrap().cid, expected_new_order.cid);
     // //
@@ -212,7 +218,7 @@ async fn test_3_open_limit_buy_order(
             assert_balance_equal_ignore_time(&TEST_QUOTE_balance.balance, &expected.balance);
         }
         other => {
-            panic!("Unexpected or missing balance event: {:?}", other);
+            panic!("[test_3] : Unexpected or missing balance event: {:?}", other);
         }
     }
 
@@ -221,20 +227,21 @@ async fn test_3_open_limit_buy_order(
                  kind: AccountEventKind::OrdersNew(new_orders),
                  ..
              }) => {
+            println!("[test_3] : Orders new event received.");
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].cid, expected_new_order.cid);
         }
         other => {
-            panic!("Unexpected or missing orders new event: {:?}", other);
+            panic!("[test_3] : Unexpected or missing orders new event: {:?}", other);
         }
     }
 
     match event_sandbox_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {
-            println!("No more additional account events, as expected.");
+            println!("[test_3] : No additional account events, as expected.");
         }
         other => {
-            panic!("Unexpected additional account event: {:?}", other);
+            panic!("[test_3] : Unexpected additional account event: {:?}", other);
         }
     }
 }
@@ -274,13 +281,14 @@ async fn test_5_cancel_buy_order(
         )])
         .await;
 
+    println!("[test_5] : {:?}", cancelled);
     let expected_cancelled = order_limit_cancelled(
         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
         test_3_ids.cid.clone(),  // 使用 clone()
         Side::Buy,
         test_3_ids.id.clone(),  // 使用 clone()
     );
-
+    println!("[test_5] : {:?}", expected_cancelled);
     assert_eq!(cancelled.len(), 1);
     assert_eq!(cancelled[0].clone().unwrap(), expected_cancelled);
 
@@ -290,6 +298,7 @@ async fn test_5_cancel_buy_order(
             kind: AccountEventKind::OrdersCancelled(cancelled),
             ..
         }) => {
+            println!("[test_5] : Orders cancelled event received.");
             assert_eq!(cancelled.len(), 1);
             assert_eq!(cancelled[0].clone(), expected_cancelled);
         }
@@ -307,6 +316,7 @@ async fn test_5_cancel_buy_order(
             ..
         }) => {
             let expected = TokenBalance::new("TEST_QUOTE", Balance::new(200.0, 249.0, current_px));
+            println!("[test_5] : Balance event received.");
             assert_eq!(TEST_QUOTE_balance.balance.total, expected.balance.total);
             assert_eq!(TEST_QUOTE_balance.balance.available, expected.balance.available);
         }
@@ -325,7 +335,10 @@ async fn test_5_cancel_buy_order(
 }
 #[allow(warnings)]
 
-// 6. 开两个 2 倍杠杆的限价买单，并检查是否发送了关于余额和新订单的 AccountEvents
+// 6. 开两个限价买单，并检查是否发送了关于余额和新订单的 AccountEvents
+// NOTE 数值是否对的上？
+// NOTE 真的要开杠杆怎么处理？
+
 async fn test_6_open_2x_limit_buy_orders(
     client: &SandBoxClient,
     test_6_ids_1: Ids,
@@ -350,6 +363,7 @@ async fn test_6_open_2x_limit_buy_orders(
             ),
         ])
         .await;
+    println!("[test_6] : {:?}", opened_orders);
 
     let expected_order_new_1 = open_order(
         Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
@@ -370,6 +384,8 @@ async fn test_6_open_2x_limit_buy_orders(
         1.0,
         0.0,
     );
+    println!("[test_6] : expected_order_new_1: {:?}", expected_order_new_1);
+    println!("[test_6] : expected_order_new_2: {:?}", expected_order_new_2);
 
     assert_eq!(opened_orders.len(), 2);
     assert_eq!(opened_orders[0].clone().unwrap().cid, expected_order_new_1.cid);
@@ -383,7 +399,7 @@ async fn test_6_open_2x_limit_buy_orders(
             kind: AccountEventKind::Balance(TEST_QUOTE_balance),
             ..
         }) => {
-            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(200.0, 149.0,current_px));
+            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(200.0, 148.0,current_px));
             assert_eq!(TEST_QUOTE_balance.balance.total, expected.balance.total);
             assert_eq!(TEST_QUOTE_balance.balance.available, expected.balance.available);
         }
@@ -413,7 +429,7 @@ async fn test_6_open_2x_limit_buy_orders(
             ..
         }) => {
             // Expected TEST_QUOTE Balance.available = 9_900 - (200.0 * 1.0)
-            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(200.0, 148.0,current_px));
+            let expected = TokenBalance::new("TEST_QUOTE", Balance::new(200.0, 147.0,current_px));
             assert_eq!(TEST_QUOTE_balance.balance.total, expected.balance.total);
             assert_eq!(TEST_QUOTE_balance.balance.available, expected.balance.available);
         }
