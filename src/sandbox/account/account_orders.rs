@@ -335,21 +335,37 @@ impl AccountOrders
         }
     }
 
-    // NOTE need to be reimplemented.
-    // / 拒绝不符合条件的 PostOnly 订单，并将其从待处理订单注册表中移除。
-    // ///
-    // /// 当一个 PostOnly 订单的价格不符合条件时（例如，买单价格低于市场价格，或卖单价格高于市场价格），
-    // /// 该函数将拒绝此订单，并将其从 `pending_registry` 中删除。
-    // ///
-    // /// # 参数
-    // ///
-    // /// - `order`: 待拒绝的 PostOnly 订单 (`Order<Pending>`)。
-    // ///
-    // /// # 返回值
-    // pub(crate) fn reject_post_only_order(&mut self, order: &Order<RequestOpen>) -> Result<OrderRole, ExecutionError>
-    // {
-    //     self.remove_order_from_pending_registry(order.state.request_id)?; // 移除订单
-    //     Err(ExecutionError::OrderRejected("PostOnly order rejected".into())) // 返回拒绝错误
+    /// 拒绝不符合条件的 PostOnly 订单，并将其从待处理订单注册表中移除。
+    ///
+    /// 当一个 PostOnly 订单的价格不符合条件时（例如，买单价格低于市场价格，或卖单价格高于市场价格），
+    /// 该函数将拒绝此订单，并将其从 `pending_registry` 中删除。
+    ///
+    /// # 参数
+    ///
+    /// - `order`: 待拒绝的 PostOnly 订单 (`Order<RequestOpen>`)。
+    /// - `current_price`: 当前市场价格 (`f64`)。
+    ///
+    /// # 返回值
+    // pub(crate) fn reject_post_only_order(
+    //     &mut self,
+    //     order: &Order<RequestOpen>,
+    //     current_price: f64
+    // ) -> Result<OrderRole, ExecutionError> {
+    //     // 检查订单类型和价格是否符合 PostOnly 的要求
+    //     match (order.side, order.state.price) {
+    //         // 买单价格必须高于或等于当前市场价格
+    //         (Side::Buy, price) if price < current_price => {
+    //             self.remove_order_from_pending_registry(order.state.request_id)?; // 移除订单
+    //             Err(ExecutionError::OrderRejected("PostOnly buy order rejected: price below market".into())) // 返回拒绝错误
+    //         }
+    //         // 卖单价格必须低于或等于当前市场价格
+    //         (Side::Sell, price) if price > current_price => {
+    //             self.remove_order_from_pending_registry(order.state.request_id)?; // 移除订单
+    //             Err(ExecutionError::OrderRejected("PostOnly sell order rejected: price above market".into())) // 返回拒绝错误
+    //         }
+    //         // 订单符合条件，返回 Ok
+    //         _ => Ok(OrderRole::PostOnly), // 你可以根据需要调整返回值
+    //     }
     // }
 
     /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
