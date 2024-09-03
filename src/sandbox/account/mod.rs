@@ -1096,6 +1096,51 @@ mod tests
     }
 
     #[tokio::test]
+    async fn test_set_perpetual_position() {
+        let mut account = create_test_account().await;
+
+        let instrument = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual));
+        let perpetual_position = create_test_perpetual_position(instrument.clone());
+
+        // 设置新的仓位
+        account.set_perpetual_position(perpetual_position.clone()).await.unwrap();
+
+        // 验证仓位是否已更新
+        let position_result = account.get_position(&instrument).await;
+        assert!(position_result.is_ok());
+        assert!(matches!(position_result.unwrap(), Some(Position::Perpetual(_))));
+    }
+
+
+    #[tokio::test]
+    async fn test_apply_cancel_order_changes() {
+        let mut account = create_test_account().await;
+
+        let order = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+            timestamp: 1625247600000,
+            cid: ClientOrderId(Some("validCID123".into())),
+            side: Side::Buy,
+            state: Open {
+                id: OrderId::new(0, 0, 0),
+                price: 100.0,
+                size: 2.0,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Maker,
+            },
+        };
+
+        let balance_before = account.get_balance(&Token::from("TEST_QUOTE")).unwrap().available;
+        let token_balance = account.apply_cancel_order_changes(&order);
+
+        // 验证余额是否已更新
+        assert_eq!(token_balance.balance.available, balance_before + 200.0);
+    }
+
+
+    #[tokio::test]
     async fn test_determine_position_margin_mode()
     {
         let account = create_test_account().await;
@@ -1128,6 +1173,8 @@ mod tests
         assert!(all_balances.iter().any(|b| b.token == Token::from("TEST_BASE")), "Expected TEST_BASE balance not found");
         assert!(all_balances.iter().any(|b| b.token == Token::from("TEST_QUOTE")), "Expected TEST_QUOTE balance not found");
     }
+
+
     #[tokio::test]
     async fn test_get_position_none()
     {
@@ -1136,6 +1183,31 @@ mod tests
         let instrument = Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual));
         let position = account.get_position(&instrument).await.unwrap();
         assert!(position.is_none());
+    }
+
+
+
+    #[tokio::test]
+    async fn test_required_available_balance() {
+        let account = create_test_account().await;
+
+        let order = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+            timestamp: 1625247600000,
+            cid: ClientOrderId(Some("validCID123".into())),
+            side: Side::Buy,
+            state: RequestOpen {
+                price: 100.0,
+                size: 2.0,
+                reduce_only: false,
+            },
+        };
+
+        let (token, required_balance) = account.required_available_balance(&order, 100.0).await;
+        assert_eq!(token, &order.instrument.quote);
+        assert_eq!(required_balance, 200.0);
     }
 
     #[tokio::test]
@@ -1247,4 +1319,57 @@ mod tests
         let result = account.check_position_direction_conflict(&instrument_commodity_option, Side::Buy).await;
         assert!(matches!(result, Err(ExecutionError::NotImplemented(_))));
     }
+
+
+
+    #[tokio::test]
+    async fn test_handle_trade_data() {
+        let mut account = create_test_account().await;
+
+        let trade = MarketTrade {
+            exchange: "Binance".to_string(),
+            symbol: "BTC_USDT".to_string(),
+            timestamp: 1625247600000,
+            price: 100.0,
+            side: Side::Buy.to_string(),
+            amount: 0.0,
+        };
+
+        // 处理交易数据
+        let result = account.handle_trade_data(trade).await;
+        assert!(result.is_ok());
+
+        // 验证时间戳是否已更新
+        assert_eq!(account.get_exchange_ts().unwrap(), 1625247600000);
+    }
+
+
+    // NOTE 需要检查atomic_open的response的发送。
+    // #[tokio::test]
+    // async fn test_atomic_open() {
+    //     let mut account = create_test_account().await;
+    //
+    //     let order = Order {
+    //         kind: OrderInstruction::Limit,
+    //         exchange: Exchange::SandBox,
+    //         instrument: Instrument::from(("TEST_BASE", "TEST_QUOTE", InstrumentKind::Perpetual)),
+    //         timestamp: 1625247600000,
+    //         cid: ClientOrderId(Some("validCID123".into())),
+    //         side: Side::Buy,
+    //         state: RequestOpen {
+    //             price: 100.0,
+    //             size: 2.0,
+    //             reduce_only: false,
+    //         },
+    //     };
+    //
+    //     let result = account.atomic_open(100.0, order.clone()).await;
+    //     assert!(result.is_ok());
+    //
+    //     let open_order = result.unwrap();
+    //     assert_eq!(open_order.state.price, 100.0);
+    //     assert_eq!(open_order.state.size, 2.0);
+    //     assert_eq!(open_order.state.filled_quantity, 0.0);
+    //     assert_eq!(open_order.state.order_role, OrderRole::Maker);
+    // }
 }
