@@ -11,7 +11,7 @@ use crate::{
         Side,
     },
     error::ExecutionError,
-    sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
+    sandbox::clickhouse_api::datatype::clickhouse_trade_data::TardisTrade,
 };
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
@@ -74,7 +74,7 @@ impl InstrumentOrders
     }
 
     // 检查传入的 [`MarketTrade`] 与当前客户 [`Order<Open>`] 匹配的是买单还是卖单
-    pub fn determine_matching_side(&self, market_event: &MarketTrade) -> Option<Side>
+    pub fn determine_matching_side(&self, market_event: &TardisTrade) -> Option<Side>
     {
         match market_event.side.as_str() {
             | "buy" => {
@@ -100,7 +100,7 @@ impl InstrumentOrders
         None
     }
 
-    pub fn match_bids(&mut self, market_event: &MarketTrade, fees_percent: f64) -> Vec<ClientTrade>
+    pub fn match_bids(&mut self, market_event: &TardisTrade, fees_percent: f64) -> Vec<ClientTrade>
     {
         // 跟踪剩余的可用流动性，以便匹配
         let mut remaining_liquidity = market_event.amount;
@@ -151,7 +151,7 @@ impl InstrumentOrders
         ClientTradeId(self.batch_id)
     }
 
-    pub fn match_asks(&mut self, market_trade: &MarketTrade, fees_percent: f64) -> Vec<ClientTrade>
+    pub fn match_asks(&mut self, market_trade: &TardisTrade, fees_percent: f64) -> Vec<ClientTrade>
     {
         // 跟踪剩余的可用流动性，以便匹配
         let mut remaining_liquidity = market_trade.amount;

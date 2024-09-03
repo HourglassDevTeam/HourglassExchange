@@ -10,7 +10,7 @@ use unilink_execution::common::order::identification::client_order_id::ClientOrd
 use unilink_execution::common::order::identification::machine_id::generate_machine_id;
 use unilink_execution::common::order::identification::OrderId;
 use unilink_execution::common::Side;
-use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
+use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data::TardisTrade;
 use unilink_execution::sandbox::sandbox_client::{SandBoxClient, SandBoxClientEvent};
 
 use crate::util::{initial_balances, open_order, order_cancel_request, order_limit_cancelled, order_request_limit, run_sample_exchange};
@@ -249,7 +249,7 @@ fn test_4_send_market_trade_that_does_not_match_any_open_order(
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
 
-    let new_market_trade = MarketTrade { exchange: "binance-futures".into(), symbol: "1000RATSUSDT".into(), side: "buy".into(), price: 0.13461, timestamp: 1714924612471000, amount: 744.0 };
+    let new_market_trade = TardisTrade { exchange: "binance-futures".into(), symbol: "1000RATSUSDT".into(), side: "buy".into(), price: 0.13461, timestamp: 1714924612471000, amount: 744.0 };
 
     // 检查是否没有生成更多的 AccountEvents
     match event_account_rx.try_recv() {

@@ -3,17 +3,17 @@ use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
-pub struct MarketTrade
+pub struct TardisTrade
 {
     pub exchange: String, // NOTE this field and relevant data is stored in database. but currently not applicable as of August 2024.
-    pub symbol: String,   // NOTE : symbol = basequote
+    pub symbol: String,   // NOTE : symbol is formatted as `base_quote` for perpetual and `base_quote_XXXX` for futures(this would vary depending on the exchange).
     pub side: String,
     pub price: f64,
     pub timestamp: i64,
     pub amount: f64,
 }
 
-impl MarketTrade {
+impl TardisTrade {
     pub fn parse_base(&self) -> Option<String> {
         let parts: Vec<&str> = self.symbol.split('_').collect();
         if parts.len() == 2 {
@@ -39,7 +39,7 @@ mod tests {
 
     #[test]
     fn test_parse_base() {
-        let trade = MarketTrade {
+        let trade = TardisTrade {
             exchange: "example".to_string(),
             symbol: "BTC_USD".to_string(),
             side: "buy".to_string(),
@@ -50,7 +50,7 @@ mod tests {
 
         assert_eq!(trade.parse_base(), Some("BTC".to_string()));
 
-        let trade = MarketTrade {
+        let trade = TardisTrade {
             exchange: "".to_string(),
             symbol: "ETH_BTC".to_string(),
             side: "".to_string(),
@@ -61,7 +61,7 @@ mod tests {
 
         assert_eq!(trade.parse_base(), Some("ETH".to_string()));
 
-        let trade = MarketTrade {
+        let trade = TardisTrade {
             exchange: "".to_string(),
             symbol: "XRP".to_string(),
             side: "".to_string(),
@@ -75,7 +75,7 @@ mod tests {
 
     #[test]
     fn test_parse_quote() {
-        let trade = MarketTrade {
+        let trade = TardisTrade {
             exchange: "example".to_string(),
             symbol: "BTC_USD".to_string(),
             side: "buy".to_string(),
@@ -86,7 +86,7 @@ mod tests {
 
         assert_eq!(trade.parse_quote(), Some("USD".to_string()));
 
-        let trade = MarketTrade {
+        let trade = TardisTrade {
             exchange: "".to_string(),
             symbol: "ETH_BTC".to_string(),
             side: "".to_string(),
@@ -97,7 +97,7 @@ mod tests {
 
         assert_eq!(trade.parse_quote(), Some("BTC".to_string()));
 
-        let trade = MarketTrade {
+        let trade = TardisTrade {
             exchange: "".to_string(),
             symbol: "XRP".to_string(),
             side: "".to_string(),
