@@ -2,7 +2,7 @@ use crate::{
     common::{
         instrument::Instrument,
         order::{
-            identification::{machine_id::generate_machine_id, request_id::RequestId, OrderId},
+            identification::{machine_id::generate_machine_id, OrderId},
             order_instructions::OrderInstruction,
             states::{open::Open, request_open::RequestOpen},
             Order, OrderRole,
@@ -95,12 +95,12 @@ impl AccountOrders
     ///
     /// 返回一个唯一的 `RequestId`。
     /// NOTE that the client's login PC might change frequently. This method is not web-compatible now.
-    pub fn generate_request_id(&self, request: &Order<RequestOpen>) -> RequestId
-    {
-        let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
-        let request_ts = request.timestamp;
-        RequestId::new(request_ts as u64, self.machine_id, counter)
-    }
+    // pub fn generate_request_id(&self, request: &Order<RequestOpen>) -> RequestId
+    // {
+    //     let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
+    //     let request_ts = request.timestamp;
+    //     RequestId::new(request_ts as u64, self.machine_id, counter)
+    // }
 
     /// 生成一组预定义的延迟值数组，用于模拟订单延迟。
     ///
@@ -403,7 +403,19 @@ impl AccountOrders
         self.order_counter.fetch_add(1, Ordering::Relaxed);
     }
 
-    /// 在 order_id 方法中，使用 [Ordering::Acquire] 确保读取到最新的计数器值。
+    /// 生成一个新的 [OrderId]。
+    ///
+    /// 该函数根据当前的系统时间戳和订单计数器生成一个唯一的 [OrderId]。
+    /// 系统时间戳以毫秒为单位计算，并结合机器 ID 和计数器来确保生成的 ID 唯一。
+    /// 由于计数器使用 [Ordering::SeqCst] 进行递增，确保了在多线程环境下的顺序一致性和原子性。
+    ///
+    /// # 返回值
+    ///
+    /// 返回一个唯一的 [OrderId]，该 ID 是基于当前的时间戳、机器 ID 和计数器生成的。
+    ///
+    /// # 错误处理
+    ///
+    /// 如果系统时间出现倒退，将导致程序崩溃并输出错误信息 "时间出现倒退"。
     pub fn order_id(&self) -> OrderId
     {
         let now_ts = SystemTime::now().duration_since(UNIX_EPOCH).expect("时间出现倒退").as_millis() as u64;
@@ -411,6 +423,14 @@ impl AccountOrders
         OrderId::new(now_ts, self.machine_id, counter)
     }
 
+    /// 更新账户的延迟值。
+    ///
+    /// 该函数通过调用 [fluctuate_latency] 方法来更新账户的延迟生成器，并根据当前的时间进行动态调整。
+    /// 更新后的延迟值将用于模拟订单的延迟，适用于回测或模拟环境。
+    ///
+    /// # 参数
+    ///
+    /// - current_time: 当前时间，以微秒为单位，作为调整延迟值的参考点。
     pub fn update_latency(&mut self, current_time: i64)
     {
         fluctuate_latency(&mut self.latency_generator, current_time);
@@ -421,12 +441,12 @@ impl AccountOrders
 mod tests
 {
     use super::*;
-    use crate::{
-        common::instrument::{kind::InstrumentKind, Instrument},
-        sandbox::account::account_latency::{AccountLatency, FluctuationMode},
-    };
+    use crate::{common::instrument::{kind::InstrumentKind, Instrument}, sandbox::account::account_latency::{AccountLatency, FluctuationMode}, Exchange};
     use std::sync::Arc;
     use tokio::sync::RwLock;
+    use client_order_id::ClientOrderId;
+    use identification::client_order_id;
+    use crate::common::order::identification;
 
     #[tokio::test]
     async fn test_generate_latencies()
@@ -536,4 +556,120 @@ mod tests
         let latency = account_orders.latency_generator;
         assert!(latency.current_value >= 10 && latency.current_value <= 100);
     }
+
+    #[tokio::test]
+    async fn test_process_backtest_requestopen_with_a_simulated_latency() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
+        let mut account_orders = AccountOrders::new(123123, instruments, account_latency).await;
+
+        let order = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            cid: ClientOrderId(Some("unit_test".to_string())),
+            timestamp: 1625232523000,
+            side: Side::Buy,
+            state: RequestOpen {
+                reduce_only: false,
+                price: 35000.0,
+                size: 0.1,
+            },
+        };
+
+        let simulated_order = account_orders.process_backtest_requestopen_with_a_simulated_latency(order).await;
+        assert!(simulated_order.timestamp >= 1625232523000 + 10); // Assuming latency is at least 10
+        assert!(simulated_order.timestamp <= 1625232523000 + 100); // Assuming latency is at most 100
+    }
+
+
+
+    #[tokio::test]
+    async fn test_determine_maker_taker() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
+        let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
+
+        let order = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            cid: ClientOrderId(Some("unit_test".to_string())),
+            timestamp: 1625232523000,
+            side: Side::Buy,
+            state: RequestOpen {
+                reduce_only: false,
+                price: 35000.0,
+                size: 0.1,
+            },
+        };
+
+        let result = account_orders.determine_maker_taker(&order, 35000.0);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), OrderRole::Maker);
+    }
+
+
+    #[tokio::test]
+    async fn test_determine_post_only_order_role() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
+        let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
+
+        let order = Order {
+            kind: OrderInstruction::PostOnly,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            cid: ClientOrderId(Some("unit_test".to_string())),
+            timestamp: 1625232523000,
+            side: Side::Buy,
+            state: RequestOpen {
+                reduce_only: false,
+                price: 35000.0,
+                size: 0.1,
+            },
+        };
+
+        let result = account_orders.determine_post_only_order_role(&order, 34999.0);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), OrderRole::Maker);
+
+        let reject_result = account_orders.determine_post_only_order_role(&order, 35001.0);
+        assert!(reject_result.is_err());
+        assert_eq!(
+            reject_result.unwrap_err().to_string(),
+            "[UniLinkExecution] : Order rejected: PostOnly order should be rejected"
+        );
+    }
+
+
+    #[tokio::test]
+    async fn test_build_order_open() {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
+        let mut account_orders = AccountOrders::new(123123, instruments, account_latency).await;
+
+        let order = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            cid: ClientOrderId(Some("unit_test".to_string())),
+            timestamp: 1625232523000,
+            side: Side::Buy,
+            state: RequestOpen {
+                reduce_only: false,
+                price: 35000.0,
+                size: 0.1,
+            },
+        };
+
+        let open_order = account_orders.build_order_open(order, OrderRole::Maker).await;
+
+        assert_eq!(open_order.state.price, 35000.0);
+        assert_eq!(open_order.state.size, 0.1);
+        assert_eq!(open_order.state.filled_quantity, 0.0);
+        assert_eq!(open_order.state.order_role, OrderRole::Maker);
+        assert!(open_order.state.id.value() > 0);
+    }
+
 }
