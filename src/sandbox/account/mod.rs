@@ -4,7 +4,7 @@ use crate::{
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
         order::{
-            identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id},
+            identification::{machine_id::generate_machine_id},
             order_instructions::OrderInstruction,
             states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
             Order, OrderRole,
@@ -42,9 +42,11 @@ use std::{
     },
     time::{SystemTime, UNIX_EPOCH},
 };
+use chrono::Utc;
 use tokio::sync::{mpsc, oneshot, RwLock};
 use tracing::warn;
 use uuid::Uuid;
+use crate::common::order::identification::client_order_id::ClientOrderId;
 
 pub mod account_config;
 pub mod account_latency;
@@ -985,6 +987,183 @@ impl Account
             }
         }
     }
+
+    /// [Part 6] 初始化、充值、买BTC、提现
+    /// 初始化账户中要使用的币种，初始余额设为 0。
+    ///
+    /// # 参数
+    ///
+    /// * `tokens` - 一个包含要初始化的 `Token` 名称的 `Vec<String>`。
+    pub fn initialize_tokens(&mut self, tokens: Vec<String>) -> Result<(), ExchangeError> {
+        for token_str in tokens {
+            let token = Token(token_str);
+            self.balances.entry(token.clone()).or_insert_with(|| Balance {
+                time: Utc::now(),
+                current_price: 1.0, // 假设初始价格为 1.0，具体根据实际情况调整
+                total: 0.0,
+                available: 0.0,
+            });
+        }
+        Ok(())
+    }
+    /// 为指定的 `Token` 充值指定数量的稳定币。
+    ///
+    /// 如果该 `Token` 已经存在于 `balances` 中，则更新其余额；如果不存在，则创建一个新的 `Balance` 条目。
+    ///
+    /// # 参数
+    ///
+    /// * `token` - 需要充值的 `Token`。
+    /// * `amount` - 充值的数额。
+    ///
+    /// # 返回值
+    ///
+    /// 返回更新后的 `TokenBalance`。
+    pub fn deposit_stablecoin(&mut self, token: Token, amount: f64) -> Result<TokenBalance, ExchangeError> {
+        let mut balance = self.balances.entry(token.clone()).or_insert_with(|| {
+            Balance {
+                time: Utc::now(),
+                current_price: 1.0, // 假设稳定币价格为1.0
+                total: 0.0,
+                available: 0.0,
+            }
+        });
+
+        balance.total += amount;
+        balance.available += amount;
+
+        Ok(TokenBalance::new(token, *balance))
+    }
+    /// 为多个指定的 `Token` 充值指定数量的稳定币。
+    ///
+    /// 如果这些 `Token` 中有已经存在于 `balances` 中的，则更新其余额；如果不存在，则创建新的 `Balance` 条目。
+    ///
+    /// # 参数
+    ///
+    /// * `deposits` - 包含多个 `Token` 和对应充值金额的元组的集合。
+    ///
+    /// # 返回值
+    ///
+    /// 返回更新后的 `TokenBalance` 列表。
+    pub fn deposit_multiple_stablecoins(&mut self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError> {
+        let mut updated_balances = Vec::new();
+
+        for (token, amount) in deposits {
+            let balance = self.deposit_stablecoin(token, amount)?;
+            updated_balances.push(balance);
+        }
+
+        Ok(updated_balances)
+    }
+
+    /// 为账户充值 `u本位` 稳定币（USDT）。
+    ///
+    /// # 参数
+    ///
+    /// * `amount` - 充值的数额。
+    ///
+    /// # 返回值
+    ///
+    /// 返回更新后的 `TokenBalance`。
+    pub fn deposit_u_base(&mut self, amount: f64) -> Result<TokenBalance, ExchangeError> {
+        let usdt_token = Token("USDT".into());
+        self.deposit_stablecoin(usdt_token, amount)
+    }
+
+    /// NOTE : BETA功能，待测试。
+    /// 为账户充值 `b本位` 稳定币（BTC）。
+    ///
+    /// # 参数
+    /// * `amount` - 充值的数额。
+    ///
+    /// # 返回值
+    ///
+    /// 返回更新后的 `TokenBalance`。
+    pub fn deposit_b_base(&mut self, amount: f64) -> Result<TokenBalance, ExchangeError> {
+        let btc_token = Token("BTC".into());
+        self.deposit_stablecoin(btc_token, amount)
+    }
+
+    /// NOTE : BETA功能，待测试。
+    /// 用 `u本位` (USDT) 买 `b本位` (BTC)。
+    ///
+    /// # 参数
+    ///
+    /// * `usdt_amount` - 用于购买的 USDT 数额。
+    /// * `btc_price` - 当前 BTC 的价格（USDT/BTC）。
+    ///
+    /// # 返回值
+    ///
+    /// 返回更新后的 `TokenBalance` 列表，其中包含更新后的 BTC 和 USDT 余额。
+    pub fn buy_b_with_u(&mut self, usdt_amount: f64, btc_price: f64) -> Result<Vec<TokenBalance>, ExchangeError> {
+        let usdt_token = Token("USDT".into());
+        let btc_token = Token("BTC".into());
+
+        // 检查是否有足够的 USDT 余额
+        self.has_sufficient_available_balance(&usdt_token, usdt_amount)?;
+
+        // 计算购买的 BTC 数量
+        let btc_amount = usdt_amount / btc_price;
+
+        // 更新 USDT 余额
+        let usdt_delta = BalanceDelta {
+            total: -usdt_amount,
+            available: -usdt_amount,
+        };
+        let updated_usdt_balance = self.apply_balance_delta(&usdt_token, usdt_delta);
+
+        // 更新 BTC 余额
+        let btc_delta = BalanceDelta {
+            total: btc_amount,
+            available: btc_amount,
+        };
+        let updated_btc_balance = self.apply_balance_delta(&btc_token, btc_delta);
+
+        Ok(vec![
+            TokenBalance::new(usdt_token, updated_usdt_balance),
+            TokenBalance::new(btc_token, updated_btc_balance),
+        ])
+    }
+
+    /// NOTE : BETA功能，待测试。
+    /// 将 `b本位` (BTC) 转换为 `u本位` (USDT) 并提现。
+    ///
+    /// # 参数
+    ///
+    /// * `btc_amount` - 要提现的 BTC 数额。
+    /// * `btc_price` - 当前 BTC 的价格（USDT/BTC）。
+    ///
+    /// # 返回值
+    ///
+    /// 返回更新后的 `TokenBalance` 列表，其中包含更新后的 BTC 和 USDT 余额。
+    pub fn withdraw_u_from_b(&mut self, btc_amount: f64, btc_price: f64) -> Result<Vec<TokenBalance>, ExchangeError> {
+        let btc_token = Token("BTC".into());
+        let usdt_token = Token("USDT".into());
+
+        // 检查是否有足够的 BTC 余额
+        self.has_sufficient_available_balance(&btc_token, btc_amount)?;
+
+        // 计算提现的 USDT 数量
+        let usdt_amount = btc_amount * btc_price;
+
+        // 更新 BTC 余额
+        let btc_delta = BalanceDelta {
+            total: -btc_amount,
+            available: -btc_amount,
+        };
+        let updated_btc_balance = self.apply_balance_delta(&btc_token, btc_delta);
+
+        // 更新 USDT 余额
+        let usdt_delta = BalanceDelta {
+            total: usdt_amount,
+            available: usdt_amount,
+        };
+        let updated_usdt_balance = self.apply_balance_delta(&usdt_token, usdt_delta);
+
+        Ok(vec![
+            TokenBalance::new(btc_token, updated_btc_balance),
+            TokenBalance::new(usdt_token, updated_usdt_balance),
+        ])
+    }
 }
 
 pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
@@ -1340,5 +1519,75 @@ mod tests
 
         // 验证时间戳是否已更新
         assert_eq!(account.get_exchange_ts().unwrap(), 1625247600000);
+    }
+
+
+    #[tokio::test]
+    async fn test_deposit_u_base() {
+        let mut account = create_test_account().await;
+        let usdt_amount = 100.0;
+
+        let balance = account.deposit_u_base(usdt_amount).unwrap();
+
+        assert_eq!(balance.token, Token("USDT".into()));
+        assert_eq!(balance.balance.total, usdt_amount);
+        assert_eq!(balance.balance.available, usdt_amount);
+    }
+
+    #[tokio::test]
+    async fn test_deposit_b_base() {
+        let mut account = create_test_account().await;
+        let btc_amount = 0.5;
+
+        let balance = account.deposit_b_base(btc_amount).unwrap();
+
+        assert_eq!(balance.token, Token("BTC".into()));
+        assert_eq!(balance.balance.total, btc_amount);
+        assert_eq!(balance.balance.available, btc_amount);
+    }
+
+    #[tokio::test]
+    async fn test_buy_b_with_u() {
+        let mut account = create_test_account().await;
+        let usdt_amount = 100.0;
+        let btc_price = 50000.0;
+
+        // 首先充值 USDT
+        account.deposit_u_base(usdt_amount).unwrap();
+
+        // 为 BTC 手动初始化一个余额（尽管余额为 0，但可以避免配置报错）
+        account.deposit_b_base(0.0).unwrap();
+
+        // 用 USDT 购买 BTC
+        let balances = account.buy_b_with_u(usdt_amount, btc_price).unwrap();
+
+        let usdt_balance = balances.iter().find(|b| b.token == Token("USDT".into())).unwrap();
+        let btc_balance = balances.iter().find(|b| b.token == Token("BTC".into())).unwrap();
+
+        // 购买后，USDT 余额应为 0，BTC 余额应为 0.002
+        assert_eq!(usdt_balance.balance.total, 0.0);
+        assert_eq!(btc_balance.balance.total, usdt_amount / btc_price);
+    }
+
+    #[tokio::test]
+    async fn test_withdraw_u_from_b() {
+        let mut account = create_test_account().await;
+        let btc_amount = 0.002;
+        let btc_price = 50000.0;
+        let usdt_initial_amount = 1000.0; // 初始存入的USDT
+
+        // 首先充值 BTC 和 USDT
+        account.deposit_b_base(btc_amount).unwrap();
+        account.deposit_u_base(usdt_initial_amount).unwrap();
+
+        // 提现 BTC 转换为 USDT
+        let balances = account.withdraw_u_from_b(btc_amount, btc_price).unwrap();
+
+        let usdt_balance = balances.iter().find(|b| b.token == Token("USDT".into())).unwrap();
+        let btc_balance = balances.iter().find(|b| b.token == Token("BTC".into())).unwrap();
+
+        // 提现后，BTC 余额应为 0，USDT 余额应为 100 + 初始USDT金额
+        assert_eq!(btc_balance.balance.total, 0.0);
+        assert_eq!(usdt_balance.balance.total, btc_amount * btc_price + usdt_initial_amount);
     }
 }

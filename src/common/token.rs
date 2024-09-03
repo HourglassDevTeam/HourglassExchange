@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 /// 表示加密货币或其他代币，例如 "btc", "eth", "usdt" 等
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-pub struct Token(String);
+pub struct Token(pub String);
 
 impl Display for Token
 {
