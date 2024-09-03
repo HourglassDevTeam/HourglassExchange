@@ -16,6 +16,9 @@ pub enum InstrumentKind
     CommodityFuture,
 }
 
+
+
+
 impl Default for InstrumentKind
 {
     fn default() -> Self

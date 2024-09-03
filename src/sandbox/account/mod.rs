@@ -780,25 +780,26 @@ impl Account
         Ok(())
     }
 
-    pub async fn match_orders(&mut self, market_trade: &MarketTrade, instrument_kind: InstrumentKind) -> Vec<ClientTrade>
+    pub async fn match_orders(&mut self, market_trade: &MarketTrade) -> Vec<ClientTrade>
     {
         let mut trades = Vec::new();
         // parse base from MarketTrade's symbol(which is formatted as base_quote)
         let base = Token::from(market_trade.parse_base().unwrap());
         let quote =Token::from(market_trade.parse_quote().unwrap());
-        let instrument = Instrument {base,quote,kind: instrument_kind };
+        let kind = market_trade.parse_kind();
+        let instrument = Instrument {base,quote,kind};
 
         if let Some(mut instrument_orders) = self.get_orders_for_instrument(&instrument).await {
             if let Some(matching_side) = instrument_orders.determine_matching_side(&market_trade) {
                 match matching_side {
                     | Side::Buy => {
                         trades.append(&mut instrument_orders.match_bids(&market_trade,
-                                                                        self.determine_fees_percent(&instrument_kind, &OrderRole::Taker)
+                                                                        self.determine_fees_percent(&kind, &OrderRole::Taker)
                                                                             .expect("Missing fees percent")));
                     }
                     | Side::Sell => {
                         trades.append(&mut instrument_orders.match_asks(&market_trade,
-                                                                        self.determine_fees_percent(&instrument_kind, &OrderRole::Taker)
+                                                                        self.determine_fees_percent(&kind, &OrderRole::Taker)
                                                                             .expect("Missing fees percent")));
                     }
                 }

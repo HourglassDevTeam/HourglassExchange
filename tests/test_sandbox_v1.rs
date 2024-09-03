@@ -65,7 +65,7 @@ async fn main() {
     // ).await;
 
     // 4. 发送一个不匹配任何未成交订单的市场事件，并检查是否没有发送 AccountEvent
-    // test_4_send_market_event_that_does_not_match_any_open_order(
+    // test_4_send_market_trade_that_does_not_match_any_open_order(
     //     &mut request_tx,
     //     &mut event_account_rx,
     // );
@@ -81,7 +81,7 @@ async fn main() {
     //
     // // 7. Send MarketEvent that exactly full matches 1x open Order (trade) and check AccountEvents
     // //    for balances and trades
-    // test_7_send_market_event_that_exact_full_matches_order(
+    // test_7_send_market_trade_that_exact_full_matches_order(
     //     &mut request_tx,
     //     &mut event_account_rx,
     // )
@@ -103,7 +103,7 @@ async fn main() {
     //
     // // 10. Send MarketEvent that fully matches 1x sell Order (trade), and partially matches the other
     // //     sell Order (trade). Check AccountEvents for balances and trades of both matches are sent.
-    // test_10_send_market_event_that_full_and_partial_matches_orders(
+    // test_10_send_market_trade_that_full_and_partial_matches_orders(
     //     &mut event_simulated_tx,
     //     &mut event_account_rx,
     // )
@@ -242,7 +242,7 @@ async fn test_3_open_limit_buy_order(
 }
 
 
-// 4. 发送一个不匹配任何未完成订单的 MarketEvent，并检查是否没有发送 AccountEvents。注意，这一部分可能存在问题，因为它没有使用`new_market_event`。
+// 4. 发送一个不匹配任何未完成订单的 MarketTrade，并检查是否没有发送 AccountEvents。注意，这一部分可能存在问题，因为它没有使用`new_market_trade`。
 // NOTE 其次还要检查一下available的数值处理是否正确。
 fn test_4_send_market_trade_that_does_not_match_any_open_order(
     event_simulated_tx: &mut UnboundedSender<SandBoxClientEvent>,
@@ -444,9 +444,9 @@ async fn test_6_open_2x_limit_buy_orders(
         }
     }
 }
-//
+
 // 7. 发送 MarketEvent，该事件与 1x 开放订单（交易）完全匹配，并检查 AccountEvents 是否发送了余额和ClientTrade信息。
-// async fn test_7_send_market_event_that_exact_full_matches_order(
+// async fn test_7_send_market_trade_that_exact_full_matches_order(
 //     event_simulated_tx: &mut mpsc::UnboundedSender<SandBoxClientEvent>,
 //     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 // ) {
@@ -676,7 +676,7 @@ async fn test_6_open_2x_limit_buy_orders(
 //
 // 10. 发送一个完全匹配 1 个卖单（交易）的 MarketEvent，并部分匹配另一个卖单。
 // //    (trade). Check AccountEvents for balances and trades of both matches are sent.
-// async fn test_10_send_market_event_that_full_and_partial_matches_orders(
+// async fn test_10_send_market_trade_that_full_and_partial_matches_orders(
 //     event_simulated_tx: &mut mpsc::UnboundedSender<SandBoxClientEvent>,
 //     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 // ) {

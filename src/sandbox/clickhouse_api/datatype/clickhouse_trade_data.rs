@@ -1,5 +1,6 @@
 use crate::sandbox::clickhouse_api::queries_operations::Row;
 use serde::{Deserialize, Serialize};
+use crate::common::instrument::kind::InstrumentKind;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
@@ -12,6 +13,29 @@ pub struct MarketTrade
     pub timestamp: i64,
     pub amount: f64,
 }
+
+
+/// NOTE : currently applicable as of August 2024.todo!() need to be UPDATED.
+impl MarketTrade {
+    pub fn parse_kind(&self) -> InstrumentKind {
+        // Check if the symbol contains an underscore
+        if self.symbol.contains('_') {
+            // Check if the symbol has more than one underscore
+            if self.symbol.matches('_').count() > 1 {
+                InstrumentKind::Future
+            } else {
+                // Assume it's Perpetual if it contains one underscore
+                InstrumentKind::Perpetual
+            }
+        } else {
+            // Handle symbols without underscores
+            // Here you can add more logic to distinguish between Spot, CryptoOption, etc.
+            // For now, we'll assume it's a Spot instrument if there's no underscore
+            todo!()
+        }
+    }
+}
+
 
 impl MarketTrade {
     pub fn parse_base(&self) -> Option<String> {
