@@ -244,12 +244,12 @@ async fn test_3_open_limit_buy_order(
 
 // 4. 发送一个不匹配任何未完成订单的 MarketEvent，并检查是否没有发送 AccountEvents。注意，这一部分可能存在问题，因为它没有使用`new_market_event`。
 // NOTE 其次还要检查一下available的数值处理是否正确。
-fn test_4_send_market_event_that_does_not_match_any_open_order(
+fn test_4_send_market_trade_that_does_not_match_any_open_order(
     event_simulated_tx: &mut UnboundedSender<SandBoxClientEvent>,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
 ) {
 
-    let new_market_event = MarketTrade { exchange: "binance-futures".into(), symbol: "1000RATSUSDT".into(), side: "buy".into(), price: 0.13461, timestamp: 1714924612471000, amount: 744.0 };
+    let new_market_trade = MarketTrade { exchange: "binance-futures".into(), symbol: "1000RATSUSDT".into(), side: "buy".into(), price: 0.13461, timestamp: 1714924612471000, amount: 744.0 };
 
     // 检查是否没有生成更多的 AccountEvents
     match event_account_rx.try_recv() {

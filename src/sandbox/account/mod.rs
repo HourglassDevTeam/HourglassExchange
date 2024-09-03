@@ -19,7 +19,6 @@ use uuid::Uuid;
 use crate::{
     common::{
         balance::{Balance, BalanceDelta, TokenBalance},
-        datafeed::market_event::MarketEvent,
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
         order::{
@@ -781,22 +780,25 @@ impl Account
         Ok(())
     }
 
-    pub async fn match_orders(&mut self, market_event: MarketEvent<MarketTrade>) -> Vec<ClientTrade>
+    pub async fn match_orders(&mut self, market_trade: &MarketTrade, instrument_kind: InstrumentKind) -> Vec<ClientTrade>
     {
         let mut trades = Vec::new();
+        // parse base from MarketTrade's symbol(which is formatted as base_quote)
+        let base = Token::from(market_trade.parse_base().unwrap());
+        let quote =Token::from(market_trade.parse_quote().unwrap());
+        let instrument = Instrument {base,quote,kind: instrument_kind };
 
-        // 调用 get_orders_for_instrument 方法获取与当前 market_event 对应的 InstrumentOrders
-        if let Some(mut instrument_orders) = self.get_orders_for_instrument(&market_event.instrument).await {
-            if let Some(matching_side) = instrument_orders.determine_matching_side(&market_event) {
+        if let Some(mut instrument_orders) = self.get_orders_for_instrument(&instrument).await {
+            if let Some(matching_side) = instrument_orders.determine_matching_side(&market_trade) {
                 match matching_side {
                     | Side::Buy => {
-                        trades.append(&mut instrument_orders.match_bids(&market_event,
-                                                                        self.determine_fees_percent(&market_event.instrument.kind, &OrderRole::Taker)
+                        trades.append(&mut instrument_orders.match_bids(&market_trade,
+                                                                        self.determine_fees_percent(&instrument_kind, &OrderRole::Taker)
                                                                             .expect("Missing fees percent")));
                     }
                     | Side::Sell => {
-                        trades.append(&mut instrument_orders.match_asks(&market_event,
-                                                                        self.determine_fees_percent(&market_event.instrument.kind, &OrderRole::Taker)
+                        trades.append(&mut instrument_orders.match_asks(&market_trade,
+                                                                        self.determine_fees_percent(&instrument_kind, &OrderRole::Taker)
                                                                             .expect("Missing fees percent")));
                     }
                 }
@@ -804,7 +806,7 @@ impl Account
         }
         else {
             warn!("No orders found for the given instrument in the market event.");
-        }
+        };
 
         self.process_trades(trades.clone()).await;
 
