@@ -24,9 +24,9 @@ struct Ids {
 }
 
 impl Ids {
-    fn new(cid: Option<String>, id: OrderId) -> Self {
+    fn new(cid: ClientOrderId, id: OrderId) -> Self {
         Self {
-            cid: ClientOrderId(cid),
+            cid,
             id,
         }
     }
@@ -35,13 +35,13 @@ impl Ids {
 #[tokio::test]
 async fn main() {
     // 创建通道用于发送和接收事件
-    let (mut request_tx, mut request_rx) = mpsc::unbounded_channel();
+    let ( mut request_tx,  request_rx) = mpsc::unbounded_channel();
     let (event_account_tx, mut event_account_rx) = mpsc::unbounded_channel();
 
     // additional initialization
     let timestamp = 1234124124124123u64;
     let machine_id = generate_machine_id().unwrap();
-    let test_3_ids = Ids::new(Option::from("test_cid".to_string()), OrderId(1234124124124123));
+    let test_3_ids = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
 
     // 创建并运行 SimulatedExchange
     tokio::spawn(run_sample_exchange(event_account_tx, request_rx));
@@ -74,8 +74,8 @@ async fn main() {
     test_5_cancel_buy_order(&client, test_3_ids, &mut event_account_rx).await;
     //
     // // 6. Open 2x LIMIT Buy Orders & assert on received AccountEvents
-    // let test_6_ids_1 = Ids::new(Uuid::new_v4(), 2);
-    // let test_6_ids_2 = Ids::new(Uuid::new_v4(), 3);
+    // let test_6_ids_1 = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
+    // let test_6_ids_2 = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
     // test_6_open_2x_limit_buy_orders(
     //     &client,
     //     test_6_ids_1.clone(),
@@ -141,16 +141,15 @@ async fn test_1_fetch_initial_orders_and_check_empty(client: &SandBoxClient) {
     let initial_orders_result = client.fetch_orders_open().await;
 
     // 打印返回结果
-    match &initial_orders_result {
+    match initial_orders_result {
         Ok(initial_orders) => {
             assert!(initial_orders.is_empty(), "Expected no open orders, but found some.");
         }
-        Err(e) => {
+        Err(_) => {  // 使用 _ 忽略错误值
             panic!("Error occurred while fetching open orders.");
         }
     }
 }
-
 // 自定义比较函数，忽略 time 字段
 fn assert_balance_equal_ignore_time(actual: &Balance, expected: &Balance) {
     assert_eq!(actual.current_price, expected.current_price, "current_price mismatch");
@@ -249,6 +248,7 @@ async fn test_3_open_limit_buy_order(
 
 
 // 4. 发送一个不匹配任何未完成订单的 MarketEvent，并检查是否没有发送 AccountEvents。注意，这一部分可能存在问题，因为它没有使用`new_market_event`。
+// NOTE 其次还要检查一下available的数值处理是否正确。
 fn test_4_send_market_event_that_does_not_match_any_open_order(
     event_simulated_tx: &mut UnboundedSender<SandBoxClientEvent>,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
@@ -312,7 +312,6 @@ async fn test_5_cancel_buy_order(
             kind: AccountEventKind::Balance(TEST_QUOTE_balance),
             ..
         }) => {
-            // Expected TEST_QUOTE Balance.available = 9_900 + (100.0 * 1.0)
             let expected = TokenBalance::new("TEST_QUOTE", Balance::new(200.0, 250.0, current_px));
             assert_eq!(TEST_QUOTE_balance.balance.total, expected.balance.total);
             assert_eq!(TEST_QUOTE_balance.balance.available, expected.balance.available);
@@ -331,7 +330,7 @@ async fn test_5_cancel_buy_order(
     }
 }
 
-// // 6. Open 2x limit buy orders and check AccountEvents for balance & order new are sent
+// 6. 开两个 2 倍杠杆的限价买单，并检查是否发送了关于余额和新订单的 AccountEvents
 async fn test_6_open_2x_limit_buy_orders(
     client: &SandBoxClient,
     test_6_ids_1: Ids,

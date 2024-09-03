@@ -82,7 +82,7 @@ pub async fn run_sample_exchange(
     // Directly modify the orders within the RwLock
     {
         let mut orders_guard = account_orders.instrument_orders_map.entry(instrument).or_default();
-        let mut orders_write = orders_guard.value_mut(); // Assuming it's a DashMap
+        let orders_write = orders_guard.value_mut(); // Assuming it's a DashMap
         orders_write.bids.push(test_order);
     }
 
