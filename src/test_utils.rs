@@ -35,6 +35,7 @@ use std::{
     sync::{atomic::AtomicI64, Arc},
     time::{SystemTime, UNIX_EPOCH},
 };
+use dashmap::DashMap;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
@@ -111,7 +112,7 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen>
 pub async fn create_test_account() -> Account
 {
     let leverage_rate = 1.0;
-    let mut balances = HashMap::new();
+    let balances = DashMap::new();
     balances.insert(Token::from("TEST_BASE"), Balance::new(10.0, 10.0, 1.0));
     balances.insert(Token::from("TEST_QUOTE"), Balance::new(10_000.0, 10_000.0, 1.0));
 

@@ -3,6 +3,7 @@ use std::{
     sync::{atomic::AtomicI64, Arc},
     time::Duration,
 };
+use dashmap::DashMap;
 use tokio::sync::{mpsc, Mutex, RwLock};
 use uuid::Uuid;
 
@@ -40,7 +41,7 @@ pub async fn run_sample_exchange(
     event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>,
 ) {
     // Creating initial balances
-    let mut balances = HashMap::new();
+    let balances = DashMap::new();
     let token1 = Token::from("TEST_BASE");
     let token2 = Token::from("TEST_QUOTE");
     balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));

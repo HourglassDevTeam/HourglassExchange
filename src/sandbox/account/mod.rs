@@ -2,7 +2,6 @@ use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
-use std::collections::HashMap;
 /// FIXME respond function is not used in some of the functions.
 use std::{
     fmt::Debug,
@@ -12,10 +11,11 @@ use std::{
     },
     time::{SystemTime, UNIX_EPOCH},
 };
+use dashmap::DashMap;
 use tokio::sync::{mpsc, oneshot, RwLock};
 use tracing::warn;
 use uuid::Uuid;
-
+use dashmap::mapref::one::{Ref, RefMut as DashMapRefMut};
 use crate::{
     common::{
         balance::{Balance, BalanceDelta, TokenBalance},
@@ -62,7 +62,7 @@ pub struct Account
     pub account_event_tx: UnboundedSender<AccountEvent>, // 帐户事件发送器
     pub config: Arc<AccountConfig>,                      // 帐户配置
     pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
-    pub balances: HashMap<Token, Balance>,               // 帐户余额
+    pub balances: DashMap<Token, Balance>,               // 帐户余额
     pub positions: AccountPositions,                     /* 帐户持仓
                                                           * pub vault: Vault, */
 }
@@ -88,7 +88,7 @@ pub struct AccountInitiator
     account_event_tx: Option<UnboundedSender<AccountEvent>>,
     config: Option<Arc<AccountConfig>>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
-    balances: Option<HashMap<Token, Balance>>,
+    balances: Option<DashMap<Token, Balance>>,
     positions: Option<AccountPositions>,
 }
 
@@ -129,7 +129,7 @@ impl AccountInitiator
         self
     }
 
-    pub fn balances(mut self, value: HashMap<Token, Balance>) -> Self
+    pub fn balances(mut self, value: DashMap<Token, Balance>) -> Self
     {
         self.balances = Some(value);
         self
@@ -221,19 +221,19 @@ impl Account
     }
 
     /// 返回指定[`Token`]的[`Balance`]的引用。
-    pub fn get_balance(&self, token: &Token) -> Result<&Balance, ExecutionError>
-    {
+    pub fn get_balance(&self, token: &Token) -> Result<Ref<Token, Balance>, ExecutionError> {
         self.balances
             .get(token)
-            .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {token}")))
+            .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {:?}", token)))
     }
 
+
+
     /// 返回指定[`Token`]的[`Balance`]的可变引用。
-    pub fn get_balance_mut(&mut self, token: &Token) -> Result<&mut Balance, ExecutionError>
-    {
+    pub fn get_balance_mut(&mut self, token: &Token) -> Result<DashMapRefMut<'_, Token, Balance>, ExecutionError> {
         self.balances
             .get_mut(token)
-            .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {token}")))
+            .ok_or_else(|| ExecutionError::SandBox(format!("SandBoxExchange is not configured for Token: {:?}", token)))
     }
 
     pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&Token, f64)
@@ -498,13 +498,13 @@ impl Account
     {
         match cancelled.side {
             | Side::Buy => {
-                let balance = self.get_balance_mut(&cancelled.instrument.quote)
+                let mut balance = self.get_balance_mut(&cancelled.instrument.quote)
                                   .expect("[UniLinkExecution] : Balance existence checked when opening Order");
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
                 TokenBalance::new(cancelled.instrument.quote.clone(), *balance)
             }
             | Side::Sell => {
-                let balance = self.get_balance_mut(&cancelled.instrument.base)
+                let mut balance = self.get_balance_mut(&cancelled.instrument.base)
                                   .expect("[UniLinkExecution] : Balance existence checked when opening Order");
                 balance.available += cancelled.state.remaining_quantity();
                 TokenBalance::new(cancelled.instrument.base.clone(), *balance)
@@ -567,7 +567,7 @@ impl Account
     /// 将 [`BalanceDelta`] 应用于指定 [`Token`] 的 [`Balance`]，并返回更新后的 [`Balance`] 。
     pub fn apply_balance_delta(&mut self, token: &Token, delta: BalanceDelta) -> Balance
     {
-        let base_balance = self.get_balance_mut(token).unwrap();
+        let mut base_balance = self.get_balance_mut(token).unwrap();
 
         let _ = base_balance.apply(delta);
 
