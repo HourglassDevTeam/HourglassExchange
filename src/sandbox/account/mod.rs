@@ -1596,7 +1596,7 @@ mod tests
         let mut account = create_test_account().await;
 
         // 初始化一些币种
-        let tokens = vec!["你大爷币".into(), "你二爷币".into(), "你姑奶奶币".into()];
+        let tokens = vec!["大爷币".into(), "二爷币".into(), "姑奶奶币".into()];
         account.initialize_tokens(tokens.clone()).unwrap();
 
         // 检查这些币种是否被正确初始化，且初始余额为 0
