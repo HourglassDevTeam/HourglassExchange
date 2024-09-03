@@ -4,10 +4,9 @@ use crate::common::instrument::kind::InstrumentKind;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
-pub struct MarketTrade
-{
-    pub exchange: String, // NOTE this field and relevant data is stored in database. but currently not applicable as of August 2024.
-    pub symbol: String,   // NOTE : symbol is formatted as `base_quote` for perpetual and `base_quote_XXXX` for futures(this would vary depending on the exchange).
+pub struct MarketTrade {
+    pub exchange: String, // 注意：此字段及相关数据存储在数据库中，但截至2024年8月目前不适用。
+    pub symbol: String,   // 注意：符号格式为 `base_quote` 代表永续合约，`base_quote_XXXX` 代表期货（取决于交易所的不同）。
     pub side: String,
     pub price: f64,
     pub timestamp: i64,
@@ -15,26 +14,27 @@ pub struct MarketTrade
 }
 
 
-/// NOTE : currently applicable as of August 2024.todo!() need to be UPDATED.
+/// 注意：当前适用于2024年8月。todo!() 需要更新。
 impl MarketTrade {
     pub fn parse_kind(&self) -> InstrumentKind {
-        // Check if the symbol contains an underscore
+        // 检查符号是否包含下划线
         if self.symbol.contains('_') {
-            // Check if the symbol has more than one underscore
+            // 检查符号中是否包含多个下划线
             if self.symbol.matches('_').count() > 1 {
                 InstrumentKind::Future
             } else {
-                // Assume it's Perpetual if it contains one underscore
+                // 如果符号包含一个下划线，假设为永续合约
                 InstrumentKind::Perpetual
             }
         } else {
-            // Handle symbols without underscores
-            // Here you can add more logic to distinguish between Spot, CryptoOption, etc.
-            // For now, we'll assume it's a Spot instrument if there's no underscore
+            // 处理没有下划线的符号
+            // 这里可以添加更多逻辑来区分现货、加密期权等
+            // 目前，如果没有下划线，我们假设为现货工具
             todo!()
         }
     }
 }
+
 
 
 impl MarketTrade {
