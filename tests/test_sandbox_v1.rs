@@ -337,7 +337,7 @@ async fn test_5_cancel_buy_order(
 
 // 6. 开两个限价买单，并检查是否发送了关于余额和新订单的 AccountEvents
 // NOTE 数值是否对的上？
-// NOTE 真的要开杠杆怎么处理？
+// NOTE 真的要开杠杆怎么处理？杠杆率怎么设置？
 
 async fn test_6_open_2x_limit_buy_orders(
     client: &SandBoxClient,
