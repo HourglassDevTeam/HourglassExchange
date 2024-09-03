@@ -1345,7 +1345,7 @@ mod tests
     }
 
 
-    // NOTE 需要检查atomic_open的response的发送。
+    // NOTE 需要检查atomic_open的response的发送。maybe run the default sample exchange .
     // #[tokio::test]
     // async fn test_atomic_open() {
     //     let mut account = create_test_account().await;
