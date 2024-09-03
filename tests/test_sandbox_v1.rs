@@ -264,6 +264,7 @@ fn test_4_send_market_trade_that_does_not_match_any_open_order(
         }
     }
 }
+
 #[allow(warnings)]
 
 // // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent.
