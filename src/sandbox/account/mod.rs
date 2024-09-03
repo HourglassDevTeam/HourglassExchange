@@ -1590,4 +1590,21 @@ mod tests
         assert_eq!(btc_balance.balance.total, 0.0);
         assert_eq!(usdt_balance.balance.total, btc_amount * btc_price + usdt_initial_amount);
     }
+
+    #[tokio::test]
+    async fn test_initialize_tokens() {
+        let mut account = create_test_account().await;
+
+        // 初始化一些币种
+        let tokens = vec!["你大爷币".into(), "你二爷币".into(), "你姑奶奶币".into()];
+        account.initialize_tokens(tokens.clone()).unwrap();
+
+        // 检查这些币种是否被正确初始化，且初始余额为 0
+        for token_str in tokens {
+            let token = Token(token_str);
+            let balance = account.get_balance(&token).unwrap();
+            assert_eq!(balance.total, 0.0);
+            assert_eq!(balance.available, 0.0);
+        }
+    }
 }
