@@ -1,11 +1,8 @@
 
-// use redis::Commands;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::time::timeout;
 use unilink_execution::ClientExecution;
 use unilink_execution::common::balance::{Balance, TokenBalance};
-use unilink_execution::common::datafeed::market_event::MarketEvent;
 use unilink_execution::common::event::{AccountEvent, AccountEventKind};
 use unilink_execution::common::instrument::Instrument;
 use unilink_execution::common::instrument::kind::InstrumentKind;
@@ -251,7 +248,7 @@ async fn test_3_open_limit_buy_order(
 }
 
 
-// 4. Send MarketEvent that does not match any open Order and check no AccountEvents are sent. NOTE this one is likely buggy as it does not use the open order.
+// 4. 发送一个不匹配任何未完成订单的 MarketEvent，并检查是否没有发送 AccountEvents。注意，这一部分可能存在问题，因为它没有使用`new_market_event`。
 fn test_4_send_market_event_that_does_not_match_any_open_order(
     event_simulated_tx: &mut UnboundedSender<SandBoxClientEvent>,
     event_account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
@@ -259,11 +256,11 @@ fn test_4_send_market_event_that_does_not_match_any_open_order(
 
     let new_market_event = MarketTrade { exchange: "binance-futures".into(), symbol: "1000RATSUSDT".into(), side: "buy".into(), price: 0.13461, timestamp: 1714924612471000, amount: 744.0 };
 
-    // Check no more AccountEvents generated
+    // 检查是否没有生成更多的 AccountEvents
     match event_account_rx.try_recv() {
         Err(mpsc::error::TryRecvError::Empty) => {}
         other => {
-            panic!("try_recv() consumed unexpected: {:?}", other);
+            panic!("try_recv() 消耗了意外的结果: {:?}", other);
         }
     }
 }
