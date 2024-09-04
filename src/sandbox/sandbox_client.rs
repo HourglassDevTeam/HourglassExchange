@@ -15,6 +15,8 @@ use crate::{
     },
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
+use crate::common::position::{AccountPositions};
+use crate::common::token::Token;
 
 #[derive(Debug)]
 pub struct SandBoxClient
@@ -30,15 +32,20 @@ pub type CancelOrderResults = Vec<Result<Order<Cancelled>, ExchangeError>>;
 pub type RequestOpenOrders = (Vec<Order<RequestOpen>>, Sender<OpenOrderResults>);
 pub type RequestCancelOrders = (Vec<Order<RequestCancel>>, Sender<CancelOrderResults>);
 
+pub type DepositResults = Vec<Result<(Token, f64), ExchangeError>>;
+pub type WithdrawalResults = Vec<Result<(Token, f64), ExchangeError>>;
+pub type DepositRequest = (Vec<(Token, f64)>, Sender<DepositResults>);
+pub type WithdrawalRequest = (Vec<(Token, f64)>, Sender<WithdrawalResults>);
+
 // 模拟交易所客户端可向模拟交易所发送的命令
 #[derive(Debug)]
 pub enum SandBoxClientEvent
 {
-    // FetchMarketEvent(MarketTrade),
-    // Deposit(RequestToDeposit),
-    // Withdrawal(RequestToWithdrawal),
+    Deposit(DepositRequest),
+    Withdrawal(WithdrawalRequest),
     FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExchangeError>>),
     FetchBalances(Sender<Result<Vec<TokenBalance>, ExchangeError>>),
+    CalculateAllPositions(Sender<Result<AccountPositions, ExchangeError>>),
     OpenOrders(RequestOpenOrders),
     CancelOrders(RequestCancelOrders),
     CancelOrdersAll(Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>),
@@ -47,9 +54,9 @@ pub enum SandBoxClientEvent
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    type Config = UnboundedSender<SandBoxClientEvent>;
-
     const CLIENT_KIND: Exchange = Exchange::SandBox;
+
+    type Config = UnboundedSender<SandBoxClientEvent>;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {
