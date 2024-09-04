@@ -29,12 +29,12 @@ impl<Statistic> PositionHandler for InMemoryVault<Statistic>
     fn add_open_position(&mut self, position: Position) -> Result<(), VaultError>
     {
         let position_id = match &position {
-            | Position::Perpetual(pos) => pos.meta.position_id,
-            | Position::LeveragedToken(pos) => pos.meta.position_id,
-            | Position::Future(pos) => pos.meta.position_id,
-            | Position::Option(pos) => pos.meta.position_id,
+            | Position::Perpetual(pos) => &pos.meta.position_id,
+            | Position::LeveragedToken(pos) => &pos.meta.position_id,
+            | Position::Future(pos) => &pos.meta.position_id,
+            | Position::Option(pos) => &pos.meta.position_id,
         };
-        self.open_positions.insert(position_id, position);
+        self.open_positions.insert(position_id.clone(), position);
         Ok(())
     }
 

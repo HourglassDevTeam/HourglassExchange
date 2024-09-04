@@ -40,7 +40,7 @@ pub struct AccountPositions
 
 impl AccountPositions
 {
-    /// 创建一个新的 AccountPositions 实例
+    /// 创建一个新的 `AccountPositions` 实例
     pub fn init() -> Self
     {
         Self { margin_pos: Vec::new(),
@@ -53,9 +53,7 @@ impl AccountPositions
     pub async fn build_new_perpetual_position(&self,
                                               config: &AccountConfig,
                                               trade: &ClientTrade,
-                                              exchange_ts: i64,
-                                              machine_id: u64,
-                                              counter: u64)
+                                              exchange_ts: i64, ) // FIXME this counter might not be useful.
                                               -> Result<PerpetualPosition, ExchangeError>
     {
         let maker_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
@@ -70,7 +68,7 @@ impl AccountPositions
         let funding_fee = trade.quantity * trade.price * config.funding_rate;
 
         // 根据 Instrument 和 Side 动态生成 position_id
-        let position_meta = PositionMetaBuilder::new().position_id(PositionId::new(exchange_ts as u64, machine_id, counter))
+        let position_meta = PositionMetaBuilder::new().position_id(PositionId::new(&trade.instrument.clone(), trade.timestamp))
                                                       .enter_ts(exchange_ts)
                                                       .update_ts(exchange_ts)
                                                       .exit_balance(TokenBalance { // 初始化为 exit_balance
