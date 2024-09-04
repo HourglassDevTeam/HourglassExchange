@@ -21,7 +21,6 @@ use crate::{
     sandbox::{
         account::account_config::{MarginMode, SandboxMode},
         clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
-        instrument_orders::InstrumentOrders,
     },
     Exchange,
 };
@@ -429,13 +428,13 @@ impl Account
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub async fn apply_open_order_changes(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExchangeError>
     {
-        // println!("[UniLinkExecution] : Starting apply_open_order_changes: {:?}, with balance: {:?}", open, required_balance);
+        println!("[UniLinkExecution] : Starting apply_open_order_changes: {:?}, with balance: {:?}", open, required_balance);
 
         // 配置从直接访问 `self.config` 获取
         let (position_mode, position_margin_mode) = (self.config.position_mode.clone(), self.config.position_margin_mode.clone());
 
-        // println!("[UniLinkExecution] : Retrieved position_mode: {:?}, position_margin_mode: {:?}",
-        //          position_mode, position_margin_mode);
+        println!("[UniLinkExecution] : Retrieved position_mode: {:?}, position_margin_mode: {:?}",
+                 position_mode, position_margin_mode);
 
         // 根据不同的 InstrumentKind 进行处理
         match open.instrument.kind {
@@ -877,22 +876,22 @@ impl Account
         }
     }
 
-    async fn get_orders_for_instrument(&self, instrument: &Instrument) -> Option<InstrumentOrders>
-    {
-        // 获取 orders_lock 并在 match 之前完成对它的操作
-        let orders_result = {
-            let orders_lock = self.orders.write().await;
-            orders_lock.get_ins_orders_mut(instrument).map(|orders| orders.to_owned())
-        };
-
-        match orders_result {
-            | Ok(orders) => Some(orders),
-            | Err(error) => {
-                warn!(?error, %instrument, "Failed to match orders for unrecognized Instrument");
-                None
-            }
-        }
-    }
+    // async fn get_orders_for_instrument(&self, instrument: &Instrument) -> Option<InstrumentOrders>
+    // {
+    //     // 获取 orders_lock 并在 match 之前完成对它的操作
+    //     let orders_result = {
+    //         let orders_lock = self.orders.write().await;
+    //         orders_lock.get_ins_orders_mut(instrument).map(|orders| orders.to_owned())
+    //     };
+    //
+    //     match orders_result {
+    //         | Ok(orders) => Some(orders),
+    //         | Err(error) => {
+    //             warn!(?error, %instrument, "Failed to match orders for unrecognized Instrument");
+    //             None
+    //         }
+    //     }
+    // }
 
     async fn process_trades(&mut self, trades: Vec<ClientTrade>)
     {
@@ -1475,7 +1474,7 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_apply_open_order_changes()
+    async fn test_apply_open_order_changes_buy()
     {
         let mut account = create_test_account().await;
 
@@ -1511,6 +1510,46 @@ mod tests
         let balance = account.get_balance(&Token::from("USDT")).unwrap();
         assert_eq!(balance.available, 9998.0); // 原始余额是 10,000.0，减去 2.0 后应该是 9998.0
     }
+
+
+    #[tokio::test]
+    async fn test_apply_open_order_changes_sell() {
+        let mut account = create_test_account().await;
+
+        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
+        let open_order_request = Order { kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: instrument.clone(),
+            timestamp: 1625247600000,
+            cid: ClientOrderId(Some("validCID456".into())),
+            side: Side::Sell,
+            state: RequestOpen { price: 1.0,
+                size: 2.0,
+                reduce_only: false } };
+
+        // 将订单状态从 RequestOpen 转换为 Open
+        let open_order = Order { kind: open_order_request.kind,
+            exchange: open_order_request.exchange,
+            instrument: open_order_request.instrument.clone(),
+            timestamp: open_order_request.timestamp,
+            cid: open_order_request.cid.clone(),
+            side: open_order_request.side,
+            state: Open { id: OrderId::new(0, 0, 0), // 使用一个新的 OrderId
+                price: open_order_request.state.price,
+                size: open_order_request.state.size,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Maker } };
+
+        let required_balance = 2.0; // 模拟需要的余额
+
+        // 因为是卖单，所以这里的 USDT 余额应该不会减少，反而应该是 ETH 的余额减少
+        let result = account.apply_open_order_changes(&open_order, required_balance).await;
+        assert!(result.is_ok());
+
+        let balance = account.get_balance(&Token::from("ETH")).unwrap();
+        assert_eq!(balance.available, 8.0); // 原始余额是 10.0，减去 2.0 后应该是 8.0
+    }
+
 
     #[tokio::test]
     async fn test_check_position_direction_conflict()
@@ -1798,6 +1837,72 @@ mod tests
         assert_eq!(balance.total, 12.0); // NOTE 此处金额不对，需要手动检查。可能是摩擦成本错误计算导致。
     }
 
+    #[tokio::test]
+    async fn test_match_market_event_with_open_order_sell() {
+        let mut account = create_test_account().await;
+
+        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
+        // 提现前查询 USDT 和 ETH 余额
+        let initial_usdt_balance = account.query_balance(&Token::from("USDT")).unwrap();
+        let initial_eth_balance = account.query_balance(&Token::from("ETH")).unwrap();
+
+        println!("Initial USDT balance: {:?}", initial_usdt_balance);
+        println!("Initial ETH balance: {:?}", initial_eth_balance);
+
+        // 创建一个待开卖单订单
+        let open_order = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: instrument.clone(),
+            timestamp: 1625247600000,
+            cid: ClientOrderId(Some("validCID456".into())),
+            side: Side::Sell,
+            state: Open {
+                id: OrderId::new(0, 0, 0),
+                price: 100.0,
+                size: 2.0,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Maker,
+            },
+        };
+
+        // 由于这个开单行为不是通过信号发送实现的，没有调用open_order方法，所以available要自行减去。
+        {
+            let mut base_balance = account.get_balance_mut(&instrument.base).unwrap();
+            base_balance.available -= 2.0; // 修改基础资产余额 (ETH)
+        }
+
+        // 将订单添加到账户
+        account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
+
+        // 创建一个市场事件，该事件与 open订单完全匹配
+        let market_event = MarketTrade {
+            exchange: "Binance".to_string(),
+            symbol: "ETH_USDT".to_string(),
+            timestamp: 1625247600000,
+            price: 100.0,
+            side: Side::Buy.to_string(),
+            amount: 2.0,
+        };
+
+        // 匹配订单并生成交易事件
+        let trades = account.match_orders(&market_event).await;
+
+        // 检查是否生成了正确数量的交易事件
+        assert_eq!(trades.len(), 1);
+        let trade = &trades[0];
+        assert_eq!(trade.quantity, 2.0);
+        assert_eq!(trade.price, 100.0);
+
+        // 检查余额是否已更新
+        let balance = account.get_balance(&instrument.base).unwrap();
+        let quote_balance = account.get_balance(&instrument.quote).unwrap();
+
+        assert_eq!(quote_balance.total, 10199.8); // 卖出 2 ETH 获得 200 USDT
+        assert_eq!(quote_balance.available, 10199.8); // 卖单后，USDT 可用余额应增加
+        assert_eq!(balance.total, 8.0); // 原始 ETH 余额是 12.0，卖出 2.0 后应为 10.0
+        assert_eq!(balance.available, 8.0); // 可用 ETH 余额应与总余额一致
+    }
 
     // #[tokio::test] NOTE Expected no open orders after full match, but found some.
     // async fn test_get_open_orders_should_be_empty_after_matching() {
