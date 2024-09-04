@@ -12,7 +12,6 @@ pub struct ClientTrade
     pub timestamp: i64,
     pub trade_id: ClientTradeId,
     pub order_id: OrderId,
-    /// FIXME 可以改成CID
     pub cid: Option<ClientOrderId>,
     pub instrument: Instrument,
     pub side: Side,
@@ -21,7 +20,6 @@ pub struct ClientTrade
     pub fees: f64,
 }
 
-/// CONSIDER : type of ClientTradeId appropriate?
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct ClientTradeId(pub i64);
 
