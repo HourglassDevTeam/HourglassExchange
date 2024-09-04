@@ -943,7 +943,8 @@ impl Account
     pub async fn atomic_cancel(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExchangeError>
     {
         Self::validate_order_request_cancel(&request)?;
-        // 首先使用读锁来查找并验证订单是否存在，同时减少写锁的持有时间
+        println!("[Atomic cancel] : {:?}", request);
+        // 首先使用读锁来查找并验证订单是否存在，同时减少写锁的持有时
         let removed_order = {
             let orders_guard = self.orders.read().await;
             let mut orders = orders_guard.get_ins_orders_mut(&request.instrument)?;
@@ -2014,8 +2015,7 @@ mod tests
         assert_eq!(result[0].as_ref().unwrap_err(), &ExchangeError::OrderNotFound(ClientOrderId(Some("invalidCID".into()))));
     }
 
-
-    // 测试 cancel_all_orders，需要首先run交易所。注意 这个测试还需要 debug cancel_all_orders方法发送的输出。
+    // 测试 cancel_all_orders，需要首先run交易所。注意 这个测试还需要 debug cancel_all_orders 方法发送的输出。
     // #[tokio::test]
     // async fn test_success_cancel_all_orders() {
     //     let mut account = create_test_account().await;

@@ -38,6 +38,10 @@ pub trait ClientExecution
     async fn init(config: Self::Config, event_tx: UnboundedSender<AccountEvent>) -> Self;
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExchangeError>;
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExchangeError>;
+
+    // async fn fetch_balance(&self) -> Result<TokenBalance, ExchangeError>; // TODO
+
+    // async fn fetch_positions(&self) -> Result<AccountPositions, ExchangeError>;  // TODO
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExchangeError>>;
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExchangeError>>;
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExchangeError>;

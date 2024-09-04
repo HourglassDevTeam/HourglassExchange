@@ -215,7 +215,7 @@ where
         kind: OrderInstruction::Cancel,
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
-        timestamp: chrono::Utc::now().timestamp_millis(), // 使用当前时间戳
+        timestamp: 1234124124124123u64 as i64, // 使用当前时间戳
         cid,
         side,
         state: RequestCancel::from(id),

@@ -52,30 +52,30 @@ async fn main() {
     let client = SandBoxClient {
         request_tx: request_tx.clone(),
     };
-
-    // 1. 获取初始的未成交订单列表，检查当前没有未成交订单
+    //
+    // // 1. 获取初始的未成交订单列表，检查当前没有未成交订单
     test_1_fetch_initial_orders_and_check_empty(&client).await;
-
-    // 2. 获取初始的余额信息，检查当前没有发生任何余额变化事件
+    //
+    // // 2. 获取初始的余额信息，检查当前没有发生任何余额变化事件
     test_2_fetch_balances_and_check_same_as_initial(&client).await;
-
-    // 3. 下达限价买单，并检查是否为报价货币（USDT）发送了 AccountEvent 余额事件
+    //
+    // // 3. 下达限价买单，并检查是否为报价货币（USDT）发送了 AccountEvent 余额事件
     test_3_open_limit_buy_order(
         &client,
         test_3_ids.clone(),
         &mut event_sandbox_rx
     ).await;
-
-    // 4. 发送一个不匹配任何未成交订单的市场事件，并检查是否没有发送 AccountEvent
+    //
+    // // 4. 发送一个不匹配任何未成交订单的市场事件，并检查是否没有发送 AccountEvent
     test_4_send_market_trade_that_does_not_match_any_open_order(
         &mut request_tx,
         &mut event_sandbox_rx,
     );
-
-    // // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent
-    test_5_cancel_buy_order(&client, test_3_ids, &mut event_sandbox_rx).await;
     //
-    // // 6. Open 2x LIMIT Buy Orders & assert on received AccountEvents
+    // // // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent
+    test_5_cancel_buy_order(&client, test_3_ids, &mut event_sandbox_rx).await;
+    // //
+    // // // 6. Open 2x LIMIT Buy Orders & assert on received AccountEvents
     let test_6_ids_1 = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
     let test_6_ids_2 = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
     test_6_open_2x_limit_buy_orders(&client, test_6_ids_1.clone(), test_6_ids_2, &mut event_sandbox_rx,)
@@ -112,8 +112,8 @@ async fn main() {
     // .await;
     //
     // // 11. Cancel all open orders. Includes a partially filled sell order, and non-filled buy order.
-    // //     Check AccountEvents for orders cancelled and balances are sent.
-    // test_11_cancel_all_orders(&client, test_6_ids_1, test_9_ids_2, &mut event_sandbox_rx).await;
+    // //    NOTE 只允许单独测试。
+    // test_11_cancel_all_orders(&client, test_6_ids_1, &mut event_sandbox_rx).await;
     //
     // // 12. Fetch open orders (now that we've called cancel_all) and check it is empty
     // test_12_fetch_open_orders_and_check_empty(&client).await;
@@ -462,11 +462,97 @@ async fn test_6_open_2x_limit_buy_orders(
     }
 }
 
+#[allow(warnings)]
+async fn test_11_cancel_all_orders(
+    client: &SandBoxClient,
+    test_6_ids_1: Ids,
+    event_sandbox_rx: &mut mpsc::UnboundedReceiver<AccountEvent>,
+) {
+
+    let initial_base_balance = client.fetch_balances().await.unwrap();
+    println!("[test_11] : Initial balances: {:?}", initial_base_balance);
+    let open_orders = client.fetch_orders_open().await;
+    println!("[test_11] : Current open orders: {:?}", open_orders);
+
+    // Cancel all orders (both the buy and sell orders)
+    let cancelled_orders = client
+        .cancel_orders(vec![
+            order_cancel_request(
+                Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
+                test_6_ids_1.cid.clone(),
+                Side::Buy,
+                OrderId(1234124124124123),
+            ),
+        ])
+        .await;
+
+    println!("[test_11] : {:?}", cancelled_orders);
+
+    // Check if the orders were properly cancelled
+    for (cancelled, expected) in cancelled_orders.iter().zip(vec![
+        order_limit_cancelled(
+            Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
+            test_6_ids_1.cid.clone(),
+            Side::Buy,
+            test_6_ids_1.id.clone(),
+        ),
+
+    ]) {
+        assert_eq!(cancelled.as_ref().unwrap(), &expected);
+    }
+
+    // Check AccountEvents for order cancellations
+    match event_sandbox_rx.try_recv() {
+        Ok(AccountEvent {
+               kind: AccountEventKind::OrdersCancelled(cancelled),
+               ..
+           }) => {
+            println!("[test_11] : Orders cancelled event received.");
+            assert_eq!(cancelled.len(), 1);
+            assert_eq!(cancelled[0], order_limit_cancelled(
+                Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
+                test_6_ids_1.cid.clone(),
+                Side::Buy,
+                test_6_ids_1.id.clone(),
+            ));
+        }
+        other => {
+            panic!("[test_11] : Unexpected event: {:?}", other);
+        }
+    }
+
+    // Check AccountEvents for balance updates
+    let current_px = 1.0;
+    match event_sandbox_rx.try_recv() {
+        Ok(AccountEvent {
+               kind: AccountEventKind::Balance(USDT_balance),
+               ..
+           }) => {
+            let expected_balance = TokenBalance::new("USDT", Balance::new(200.0, 250.0, current_px));
+            println!("[test_11] : Balance event received.");
+            assert_eq!(USDT_balance.balance.total, expected_balance.balance.total);
+            assert_eq!(USDT_balance.balance.available, expected_balance.balance.available);
+        }
+        other => {
+            panic!("[test_11] : Unexpected event for balance update: {:?}", other);
+        }
+    }
+
+    // Ensure no more unexpected events
+    match event_sandbox_rx.try_recv() {
+        Err(mpsc::error::TryRecvError::Empty) => {
+            println!("[test_11] : No additional events, as expected.");
+        }
+        other => {
+            panic!("[test_11] : Unexpected additional event: {:?}", other);
+        }
+    }
+}
+
 // 7. 发送 MarketEvent，该事件与 1x 开放订单（交易）完全匹配，并检查 AccountEvents 是否发送了余额和ClientTrade信息。
 // 8. 获取未完成的订单并检查是否只剩下一个来自 test_6_order_cid_1 的限价买单。
 // 9. 开启 2 个限价卖单，并检查 AccountEvents 是否发送了余额和订单更新信息。
 // 10. 发送一个完全匹配 1 个卖单（交易）的 MarketEvent，并部分匹配另一个卖单。
-// 11. 取消所有未完成的订单。包括部分成交的卖单和未成交的买单。
 // 12. 获取未完成的订单（既然我们已经调用了取消所有订单），并检查它是否为空。
 // 13. 尝试用资金不足的情况失败地开设限价买单。
 // 14. 使用不正确的订单ID尝试取消限价订单时，订单未找到失败。
