@@ -47,9 +47,6 @@ mod tests {
 
         let position_id = PositionId::new(&instrument, timestamp);
 
-        // 直接打印 `PositionId`
-        println!("PositionId: {}", position_id.as_u64());
-
         // 确保 `PositionId` 生成的是非零的 `u64`
         assert!(position_id.as_u64() > 0);
     }
