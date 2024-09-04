@@ -44,9 +44,7 @@ mod tests {
     fn test_position_id() {
         let instrument = Instrument::new("BTC", "USDT", InstrumentKind::Perpetual);
         let timestamp = 1625247600;
-
         let position_id = PositionId::new(&instrument, timestamp);
-
         // 确保 `PositionId` 生成的是非零的 `u64`
         assert!(position_id.as_u64() > 0);
     }

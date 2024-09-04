@@ -29,6 +29,9 @@ pub mod perpetual;
 pub mod position_id;
 pub mod position_meta;
 
+
+
+/// FIXME 应该改成诸种Token和Position变种的字典
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountPositions
 {
