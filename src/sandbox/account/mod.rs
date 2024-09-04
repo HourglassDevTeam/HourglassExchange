@@ -783,54 +783,77 @@ impl Account
         Ok(())
     }
 
+    /// 处理市场交易事件并尝试匹配订单。
+    ///
+    /// 该函数根据市场交易事件尝试匹配账户中的订单，并生成相应的交易。它会根据市场事件的方向（买或卖）
+    /// 查找最佳报价，并使用预先计算的 `OrderRole` 来确定订单的费用比例。匹配成功的订单会生成相应的交易记录。
+    ///
+    /// # 参数
+    ///
+    /// - `market_trade`: 一个 [`MarketTrade`] 实例，表示来自市场的交易事件。
+    ///
+    /// # 返回值
+    ///
+    /// 返回一个包含所有匹配到的 [`ClientTrade`] 实例的向量。
+    ///
+    /// # 逻辑
+    ///
+    /// 1. 从市场交易事件中解析出基础货币和报价货币，并确定金融工具种类。
+    /// 2. 查找与该金融工具相关的挂单（`InstrumentOrders`）。
+    /// 3. 根据市场事件的方向（买或卖）尝试匹配相应的挂单（买单匹配卖单，卖单匹配买单）。
+    /// 4. 使用订单的 `OrderRole` 来计算手续费，并生成交易记录。
+    /// 5. 处理并返回生成的交易记录。
+    ///
+    /// # 注意
+    ///     - 该函数假设市场交易事件的符号格式为 `base_quote`，并从中解析出基础货币和报价货币。
+    ///     - 如果找不到与市场事件相关的挂单，函数会记录警告并返回一个空的交易向量。
     pub async fn match_orders(&mut self, market_trade: &MarketTrade) -> Vec<ClientTrade> {
         println!("[match_orders]: market_trade: {:?}", market_trade);
         let mut trades = Vec::new();
 
-        // Parse base and quote tokens from MarketTrade's symbol (formatted as base_quote)
+        // 从市场交易事件的符号中解析基础货币和报价货币，并确定金融工具种类
         let base = Token::from(market_trade.parse_base().unwrap());
         let quote = Token::from(market_trade.parse_quote().unwrap());
         let kind = market_trade.parse_kind();
         let instrument = Instrument { base, quote, kind };
 
-        // 注意，在开单中我已经存储了预先计算的OrderRole，应该读出来并相应传入。
-
-        // Retrieve the instrument orders for the specified instrument
+        // 查找与指定金融工具相关的挂单
         if let Some(mut instrument_orders) = self.orders.read().await.get_ins_orders_mut(&instrument).ok() {
+            // 确定市场事件匹配的挂单方向（买或卖）
             if let Some(matching_side) = instrument_orders.determine_matching_side(&market_trade) {
                 match matching_side {
                     Side::Buy => {
                         println!("[match_orders]: matching_side: {:?}", matching_side);
 
-                        // Extract the `OrderRole` from the best bid to get the correct fees percent
+                        // 从最佳买单中提取 `OrderRole` 以获取正确的手续费比例
                         if let Some(best_bid) = instrument_orders.bids.last() {
                             let order_role = best_bid.state.order_role;
                             println!("[match_orders]: order_role: {:?}", order_role);
                             let fees_percent = self.fees_percent(&kind, &order_role)
-                                .expect("Missing fees percent");
+                                .expect("缺少手续费比例");
 
-                            // Match bids using the calculated fees percent
+                            // 使用计算出的手续费比例匹配买单
                             trades.append(&mut instrument_orders.match_bids(&market_trade, fees_percent));
                         }
                     }
                     Side::Sell => {
                         println!("[match_orders]: matching_side: {:?}", matching_side);
 
-                        // Extract the `OrderRole` from the best ask to get the correct fees percent
+                        // 从最佳卖单中提取 `OrderRole` 以获取正确的手续费比例
                         if let Some(best_ask) = instrument_orders.asks.last() {
                             let order_role = best_ask.state.order_role;
                             println!("[match_orders]: order_role: {:?}", order_role);
                             let fees_percent = self.fees_percent(&kind, &order_role)
-                                .expect("Missing fees percent");
+                                .expect("缺少手续费比例");
 
-                            // Match asks using the calculated fees percent
+                            // 使用计算出的手续费比例匹配卖单
                             trades.append(&mut instrument_orders.match_asks(&market_trade, fees_percent));
                         }
                     }
                 }
             }
         } else {
-            warn!("No orders found for the given instrument in the market event.");
+            warn!("未找到与市场事件相关的挂单。");
         }
 
         println!("[match_orders]: trades: {:?}", trades);
@@ -838,7 +861,6 @@ impl Account
 
         trades
     }
-
     fn fees_percent(&self, kind: &InstrumentKind, role: &OrderRole) -> Option<f64>
     {
         let commission_rates = &self.config.fees_book.get(kind)?;
