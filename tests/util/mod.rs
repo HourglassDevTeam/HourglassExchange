@@ -71,7 +71,7 @@ pub async fn run_sample_exchange(
         exchange: Exchange::SandBox,
         instrument: instrument.clone(),
         timestamp: 1234124124124123, // Assumes a function to get current timestamp
-        cid: ClientOrderId(Some("test_cid".into())),
+        cid: Some(ClientOrderId("test_cid".into())),
         side: Side::Buy,
         state: Open {
             id: OrderId(1234124124124123),
@@ -160,7 +160,7 @@ where
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
         timestamp:1233312345124, // 使用当前时间戳
-        cid: cid.clone(),
+        cid: Some(cid.clone()),
         side,
         state: RequestOpen {
             cid: Some(cid.clone()),
@@ -189,7 +189,7 @@ where
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
         timestamp: 1233312345124, // 使用当前时间戳
-        cid: cid.clone(),
+        cid: Some(cid.clone()),
         side,
         state: Open {
             id,
@@ -219,7 +219,7 @@ where
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
         timestamp: 1234124124124123u64 as i64, // 使用当前时间戳
-        cid,
+        cid: Some(cid),
         side,
         state: RequestCancel::from(id),
     }
@@ -242,7 +242,7 @@ where
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
         timestamp: 1234124124124123u64 as i64, // 使用当前时间戳
-        cid,
+        cid: Some(cid),
         side,
         state: Cancelled::from(id),
     }

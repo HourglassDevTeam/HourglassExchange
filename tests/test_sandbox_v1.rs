@@ -43,7 +43,7 @@ async fn main() {
     // 给定测试用的timestamp和machine_id和IDs
     let timestamp = 1234124124124123u64;
     let machine_id = generate_machine_id().unwrap();
-    let test_3_ids = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
+    let test_3_ids = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
 
     // 创建并运行 SimulatedExchange
     tokio::spawn(run_sample_exchange(event_sandbox_tx, request_rx));
@@ -76,8 +76,8 @@ async fn main() {
     test_5_cancel_buy_order(&client, test_3_ids, &mut event_sandbox_rx).await;
     // //
     // // // 6. Open 2x LIMIT Buy Orders & assert on received AccountEvents
-    let test_6_ids_1 = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
-    let test_6_ids_2 = Ids::new(ClientOrderId(Some("test_cid".to_string())), OrderId(1234124124124123));
+    let test_6_ids_1 = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
+    let test_6_ids_2 = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
     test_6_open_2x_limit_buy_orders(&client, test_6_ids_1.clone(), test_6_ids_2, &mut event_sandbox_rx,)
     .await;
 
