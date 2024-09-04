@@ -955,28 +955,49 @@ impl Account
         response_tx.send(cancel_results).unwrap_or(());
     }
 
-    pub async fn atomic_cancel(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExchangeError>
-    {
+    pub async fn atomic_cancel(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExchangeError> {
         Self::validate_order_request_cancel(&request)?;
         println!("[Atomic cancel] : {:?}", request);
+
         // 首先使用读锁来查找并验证订单是否存在，同时减少写锁的持有时
         let removed_order = {
             let orders_guard = self.orders.read().await;
             let mut orders = orders_guard.get_ins_orders_mut(&request.instrument)?;
-            // 查找并移除订单，这里使用写锁来修改订单集合
+
+            // 根据 `id` 或 `cid` 查找并移除订单
             match request.side {
-                | Side::Buy => {
+                Side::Buy => {
                     let index = orders.bids
-                                      .par_iter()
-                                      .position_any(|bid| bid.state.id == request.state.id.clone().unwrap())
-                                      .ok_or(ExchangeError::OrderNotFound(request.cid.unwrap()))?;
+                        .par_iter()
+                        .position_any(|bid| {
+                            // 匹配 `OrderId` 或 `ClientOrderId`
+                            bid.state.id == request.state.id.clone().unwrap() ||
+                                bid.cid == request.cid
+                        })
+                        .ok_or_else(|| {
+                            if let Some(cid) = &request.cid {
+                                ExchangeError::OrderNotFound(cid.clone())   // 注意 ExchangeError::OrderNotFound 应该同时输出 `ClientOrderId`和 `OrderId`的值。
+                            } else {
+                                ExchangeError::OrderNotFound(ClientOrderId("Unknown".into()))
+                            }
+                        })?;
                     orders.bids.remove(index)
                 }
-                | Side::Sell => {
+                Side::Sell => {
                     let index = orders.asks
-                                      .par_iter()
-                                      .position_any(|ask| ask.state.id == request.state.id.clone().unwrap())
-                                      .ok_or(ExchangeError::OrderNotFound(request.cid.unwrap()))?;
+                        .par_iter()
+                        .position_any(|ask| {
+                            // 匹配 `OrderId` 或 `ClientOrderId`
+                            ask.state.id == request.state.id.clone().unwrap() ||
+                                ask.cid == request.cid
+                        })
+                        .ok_or_else(|| {
+                            if let Some(cid) = &request.cid {
+                                ExchangeError::OrderNotFound(cid.clone())  // 注意 ExchangeError::OrderNotFound 应该同时输出 `ClientOrderId`和 `OrderId`的值。
+                            } else {
+                                ExchangeError::OrderNotFound(ClientOrderId("Unknown".into()))
+                            }
+                        })?;
                     orders.asks.remove(index)
                 }
             }
@@ -991,21 +1012,26 @@ impl Account
         // 获取当前的 exchange_timestamp
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
-        // 发送 AccountEvents 给客户端（不需要持有订单写锁） NOTE 原子取消也要发送一个Vec<Order<Cancelled>>吗？？？？
+        // 发送 AccountEvents 给客户端（不需要持有订单写锁）
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
+            .send(AccountEvent {
+                exchange_timestamp,
+                exchange: Exchange::SandBox,
+                kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]),
+            })
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::OrdersCancelled");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::Balance(balance_event) })
+            .send(AccountEvent {
+                exchange_timestamp,
+                exchange: Exchange::SandBox,
+                kind: AccountEventKind::Balance(balance_event),
+            })
             .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Balance");
 
         Ok(cancelled)
     }
+
 
     pub async fn cancel_orders_all(&mut self, response_tx: Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>)
     {
