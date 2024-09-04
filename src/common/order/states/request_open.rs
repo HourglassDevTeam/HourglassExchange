@@ -9,7 +9,7 @@ use std::{cmp::Ordering, fmt};
 #[derive( Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct RequestOpen
 {
-    pub reduce_only: bool,
+    pub reduce_only: bool, /// NOTE to be checked
     pub price: f64,
     pub size: f64,
 }

@@ -6,8 +6,9 @@ use crate::common::{instrument::Instrument, order::identification::OrderId, Side
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct ClientTrade
 {
+    // FIXME 补上时间辍
     pub trade_id: ClientTradeId,
-    pub client_order_id: OrderId,
+    pub client_order_id: OrderId, /// FIXME 可以改成CID
     pub instrument: Instrument,
     pub side: Side,
     pub price: f64,

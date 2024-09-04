@@ -685,7 +685,6 @@ impl Account
         // println!("[attempt_atomic_open]: required_balance: {:?}", required_balance);
         // 检查余额是否充足，并在锁定后更新订单
         self.has_sufficient_available_balance(token, required_balance)?;
-
         let open_order = {
             let mut orders_guard = self.orders.write().await; // 使用写锁来创建订单
             let open_order = orders_guard.build_order_open(order, order_role).await;
@@ -698,7 +697,6 @@ impl Account
         // println!("[attempt_atomic_open]: balance_event: {:?}",balance_event);
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
         // println!("[attempt_atomic_open]: exchange_timestamp: {:?}",exchange_timestamp);
-
         self.account_event_tx
             .send(balance_event)
             .expect("[attempt_atomic_open]: Client offline - Failed to send AccountEvent::Balance");
@@ -772,14 +770,14 @@ impl Account
             return Err(ExchangeError::InvalidRequestCancel("Both OrderId and ClientOrderId are missing".into()));
         }
 
-        // 如果提供了 OrderId，则检查其是否有效
+        // 如果提供了 OrderId，则检查其是否有效 FIXME 根据雪花算法的规则完善验证
         if let Some(id) = &order.state.id {
             if id.value() == 0 {
                 return Err(ExchangeError::InvalidRequestCancel("OrderId is missing or invalid".into()));
             }
         }
 
-        // 如果提供了 ClientOrderId，则检查其有效性 (从 `Order` 结构体中获取 `cid`)
+        // 如果提供了 ClientOrderId， FIXME 根据正则表达式规则完善验证
         if let Some(cid) = &order.cid {
             // 在此处添加自定义的 ClientOrderId 有效性检查逻辑
             if cid.0.is_empty() || cid.0.len() < 5 {
@@ -1118,7 +1116,7 @@ impl Account
     /// # 返回值
     ///
     /// 返回更新后的 `TokenBalance`。
-    pub fn deposit_stablecoin(&mut self, token: Token, amount: f64) -> Result<TokenBalance, ExchangeError> {
+    pub fn deposit_coin(&mut self, token: Token, amount: f64) -> Result<TokenBalance, ExchangeError> {
         let mut balance = self.balances.entry(token.clone()).or_insert_with(|| {
             Balance {
                 time: Utc::now(),
@@ -1144,11 +1142,11 @@ impl Account
     /// # 返回值
     ///
     /// 返回更新后的 `TokenBalance` 列表。
-    pub fn deposit_multiple_stablecoins(&mut self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError> {
+    pub fn deposit_multiple_coins(&mut self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError> {
         let mut updated_balances = Vec::new();
 
         for (token, amount) in deposits {
-            let balance = self.deposit_stablecoin(token, amount)?;
+            let balance = self.deposit_coin(token, amount)?;
             updated_balances.push(balance);
         }
 
@@ -1166,7 +1164,7 @@ impl Account
     /// 返回更新后的 `TokenBalance`。
     pub fn deposit_u_base(&mut self, amount: f64) -> Result<TokenBalance, ExchangeError> {
         let usdt_token = Token("USDT".into());
-        self.deposit_stablecoin(usdt_token, amount)
+        self.deposit_coin(usdt_token, amount)
     }
 
     /// NOTE : BETA功能，待测试。
@@ -1180,7 +1178,7 @@ impl Account
     /// 返回更新后的 `TokenBalance`。
     pub fn deposit_b_base(&mut self, amount: f64) -> Result<TokenBalance, ExchangeError> {
         let btc_token = Token("BTC".into());
-        self.deposit_stablecoin(btc_token, amount)
+        self.deposit_coin(btc_token, amount)
     }
 
     /// NOTE : BETA功能，待测试。
