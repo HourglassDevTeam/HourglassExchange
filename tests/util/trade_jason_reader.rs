@@ -5,7 +5,8 @@ use unilink_execution::sandbox::clickhouse_api::datatype::clickhouse_trade_data:
 const DATA_HISTORIC_TRADES: &str = "tests/util/sample_trades.json";
 
 // 定义一个函数来加载JSON并将其转换为Vec<MarketTrade>
-fn load_json_market_trade() -> Vec<MarketTrade> {
+fn load_json_market_trade() -> Vec<MarketTrade>
+{
     // 读取文件内容
     let trades_data = fs::read_to_string(DATA_HISTORIC_TRADES).expect("读取文件失败");
 
@@ -17,46 +18,38 @@ fn load_json_market_trade() -> Vec<MarketTrade> {
 
 // 定义测试
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
 
     #[test]
-    fn test_load_json_market_trade() {
+    fn test_load_json_market_trade()
+    {
         // 设置预期数据
-        let expected_trades = vec![
-            MarketTrade {
-                exchange: "binance-futures".to_string(),
-                symbol: "1000PEPEUSDT".to_string(),
-                side: "buy".to_string(),
-                price: 1000.0,
-                timestamp: 1649188800000000,
-                amount: 1000000000.0,
-            },
-            MarketTrade {
-                exchange: "binance-futures".to_string(),
-                symbol: "1000PEPEUSDT".to_string(),
-                side: "buy".to_string(),
-                price: 1050.0,
-                timestamp: 1649192400000000,
-                amount: 1000000000.0,
-            },
-            MarketTrade {
-                exchange: "binance-futures".to_string(),
-                symbol: "1000PEPEUSDT".to_string(),
-                side: "buy".to_string(),
-                price: 1060.0,
-                timestamp: 1649196000000000,
-                amount: 1000000000.0,
-            },
-            MarketTrade {
-                exchange: "binance-futures".to_string(),
-                symbol: "1000PEPEUSDT".to_string(),
-                side: "buy".to_string(),
-                price: 1200.0,
-                timestamp: 1649199600000000,
-                amount: 1000000000.0,
-            },
-        ];
+        let expected_trades = vec![MarketTrade { exchange: "binance-futures".to_string(),
+                                                 symbol: "1000PEPEUSDT".to_string(),
+                                                 side: "buy".to_string(),
+                                                 price: 1000.0,
+                                                 timestamp: 1649188800000000,
+                                                 amount: 1000000000.0 },
+                                   MarketTrade { exchange: "binance-futures".to_string(),
+                                                 symbol: "1000PEPEUSDT".to_string(),
+                                                 side: "buy".to_string(),
+                                                 price: 1050.0,
+                                                 timestamp: 1649192400000000,
+                                                 amount: 1000000000.0 },
+                                   MarketTrade { exchange: "binance-futures".to_string(),
+                                                 symbol: "1000PEPEUSDT".to_string(),
+                                                 side: "buy".to_string(),
+                                                 price: 1060.0,
+                                                 timestamp: 1649196000000000,
+                                                 amount: 1000000000.0 },
+                                   MarketTrade { exchange: "binance-futures".to_string(),
+                                                 symbol: "1000PEPEUSDT".to_string(),
+                                                 side: "buy".to_string(),
+                                                 price: 1200.0,
+                                                 timestamp: 1649199600000000,
+                                                 amount: 1000000000.0 },];
 
         // 使用函数加载数据
         let actual_trades = load_json_market_trade();
@@ -73,7 +66,7 @@ mod tests {
             println!("| 预期交易 : {:?} |", expected_trade);
         }
         println!("{:-<159}", ""); // 输出长度为30的分隔线
-        // 断言实际数据与预期数据相等
+                                  // 断言实际数据与预期数据相等
         assert_eq!(actual_trades, expected_trades);
     }
 }

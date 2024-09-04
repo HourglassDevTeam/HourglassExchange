@@ -46,22 +46,25 @@ impl Display for ClientOrderId
 /// 从而减少因格式错误的 ID 导致的错误概率。
 static ID_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9_-]{6,20}$").unwrap());
 
-impl ClientOrderId {
+impl ClientOrderId
+{
     // 用户自定义或生成唯一的字符串ID
-    pub fn new(custom_id: String) -> Result<Self, String> {
+    pub fn new(custom_id: String) -> Result<Self, String>
+    {
         if Self::validate_id_format(&custom_id) {
             Ok(ClientOrderId(custom_id))
-        } else {
+        }
+        else {
             Err("Invalid ClientOrderId format".into())
         }
     }
 
     // 验证 ID 格式
-    pub(crate) fn validate_id_format(id: &str) -> bool {
+    pub(crate) fn validate_id_format(id: &str) -> bool
+    {
         ID_REGEX.is_match(id)
     }
 }
-
 
 #[cfg(test)]
 mod tests

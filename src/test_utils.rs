@@ -29,13 +29,13 @@ use crate::{
     },
     Exchange,
 };
+use dashmap::DashMap;
 use rand::Rng;
 use std::{
     collections::HashMap,
     sync::{atomic::AtomicI64, Arc},
     time::{SystemTime, UNIX_EPOCH},
 };
-use dashmap::DashMap;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
@@ -73,15 +73,15 @@ pub async fn create_test_account_orders() -> AccountOrders
 pub fn create_test_order_open(side: Side, price: f64, size: f64) -> Order<Open>
 {
     Order { instruction: OrderInstruction::Limit, // 假设测试订单使用限价订单类型
-            exchange: Exchange::SandBox,   // 假设测试环境使用 SandBox 交易所
-            instrument: Instrument { base: Token::from("ETH"),   // 测试用基础货币
-                                     quote: Token::from("USDT"), // 测试用报价货币
-                                     kind: InstrumentKind::Perpetual   /* 测试用永续合约 */ },
+            exchange: Exchange::SandBox,          // 假设测试环境使用 SandBox 交易所
+            instrument: Instrument { base: Token::from("ETH"),        // 测试用基础货币
+                                     quote: Token::from("USDT"),      // 测试用报价货币
+                                     kind: InstrumentKind::Perpetual  /* 测试用永续合约 */ },
             timestamp: 1625247600000,                       // 假设的客户端时间戳
             cid: Some(ClientOrderId("validCID123".into())), // 假设的客户端订单ID
             side,
             state: Open { id: OrderId(123), // 假设的订单ID
-                price,
+                          price,
                           size,
                           filled_quantity: 0.0,         // 初始填充数量为0
                           order_role: OrderRole::Taker  /* 假设订单角色为 Taker */ } }
@@ -104,8 +104,7 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen>
             timestamp: 1625247600000,
             cid: Some(ClientOrderId(format!("CID{}", order_id.0 % 1_000_000))),
             side: Side::Buy,
-            state: RequestOpen {
-                price: 50000.0,
+            state: RequestOpen { price: 50000.0,
                                  size: 1.0,
                                  reduce_only: false } }
 }

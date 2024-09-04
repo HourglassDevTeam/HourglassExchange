@@ -111,9 +111,8 @@ impl Default for ExchangeInitiator
     {
         let (_tx, rx) = mpsc::unbounded_channel();
         Self { event_sandbox_rx: Some(rx),
-               account: None
-               /* market_event_tx: None,
-                * data_source: None, */ }
+               account: None /* market_event_tx: None,
+                              * data_source: None, */ }
     }
 }
 pub struct ExchangeInitiator
@@ -129,9 +128,8 @@ impl ExchangeInitiator
     pub fn new() -> Self
     {
         Self { event_sandbox_rx: None,
-               account: None
-               /* market_event_tx: None,
-                * data_source: None, */ }
+               account: None /* market_event_tx: None,
+                              * data_source: None, */ }
     }
 
     pub fn event_sandbox_rx(self, value: UnboundedReceiver<SandBoxClientEvent>) -> Self

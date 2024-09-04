@@ -199,8 +199,7 @@ impl AccountOrders
                 cid: order.cid,
                 timestamp: adjusted_client_ts,
                 side: order.side,
-                state: RequestOpen {
-                    reduce_only: order.state.reduce_only,
+                state: RequestOpen { reduce_only: order.state.reduce_only,
                                      price: order.state.price,
                                      size: order.state.size } }
     }
@@ -349,7 +348,7 @@ impl AccountOrders
                 timestamp: request.timestamp,
                 side: request.side,
                 state: Open { id: self.order_id(),
-                    price: request.state.price,
+                              price: request.state.price,
                               size: request.state.size,
                               filled_quantity: 0.0,
                               order_role: role } }
@@ -408,12 +407,18 @@ impl AccountOrders
 mod tests
 {
     use super::*;
-    use crate::{common::instrument::{kind::InstrumentKind, Instrument}, sandbox::account::account_latency::{AccountLatency, FluctuationMode}, Exchange};
-    use std::sync::Arc;
-    use tokio::sync::RwLock;
+    use crate::{
+        common::{
+            instrument::{kind::InstrumentKind, Instrument},
+            order::identification,
+        },
+        sandbox::account::account_latency::{AccountLatency, FluctuationMode},
+        Exchange,
+    };
     use client_order_id::ClientOrderId;
     use identification::client_order_id;
-    use crate::common::order::identification;
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
 
     #[tokio::test]
     async fn test_generate_latencies()
@@ -525,77 +530,65 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_process_backtest_requestopen_with_a_simulated_latency() {
+    async fn test_process_backtest_requestopen_with_a_simulated_latency()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let mut account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
-        let order = Order {
-            instruction: OrderInstruction::Limit,
-            exchange: Exchange::Binance,
-            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            cid: Some(ClientOrderId("unit_test".to_string())),
-            timestamp: 1625232523000,
-            side: Side::Buy,
-            state: RequestOpen {
-                reduce_only: false,
-                price: 35000.0,
-                size: 0.1,
-            },
-        };
+        let order = Order { instruction: OrderInstruction::Limit,
+                            exchange: Exchange::Binance,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            cid: Some(ClientOrderId("unit_test".to_string())),
+                            timestamp: 1625232523000,
+                            side: Side::Buy,
+                            state: RequestOpen { reduce_only: false,
+                                                 price: 35000.0,
+                                                 size: 0.1 } };
 
         let simulated_order = account_orders.process_backtest_requestopen_with_a_simulated_latency(order).await;
         assert!(simulated_order.timestamp >= 1625232523000 + 10); // Assuming latency is at least 10
         assert!(simulated_order.timestamp <= 1625232523000 + 100); // Assuming latency is at most 100
     }
 
-
-
     #[tokio::test]
-    async fn test_determine_maker_taker() {
+    async fn test_determine_maker_taker()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
-        let order = Order {
-            instruction: OrderInstruction::Limit,
-            exchange: Exchange::Binance,
-            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            cid: Some(ClientOrderId("unit_test".to_string())),
-            timestamp: 1625232523000,
-            side: Side::Buy,
-            state: RequestOpen {
-                reduce_only: false,
-                price: 35000.0,
-                size: 0.1,
-            },
-        };
+        let order = Order { instruction: OrderInstruction::Limit,
+                            exchange: Exchange::Binance,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            cid: Some(ClientOrderId("unit_test".to_string())),
+                            timestamp: 1625232523000,
+                            side: Side::Buy,
+                            state: RequestOpen { reduce_only: false,
+                                                 price: 35000.0,
+                                                 size: 0.1 } };
 
         let result = account_orders.determine_maker_taker(&order, 35000.0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), OrderRole::Maker);
     }
 
-
     #[tokio::test]
-    async fn test_determine_post_only_order_role() {
+    async fn test_determine_post_only_order_role()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
-        let order = Order {
-            instruction: OrderInstruction::PostOnly,
-            exchange: Exchange::Binance,
-            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            cid: Some(ClientOrderId("unit_test".to_string())),
-            timestamp: 1625232523000,
-            side: Side::Buy,
-            state: RequestOpen {
-                reduce_only: false,
-                price: 35000.0,
-                size: 0.1,
-            },
-        };
+        let order = Order { instruction: OrderInstruction::PostOnly,
+                            exchange: Exchange::Binance,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            cid: Some(ClientOrderId("unit_test".to_string())),
+                            timestamp: 1625232523000,
+                            side: Side::Buy,
+                            state: RequestOpen { reduce_only: false,
+                                                 price: 35000.0,
+                                                 size: 0.1 } };
 
         let result = account_orders.determine_post_only_order_role(&order, 34999.0);
         assert!(result.is_ok());
@@ -603,32 +596,26 @@ mod tests
 
         let reject_result = account_orders.determine_post_only_order_role(&order, 35001.0);
         assert!(reject_result.is_err());
-        assert_eq!(
-            reject_result.unwrap_err().to_string(),
-            "[UniLinkExecution] : Order rejected: PostOnly order should be rejected"
-        );
+        assert_eq!(reject_result.unwrap_err().to_string(),
+                   "[UniLinkExecution] : Order rejected: PostOnly order should be rejected");
     }
 
-
     #[tokio::test]
-    async fn test_build_order_open() {
+    async fn test_build_order_open()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let mut account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
-        let order = Order {
-            instruction: OrderInstruction::Limit,
-            exchange: Exchange::Binance,
-            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            cid: Some(ClientOrderId("unit_test".to_string())),
-            timestamp: 1625232523000,
-            side: Side::Buy,
-            state: RequestOpen {
-                reduce_only: false,
-                price: 35000.0,
-                size: 0.1,
-            },
-        };
+        let order = Order { instruction: OrderInstruction::Limit,
+                            exchange: Exchange::Binance,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            cid: Some(ClientOrderId("unit_test".to_string())),
+                            timestamp: 1625232523000,
+                            side: Side::Buy,
+                            state: RequestOpen { reduce_only: false,
+                                                 price: 35000.0,
+                                                 size: 0.1 } };
 
         let open_order = account_orders.build_order_open(order, OrderRole::Maker).await;
 
@@ -638,5 +625,4 @@ mod tests
         assert_eq!(open_order.state.order_role, OrderRole::Maker);
         assert!(open_order.state.id.value() > 0);
     }
-
 }

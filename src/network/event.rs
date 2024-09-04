@@ -153,14 +153,13 @@ mod tests
         let event_type = "OpenOrders";
 
         // 2. 构建 payload
-        let orders = vec![Order { instruction: OrderInstruction::Limit,                                         // 订单类型，例如限价单
+        let orders = vec![Order { instruction: OrderInstruction::Limit,                                  // 订单类型，例如限价单
                                   exchange: Exchange::Binance,                                           // 交易所名称
                                   instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual), // 交易对
                                   timestamp: chrono::Utc::now().timestamp_millis(),                      // 客户端下单时间戳
-                                  cid: Some(ClientOrderId("OJBK".to_string())),                  // 客户端订单 ID
+                                  cid: Some(ClientOrderId("OJBK".to_string())),                          // 客户端订单 ID
                                   side: Side::Buy,                                                       // 买卖方向
-                                  state: RequestOpen {
-                                      reduce_only: false, // 非减仓订单
+                                  state: RequestOpen { reduce_only: false, // 非减仓订单
                                                        price: 50000.0,     // 下单价格
                                                        size: 1.0           /* 下单数量 */ } }];
 

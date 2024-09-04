@@ -1,14 +1,19 @@
 use serde::{Deserialize, Serialize};
-
 // 引入相关模块和结构体。
-use crate::common::{instrument::Instrument, order::identification::OrderId, Side};
+use crate::common::{
+    instrument::Instrument,
+    order::identification::{client_order_id::ClientOrderId, OrderId},
+    Side,
+};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct ClientTrade
 {
-    // FIXME 补上时间辍
+    pub timestamp: i64,
     pub trade_id: ClientTradeId,
-    pub client_order_id: OrderId, /// FIXME 可以改成CID
+    pub order_id: OrderId,
+    /// FIXME 可以改成CID
+    pub cid: Option<ClientOrderId>,
     pub instrument: Instrument,
     pub side: Side,
     pub price: f64,

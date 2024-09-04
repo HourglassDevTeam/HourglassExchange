@@ -100,17 +100,19 @@ impl InstrumentOrders
         None
     }
 
-    pub fn match_bids(&mut self, market_event: &MarketTrade, fees_percent: f64) -> Vec<ClientTrade>
+    pub fn match_bids(&mut self, market_trade: &MarketTrade, fees_percent: f64) -> Vec<ClientTrade>
     {
+        let latest_trade_ts = market_trade.timestamp;
+
         // 跟踪剩余的可用流动性，以便匹配
-        let mut remaining_liquidity = market_event.amount;
+        let mut remaining_liquidity = market_trade.amount;
 
         // 收集由匹配未成交的客户端买单生成的交易
         let mut trades = Vec::new();
 
         while let Some(mut best_bid) = self.bids.pop() {
             // 如果最优买单价格低于市场事件价格或流动性耗尽，退出循环
-            if best_bid.state.price < market_event.price || remaining_liquidity <= 0.0 {
+            if best_bid.state.price < market_trade.price || remaining_liquidity <= 0.0 {
                 self.bids.push(best_bid);
                 break;
             }
@@ -125,7 +127,7 @@ impl InstrumentOrders
             if remaining_quantity <= remaining_liquidity {
                 // 全量成交
                 remaining_liquidity -= remaining_quantity;
-                trades.push(self.generate_client_trade_event(&best_bid, remaining_quantity, fees_percent).unwrap());
+                trades.push(self.generate_client_trade_event(latest_trade_ts, &best_bid, remaining_quantity, fees_percent).unwrap());
 
                 // 如果流动性刚好耗尽，退出循环
                 if remaining_liquidity == 0.0 {
@@ -136,7 +138,7 @@ impl InstrumentOrders
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_bid.state.filled_quantity += trade_quantity;
-                trades.push(self.generate_client_trade_event(&best_bid, trade_quantity, fees_percent).unwrap());
+                trades.push(self.generate_client_trade_event(latest_trade_ts, &best_bid, trade_quantity, fees_percent).unwrap());
                 self.bids.push(best_bid); // 将部分成交后的订单重新放回队列
                 break;
             }
@@ -153,6 +155,7 @@ impl InstrumentOrders
 
     pub fn match_asks(&mut self, market_trade: &MarketTrade, fees_percent: f64) -> Vec<ClientTrade>
     {
+        let latest_trade_ts = market_trade.timestamp;
         // 跟踪剩余的可用流动性，以便匹配
         let mut remaining_liquidity = market_trade.amount;
 
@@ -176,7 +179,7 @@ impl InstrumentOrders
             if remaining_quantity <= remaining_liquidity {
                 // 全量成交
                 remaining_liquidity -= remaining_quantity;
-                trades.push(self.generate_client_trade_event(&best_ask, remaining_quantity, fees_percent).unwrap());
+                trades.push(self.generate_client_trade_event(latest_trade_ts, &best_ask, remaining_quantity, fees_percent).unwrap());
 
                 // 如果流动性刚好耗尽，退出循环
                 if remaining_liquidity == 0.0 {
@@ -187,7 +190,7 @@ impl InstrumentOrders
                 // 部分成交
                 let trade_quantity = remaining_liquidity;
                 best_ask.state.filled_quantity += trade_quantity;
-                trades.push(self.generate_client_trade_event(&best_ask.clone(), trade_quantity, fees_percent).unwrap());
+                trades.push(self.generate_client_trade_event(latest_trade_ts, &best_ask.clone(), trade_quantity, fees_percent).unwrap());
                 self.asks.push(best_ask); // 将部分成交后的订单重新放回队列
                 break;
             }
@@ -198,12 +201,14 @@ impl InstrumentOrders
 
     // 辅助函数：生成 ClientTrade
     // NOTE 直接生成 ClientTrade 事件而不生成 OrderFill（例如 FullyFill 或 PartialFill）在某些场景下是合理的，但也有一些需要注意的地方。
-    pub fn generate_client_trade_event(&self, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> Result<ClientTrade, ExchangeError>
+    pub fn generate_client_trade_event(&self, timestamp: i64, order: &Order<Open>, trade_quantity: f64, fees_percent: f64) -> Result<ClientTrade, ExchangeError>
     {
         let fee = trade_quantity * order.state.price * fees_percent;
 
-        Ok(ClientTrade { trade_id: self.batch_id.into(), // NOTE trade_id 现在本质上是InstrumentOrders的一个counter生成的
-                         client_order_id: order.state.id.clone(),
+        Ok(ClientTrade { timestamp,
+                         trade_id: self.batch_id.into(), // NOTE trade_id 现在本质上是InstrumentOrders的一个counter生成的
+                         order_id: order.state.id.clone(),
+                         cid: order.cid.clone(),
                          instrument: order.instrument.clone(),
                          side: order.side,
                          price: order.state.price,

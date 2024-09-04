@@ -41,9 +41,8 @@ impl MarketEvent<WsTrade>
                                       quote: Token::from(quote),
                                       kind: instrument };
 
-        MarketEvent {
-            exchange_ts: exchange_time,
-            received_ts: received_time,
+        MarketEvent { exchange_ts: exchange_time,
+                      received_ts: received_time,
                       exchange: Exchange::SandBox,
 
                       instrument,
@@ -63,9 +62,8 @@ impl MarketEvent<MarketTrade>
                                       quote: Token::from(quote),
                                       kind: Perpetual };
 
-        MarketEvent {
-            exchange_ts: exchange_time,
-            received_ts: received_time,
+        MarketEvent { exchange_ts: exchange_time,
+                      received_ts: received_time,
                       exchange: Exchange::SandBox,
                       instrument,
                       kind: trade }

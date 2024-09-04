@@ -47,9 +47,9 @@ pub enum SandBoxClientEvent
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    const CLIENT_KIND: Exchange = Exchange::SandBox;
-
     type Config = UnboundedSender<SandBoxClientEvent>;
+
+    const CLIENT_KIND: Exchange = Exchange::SandBox;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {
@@ -57,8 +57,7 @@ impl ClientExecution for SandBoxClient
         let request_tx = config;
 
         // 使用 request_tx 和 market_event_rx 初始化 SandBoxClient
-        Self { request_tx
-               /* market_event_rx, */ }
+        Self { request_tx /* market_event_rx, */ }
     }
 
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExchangeError>
