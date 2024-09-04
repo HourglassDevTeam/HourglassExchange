@@ -19,7 +19,7 @@ pub struct Order<State>
     pub exchange: Exchange,     // 交易所
     pub instrument: Instrument, // 交易工具
     pub timestamp: i64,         // 生成的时候填客户端下单时间,NOTE 回测场景中之后会被加上一个随机延迟时间。
-    pub cid: ClientOrderId,     // 客户端订单ID
+    pub cid: Option<ClientOrderId>,     // 客户端订单ID
     pub side: Side,             // 买卖方向
     pub state: State,           // 订单状态
 }
@@ -52,10 +52,14 @@ mod tests
     #[test]
     fn request_open_should_be_comparable()
     {
-        let req1 = RequestOpen { reduce_only: true,
+        let req1 = RequestOpen {
+            cid: None,
+            reduce_only: true,
                                  price: 50.0,
                                  size: 1.0 };
-        let req2 = RequestOpen { reduce_only: false,
+        let req2 = RequestOpen {
+            cid: None,
+            reduce_only: false,
                                  price: 60.0,
                                  size: 2.0 };
         assert!(req1 < req2);
@@ -66,6 +70,6 @@ mod tests
     {
         let order_id = OrderId(123);
         let cancel_request: RequestCancel = order_id.clone().into();
-        assert_eq!(cancel_request.id, order_id);
+        assert_eq!(cancel_request.id, Some(order_id));
     }
 }

@@ -78,10 +78,11 @@ pub fn create_test_order_open(side: Side, price: f64, size: f64) -> Order<Open>
                                      quote: Token::from("USDT"), // 测试用报价货币
                                      kind: InstrumentKind::Perpetual   /* 测试用永续合约 */ },
             timestamp: 1625247600000,                       // 假设的客户端时间戳
-            cid: ClientOrderId(Some("validCID123".into())), // 假设的客户端订单ID
+            cid: Some(ClientOrderId("validCID123".into())), // 假设的客户端订单ID
             side,
             state: Open { id: OrderId(123), // 假设的订单ID
-                          price,
+                cid: None,
+                price,
                           size,
                           filled_quantity: 0.0,         // 初始填充数量为0
                           order_role: OrderRole::Taker  /* 假设订单角色为 Taker */ } }
@@ -102,9 +103,11 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen>
                                      quote: Token::from(quote),
                                      kind: InstrumentKind::Spot },
             timestamp: 1625247600000,
-            cid: ClientOrderId(Some(format!("CID{}", order_id.0 % 1_000_000))),
+            cid: Some(ClientOrderId(format!("CID{}", order_id.0 % 1_000_000))),
             side: Side::Buy,
-            state: RequestOpen { price: 50000.0,
+            state: RequestOpen {
+                cid: None,
+                price: 50000.0,
                                  size: 1.0,
                                  reduce_only: false } }
 }

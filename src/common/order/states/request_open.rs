@@ -2,13 +2,15 @@ use crate::common::order::Order;
 use fmt::Display;
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt};
+use crate::common::order::identification::client_order_id::ClientOrderId;
 
 /// 订单初始状态。发送到client进行操作
 ///
 /// `RequestOpen` 用于表示一个初始订单状态。这个状态包含了订单的价格、大小，以及是否为 `reduce_only` 订单。
-#[derive(Copy, Clone, PartialEq, Debug, Deserialize, Serialize)]
+#[derive( Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct RequestOpen
 {
+    pub cid: Option<ClientOrderId>,
     pub reduce_only: bool,
     pub price: f64,
     pub size: f64,

@@ -735,17 +735,16 @@ impl Account
     pub fn validate_order_request_open(order: &Order<RequestOpen>) -> Result<(), ExchangeError>
     {
         // 检查是否提供了有效的 ClientOrderId
-        if let Some(cid) = &order.cid.0 {
-            if cid.trim().is_empty() {
+        if let Some(cid) = &order.cid {
+            if cid.0.trim().is_empty() {
                 return Err(ExchangeError::InvalidRequestOpen("ClientOrderId is empty".into()));
             }
 
             // 使用 validate_id_format 验证 ID 格式
-            if !ClientOrderId::validate_id_format(cid) {
-                return Err(ExchangeError::InvalidRequestOpen(format!("Invalid ClientOrderId format: {}", cid)));
+            if !ClientOrderId::validate_id_format(&cid.0) {
+                return Err(ExchangeError::InvalidRequestOpen(format!("Invalid ClientOrderId format: {}", cid.0)));
             }
         }
-
         // 检查订单类型是否合法
         Account::validate_order_instruction(order.kind)?;
 
@@ -767,11 +766,25 @@ impl Account
         Ok(())
     }
 
-    pub fn validate_order_request_cancel(order: &Order<RequestCancel>) -> Result<(), ExchangeError>
-    {
-        // 检查是否提供了有效的 OrderId
-        if order.state.id.value() == 0 {
-            return Err(ExchangeError::InvalidRequestCancel("OrderId is missing or invalid".into()));
+    pub fn validate_order_request_cancel(order: &Order<RequestCancel>) -> Result<(), ExchangeError> {
+        // 检查是否提供了有效的 OrderId 或 ClientOrderId
+        if order.state.id.is_none() && order.cid.is_none() {
+            return Err(ExchangeError::InvalidRequestCancel("Both OrderId and ClientOrderId are missing".into()));
+        }
+
+        // 如果提供了 OrderId，则检查其是否有效
+        if let Some(id) = &order.state.id {
+            if id.value() == 0 {
+                return Err(ExchangeError::InvalidRequestCancel("OrderId is missing or invalid".into()));
+            }
+        }
+
+        // 如果提供了 ClientOrderId，则检查其有效性 (从 `Order` 结构体中获取 `cid`)
+        if let Some(cid) = &order.cid {
+            // 在此处添加自定义的 ClientOrderId 有效性检查逻辑
+            if cid.0.is_empty() || cid.0.len() < 5 {
+                return Err(ExchangeError::InvalidRequestCancel("ClientOrderId is missing or invalid".into()));
+            }
         }
 
         // 检查基础货币和报价货币是否相同
@@ -781,6 +794,8 @@ impl Account
 
         Ok(())
     }
+
+
 
     /// 处理市场交易事件并尝试匹配订单。
     ///
@@ -953,15 +968,15 @@ impl Account
                 | Side::Buy => {
                     let index = orders.bids
                                       .par_iter()
-                                      .position_any(|bid| bid.state.id == request.state.id)
-                                      .ok_or(ExchangeError::OrderNotFound(request.cid))?;
+                                      .position_any(|bid| bid.state.id == request.state.id.clone().unwrap())
+                                      .ok_or(ExchangeError::OrderNotFound(request.cid.unwrap()))?;
                     orders.bids.remove(index)
                 }
                 | Side::Sell => {
                     let index = orders.asks
                                       .par_iter()
-                                      .position_any(|ask| ask.state.id == request.state.id)
-                                      .ok_or(ExchangeError::OrderNotFound(request.cid))?;
+                                      .position_any(|ask| ask.state.id == request.state.id.clone().unwrap())
+                                      .ok_or(ExchangeError::OrderNotFound(request.cid.unwrap()))?;
                     orders.asks.remove(index)
                 }
             }
@@ -1002,7 +1017,7 @@ impl Account
 
         // 将所有打开的订单转换为取消请求
         let cancel_requests: Vec<Order<RequestCancel>> = orders_to_cancel.into_iter()
-                                                                         .map(|order| Order { state: RequestCancel { id: order.state.id },
+                                                                         .map(|order| Order { state: RequestCancel { id: Some(order.state.id) },
                                                                                               instrument: order.instrument,
                                                                                               side: order.side,
                                                                                               kind: order.kind,
@@ -1252,15 +1267,17 @@ mod tests
                                                      quote: Token::from("USD"),
                                                      kind: InstrumentKind::Spot },
                             timestamp: 1625247600000,
-                            cid: ClientOrderId(Some("validCID123".into())),
+                            cid: Some(ClientOrderId("validCID123".into())),
                             side: Side::Buy,
-                            state: RequestOpen { price: 50000.0,
+                            state: RequestOpen {
+                                cid: None,
+                                price: 50000.0,
                                                  size: 1.0,
                                                  reduce_only: false } };
 
         assert!(Account::validate_order_request_open(&order).is_ok());
 
-        let invalid_order = Order { cid: ClientOrderId(Some("".into())), // Invalid ClientOrderId
+        let invalid_order = Order { cid: Some(ClientOrderId("ars3214321431234rafsftdarstdars".into())), // Invalid ClientOrderId
                                     ..order.clone() };
         assert!(Account::validate_order_request_open(&invalid_order).is_err());
     }
@@ -1274,13 +1291,13 @@ mod tests
                                                             quote: Token::from("USD"),
                                                             kind: InstrumentKind::Spot },
                                    timestamp: 1625247600000,
-                                   cid: ClientOrderId(Some("validCID123".into())),
+                                   cid: Some(ClientOrderId("validCID123".into())),
                                    side: Side::Buy,
-                                   state: RequestCancel { id: OrderId(12345) } };
+                                   state: RequestCancel { id: Some(OrderId(12345)) } };
 
         assert!(Account::validate_order_request_cancel(&cancel_order).is_ok());
 
-        let invalid_cancel_order = Order { state: RequestCancel { id: OrderId(0) }, // Invalid OrderId
+        let invalid_cancel_order = Order { state: RequestCancel { id: Some(OrderId(0)) }, // Invalid OrderId
                                            ..cancel_order.clone() };
         assert!(Account::validate_order_request_cancel(&invalid_cancel_order).is_err());
     }
@@ -1358,10 +1375,11 @@ mod tests
             exchange: Exchange::SandBox,
             instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
             timestamp: 1625247600000,
-            cid: ClientOrderId(Some("validCID123".into())),
+            cid: Some(ClientOrderId("validCID123".into())),
             side: Side::Buy,
             state: Open {
                 id: OrderId::new(0, 0, 0),
+                cid: None,
                 price: 100.0,
                 size: 2.0,
                 filled_quantity: 0.0,
@@ -1433,9 +1451,10 @@ mod tests
             exchange: Exchange::SandBox,
             instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
             timestamp: 1625247600000,
-            cid: ClientOrderId(Some("validCID123".into())),
+            cid: Some(ClientOrderId("validCID123".into())),
             side: Side::Buy,
             state: RequestOpen {
+                cid: None,
                 price: 100.0,
                 size: 2.0,
                 reduce_only: false,
@@ -1484,9 +1503,11 @@ mod tests
                                          exchange: Exchange::SandBox,
                                          instrument: instrument.clone(),
                                          timestamp: 1625247600000,
-                                         cid: ClientOrderId(Some("validCID123".into())),
+                                         cid: Some(ClientOrderId("validCID123".into())),
                                          side: Side::Buy,
-                                         state: RequestOpen { price: 1.0,
+                                         state: RequestOpen {
+                                             cid: None,
+                                             price: 1.0,
                                                               size: 2.0,
                                                               reduce_only: false } };
 
@@ -1498,7 +1519,8 @@ mod tests
                                  cid: open_order_request.cid.clone(),
                                  side: open_order_request.side,
                                  state: Open { id: OrderId::new(0, 0, 0), // 使用一个新的 OrderId
-                                               price: open_order_request.state.price,
+                                     cid: None,
+                                     price: open_order_request.state.price,
                                                size: open_order_request.state.size,
                                                filled_quantity: 0.0,
                                                order_role: OrderRole::Maker } };
@@ -1522,9 +1544,11 @@ mod tests
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
-            cid: ClientOrderId(Some("validCID456".into())),
+            cid: Some(ClientOrderId("validCID123".into())),
             side: Side::Sell,
-            state: RequestOpen { price: 1.0,
+            state: RequestOpen {
+                cid: None,
+                price: 1.0,
                 size: 2.0,
                 reduce_only: false } };
 
@@ -1536,6 +1560,7 @@ mod tests
             cid: open_order_request.cid.clone(),
             side: open_order_request.side,
             state: Open { id: OrderId::new(0, 0, 0), // 使用一个新的 OrderId
+                cid: None,
                 price: open_order_request.state.price,
                 size: open_order_request.state.size,
                 filled_quantity: 0.0,
@@ -1665,14 +1690,14 @@ mod tests
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
-            cid: ClientOrderId(Some("validCID123".into())),
+            cid: Some(ClientOrderId("validCID123".into())),
             side: Side::Buy,
-            state: RequestCancel { id: OrderId(99999) }, // 无效的OrderId
+            state: RequestCancel { id: Some(OrderId(99999)) }, // 无效的OrderId
         };
 
         let result = account.atomic_cancel(invalid_cancel_request).await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ExchangeError::OrderNotFound(ClientOrderId(Some("validCID123".into()))));
+        assert_eq!(result.unwrap_err(), ExchangeError::OrderNotFound(ClientOrderId("validCID123".into())));
     }
 
     #[tokio::test]
@@ -1790,10 +1815,11 @@ mod tests
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
-            cid: ClientOrderId(Some("validCID123".into())),
+            cid: Some(ClientOrderId("validCID123".into())),
             side: Side::Buy,
             state: Open {
                 id: OrderId::new(0, 0, 0),
+                cid: None,
                 price: 100.0,
                 size: 2.0,
                 filled_quantity: 0.0,
@@ -1856,10 +1882,11 @@ mod tests
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
-            cid: ClientOrderId(Some("validCID456".into())),
+            cid: Some(ClientOrderId("validCID456".into())),
             side: Side::Sell,
             state: Open {
                 id: OrderId::new(0, 0, 0),
+                cid: None,
                 price: 100.0,
                 size: 2.0,
                 filled_quantity: 0.0,
@@ -1917,10 +1944,11 @@ mod tests
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
-            cid: ClientOrderId(Some("validCID123".into())),
+            cid: Some(ClientOrderId("validCID123".into())),
             side: Side::Buy,
             state: Open {
                 id: OrderId::new(0, 0, 0),
+                cid: None,
                 price: 100.0,
                 size: 2.0,
                 filled_quantity: 0.0,
@@ -1964,9 +1992,10 @@ mod tests
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
-            cid: ClientOrderId(Some("validCID123".into())),
+            cid: Some(ClientOrderId("validCID123".into())),
             side: Side::Buy,
             state: RequestOpen {
+                cid: None,
                 price: 100.0,
                 size: 2.0,
                 reduce_only: false,
@@ -1996,9 +2025,9 @@ mod tests
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
-            cid: ClientOrderId(Some("invalidCID".into())),
+            cid: Some(ClientOrderId("validCID123".into())),
             side: Side::Buy,
-            state: RequestCancel { id: invalid_order_id },
+            state: RequestCancel { id: Some(invalid_order_id) },
         };
 
         // 创建一个用于接收取消结果的 channel
@@ -2012,80 +2041,38 @@ mod tests
 
         // 确保返回的结果是失败的，并且错误类型是 OrderNotFound
         assert!(result[0].is_err());
-        assert_eq!(result[0].as_ref().unwrap_err(), &ExchangeError::OrderNotFound(ClientOrderId(Some("invalidCID".into()))));
+        assert_eq!(result[0].as_ref().unwrap_err(), &ExchangeError::OrderNotFound(ClientOrderId("validCID123".into())));
     }
 
-    // 测试 cancel_all_orders，需要首先run交易所。注意 这个测试还需要 debug cancel_all_orders 方法发送的输出。
-    // #[tokio::test]
-    // async fn test_success_cancel_all_orders() {
-    //     let mut account = create_test_account().await;
-    //
-    //     let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-    //
-    //     // 创建两个有效的打开订单
-    //     let open_order1 = Order {
-    //         kind: OrderInstruction::Limit,
-    //         exchange: Exchange::SandBox,
-    //         instrument: instrument.clone(),
-    //         timestamp: 1625247600000,
-    //         cid: ClientOrderId(Some("validCID1".into())),
-    //         side: Side::Buy,
-    //         state: Open {
-    //             id: OrderId::new(1, 0, 0),
-    //             price: 100.0,
-    //             size: 2.0,
-    //             filled_quantity: 0.0,
-    //             order_role: OrderRole::Maker,
-    //         },
-    //     };
-    //
-    //     let open_order2 = Order {
-    //         kind: OrderInstruction::Limit,
-    //         exchange: Exchange::SandBox,
-    //         instrument: instrument.clone(),
-    //         timestamp: 1625247601000,
-    //         cid: ClientOrderId(Some("validCID2".into())),
-    //         side: Side::Sell,
-    //         state: Open {
-    //             id: OrderId::new(2, 0, 0),
-    //             price: 150.0,
-    //             size: 3.0,
-    //             filled_quantity: 0.0,
-    //             order_role: OrderRole::Taker,
-    //         },
-    //     };
-    //
-    //     // 将订单添加到账户中
-    //     {
-    //         let orders = account.orders.write().await;
-    //         let mut ins_orders = orders.get_ins_orders_mut(&instrument).unwrap();
-    //         ins_orders.add_order_open(open_order1.clone());
-    //         ins_orders.add_order_open(open_order2.clone());
-    //     }
-    //
-    //     // 创建一个用于接收取消结果的 channel
-    //     let (tx, rx) = oneshot::channel();
-    //
-    //     // 调用 cancel_orders_all 方法，传入发送者
-    //     account.cancel_orders_all(tx).await;
-    //
-    //     // 等待取消结果
-    //     let result = rx.await.unwrap();
-    //
-    //     // 确保返回的结果是成功的，所有订单都被取消
-    //     assert!(result.is_ok());
-    //     let cancelled_orders = result.unwrap();
-    //     assert_eq!(cancelled_orders.len(), 2); // 应该有两个取消的订单
-    //     assert_eq!(cancelled_orders[0].state.id, open_order1.state.id);
-    //     assert_eq!(cancelled_orders[1].state.id, open_order2.state.id);
-    //
-    //     // 验证账户的余额是否已正确更新
-    //     let usdt_balance = account.get_balance(&Token::from("USDT")).unwrap();
-    //     let eth_balance = account.get_balance(&Token::from("ETH")).unwrap();
-    //
-    //     // 检查取消订单后的余额状态（根据你的业务逻辑，调整这些断言）
-    //     assert_eq!(usdt_balance.available, 10000.0); // 假设在取消后，余额回到初始状态
-    //     assert_eq!(eth_balance.available, 10.0);     // 同样检查 ETH 的余额
-    // }
+    #[tokio::test]
+    async fn test_cancel_valid_cid() {
+        let mut account = create_test_account().await;
 
+        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
+
+
+        // 构造一个取消请求
+        let cancel_request = Order {
+            kind: OrderInstruction::Cancel,
+            exchange: Exchange::SandBox,
+            instrument: instrument.clone(),
+            timestamp: 1625247600000,
+            cid: Some(ClientOrderId("invalidCID".into())),
+            side: Side::Buy,
+            state: RequestCancel { id: None},
+        };
+
+        // 创建一个用于接收取消结果的 channel
+        let (tx, rx) = oneshot::channel();
+
+        // 调用 cancel_orders 方法，传入取消请求和发送者
+        account.cancel_orders(vec![cancel_request], tx).await;
+
+        // 等待取消结果
+        let result = rx.await.unwrap();
+        println!("result: {:?}", result);
+
+        // 确保返回的结果是失败的，并且错误类型是 OrderNotFound
+        assert!(result[0].is_err());
+    }
 }

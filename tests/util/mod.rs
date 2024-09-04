@@ -75,6 +75,7 @@ pub async fn run_sample_exchange(
         side: Side::Buy,
         state: Open {
             id: OrderId(1234124124124123),
+            cid: None,
             price: 100.0,
             size: 1.0,
             filled_quantity: 0.0,
@@ -159,9 +160,10 @@ where
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
         timestamp:1233312345124, // 使用当前时间戳
-        cid,
+        cid: cid.clone(),
         side,
         state: RequestOpen {
+            cid: Some(cid.clone()),
             reduce_only: false, // 假设创建的订单不是 reduce_only
             price,
             size: quantity,
@@ -187,10 +189,11 @@ where
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
         timestamp: 1233312345124, // 使用当前时间戳
-        cid,
+        cid: cid.clone(),
         side,
         state: Open {
             id,
+            cid: Some(cid),
             price,
             size: quantity,
             filled_quantity: filled,

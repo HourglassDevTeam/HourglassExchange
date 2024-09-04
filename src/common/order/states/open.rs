@@ -1,12 +1,14 @@
 use crate::common::order::{identification::OrderId, Order, OrderRole};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use crate::common::order::identification::client_order_id::ClientOrderId;
 
 /// `Open` 结构体表示订单在开放状态下的详细信息。
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct Open
 {
     pub id: OrderId,
+    pub cid: Option<ClientOrderId>,
     pub price: f64,
     pub size: f64,
     pub filled_quantity: f64,
