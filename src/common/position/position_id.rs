@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt,
+    fmt::{Display, Formatter},
+};
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize, PartialOrd)]
 pub struct PositionId(pub u64);
