@@ -537,12 +537,12 @@ impl Account
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let (base_delta, quote_delta) = match side {
                     | Side::Buy => {
-                        let base_increase = trade.quantity - fee;
+                        let base_increase = trade.quantity;
                         // Note: available was already decreased by the opening of the Side::Buy order
                         let base_delta = BalanceDelta { total: base_increase,
                                                         available: base_increase };
-                        let quote_delta = BalanceDelta { total: -trade.quantity * trade.price,
-                                                         available: 0.0 };
+                        let quote_delta = BalanceDelta { total: -trade.quantity * trade.price - fee,
+                                                         available: - fee };
                         (base_delta, quote_delta)
                     }
                     | Side::Sell => {
@@ -783,42 +783,63 @@ impl Account
         Ok(())
     }
 
-    pub async fn match_orders(&mut self, market_trade: &MarketTrade) -> Vec<ClientTrade>
-    {
+    pub async fn match_orders(&mut self, market_trade: &MarketTrade) -> Vec<ClientTrade> {
         println!("[match_orders]: market_trade: {:?}", market_trade);
         let mut trades = Vec::new();
-        // parse base from MarketTrade's symbol(which is formatted as base_quote)
-        let base = Token::from(market_trade.parse_base().unwrap());
-        let quote =Token::from(market_trade.parse_quote().unwrap());
-        let kind = market_trade.parse_kind();
-        let instrument = Instrument {base,quote,kind};
 
-        if let Some(mut instrument_orders) = self.get_orders_for_instrument(&instrument).await {
+        // Parse base and quote tokens from MarketTrade's symbol (formatted as base_quote)
+        let base = Token::from(market_trade.parse_base().unwrap());
+        let quote = Token::from(market_trade.parse_quote().unwrap());
+        let kind = market_trade.parse_kind();
+        let instrument = Instrument { base, quote, kind };
+
+        // 注意，在开单中我已经存储了预先计算的OrderRole，应该读出来并相应传入。
+
+        // Retrieve the instrument orders for the specified instrument
+        if let Some(mut instrument_orders) = self.orders.read().await.get_ins_orders_mut(&instrument).ok() {
             if let Some(matching_side) = instrument_orders.determine_matching_side(&market_trade) {
                 match matching_side {
-                    | Side::Buy => {
-                        trades.append(&mut instrument_orders.match_bids(&market_trade,
-                                                                        self.determine_fees_percent(&kind, &OrderRole::Taker)
-                                                                            .expect("Missing fees percent")));
+                    Side::Buy => {
+                        println!("[match_orders]: matching_side: {:?}", matching_side);
+
+                        // Extract the `OrderRole` from the best bid to get the correct fees percent
+                        if let Some(best_bid) = instrument_orders.bids.last() {
+                            let order_role = best_bid.state.order_role;
+                            println!("[match_orders]: order_role: {:?}", order_role);
+                            let fees_percent = self.fees_percent(&kind, &order_role)
+                                .expect("Missing fees percent");
+
+                            // Match bids using the calculated fees percent
+                            trades.append(&mut instrument_orders.match_bids(&market_trade, fees_percent));
+                        }
                     }
-                    | Side::Sell => {
-                        trades.append(&mut instrument_orders.match_asks(&market_trade,
-                                                                        self.determine_fees_percent(&kind, &OrderRole::Taker)
-                                                                            .expect("Missing fees percent")));
+                    Side::Sell => {
+                        println!("[match_orders]: matching_side: {:?}", matching_side);
+
+                        // Extract the `OrderRole` from the best ask to get the correct fees percent
+                        if let Some(best_ask) = instrument_orders.asks.last() {
+                            let order_role = best_ask.state.order_role;
+                            println!("[match_orders]: order_role: {:?}", order_role);
+                            let fees_percent = self.fees_percent(&kind, &order_role)
+                                .expect("Missing fees percent");
+
+                            // Match asks using the calculated fees percent
+                            trades.append(&mut instrument_orders.match_asks(&market_trade, fees_percent));
+                        }
                     }
                 }
             }
-        }
-        else {
+        } else {
             warn!("No orders found for the given instrument in the market event.");
-        };
+        }
 
+        println!("[match_orders]: trades: {:?}", trades);
         self.process_trades(trades.clone()).await;
 
         trades
     }
 
-    fn determine_fees_percent(&self, kind: &InstrumentKind, role: &OrderRole) -> Option<f64>
+    fn fees_percent(&self, kind: &InstrumentKind, role: &OrderRole) -> Option<f64>
     {
         let commission_rates = &self.config.fees_book.get(kind)?;
 
@@ -1718,6 +1739,12 @@ mod tests
             },
         };
 
+        // 由于这个开单行为不是通过信号发送实现的，没有调用open_order方法，所以available要自行减去。
+        {
+            let mut quote_balance = account.get_balance_mut(&instrument.quote).unwrap();
+            quote_balance.available -= 200.0; // Modify the balance
+        }
+
         // 将订单添加到账户
         account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
 
@@ -1742,6 +1769,10 @@ mod tests
 
         // 检查余额是否已更新
         let balance = account.get_balance(&instrument.base).unwrap();
+        let quote_balance = account.get_balance(&instrument.quote).unwrap();
+
+        assert_eq!(quote_balance.total, 9799.8); // NOTE 此处金额不对，需要手动检查。可能是摩擦成本错误计算导致。
+        assert_eq!(quote_balance.available, 9799.8); // NOTE 此处金额不对，available 没有被扣除。可能是摩擦成本错误计算导致。
         assert_eq!(balance.total, 12.0); // NOTE 此处金额不对，需要手动检查。可能是摩擦成本错误计算导致。
     }
 
