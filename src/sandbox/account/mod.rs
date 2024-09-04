@@ -1638,7 +1638,7 @@ mod tests
         assert_eq!(btc_initial_balance.total, 0.0);
 
         // 用 USDT 购买 BTC
-        let balances = account.buy_b_with_u(usdt_amount, btc_price).unwrap();
+        account.buy_b_with_u(usdt_amount, btc_price).unwrap();
 
         // 购买后查询 USDT 和 BTC 余额
         let usdt_balance = account.query_balance(&Token::from("USDT")).unwrap();
@@ -1675,7 +1675,7 @@ mod tests
         assert_eq!(initial_usdt_balance.total, 10_000.0 + usdt_initial_amount);
 
         // 提现 BTC 转换为 USDT
-        let balances = account.withdraw_u_from_b(btc_amount, btc_price).unwrap();
+        account.withdraw_u_from_b(btc_amount, btc_price).unwrap();
 
         // 提现后查询 USDT 和 BTC 余额
         let updated_usdt_balance = account.query_balance(&Token::from("USDT")).unwrap();
