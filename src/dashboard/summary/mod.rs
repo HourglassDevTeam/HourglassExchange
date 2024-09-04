@@ -16,8 +16,7 @@ use prettytable::{Cell, Row, Table};
 /// - `PositionSummariser` 特性定义了一个更新和生成交易仓位摘要的接口。通过实现这个接口，可以在处理一组交易仓位时快速生成统计数据。
 /// - `TableBuilder` 特性定义了一套接口，用于生成表格标题、行数据以及完整表格。它还支持将多个表格合并为一个表格。
 /// - `combine` 函数用于合并多个表格生成器，生成一个包含所有行数据的完整表格。
-
-///  用于初始化结构体的接口，要求实现者能够通过配置进行初始化。
+///
 pub trait Initialiser
 {
     type Config;

@@ -829,9 +829,9 @@ impl Account
         let instrument = Instrument { base, quote, kind };
 
         // 查找与指定金融工具相关的挂单
-        if let Some(mut instrument_orders) = self.orders.read().await.get_ins_orders_mut(&instrument).ok() {
+        if let Ok(mut instrument_orders) = self.orders.read().await.get_ins_orders_mut(&instrument) {
             // 确定市场事件匹配的挂单方向（买或卖）
-            if let Some(matching_side) = instrument_orders.determine_matching_side(&market_trade) {
+            if let Some(matching_side) = instrument_orders.determine_matching_side(market_trade) {
                 match matching_side {
                     | Side::Buy => {
                         println!("[match_orders]: matching_side: {:?}", matching_side);
@@ -843,7 +843,7 @@ impl Account
                             let fees_percent = self.fees_percent(&kind, &order_role).expect("缺少手续费比例");
 
                             // 使用计算出的手续费比例匹配买单
-                            trades.append(&mut instrument_orders.match_bids(&market_trade, fees_percent));
+                            trades.append(&mut instrument_orders.match_bids(market_trade, fees_percent));
                         }
                     }
                     | Side::Sell => {
@@ -856,7 +856,7 @@ impl Account
                             let fees_percent = self.fees_percent(&kind, &order_role).expect("缺少手续费比例");
 
                             // 使用计算出的手续费比例匹配卖单
-                            trades.append(&mut instrument_orders.match_asks(&market_trade, fees_percent));
+                            trades.append(&mut instrument_orders.match_asks(market_trade, fees_percent));
                         }
                     }
                 }
