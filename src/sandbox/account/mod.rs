@@ -237,30 +237,32 @@ impl Account
             .get_mut(token)
             .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for Token: {:?}", token)))
     }
-    pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&'a Token, f64) {
+
+    pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&'a Token, f64)
+    {
         match order.instrument.kind {
-            InstrumentKind::Spot => match order.side {
-                Side::Buy => (&order.instrument.quote, current_price * order.state.size),
-                Side::Sell => (&order.instrument.base, order.state.size),
+            | InstrumentKind::Spot => match order.side {
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size),
+                | Side::Sell => (&order.instrument.base, order.state.size),
             },
-            InstrumentKind::Perpetual => match order.side {
-                Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
-                Side::Sell => (&order.instrument.base, order.state.size * self.config.account_leverage_rate),
+            | InstrumentKind::Perpetual => match order.side {
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
+                | Side::Sell => (&order.instrument.base, order.state.size * self.config.account_leverage_rate),
             },
-            InstrumentKind::Future => match order.side {
-                Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
-                Side::Sell => (&order.instrument.base, order.state.size * self.config.account_leverage_rate),
+            | InstrumentKind::Future => match order.side {
+                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
+                | Side::Sell => (&order.instrument.base, order.state.size * self.config.account_leverage_rate),
             },
-            InstrumentKind::CryptoOption => {
+            | InstrumentKind::CryptoOption => {
                 todo!("CryptoOption is not supported yet")
             }
-            InstrumentKind::CryptoLeveragedToken => {
+            | InstrumentKind::CryptoLeveragedToken => {
                 todo!("CryptoLeveragedToken is not supported yet")
             }
-            InstrumentKind::CommodityOption => {
+            | InstrumentKind::CommodityOption => {
                 todo!("CommodityOption is not supported yet")
             }
-            InstrumentKind::CommodityFuture => {
+            | InstrumentKind::CommodityFuture => {
                 todo!("CommodityFuture is not supported yet")
             }
         }
@@ -518,6 +520,8 @@ impl Account
         let Instrument { base, quote, kind, .. } = &trade.instrument;
         let fee = trade.fees; // 直接从 TradeEvent 中获取费用
         let side = trade.side; // 直接使用 TradeEvent 中的 side
+                               // let trade_price = trade.price;
+                               // let trade_quantity = trade.quantity;
 
         match kind {
             | InstrumentKind::Spot => {
