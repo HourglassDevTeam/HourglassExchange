@@ -8,8 +8,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct RequestCancel
 {
-    /// 要取消的订单的唯一标识符。
+    // 要取消的订单的唯一标识符。
     pub id: OrderId,
+    // 可选的ClientOrderId
+    // pub cid: Option<ClientOrderId>,
 }
 
 /// 通过 `OrderId` 或其他可以转换为 `OrderId` 的类型生成 `RequestCancel` 实例。
