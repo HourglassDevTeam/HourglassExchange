@@ -52,7 +52,9 @@ impl AccountPositions
     /// TODO check init logic
     pub async fn build_new_perpetual_position(&self,
                                               config: &AccountConfig,
-                                              trade: &ClientTrade,
+                                              trade: &ClientTrade, // 使用 ClientTrade 作为输入参数
+                                              pos_margin_mode: PositionMarginMode,
+                                              position_mode: PositionDirectionMode,
                                               exchange_ts: i64,
                                               machine_id: u64,
                                               counter: u64)
@@ -60,8 +62,6 @@ impl AccountPositions
     {
         let maker_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
         let taker_rate = config.get_taker_fee_rate(&trade.instrument.kind)?;
-        let position_mode = config.position_mode.clone();
-        let position_margin_mode = config.position_margin_mode.clone();
         // 计算初始保证金
         let initial_margin = trade.price * trade.quantity / config.account_leverage_rate;
         // 计算费用
@@ -101,7 +101,7 @@ impl AccountPositions
         else {
             trade.price * (1.0 + initial_margin / (trade.quantity * trade.price))
         };
-        let pos_config = PerpetualPositionConfig { pos_margin_mode: position_margin_mode,
+        let pos_config = PerpetualPositionConfig { pos_margin_mode,
                                                    leverage: config.account_leverage_rate,
                                                    position_mode };
 
