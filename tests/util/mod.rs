@@ -47,10 +47,10 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
     balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
 
     // Creating initial positions
-    let positions = AccountPositions { margin_pos: Vec::new(),
+    let positions = Arc::new(Mutex::new(AccountPositions { margin_pos: Vec::new(),
                                        perpetual_pos: Vec::new(),
                                        futures_pos: Vec::new(),
-                                       option_pos: Vec::new() };
+                                       option_pos: Vec::new() }));
 
     let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
     let account_orders = AccountOrders::new(0, vec![instrument.clone()], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -85,7 +85,7 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
     let account_arc = Arc::new(Mutex::new(Account { current_session: Uuid::new_v4(),
                                                     machine_id: 0,
                                                     exchange_timestamp: AtomicI64::new(1234567),
-                                                    config: Arc::new(create_test_account_config()),
+                                                    config: create_test_account_config(),
                                                     orders: orders_arc,
                                                     balances,
                                                     positions,

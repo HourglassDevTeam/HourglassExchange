@@ -44,7 +44,7 @@ use std::{
     },
     time::{SystemTime, UNIX_EPOCH},
 };
-use tokio::sync::{mpsc, oneshot, RwLock};
+use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 use uuid::Uuid;
 
@@ -62,11 +62,11 @@ pub struct Account
     pub machine_id: u64,                                 // 机器ID
     pub exchange_timestamp: AtomicI64,                   // 交易所时间戳
     pub account_event_tx: UnboundedSender<AccountEvent>, // 帐户事件发送器
-    pub config: Arc<AccountConfig>,                      // 帐户配置
+    pub config: AccountConfig,                      // 帐户配置
     pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
     pub balances: DashMap<Token, Balance>,               // 帐户余额
-    pub positions: AccountPositions,                     /* 帐户持仓
-                                                          * pub vault: Vault, */
+    pub positions: Arc<Mutex<AccountPositions>>,         //帐户持仓
+    // pub vault: Vault,
 }
 
 // 手动实现 Clone trait
@@ -78,7 +78,7 @@ impl Clone for Account
                   machine_id: self.machine_id,
                   exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
                   account_event_tx: self.account_event_tx.clone(),
-                  config: Arc::clone(&self.config),
+                  config: self.config.clone(),
                   orders: Arc::clone(&self.orders),
                   balances: self.balances.clone(),
                   positions: self.positions.clone() }
@@ -88,10 +88,10 @@ impl Clone for Account
 pub struct AccountInitiator
 {
     account_event_tx: Option<UnboundedSender<AccountEvent>>,
-    config: Option<Arc<AccountConfig>>,
+    config: Option<AccountConfig>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
     balances: Option<DashMap<Token, Balance>>,
-    positions: Option<AccountPositions>,
+    positions: Option<Arc<Mutex<AccountPositions>>>,
 }
 
 impl Default for AccountInitiator
@@ -121,7 +121,7 @@ impl AccountInitiator
 
     pub fn config(mut self, value: AccountConfig) -> Self
     {
-        self.config = Some(Arc::new(value));
+        self.config = Some(value);
         self
     }
 
@@ -139,7 +139,7 @@ impl AccountInitiator
 
     pub fn positions(mut self, value: AccountPositions) -> Self
     {
-        self.positions = Some(value);
+        self.positions = Some(Arc::new(Mutex::new(value)));
         self
     }
 
@@ -177,14 +177,14 @@ impl Account
 
     pub async fn fetch_positions_and_respond(&self, response_tx: Sender<Result<AccountPositions, ExchangeError>>)
     {
-        let positions = self.positions.clone();
+        let positions = self.positions.lock().await.clone();
         respond(response_tx, Ok(positions));
     }
 
     /// 获取指定 `Instrument` 的仓位
     pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>
     {
-        let positions = &self.positions; // 获取锁
+        let positions = &self.positions.lock().await; // 获取锁
 
         match instrument.kind {
             | InstrumentKind::Spot => {
@@ -325,10 +325,10 @@ impl Account
     async fn set_perpetual_position(&mut self, pos: PerpetualPosition) -> Result<(), ExchangeError>
     {
         // 获取账户的锁，确保在更新仓位信息时没有并发访问的问题
-        let positions = &mut self.positions;
+        let positions_lock = &mut self.positions.lock().await;
 
         // 获取永续合约仓位的可变引用
-        let perpetual_positions = &mut positions.perpetual_pos;
+        let perpetual_positions = &mut positions_lock.perpetual_pos;
 
         // 查找是否存在与传入 `pos` 相同的 `instrument`
         if let Some(existing_pos) = perpetual_positions.iter_mut().find(|p| p.meta.instrument == pos.meta.instrument) {
@@ -365,7 +365,7 @@ impl Account
     /// 需要首先从 open 订单中确定 InstrumentKind，因为仓位类型各不相同
     pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExchangeError>
     {
-        let positions_lock = &self.positions; // 获取锁
+        let positions_lock = &self.positions.lock().await; // 获取锁
 
         // 直接调用 AccountPositions 中的 has_position 方法
         if positions_lock.has_position(&open.instrument) {
@@ -377,7 +377,7 @@ impl Account
 
     async fn check_position_direction_conflict(&self, instrument: &Instrument, side: Side) -> Result<(), ExchangeError>
     {
-        let positions_lock = &self.positions;
+        let positions_lock = &self.positions.lock().await;
 
         match instrument.kind {
             | InstrumentKind::Spot => {
@@ -1575,7 +1575,7 @@ mod tests
     #[tokio::test]
     async fn test_check_position_direction_conflict()
     {
-        let mut account = create_test_account().await;
+        let account = create_test_account().await;
 
         // 情况1：没有冲突的情况下调用
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
@@ -1584,7 +1584,7 @@ mod tests
 
         // 情况2：模拟存在冲突的Perpetual仓位，注意这里 `side` 是 `Sell`
         let perpetual_position = create_test_perpetual_position(instrument.clone());
-        account.positions.perpetual_pos.push(perpetual_position);
+        account.positions.lock().await.perpetual_pos.push(perpetual_position);
 
         let result = account.check_position_direction_conflict(&instrument, Side::Sell).await;
         assert!(result.is_err());
@@ -1597,7 +1597,7 @@ mod tests
 
         // 情况4：模拟存在冲突的Future仓位，注意这里 `side` 是 `Sell`
         let future_position = create_test_future_position_with_side(instrument_future.clone(), Side::Sell);
-        account.positions.futures_pos.push(future_position);
+        account.positions.lock().await.futures_pos.push(future_position);
 
         let result = account.check_position_direction_conflict(&instrument_future, Side::Buy).await;
         assert!(result.is_err());

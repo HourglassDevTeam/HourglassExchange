@@ -36,7 +36,7 @@ use std::{
     sync::{atomic::AtomicI64, Arc},
     time::{SystemTime, UNIX_EPOCH},
 };
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
 
 /// 创建一个测试用的 `Instrument` 实例。
@@ -142,9 +142,9 @@ pub async fn create_test_account() -> Account
               machine_id,
               exchange_timestamp: AtomicI64::new(1234567),
               account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-              config: Arc::new(account_config),
+              config: account_config,
               balances,
-              positions,
+              positions:Arc::new(Mutex::new(positions)),
               orders: Arc::new(RwLock::new(AccountOrders::new(machine_id,
                                                               vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))],
                                                               AccountLatency { fluctuation_mode: FluctuationMode::Sine,
