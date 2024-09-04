@@ -53,12 +53,12 @@ mod tests
     fn request_open_should_be_comparable()
     {
         let req1 = RequestOpen {
-            cid: None,
+             
             reduce_only: true,
                                  price: 50.0,
                                  size: 1.0 };
         let req2 = RequestOpen {
-            cid: None,
+             
             reduce_only: false,
                                  price: 60.0,
                                  size: 2.0 };

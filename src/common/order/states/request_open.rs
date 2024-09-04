@@ -2,7 +2,6 @@ use crate::common::order::Order;
 use fmt::Display;
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt};
-use crate::common::order::identification::client_order_id::ClientOrderId;
 
 /// 订单初始状态。发送到client进行操作
 ///
@@ -10,7 +9,6 @@ use crate::common::order::identification::client_order_id::ClientOrderId;
 #[derive( Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct RequestOpen
 {
-    pub cid: Option<ClientOrderId>,
     pub reduce_only: bool,
     pub price: f64,
     pub size: f64,

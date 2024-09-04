@@ -1270,7 +1270,7 @@ mod tests
                             cid: Some(ClientOrderId("validCID123".into())),
                             side: Side::Buy,
                             state: RequestOpen {
-                                cid: None,
+                                 
                                 price: 50000.0,
                                                  size: 1.0,
                                                  reduce_only: false } };
@@ -1379,7 +1379,7 @@ mod tests
             side: Side::Buy,
             state: Open {
                 id: OrderId::new(0, 0, 0),
-                cid: None,
+                 
                 price: 100.0,
                 size: 2.0,
                 filled_quantity: 0.0,
@@ -1454,7 +1454,7 @@ mod tests
             cid: Some(ClientOrderId("validCID123".into())),
             side: Side::Buy,
             state: RequestOpen {
-                cid: None,
+                 
                 price: 100.0,
                 size: 2.0,
                 reduce_only: false,
@@ -1506,7 +1506,7 @@ mod tests
                                          cid: Some(ClientOrderId("validCID123".into())),
                                          side: Side::Buy,
                                          state: RequestOpen {
-                                             cid: None,
+                                              
                                              price: 1.0,
                                                               size: 2.0,
                                                               reduce_only: false } };
@@ -1519,7 +1519,7 @@ mod tests
                                  cid: open_order_request.cid.clone(),
                                  side: open_order_request.side,
                                  state: Open { id: OrderId::new(0, 0, 0), // 使用一个新的 OrderId
-                                     cid: None,
+                                      
                                      price: open_order_request.state.price,
                                                size: open_order_request.state.size,
                                                filled_quantity: 0.0,
@@ -1547,7 +1547,7 @@ mod tests
             cid: Some(ClientOrderId("validCID123".into())),
             side: Side::Sell,
             state: RequestOpen {
-                cid: None,
+                 
                 price: 1.0,
                 size: 2.0,
                 reduce_only: false } };
@@ -1560,7 +1560,7 @@ mod tests
             cid: open_order_request.cid.clone(),
             side: open_order_request.side,
             state: Open { id: OrderId::new(0, 0, 0), // 使用一个新的 OrderId
-                cid: None,
+                 
                 price: open_order_request.state.price,
                 size: open_order_request.state.size,
                 filled_quantity: 0.0,
@@ -1819,7 +1819,7 @@ mod tests
             side: Side::Buy,
             state: Open {
                 id: OrderId::new(0, 0, 0),
-                cid: None,
+                 
                 price: 100.0,
                 size: 2.0,
                 filled_quantity: 0.0,
@@ -1886,7 +1886,7 @@ mod tests
             side: Side::Sell,
             state: Open {
                 id: OrderId::new(0, 0, 0),
-                cid: None,
+                 
                 price: 100.0,
                 size: 2.0,
                 filled_quantity: 0.0,
@@ -1948,7 +1948,7 @@ mod tests
             side: Side::Buy,
             state: Open {
                 id: OrderId::new(0, 0, 0),
-                cid: None,
+                 
                 price: 100.0,
                 size: 2.0,
                 filled_quantity: 0.0,
@@ -1995,7 +1995,7 @@ mod tests
             cid: Some(ClientOrderId("validCID123".into())),
             side: Side::Buy,
             state: RequestOpen {
-                cid: None,
+                 
                 price: 100.0,
                 size: 2.0,
                 reduce_only: false,

@@ -75,7 +75,6 @@ pub async fn run_sample_exchange(
         side: Side::Buy,
         state: Open {
             id: OrderId(1234124124124123),
-            cid: None,
             price: 100.0,
             size: 1.0,
             filled_quantity: 0.0,
@@ -163,7 +162,6 @@ where
         cid: Some(cid.clone()),
         side,
         state: RequestOpen {
-            cid: Some(cid.clone()),
             reduce_only: false, // 假设创建的订单不是 reduce_only
             price,
             size: quantity,
@@ -193,7 +191,6 @@ where
         side,
         state: Open {
             id,
-            cid: Some(cid),
             price,
             size: quantity,
             filled_quantity: filled,

@@ -81,7 +81,6 @@ pub fn create_test_order_open(side: Side, price: f64, size: f64) -> Order<Open>
             cid: Some(ClientOrderId("validCID123".into())), // 假设的客户端订单ID
             side,
             state: Open { id: OrderId(123), // 假设的订单ID
-                cid: None,
                 price,
                           size,
                           filled_quantity: 0.0,         // 初始填充数量为0
@@ -106,7 +105,6 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen>
             cid: Some(ClientOrderId(format!("CID{}", order_id.0 % 1_000_000))),
             side: Side::Buy,
             state: RequestOpen {
-                cid: None,
                 price: 50000.0,
                                  size: 1.0,
                                  reduce_only: false } }

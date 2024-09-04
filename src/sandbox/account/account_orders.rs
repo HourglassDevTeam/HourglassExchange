@@ -200,7 +200,6 @@ impl AccountOrders
                 timestamp: adjusted_client_ts,
                 side: order.side,
                 state: RequestOpen {
-                    cid: order.state.cid,
                     reduce_only: order.state.reduce_only,
                                      price: order.state.price,
                                      size: order.state.size } }
@@ -350,7 +349,6 @@ impl AccountOrders
                 timestamp: request.timestamp,
                 side: request.side,
                 state: Open { id: self.order_id(),
-                    cid: None,
                     price: request.state.price,
                               size: request.state.size,
                               filled_quantity: 0.0,
@@ -540,7 +538,6 @@ mod tests
             timestamp: 1625232523000,
             side: Side::Buy,
             state: RequestOpen {
-                cid: None,
                 reduce_only: false,
                 price: 35000.0,
                 size: 0.1,
@@ -568,7 +565,6 @@ mod tests
             timestamp: 1625232523000,
             side: Side::Buy,
             state: RequestOpen {
-                cid: None,
                 reduce_only: false,
                 price: 35000.0,
                 size: 0.1,
@@ -595,7 +591,6 @@ mod tests
             timestamp: 1625232523000,
             side: Side::Buy,
             state: RequestOpen {
-                cid: None,
                 reduce_only: false,
                 price: 35000.0,
                 size: 0.1,
@@ -629,7 +624,6 @@ mod tests
             timestamp: 1625232523000,
             side: Side::Buy,
             state: RequestOpen {
-                cid: None,
                 reduce_only: false,
                 price: 35000.0,
                 size: 0.1,
