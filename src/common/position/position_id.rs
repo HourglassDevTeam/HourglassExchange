@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-/// FIXME : THIS GENERATION LOGIC IS IN NEED OF RECONFIRMATION.
 use std::fmt;
 use std::fmt::{Display, Formatter};
 

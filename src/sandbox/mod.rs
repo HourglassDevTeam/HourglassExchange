@@ -222,7 +222,6 @@ mod tests
         assert!(is_port_in_use(address));
         exchange.run_online().await;
     }
-
     // Function to check if a port is in use
     fn is_port_in_use(address: std::net::SocketAddr) -> bool
     {

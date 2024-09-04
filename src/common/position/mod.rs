@@ -20,7 +20,6 @@ use crate::{
 };
 use chrono::Utc;
 /// FIXME  : code below needs to be restructured and fitted to the framework. need to provide enums?
-/// CONSIDER: can these positions coexist, if so enums might not be ideal.
 use serde::{Deserialize, Serialize};
 
 pub mod future;
