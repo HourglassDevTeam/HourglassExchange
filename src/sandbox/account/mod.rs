@@ -1689,55 +1689,61 @@ mod tests
         assert_eq!(updated_usdt_balance.total, btc_amount * btc_price + usdt_initial_amount + 10_000.0);
     }
 
-    // #[tokio::test]
-    // async fn test_match_market_event_with_open_order() {
-    //     let mut account = create_test_account().await;
-    //
-    //     let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-    //
-    //     // 创建一个待开订单
-    //     let open_order = Order {
-    //         kind: OrderInstruction::Limit,
-    //         exchange: Exchange::SandBox,
-    //         instrument: instrument.clone(),
-    //         timestamp: 1625247600000,
-    //         cid: ClientOrderId(Some("validCID123".into())),
-    //         side: Side::Buy,
-    //         state: Open {
-    //             id: OrderId::new(0, 0, 0),
-    //             price: 100.0,
-    //             size: 2.0,
-    //             filled_quantity: 0.0,
-    //             order_role: OrderRole::Maker,
-    //         },
-    //     };
-    //
-    //     // 将订单添加到账户
-    //     account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
-    //
-    //     // 创建一个市场事件，该事件与 open订单完全匹配
-    //     let market_event = MarketTrade {
-    //         exchange: "Binance".to_string(),
-    //         symbol: "ETH_USDT".to_string(),
-    //         timestamp: 1625247600000,
-    //         price: 100.0,
-    //         side: Side::Sell.to_string(),
-    //         amount: 2.0,
-    //     };
-    //
-    //     // 匹配订单并生成交易事件
-    //     let trades = account.match_orders(&market_event).await;
-    //
-    //     // 检查是否生成了正确数量的交易事件
-    //     assert_eq!(trades.len(), 1);
-    //     let trade = &trades[0];
-    //     assert_eq!(trade.quantity, 2.0);
-    //     assert_eq!(trade.price, 100.0);
-    //
-    //     // 检查余额是否已更新 NOTE 此处金额不对，需要手动检查。可能是摩擦成本导致。
-    //     let balance = account.get_balance(&instrument.base).unwrap();
-    //     assert_eq!(balance.total, 12.0); // 原始余额是 10.0，买入2.0后应为12.0
-    // }
+    #[tokio::test]
+    async fn test_match_market_event_with_open_order() {
+        let mut account = create_test_account().await;
+
+        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
+        // 提现前查询 USDT 和 BTC 余额
+        let initial_usdt_balance = account.query_balance(&Token::from("USDT")).unwrap();
+        let initial_eth_balance = account.query_balance(&Token::from("ETH")).unwrap();
+
+        println!("Initial USDT balance: {:?}", initial_usdt_balance);
+        println!("Initial ETH balance: {:?}", initial_eth_balance);
+
+        // 创建一个待开订单
+        let open_order = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: instrument.clone(),
+            timestamp: 1625247600000,
+            cid: ClientOrderId(Some("validCID123".into())),
+            side: Side::Buy,
+            state: Open {
+                id: OrderId::new(0, 0, 0),
+                price: 100.0,
+                size: 2.0,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Maker,
+            },
+        };
+
+        // 将订单添加到账户
+        account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
+
+        // 创建一个市场事件，该事件与 open订单完全匹配
+        let market_event = MarketTrade {
+            exchange: "Binance".to_string(),
+            symbol: "ETH_USDT".to_string(),
+            timestamp: 1625247600000,
+            price: 100.0,
+            side: Side::Sell.to_string(),
+            amount: 2.0,
+        };
+
+        // 匹配订单并生成交易事件
+        let trades = account.match_orders(&market_event).await;
+
+        // 检查是否生成了正确数量的交易事件
+        assert_eq!(trades.len(), 1);
+        let trade = &trades[0];
+        assert_eq!(trade.quantity, 2.0);
+        assert_eq!(trade.price, 100.0);
+
+        // 检查余额是否已更新
+        let balance = account.get_balance(&instrument.base).unwrap();
+        assert_eq!(balance.total, 12.0); // NOTE 此处金额不对，需要手动检查。可能是摩擦成本错误计算导致。
+    }
 
 
     // #[tokio::test] NOTE Expected no open orders after full match, but found some.
