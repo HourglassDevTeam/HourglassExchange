@@ -205,9 +205,11 @@ pub enum PositionDirectionMode
     NetMode,       // Note one side per token per position
 }
 
-/// NOTE : PositionMarginMode has defined two modes of margin consumption.
+///  NOTE : PositionMarginMode has defined two modes of margin consumption.
+///
 ///  [Cross]: 交叉保证金模式。在这种模式下，所有仓位共享一个保证金池，盈亏共用。如果仓位的保证金不足，将从账户余额中提取以补充不足。
 ///  [Isolated]: 逐仓保证金模式。在这种模式下，每个仓位都有独立的保证金，盈亏互不影响。如果某个仓位的保证金不足，该仓位将被强制平仓，而不会影响到其他仓位。
+
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionMarginMode
 {

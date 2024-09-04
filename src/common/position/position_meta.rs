@@ -246,6 +246,14 @@ impl PositionMetaBuilder
     }
 }
 
+impl Default for PositionMetaBuilder
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests
 {

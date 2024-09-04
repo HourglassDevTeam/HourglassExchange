@@ -55,6 +55,15 @@ pub struct PerpetualPositionBuilder
     liquidation_price: Option<f64>,
     margin: Option<f64>,
 }
+
+impl Default for PerpetualPositionBuilder
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
 #[allow(dead_code)]
 impl PerpetualPositionBuilder
 {
