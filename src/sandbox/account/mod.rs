@@ -804,8 +804,8 @@ impl Account
     /// 5. 处理并返回生成的交易记录。
     ///
     /// # 注意
-    ///     - 该函数假设市场交易事件的符号格式为 `base_quote`，并从中解析出基础货币和报价货币。
-    ///     - 如果找不到与市场事件相关的挂单，函数会记录警告并返回一个空的交易向量。
+    /// 该函数假设市场交易事件的符号格式为 `base_quote`，并从中解析出基础货币和报价货币。
+    /// 如果找不到与市场事件相关的挂单，函数会记录警告并返回一个空的交易向量。
     pub async fn match_orders(&mut self, market_trade: &MarketTrade) -> Vec<ClientTrade> {
         println!("[match_orders]: market_trade: {:?}", market_trade);
         let mut trades = Vec::new();
@@ -932,7 +932,7 @@ impl Account
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
                                                             let mut this = self.clone();
-                                                            async move { this.process_cancel_request_into_cancelled_atomic(request).await }
+                                                            async move { this.atomic_cancel(request).await }
                                                         });
 
         // 等待所有的取消操作完成
@@ -940,7 +940,7 @@ impl Account
         response_tx.send(cancel_results).unwrap_or(());
     }
 
-    pub async fn process_cancel_request_into_cancelled_atomic(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExchangeError>
+    pub async fn atomic_cancel(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExchangeError>
     {
         Self::validate_order_request_cancel(&request)?;
         // 首先使用读锁来查找并验证订单是否存在，同时减少写锁的持有时间
@@ -975,12 +975,12 @@ impl Account
         // 获取当前的 exchange_timestamp
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
-        // 发送 AccountEvents 给客户端（不需要持有订单写锁）
+        // 发送 AccountEvents 给客户端（不需要持有订单写锁） NOTE 原子取消也要发送一个Vec<Order<Cancelled>>吗？？？？
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
                                  exchange: Exchange::SandBox,
                                  kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
-            .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Trade");
+            .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::OrdersCancelled");
 
         self.account_event_tx
             .send(AccountEvent { exchange_timestamp,
@@ -1669,7 +1669,7 @@ mod tests
             state: RequestCancel { id: OrderId(99999) }, // 无效的OrderId
         };
 
-        let result = account.process_cancel_request_into_cancelled_atomic(invalid_cancel_request).await;
+        let result = account.atomic_cancel(invalid_cancel_request).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), ExchangeError::OrderNotFound(ClientOrderId(Some("validCID123".into()))));
     }
@@ -1904,73 +1904,185 @@ mod tests
         assert_eq!(balance.available, 8.0); // 可用 ETH 余额应与总余额一致
     }
 
-    // #[tokio::test] NOTE Expected no open orders after full match, but found some.
-    // async fn test_get_open_orders_should_be_empty_after_matching() {
-    //     let mut account = create_test_account().await;
-    //
-    //     let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-    //
-    //     // 创建并添加订单
-    //     let open_order = Order {
-    //         kind: OrderInstruction::Limit,
-    //         exchange: Exchange::SandBox,
-    //         instrument: instrument.clone(),
-    //         timestamp: 1625247600000,
-    //         cid: ClientOrderId(Some("validCID123".into())),
-    //         side: Side::Buy,
-    //         state: Open {
-    //             id: OrderId::new(0, 0, 0),
-    //             price: 100.0,
-    //             size: 2.0,
-    //             filled_quantity: 0.0,
-    //             order_role: OrderRole::Maker,
-    //         },
-    //     };
-    //     account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
-    //
-    //     // 匹配一个完全匹配的市场事件
-    //     let market_event = MarketTrade {
-    //         exchange: "Binance".to_string(),
-    //         symbol: "ETH_USDT".to_string(),
-    //         timestamp: 1625247600000,
-    //         price: 100.0,
-    //         side: Side::Sell.to_string(),
-    //         amount: 2.0,
-    //     };
-    //     account.match_orders(&market_event).await;
-    //
-    //     // 获取未完成的订单
-    //     let orders = account.orders.read().await.fetch_all();
-    //     assert!(orders.is_empty(), "Expected no open orders after full match, but found some.");
-    // }
+    #[tokio::test]
+    async fn test_get_open_orders_should_be_empty_after_matching() {
+        let mut account = create_test_account().await;
+
+        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
+
+        // 创建并添加订单
+        let open_order = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: instrument.clone(),
+            timestamp: 1625247600000,
+            cid: ClientOrderId(Some("validCID123".into())),
+            side: Side::Buy,
+            state: Open {
+                id: OrderId::new(0, 0, 0),
+                price: 100.0,
+                size: 2.0,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Maker,
+            },
+        };
+        account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
+
+        // 匹配一个完全匹配的市场事件
+        let market_event = MarketTrade {
+            exchange: "Binance".to_string(),
+            symbol: "ETH_USDT".to_string(),
+            timestamp: 1625247600000,
+            price: 100.0,
+            side: Side::Sell.to_string(),
+            amount: 2.0,
+        };
+        account.match_orders(&market_event).await;
+
+        // 获取未完成的订单
+        let orders = account.orders.read().await.fetch_all();
+        assert!(orders.is_empty(), "Expected no open orders after full match, but found some.");
+    }
 
 
-    // #[tokio::test]
-    // async fn test_fail_to_open_limit_order_due_to_insufficient_funds() {
-    //     let mut account = create_test_account().await;
-    //
-    //     let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-    //
-    //     // 设置一个资金不足的场景，减少TEST_QUOTE的余额
-    //     let mut balance = account.get_balance_mut(&instrument.quote).unwrap();
-    //     balance.available = 1.0;
-    //
-    //     let open_order_request = Order {
-    //         kind: OrderInstruction::Limit,
-    //         exchange: Exchange::SandBox,
-    //         instrument: instrument.clone(),
-    //         timestamp: 1625247600000,
-    //         cid: ClientOrderId(Some("validCID123".into())),
-    //         side: Side::Buy,
-    //         state: RequestOpen {
-    //             price: 100.0,
-    //             size: 2.0,
-    //             reduce_only: false,
-    //         },
-    //     };
-    //
-    //     let result = account.attempt_atomic_open(100.0, open_order_request).await;
-    //     assert!(result.is_err());
-    //     assert_eq!(result.unwrap_err(), ExchangeError::InsufficientBalance(instrument.quote));
-    // }
+    #[tokio::test]
+    async fn test_fail_to_open_limit_order_due_to_insufficient_funds() {
+        let mut account = create_test_account().await;
+
+        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
+
+        // 设置一个资金不足的场景，减少USDT的余额
+        {
+            let mut quote_balance = account.get_balance_mut(&instrument.quote).unwrap();
+            quote_balance.available = 1.0; // 模拟 USDT 余额不足
+        }
+
+        // 创建一个待开买单订单
+        let open_order_request = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: instrument.clone(),
+            timestamp: 1625247600000,
+            cid: ClientOrderId(Some("validCID123".into())),
+            side: Side::Buy,
+            state: RequestOpen {
+                price: 100.0,
+                size: 2.0,
+                reduce_only: false,
+            },
+        };
+
+        // 尝试开单，所需资金为 200 USDT，但当前账户只有 1 USDT
+        let result = account.attempt_atomic_open(200.0, open_order_request).await;
+
+        // 断言开单失败，且返回的错误是余额不足
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ExchangeError::InsufficientBalance(instrument.quote));
+    }
+
+    #[tokio::test]
+    async fn test_fail_to_cancel_invalid_order_id() {
+        let mut account = create_test_account().await;
+
+        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
+
+        // 创建一个无效的 OrderId（这里假设 999 是一个不存在的订单 ID）
+        let invalid_order_id = OrderId::new(999, 0, 0);
+
+        // 构造一个取消请求
+        let cancel_request = Order {
+            kind: OrderInstruction::Cancel,
+            exchange: Exchange::SandBox,
+            instrument: instrument.clone(),
+            timestamp: 1625247600000,
+            cid: ClientOrderId(Some("invalidCID".into())),
+            side: Side::Buy,
+            state: RequestCancel { id: invalid_order_id },
+        };
+
+        // 创建一个用于接收取消结果的 channel
+        let (tx, rx) = oneshot::channel();
+
+        // 调用 cancel_orders 方法，传入取消请求和发送者
+        account.cancel_orders(vec![cancel_request], tx).await;
+
+        // 等待取消结果
+        let result = rx.await.unwrap();
+
+        // 确保返回的结果是失败的，并且错误类型是 OrderNotFound
+        assert!(result[0].is_err());
+        assert_eq!(result[0].as_ref().unwrap_err(), &ExchangeError::OrderNotFound(ClientOrderId(Some("invalidCID".into()))));
+    }
+    #[tokio::test]
+    async fn test_success_cancel_all_orders() {
+        let mut account = create_test_account().await;
+
+        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
+
+        // 创建两个有效的打开订单
+        let open_order1 = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: instrument.clone(),
+            timestamp: 1625247600000,
+            cid: ClientOrderId(Some("validCID1".into())),
+            side: Side::Buy,
+            state: Open {
+                id: OrderId::new(1, 0, 0),
+                price: 100.0,
+                size: 2.0,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Maker,
+            },
+        };
+
+        let open_order2 = Order {
+            kind: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: instrument.clone(),
+            timestamp: 1625247601000,
+            cid: ClientOrderId(Some("validCID2".into())),
+            side: Side::Sell,
+            state: Open {
+                id: OrderId::new(2, 0, 0),
+                price: 150.0,
+                size: 3.0,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Taker,
+            },
+        };
+
+        // 将订单添加到账户中
+        {
+            let orders = account.orders.write().await;
+            let mut ins_orders = orders.get_ins_orders_mut(&instrument).unwrap();
+            ins_orders.add_order_open(open_order1.clone());
+            ins_orders.add_order_open(open_order2.clone());
+        }
+
+        // 创建一个用于接收取消结果的 channel
+        let (tx, rx) = oneshot::channel();
+
+        // 调用 cancel_orders_all 方法，传入发送者
+        account.cancel_orders_all(tx).await;
+
+        // 等待取消结果
+        let result = rx.await.unwrap();
+
+        // 确保返回的结果是成功的，所有订单都被取消
+        assert!(result.is_ok());
+        let cancelled_orders = result.unwrap();
+        assert_eq!(cancelled_orders.len(), 2); // 应该有两个取消的订单
+        assert_eq!(cancelled_orders[0].state.id, open_order1.state.id);
+        assert_eq!(cancelled_orders[1].state.id, open_order2.state.id);
+
+        // 验证账户的余额是否已正确更新
+        let usdt_balance = account.get_balance(&Token::from("USDT")).unwrap();
+        let eth_balance = account.get_balance(&Token::from("ETH")).unwrap();
+
+        // 检查取消订单后的余额状态（根据你的业务逻辑，调整这些断言）
+        assert_eq!(usdt_balance.available, 10000.0); // 假设在取消后，余额回到初始状态
+        assert_eq!(eth_balance.available, 10.0);     // 同样检查 ETH 的余额
+    }
+
 }
