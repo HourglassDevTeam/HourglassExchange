@@ -740,7 +740,7 @@ impl Account
                 return Err(ExchangeError::InvalidRequestOpen("ClientOrderId is empty".into()));
             }
 
-            // 使用 validate_id_format 验证 ID 格式
+            // 使用 validate_id_format 验证 CID 格式
             if !ClientOrderId::validate_id_format(&cid.0) {
                 return Err(ExchangeError::InvalidRequestOpen(format!("Invalid ClientOrderId format: {}", cid.0)));
             }
@@ -1023,7 +1023,7 @@ impl Account
                                                                                               kind: order.kind,
                                                                                               cid: order.cid,
                                                                                               exchange: Exchange::SandBox,
-                                                                                              timestamp: 0 })
+                                                                                              timestamp: self.exchange_timestamp.load(Ordering::SeqCst) })
                                                                          .collect();
 
         // 调用现有的 cancel_orders 方法
