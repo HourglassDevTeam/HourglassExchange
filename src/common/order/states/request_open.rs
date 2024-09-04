@@ -52,6 +52,6 @@ impl Display for Order<RequestOpen>
     {
         write!(f,
                "Order {{ kind: {:?}, exchange: {:?}, instrument: {:?}, client_ts: {}, cid: {:?}, side: {:?}, state: {} }}",
-               self.kind, self.exchange, self.instrument, self.timestamp, self.cid, self.side, self.state)
+               self.instruction, self.exchange, self.instrument, self.timestamp, self.cid, self.side, self.state)
     }
 }

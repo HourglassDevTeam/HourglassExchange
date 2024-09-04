@@ -25,7 +25,7 @@ impl From<Order<Open>> for Order<Cancelled>
     /// 将 `Order<Open>` 转换为 `Order<Cancelled>`，保持订单的基本信息不变，只改变订单状态为取消。
     fn from(order: Order<Open>) -> Self
     {
-        Self { kind: order.kind,
+        Self { instruction: order.instruction,
                exchange: order.exchange,
                instrument: order.instrument.clone(),
                cid: order.cid,

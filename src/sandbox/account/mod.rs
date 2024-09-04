@@ -672,7 +672,7 @@ impl Account
 
     pub async fn attempt_atomic_open(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError>
     {
-        Self::validate_order_instruction(order.kind)?;
+        Self::validate_order_instruction(order.instruction)?;
         // println!("[attempt_atomic_open]: {:?}", order);
         // 提前声明所需的变量
         let order_role = {
@@ -746,7 +746,7 @@ impl Account
             }
         }
         // 检查订单类型是否合法
-        Account::validate_order_instruction(order.kind)?;
+        Account::validate_order_instruction(order.instruction)?;
 
         // 检查价格是否合法（应为正数）
         if order.state.price <= 0.0 {
@@ -1020,7 +1020,7 @@ impl Account
                                                                          .map(|order| Order { state: RequestCancel { id: Some(order.state.id) },
                                                                                               instrument: order.instrument,
                                                                                               side: order.side,
-                                                                                              kind: order.kind,
+                                                                                              instruction: order.instruction,
                                                                                               cid: order.cid,
                                                                                               exchange: Exchange::SandBox,
                                                                                               timestamp: self.exchange_timestamp.load(Ordering::SeqCst) })
@@ -1261,7 +1261,7 @@ mod tests
     #[tokio::test]
     async fn test_validate_order_request_open()
     {
-        let order = Order { kind: OrderInstruction::Market,
+        let order = Order { instruction: OrderInstruction::Market,
                             exchange: Exchange::SandBox,
                             instrument: Instrument { base: Token::from("BTC"),
                                                      quote: Token::from("USD"),
@@ -1285,7 +1285,7 @@ mod tests
     #[tokio::test]
     async fn test_validate_order_request_cancel()
     {
-        let cancel_order = Order { kind: OrderInstruction::Market,
+        let cancel_order = Order { instruction: OrderInstruction::Market,
                                    exchange: Exchange::SandBox,
                                    instrument: Instrument { base: Token::from("BTC"),
                                                             quote: Token::from("USD"),
@@ -1371,7 +1371,7 @@ mod tests
         let mut account = create_test_account().await;
 
         let order = Order {
-            kind: OrderInstruction::Limit,
+            instruction: OrderInstruction::Limit,
             exchange: Exchange::SandBox,
             instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
             timestamp: 1625247600000,
@@ -1447,7 +1447,7 @@ mod tests
         let account = create_test_account().await;
 
         let order = Order {
-            kind: OrderInstruction::Limit,
+            instruction: OrderInstruction::Limit,
             exchange: Exchange::SandBox,
             instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
             timestamp: 1625247600000,
@@ -1499,7 +1499,7 @@ mod tests
         let mut account = create_test_account().await;
 
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-        let open_order_request = Order { kind: OrderInstruction::Limit,
+        let open_order_request = Order { instruction: OrderInstruction::Limit,
                                          exchange: Exchange::SandBox,
                                          instrument: instrument.clone(),
                                          timestamp: 1625247600000,
@@ -1512,7 +1512,7 @@ mod tests
                                                               reduce_only: false } };
 
         // 将订单状态从 RequestOpen 转换为 Open
-        let open_order = Order { kind: open_order_request.kind,
+        let open_order = Order { instruction: open_order_request.instruction,
                                  exchange: open_order_request.exchange,
                                  instrument: open_order_request.instrument.clone(),
                                  timestamp: open_order_request.timestamp,
@@ -1540,7 +1540,7 @@ mod tests
         let mut account = create_test_account().await;
 
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-        let open_order_request = Order { kind: OrderInstruction::Limit,
+        let open_order_request = Order { instruction: OrderInstruction::Limit,
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
@@ -1553,7 +1553,7 @@ mod tests
                 reduce_only: false } };
 
         // 将订单状态从 RequestOpen 转换为 Open
-        let open_order = Order { kind: open_order_request.kind,
+        let open_order = Order { instruction: open_order_request.instruction,
             exchange: open_order_request.exchange,
             instrument: open_order_request.instrument.clone(),
             timestamp: open_order_request.timestamp,
@@ -1686,7 +1686,7 @@ mod tests
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
 
         let invalid_cancel_request = Order {
-            kind: OrderInstruction::Cancel,
+            instruction: OrderInstruction::Cancel,
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
@@ -1811,7 +1811,7 @@ mod tests
 
         // 创建一个待开订单
         let open_order = Order {
-            kind: OrderInstruction::Limit,
+            instruction: OrderInstruction::Limit,
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
@@ -1878,7 +1878,7 @@ mod tests
 
         // 创建一个待开卖单订单
         let open_order = Order {
-            kind: OrderInstruction::Limit,
+            instruction: OrderInstruction::Limit,
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
@@ -1940,7 +1940,7 @@ mod tests
 
         // 创建并添加订单
         let open_order = Order {
-            kind: OrderInstruction::Limit,
+            instruction: OrderInstruction::Limit,
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
@@ -1988,7 +1988,7 @@ mod tests
 
         // 创建一个待开买单订单
         let open_order_request = Order {
-            kind: OrderInstruction::Limit,
+            instruction: OrderInstruction::Limit,
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
@@ -2021,7 +2021,7 @@ mod tests
 
         // 构造一个取消请求
         let cancel_request = Order {
-            kind: OrderInstruction::Cancel,
+            instruction: OrderInstruction::Cancel,
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
@@ -2053,7 +2053,7 @@ mod tests
 
         // 构造一个取消请求
         let cancel_request = Order {
-            kind: OrderInstruction::Cancel,
+            instruction: OrderInstruction::Cancel,
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,

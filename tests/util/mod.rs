@@ -67,7 +67,7 @@ pub async fn run_sample_exchange(
 
     // Create and insert a test order
     let test_order = Order {
-        kind: OrderInstruction::Limit,
+        instruction: OrderInstruction::Limit,
         exchange: Exchange::SandBox,
         instrument: instrument.clone(),
         timestamp: 1234124124124123, // Assumes a function to get current timestamp
@@ -155,7 +155,7 @@ where
     I: Into<Instrument>,
 {
     Order {
-        kind: OrderInstruction::Limit,
+        instruction: OrderInstruction::Limit,
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
         timestamp:1233312345124, // 使用当前时间戳
@@ -183,7 +183,7 @@ where
     I: Into<Instrument>,
 {
     Order {
-        kind: OrderInstruction::Limit,
+        instruction: OrderInstruction::Limit,
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
         timestamp: 1233312345124, // 使用当前时间戳
@@ -212,7 +212,7 @@ where
     Id: Into<OrderId>,
 {
     Order {
-        kind: OrderInstruction::Cancel,
+        instruction: OrderInstruction::Cancel,
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
         timestamp: 1234124124124123u64 as i64, // 使用当前时间戳
@@ -235,7 +235,7 @@ where
     Id: Into<OrderId>,
 {
     Order {
-        kind: OrderInstruction::Limit,
+        instruction: OrderInstruction::Limit,
         exchange: Exchange::SandBox,
         instrument: instrument.into(),
         timestamp: 1234124124124123u64 as i64, // 使用当前时间戳

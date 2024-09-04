@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct Order<State>
 {
-    pub kind: OrderInstruction, // 订单指令
+    pub instruction: OrderInstruction, // 订单指令
     pub exchange: Exchange,     // 交易所
     pub instrument: Instrument, // 交易工具
     pub timestamp: i64,         // 生成的时候填客户端下单时间,NOTE 回测场景中之后会被加上一个随机延迟时间。

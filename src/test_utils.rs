@@ -72,7 +72,7 @@ pub async fn create_test_account_orders() -> AccountOrders
 /// 创建一个测试用的 `Order<Open>` 实例。
 pub fn create_test_order_open(side: Side, price: f64, size: f64) -> Order<Open>
 {
-    Order { kind: OrderInstruction::Limit, // 假设测试订单使用限价订单类型
+    Order { instruction: OrderInstruction::Limit, // 假设测试订单使用限价订单类型
             exchange: Exchange::SandBox,   // 假设测试环境使用 SandBox 交易所
             instrument: Instrument { base: Token::from("ETH"),   // 测试用基础货币
                                      quote: Token::from("USDT"), // 测试用报价货币
@@ -96,7 +96,7 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen>
     let now_ts = SystemTime::now().duration_since(UNIX_EPOCH).expect("时间出现倒退").as_millis() as u64;
 
     let order_id = OrderId::new(now_ts, machine_id, counter);
-    Order { kind: OrderInstruction::Market,
+    Order { instruction: OrderInstruction::Market,
             exchange: Exchange::SandBox,
             instrument: Instrument { base: Token::from(base),
                                      quote: Token::from(quote),

@@ -193,7 +193,7 @@ impl AccountOrders
         let adjusted_client_ts = order.timestamp + latency;
 
         // 创建并返回新的 RequestOpen 订单
-        Order { kind: order.kind,
+        Order { instruction: order.instruction,
                 exchange: order.exchange,
                 instrument: order.instrument,
                 cid: order.cid,
@@ -226,7 +226,7 @@ impl AccountOrders
     /// - 对于 `GoodTilCancelled` 类型的订单，按照限价订单的逻辑来判断角色。
     pub fn determine_maker_taker(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>
     {
-        match order.kind {
+        match order.instruction {
             | OrderInstruction::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
 
             | OrderInstruction::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
@@ -342,7 +342,7 @@ impl AccountOrders
         self.increment_order_counter();
 
         // 直接构建 Order<Open>
-        Order { kind: request.kind,
+        Order { instruction: request.instruction,
                 exchange: request.exchange,
                 instrument: request.instrument,
                 cid: request.cid,
@@ -531,7 +531,7 @@ mod tests
         let mut account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
         let order = Order {
-            kind: OrderInstruction::Limit,
+            instruction: OrderInstruction::Limit,
             exchange: Exchange::Binance,
             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
             cid: Some(ClientOrderId("unit_test".to_string())),
@@ -558,7 +558,7 @@ mod tests
         let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
         let order = Order {
-            kind: OrderInstruction::Limit,
+            instruction: OrderInstruction::Limit,
             exchange: Exchange::Binance,
             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
             cid: Some(ClientOrderId("unit_test".to_string())),
@@ -584,7 +584,7 @@ mod tests
         let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
         let order = Order {
-            kind: OrderInstruction::PostOnly,
+            instruction: OrderInstruction::PostOnly,
             exchange: Exchange::Binance,
             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
             cid: Some(ClientOrderId("unit_test".to_string())),
@@ -617,7 +617,7 @@ mod tests
         let mut account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
         let order = Order {
-            kind: OrderInstruction::Limit,
+            instruction: OrderInstruction::Limit,
             exchange: Exchange::Binance,
             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
             cid: Some(ClientOrderId("unit_test".to_string())),
