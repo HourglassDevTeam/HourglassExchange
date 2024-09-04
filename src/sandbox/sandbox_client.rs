@@ -12,11 +12,11 @@ use crate::{
             states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel},
             Order,
         },
+        position::AccountPositions,
+        token::Token,
     },
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
-use crate::common::position::{AccountPositions};
-use crate::common::token::Token;
 
 #[derive(Debug)]
 pub struct SandBoxClient
@@ -54,9 +54,9 @@ pub enum SandBoxClientEvent
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    const CLIENT_KIND: Exchange = Exchange::SandBox;
-
     type Config = UnboundedSender<SandBoxClientEvent>;
+
+    const CLIENT_KIND: Exchange = Exchange::SandBox;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {

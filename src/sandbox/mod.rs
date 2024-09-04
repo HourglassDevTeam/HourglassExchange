@@ -99,8 +99,12 @@ impl SandBoxExchange
                 | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.lock().await.cancel_orders(cancel_requests, response_tx).await,
                 | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.lock().await.cancel_orders_all(response_tx).await,
                 | SandBoxClientEvent::CalculateAllPositions(response_tx) => self.account.lock().await.fetch_positions_and_respond(response_tx).await,
-                | SandBoxClientEvent::Deposit(_) => {todo!()}  // FIXME Implement deposit
-                | SandBoxClientEvent::Withdrawal(_) => {todo!()} // FIXME Implement withdrawal
+                | SandBoxClientEvent::Deposit(_) => {
+                    todo!()
+                } // FIXME Implement deposit
+                | SandBoxClientEvent::Withdrawal(_) => {
+                    todo!()
+                } // FIXME Implement withdrawal
             }
         }
     }
