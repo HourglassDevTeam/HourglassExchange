@@ -9,7 +9,7 @@ use crate::{
             states::{cancelled::Cancelled, request_cancel::RequestCancel, request_open::RequestOpen},
             Order,
         },
-        account_positions::{AccountPositions, Position},
+        position::{AccountPositions, Position},
         token::Token,
     },
     error::ExchangeError,

@@ -1,4 +1,4 @@
-use crate::common::account_positions::Position;
+use crate::common::position::Position;
 
 pub trait PositionSummariser: Copy
 {

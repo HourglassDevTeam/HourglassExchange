@@ -137,13 +137,13 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
 // where
 //     Statistic: PositionSummariser + Serialize + DeserializeOwned,
 // {
-//     fn set_open_position(&mut self, account_positions: Position) -> Result<(), ExecutionError> {
+//     fn set_open_position(&mut self, position: Position) -> Result<(), ExecutionError> {
 //         // 将 Position 对象序列化为 JSON 字符串
-//         let position_string = serde_json::to_string(&account_positions)?;
+//         let position_string = serde_json::to_string(&position)?;
 //
 //         // 将序列化后的 Position 存入 Redis
 //         self.conn
-//             .set(account_positions.position_id.to_string(), position_string)
+//             .set(position.position_id.to_string(), position_string)
 //             .map_err(|_| ExecutionError::WriteError)
 //     }
 //
@@ -184,25 +184,25 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
 //         position_id: &PositionId,
 //     ) -> Result<Option<Position>, ExecutionError> {
 //         // 获取并删除 Redis 中对应的 Position
-//         let account_positions = self.get_open_position(position_id)?;
+//         let position = self.get_open_position(position_id)?;
 //
 //         self.conn
 //             .del(position_id.to_string())
 //             .map_err(|_| ExecutionError::DeleteError)?;
 //
-//         Ok(account_positions)
+//         Ok(position)
 //     }
 //
 //     fn set_exited_position(
 //         &mut self,
 //         session_id: Uuid,
-//         account_positions: Position,
+//         position: Position,
 //     ) -> Result<(), ExecutionError> {
 //         // 将已退出的 Position 推入 Redis 列表
 //         self.conn
 //             .lpush(
 //                 determine_exited_positions_id(session_id),
-//                 serde_json::to_string(&account_positions)?,
+//                 serde_json::to_string(&position)?,
 //             )
 //             .map_err(|_| ExecutionError::WriteError)
 //     }

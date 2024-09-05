@@ -11,7 +11,7 @@ use crate::{
             states::{open::Open, request_open::RequestOpen},
             Order, OrderRole,
         },
-        account_positions::{
+        position::{
             future::{FuturePosition, FuturePositionConfig},
             perpetual::{PerpetualPosition, PerpetualPositionConfig},
             position_id::PositionId,

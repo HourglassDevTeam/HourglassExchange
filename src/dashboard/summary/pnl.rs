@@ -38,18 +38,18 @@ impl Default for PnLReturnSummary
     }
 }
 // impl PositionSummariser for PnLReturnSummary {
-//     fn update(&mut self, account_positions: &Position) {
+//     fn update(&mut self, position: &Position) {
 //         // Set start timestamp if it's the first trade of the session
 //         if self.total.count == 0 {
-//             self.time = account_positions.meta.enter_time;
+//             self.time = position.meta.enter_time;
 //         }
 //
 //         // Update duration of trading session & trades per day
-//         self.update_trading_session_duration(account_positions);
+//         self.update_trading_session_duration(position);
 //         self.update_trades_per_day();
 //
 //         // Calculate the Position PnL Return
-//         let pnl_return = account_positions.calculate_profit_loss_return();
+//         let pnl_return = position.calculate_profit_loss_return();
 //
 //         // Update Total PnL Returns
 //         self.total.update(pnl_return);
@@ -107,11 +107,11 @@ impl Default for PnLReturnSummary
 //         }
 //     }
 //
-//     pub fn update_trading_session_duration(&mut self, account_positions: &Position) {
-//         self.duration = match account_positions.meta.exit_balance {
+//     pub fn update_trading_session_duration(&mut self, position: &Position) {
+//         self.duration = match position.meta.exit_balance {
 //             None => {
 //                 // Since Position is not exited, estimate duration w/ last_update_time
-//                 account_positions.meta.update_time.signed_duration_since(self.time)
+//                 position.meta.update_time.signed_duration_since(self.time)
 //             }
 //             Some(exit_balance) => exit_balance.time.signed_duration_since(self.time),
 //         }
@@ -137,20 +137,20 @@ impl Default for PnLReturnSummary
 // }
 //
 // impl PositionSummariser for ProfitLossSummary {
-//     fn update(&mut self, account_positions: &Position) {
-//         self.total_contracts += account_positions.quantity.abs();
-//         self.total_pnl += account_positions.realised_profit_loss;
+//     fn update(&mut self, position: &Position) {
+//         self.total_contracts += position.quantity.abs();
+//         self.total_pnl += position.realised_profit_loss;
 //         self.total_pnl_per_contract = self.total_pnl / self.total_contracts;
 //
-//         match account_positions.side {
+//         match position.side {
 //             Side::Buy => {
-//                 self.long_contracts += account_positions.quantity.abs();
-//                 self.long_pnl += account_positions.realised_profit_loss;
+//                 self.long_contracts += position.quantity.abs();
+//                 self.long_pnl += position.realised_profit_loss;
 //                 self.long_pnl_per_contract = self.long_pnl / self.long_contracts;
 //             }
 //             Side::Sell => {
-//                 self.short_contracts += account_positions.quantity.abs();
-//                 self.short_pnl += account_positions.realised_profit_loss;
+//                 self.short_contracts += position.quantity.abs();
+//                 self.short_pnl += position.realised_profit_loss;
 //                 self.short_pnl_per_contract = self.short_pnl / self.short_contracts;
 //             }
 //         }
@@ -196,7 +196,7 @@ impl Default for PnLReturnSummary
 // #[cfg(test)]
 // mod tests {
 //     use super::*;
-//     use crate::{portfolio::Balance, test_util::account_positions};
+//     use crate::{portfolio::Balance, test_util::position};
 //     use chrono::{Duration, Utc};
 //
 //     #[test]
@@ -211,7 +211,7 @@ impl Default for PnLReturnSummary
 //         let mut pnl_return_view = PnLReturnSummary::new();
 //         pnl_return_view.time = base_time;
 //
-//         let mut input_position = account_positions();
+//         let mut input_position = position();
 //         input_position.meta.exit_balance = None;
 //         input_position.meta.update_time = base_time.checked_add_signed(Duration::days(10)).unwrap();
 //
@@ -229,7 +229,7 @@ impl Default for PnLReturnSummary
 //         let mut pnl_return_view = PnLReturnSummary::new();
 //         pnl_return_view.time = base_time;
 //
-//         let mut input_position = account_positions();
+//         let mut input_position = position();
 //         input_position.meta.exit_balance = Some(Balance {
 //             time: base_time.checked_add_signed(Duration::days(15)).unwrap(),
 //             total: 0.0,

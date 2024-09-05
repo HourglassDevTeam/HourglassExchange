@@ -54,7 +54,7 @@ mod tests
     use crate::{
         common::{
             instrument::kind::InstrumentKind,
-            account_positions::{PositionDirectionMode, PositionMarginMode},
+            position::{PositionDirectionMode, PositionMarginMode},
         },
         sandbox::account::account_config::{CommissionLevel, CommissionRates, MarginMode},
     };

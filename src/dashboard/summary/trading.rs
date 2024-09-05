@@ -1,5 +1,5 @@
 // use crate::{
-//     portfolio::account_positions::Position,
+//     portfolio::position::Position,
 //     statistic::{
 //         metrics::ratio::{CalmarRatio, Ratio, SharpeRatio, SortinoRatio},
 //         summary::{
@@ -40,9 +40,9 @@
 // }
 //
 // impl PositionSummariser for TradingSummary {
-//     fn update(&mut self, account_positions: &Position) {
-//         self.pnl_returns.update(account_positions);
-//         self.drawdown.update(account_positions);
+//     fn update(&mut self, position: &Position) {
+//         self.pnl_returns.update(position);
+//         self.drawdown.update(position);
 //         self.tear_sheet.update(&self.pnl_returns, &self.drawdown);
 //     }
 // }
@@ -123,11 +123,11 @@
 //     }
 // }
 //
-// pub fn calculate_trading_duration(start_time: &DateTime<Utc>, account_positions: &Position) -> Duration {
-//     match account_positions.meta.exit_balance {
+// pub fn calculate_trading_duration(start_time: &DateTime<Utc>, position: &Position) -> Duration {
+//     match position.meta.exit_balance {
 //         None => {
 //             // Since Position is not exited, estimate duration w/ last_update_time
-//             account_positions.meta.update_time.signed_duration_since(*start_time)
+//             position.meta.update_time.signed_duration_since(*start_time)
 //         }
 //         Some(exit_balance) => exit_balance.time.signed_duration_since(*start_time),
 //     }

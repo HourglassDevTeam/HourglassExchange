@@ -20,7 +20,7 @@ use unilink_execution::{
             states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
             Order, OrderRole,
         },
-        account_positions::AccountPositions,
+        position::AccountPositions,
         token::Token,
         Side,
     },

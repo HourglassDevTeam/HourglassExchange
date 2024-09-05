@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common::account_positions::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode};
+use crate::common::position::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -117,7 +117,7 @@ mod tests
             balance::{Balance, TokenBalance},
             friction::{Fees, SpotFees},
             instrument::{kind::InstrumentKind, Instrument},
-            account_positions::{position_id::PositionId, PositionDirectionMode, PositionMarginMode},
+            position::{position_id::PositionId, PositionDirectionMode, PositionMarginMode},
             token::Token,
             Side,
         },
