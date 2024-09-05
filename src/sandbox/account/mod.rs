@@ -169,11 +169,22 @@ impl Account
         self.balances.clone().into_iter().map(|(token, balance)| TokenBalance::new(token, balance)).collect()
     }
 
-    pub async fn fetch_balances_and_respond(&self, response_tx: Sender<Result<Vec<TokenBalance>, ExchangeError>>)
+    pub async fn fetch_token_balances_and_respond(&self, response_tx: Sender<Result<Vec<TokenBalance>, ExchangeError>>)
     {
         let balances = self.get_balances().await;
         respond(response_tx, Ok(balances));
     }
+
+    pub async fn fetch_token_balance_and_respond(
+        &self,
+        token: &Token,
+        response_tx: Sender<Result<TokenBalance, ExchangeError>>,
+    ) {
+        let balance_ref = self.get_balance(token).unwrap();
+        let token_balance = TokenBalance::new(token.clone(), balance_ref.clone());
+        respond(response_tx, Ok(token_balance));
+    }
+
 
     pub async fn fetch_positions_and_respond(&self, response_tx: Sender<Result<AccountPositions, ExchangeError>>)
     {
@@ -1149,19 +1160,6 @@ impl Account
         Ok(())
     }
 
-    /// 查询指定 `Token` 的当前余额
-    ///
-    /// # 参数
-    ///
-    /// * `token` - 需要查询的 `Token`
-    ///
-    /// # 返回值
-    ///
-    /// 返回该 `Token` 的 `Balance`，如果找不到该 `Token`，则返回 `None`
-    pub fn query_balance(&self, token: &Token) -> Option<Balance>
-    {
-        self.balances.get(token).map(|balance| *balance)
-    }
 
     /// 为指定的 `Token` 充值指定数量的稳定币。
     ///
@@ -1175,7 +1173,7 @@ impl Account
     /// # 返回值
     ///
     /// 返回更新后的 `TokenBalance`。
-    pub(crate) fn deposit_coin(&mut self, token: Token, amount: f64) -> Result<TokenBalance, ExchangeError>
+    fn deposit_coin(&mut self, token: Token, amount: f64) -> Result<TokenBalance, ExchangeError>
     {
         let mut balance = self.balances.entry(token.clone()).or_insert_with(|| {
                                                                 Balance { time: Utc::now(),
@@ -1201,7 +1199,7 @@ impl Account
     /// # 返回值
     ///
     /// 返回更新后的 `TokenBalance` 列表。
-    pub(crate) fn deposit_multiple_coins(&mut self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError>
+    fn deposit_multiple_coins(&mut self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError>
     {
         let mut updated_balances = Vec::new();
 
@@ -1710,23 +1708,23 @@ mod tests
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), ExchangeError::OrderNotFound(ClientOrderId("validCID123".into())));
     }
-
     #[tokio::test]
-    async fn test_deposit_u_base()
-    {
+    async fn test_deposit_u_base() {
         let mut account = create_test_account().await;
         let usdt_amount = 100.0;
 
-        // 充值前查询 USDT 余额
-        let initial_balance = account.query_balance(&Token::from("USDT")).unwrap();
-        println!("Initial USDT balance: {:?}", initial_balance);
-        assert_eq!(initial_balance.total, 10_000.0);
+        {
+            // 充值前查询 USDT 余额
+            let initial_balance = account.get_balance(&Token::from("USDT")).unwrap();
+            println!("Initial USDT balance: {:?}", initial_balance);
+            assert_eq!(initial_balance.total, 10_000.0);
+        } // `initial_balance` 的作用域在此结束，释放了不可变借用
 
         // 进行充值操作
         let balance = account.deposit_u_base(usdt_amount).unwrap();
 
         // 充值后再次查询 USDT 余额
-        let updated_balance = account.query_balance(&Token::from("USDT")).unwrap();
+        let updated_balance = account.get_balance(&Token::from("USDT")).unwrap();
         println!("Updated USDT balance: {:?}", updated_balance);
 
         // 验证余额更新
@@ -1735,9 +1733,9 @@ mod tests
         assert_eq!(updated_balance.available, 10_000.0 + usdt_amount);
     }
 
+
     #[tokio::test]
-    async fn test_buy_b_with_u()
-    {
+    async fn test_buy_b_with_u() {
         let mut account = create_test_account().await;
         let usdt_amount = 100.0;
         let btc_price = 50_000.0;
@@ -1748,9 +1746,9 @@ mod tests
         // 为 BTC 手动初始化一个余额（尽管余额为 0，但可以避免配置报错）
         account.deposit_b_base(0.0).unwrap();
 
-        // 购买前查询 USDT 和 BTC 余额
-        let usdt_initial_balance = account.query_balance(&Token::from("USDT")).unwrap();
-        let btc_initial_balance = account.query_balance(&Token::from("BTC")).unwrap();
+        // 购买前查询 USDT 和 BTC 余额，提取实际值以避免生命周期问题
+        let usdt_initial_balance = account.get_balance(&Token::from("USDT")).unwrap().clone();
+        let btc_initial_balance = account.get_balance(&Token::from("BTC")).unwrap().clone();
 
         println!("Initial USDT balance: {:?}", usdt_initial_balance);
         println!("Initial BTC balance: {:?}", btc_initial_balance);
@@ -1762,8 +1760,8 @@ mod tests
         account.buy_b_with_u(usdt_amount, btc_price).unwrap();
 
         // 购买后查询 USDT 和 BTC 余额
-        let usdt_balance = account.query_balance(&Token::from("USDT")).unwrap();
-        let btc_balance = account.query_balance(&Token::from("BTC")).unwrap();
+        let usdt_balance = account.get_balance(&Token::from("USDT")).unwrap();
+        let btc_balance = account.get_balance(&Token::from("BTC")).unwrap();
 
         println!("Updated USDT balance: {:?}", usdt_balance);
         println!("Updated BTC balance: {:?}", btc_balance);
@@ -1774,8 +1772,7 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_withdraw_u_from_b()
-    {
+    async fn test_withdraw_u_from_b() {
         let mut account = create_test_account().await;
         let btc_amount = 0.002;
         let btc_price = 50_000.0;
@@ -1785,9 +1782,9 @@ mod tests
         account.deposit_b_base(btc_amount).unwrap();
         account.deposit_u_base(usdt_initial_amount).unwrap();
 
-        // 提现前查询 USDT 和 BTC 余额
-        let initial_usdt_balance = account.query_balance(&Token::from("USDT")).unwrap();
-        let initial_btc_balance = account.query_balance(&Token::from("BTC")).unwrap();
+        // 提现前查询 USDT 和 BTC 余额，使用 clone 提取实际值以避免借用冲突
+        let initial_usdt_balance = account.get_balance(&Token::from("USDT")).unwrap().clone();
+        let initial_btc_balance = account.get_balance(&Token::from("BTC")).unwrap().clone();
 
         println!("Initial USDT balance: {:?}", initial_usdt_balance);
         println!("Initial BTC balance: {:?}", initial_btc_balance);
@@ -1799,8 +1796,8 @@ mod tests
         account.withdraw_u_from_b(btc_amount, btc_price).unwrap();
 
         // 提现后查询 USDT 和 BTC 余额
-        let updated_usdt_balance = account.query_balance(&Token::from("USDT")).unwrap();
-        let updated_btc_balance = account.query_balance(&Token::from("BTC")).unwrap();
+        let updated_usdt_balance = account.get_balance(&Token::from("USDT")).unwrap();
+        let updated_btc_balance = account.get_balance(&Token::from("BTC")).unwrap();
 
         println!("Updated USDT balance: {:?}", updated_usdt_balance);
         println!("Updated BTC balance: {:?}", updated_btc_balance);
@@ -1811,48 +1808,53 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_match_market_event_with_open_order()
-    {
+    async fn test_match_market_event_with_open_order() {
         let mut account = create_test_account().await;
 
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-        // 提现前查询 USDT 和 BTC 余额
-        let initial_usdt_balance = account.query_balance(&Token::from("USDT")).unwrap();
-        let initial_eth_balance = account.query_balance(&Token::from("ETH")).unwrap();
+
+        // 提现前查询 USDT 和 BTC 余额，并使用 clone 提取实际值以避免借用冲突
+        let initial_usdt_balance = account.get_balance(&Token::from("USDT")).unwrap().clone();
+        let initial_eth_balance = account.get_balance(&Token::from("ETH")).unwrap().clone();
 
         println!("Initial USDT balance: {:?}", initial_usdt_balance);
         println!("Initial ETH balance: {:?}", initial_eth_balance);
 
         // 创建一个待开订单
-        let open_order = Order { instruction: OrderInstruction::Limit,
-                                 exchange: Exchange::SandBox,
-                                 instrument: instrument.clone(),
-                                 timestamp: 1625247600000,
-                                 cid: Some(ClientOrderId("validCID123".into())),
-                                 side: Side::Buy,
-                                 state: Open { id: OrderId::new(0, 0, 0),
+        let open_order = Order {
+            instruction: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: instrument.clone(),
+            timestamp: 1625247600000,
+            cid: Some(ClientOrderId("validCID123".into())),
+            side: Side::Buy,
+            state: Open {
+                id: OrderId::new(0, 0, 0),
+                price: 100.0,
+                size: 2.0,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Maker,
+            },
+        };
 
-                                               price: 100.0,
-                                               size: 2.0,
-                                               filled_quantity: 0.0,
-                                               order_role: OrderRole::Maker } };
-
-        // 由于这个开单行为不是通过信号发送实现的，没有调用open_order方法，所以available要自行减去。
+        // 手动修改余额
         {
             let mut quote_balance = account.get_balance_mut(&instrument.quote).unwrap();
-            quote_balance.available -= 200.0; // Modify the balance
+            quote_balance.available -= 200.0; // 修改余额
         }
 
         // 将订单添加到账户
         account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
 
         // 创建一个市场事件，该事件与 open订单完全匹配
-        let market_event = MarketTrade { exchange: "Binance".to_string(),
-                                         symbol: "ETH_USDT".to_string(),
-                                         timestamp: 1625247600000,
-                                         price: 100.0,
-                                         side: Side::Sell.to_string(),
-                                         amount: 2.0 };
+        let market_event = MarketTrade {
+            exchange: "Binance".to_string(),
+            symbol: "ETH_USDT".to_string(),
+            timestamp: 1625247600000,
+            price: 100.0,
+            side: Side::Sell.to_string(),
+            amount: 2.0,
+        };
 
         // 匹配订单并生成交易事件
         let trades = account.match_orders(&market_event).await;
@@ -1867,54 +1869,64 @@ mod tests
         let balance = account.get_balance(&instrument.base).unwrap();
         let quote_balance = account.get_balance(&instrument.quote).unwrap();
 
-        assert_eq!(quote_balance.total, 9799.8); // NOTE 此处金额不对，需要手动检查。可能是摩擦成本错误计算导致。
-        assert_eq!(quote_balance.available, 9799.8); // NOTE 此处金额不对，available 没有被扣除。可能是摩擦成本错误计算导致。
-        assert_eq!(balance.total, 12.0); // NOTE 此处金额不对，需要手动检查。可能是摩擦成本错误计算导致。
+        assert_eq!(quote_balance.total, 9799.8);
+        assert_eq!(quote_balance.available, 9799.8);
+        assert_eq!(balance.total, 12.0);
     }
-
     #[tokio::test]
-    async fn test_match_market_event_with_open_order_sell()
-    {
+    async fn test_match_market_event_with_open_order_sell() {
         let mut account = create_test_account().await;
 
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-        // 提现前查询 USDT 和 ETH 余额
-        let initial_usdt_balance = account.query_balance(&Token::from("USDT")).unwrap();
-        let initial_eth_balance = account.query_balance(&Token::from("ETH")).unwrap();
+
+        // 查询 USDT 和 ETH 余额并 clone，以避免借用冲突
+        let initial_usdt_balance = account.get_balance(&Token::from("USDT")).unwrap().clone();
+        let initial_eth_balance = account.get_balance(&Token::from("ETH")).unwrap().clone();
 
         println!("Initial USDT balance: {:?}", initial_usdt_balance);
         println!("Initial ETH balance: {:?}", initial_eth_balance);
 
         // 创建一个待开卖单订单
-        let open_order = Order { instruction: OrderInstruction::Limit,
-                                 exchange: Exchange::SandBox,
-                                 instrument: instrument.clone(),
-                                 timestamp: 1625247600000,
-                                 cid: Some(ClientOrderId("validCID456".into())),
-                                 side: Side::Sell,
-                                 state: Open { id: OrderId::new(0, 0, 0),
+        let open_order = Order {
+            instruction: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: instrument.clone(),
+            timestamp: 1625247600000,
+            cid: Some(ClientOrderId("validCID456".into())),
+            side: Side::Sell,
+            state: Open {
+                id: OrderId::new(0, 0, 0),
+                price: 100.0,
+                size: 2.0,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Maker,
+            },
+        };
 
-                                               price: 100.0,
-                                               size: 2.0,
-                                               filled_quantity: 0.0,
-                                               order_role: OrderRole::Maker } };
-
-        // 由于这个开单行为不是通过信号发送实现的，没有调用open_order方法，所以available要自行减去。
+        // 手动修改基础资产余额 (ETH)
         {
             let mut base_balance = account.get_balance_mut(&instrument.base).unwrap();
-            base_balance.available -= 2.0; // 修改基础资产余额 (ETH)
+            base_balance.available -= 2.0; // 修改可用余额
         }
 
         // 将订单添加到账户
-        account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
+        account
+            .orders
+            .write()
+            .await
+            .get_ins_orders_mut(&instrument)
+            .unwrap()
+            .add_order_open(open_order.clone());
 
         // 创建一个市场事件，该事件与 open订单完全匹配
-        let market_event = MarketTrade { exchange: "Binance".to_string(),
-                                         symbol: "ETH_USDT".to_string(),
-                                         timestamp: 1625247600000,
-                                         price: 100.0,
-                                         side: Side::Buy.to_string(),
-                                         amount: 2.0 };
+        let market_event = MarketTrade {
+            exchange: "Binance".to_string(),
+            symbol: "ETH_USDT".to_string(),
+            timestamp: 1625247600000,
+            price: 100.0,
+            side: Side::Buy.to_string(),
+            amount: 2.0,
+        };
 
         // 匹配订单并生成交易事件
         let trades = account.match_orders(&market_event).await;
@@ -1929,11 +1941,13 @@ mod tests
         let balance = account.get_balance(&instrument.base).unwrap();
         let quote_balance = account.get_balance(&instrument.quote).unwrap();
 
+        // 验证余额更新
         assert_eq!(quote_balance.total, 10199.8); // 卖出 2 ETH 获得 200 USDT
         assert_eq!(quote_balance.available, 10199.8); // 卖单后，USDT 可用余额应增加
         assert_eq!(balance.total, 8.0); // 原始 ETH 余额是 12.0，卖出 2.0 后应为 10.0
         assert_eq!(balance.available, 8.0); // 可用 ETH 余额应与总余额一致
     }
+
 
     #[tokio::test]
     async fn test_get_open_orders_should_be_empty_after_matching()
