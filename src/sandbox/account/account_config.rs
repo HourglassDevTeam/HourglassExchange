@@ -1,7 +1,7 @@
 use crate::{
     common::{
         instrument::kind::InstrumentKind,
-        position::{PositionDirectionMode, PositionMarginMode},
+        account_positions::{PositionDirectionMode, PositionMarginMode},
     },
     error::ExchangeError,
     sandbox::utils::config_parser::read_config_file,

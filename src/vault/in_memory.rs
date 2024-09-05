@@ -2,7 +2,7 @@ use crate::{
     common::{
         balance::Balance,
         instrument::Instrument,
-        position::{position_id::PositionId, Position},
+        account_positions::{position_id::PositionId, Position},
     },
     vault::{determine_exited_positions_id, error::VaultError, BalanceHandler, PositionHandler, StatisticHandler},
     Exchange,
