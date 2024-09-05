@@ -599,7 +599,7 @@ mod tests
         let reject_result = account_orders.determine_post_only_order_role(&order, 35001.0);
         assert!(reject_result.is_err());
         assert_eq!(reject_result.unwrap_err().to_string(),
-                   "[UniLinkExecution] : Order rejected: PostOnly order should be rejected");
+                   "[UniLinkExecution] : PostOnlyViolation");
     }
 
     #[tokio::test]
