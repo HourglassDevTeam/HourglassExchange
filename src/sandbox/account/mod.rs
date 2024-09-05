@@ -637,7 +637,25 @@ impl Account
         Ok(false)
     }
 
-
+    /// 检查给定的 `new_order_side` 是否与现有仓位方向冲突，并根据 `is_reduce_only` 标志做出相应处理。
+    ///
+    /// ### 参数:
+    /// - `instrument`: 订单涉及的金融工具。
+    /// - `new_order_side`: 新订单的方向（买/卖）。
+    /// - `is_reduce_only`: 如果为 `true`，则订单仅用于减少现有仓位。
+    ///
+    /// ### 返回:
+    /// - 如果没有方向冲突，返回 `Ok(())`。
+    /// - 如果存在与订单方向相反的仓位，并且 `is_reduce_only` 为 `false`，返回 `Err(ExchangeError::InvalidDirection)`。
+    ///
+    /// ### 特殊情况:
+    /// - 对于 `Spot`、`CommodityOption`、`CommodityFuture`、`CryptoOption` 和 `CryptoLeveragedToken` 类型的 `InstrumentKind`，
+    ///   当前不支持仓位冲突检查，返回 `Err(ExchangeError::NotImplemented)`。
+    /// - 如果 `is_reduce_only` 为 `true`，允许方向冲突。
+    ///
+    /// ### 错误:
+    /// - `ExchangeError::InvalidDirection`: 当存在方向冲突时。
+    /// - `ExchangeError::NotImplemented`: 当 `InstrumentKind` 不支持检查时。
     pub async fn check_position_direction_conflict(
         &self,
         instrument: &Instrument,
@@ -848,7 +866,7 @@ impl Account
     }
 
     /// 将 [`BalanceDelta`] 应用于指定 [`Token`] 的 [`Balance`]，并返回更新后的 [`Balance`] 。
-    pub fn apply_balance_delta(&mut self, token: &Token, delta: BalanceDelta) -> Balance
+    pub(crate) fn apply_balance_delta(&mut self, token: &Token, delta: BalanceDelta) -> Balance
     {
         let mut base_balance = self.get_balance_mut(token).unwrap();
 
@@ -858,34 +876,17 @@ impl Account
     }
 
     /// [PART 2] 杂项方法。
-    /// `get_fee` 是获取手续费的方法，用于获取 maker 和 taker 手续费
     /// `get_exchange_ts` 是获取当前时间戳的方法
     /// `update_exchange_timestamp` 是基本的时间戳更新方法，用于更新 `exchange_timestamp` 值。
     /// `generate_request_id` 生成请求id。
-
-    pub async fn get_fee(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExchangeError>
-    {
-        // 直接访问 account 的 config 字段
-        let commission_rates = self.config
-                                   .fees_book
-                                   .get(instrument_kind)
-                                   .cloned()
-                                   .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
-
-        match role {
-            | OrderRole::Maker => Ok(commission_rates.maker_fees),
-            | OrderRole::Taker => Ok(commission_rates.taker_fees),
-        }
-    }
-
-    pub fn get_exchange_ts(&self) -> Result<i64, ExchangeError>
+    pub(crate) fn get_exchange_ts(&self) -> Result<i64, ExchangeError>
     {
         // 直接访问 account 的 exchange_timestamp 字段
         let exchange_ts = self.exchange_timestamp.load(Ordering::SeqCst);
         Ok(exchange_ts)
     }
 
-    pub fn update_exchange_ts(&self, timestamp: i64)
+    pub(crate) fn update_exchange_ts(&self, timestamp: i64)
     {
         let adjusted_timestamp = match self.config.execution_mode {
             | SandboxMode::Backtest => timestamp,                                                            // 在回测模式下使用传入的时间戳
@@ -1071,7 +1072,7 @@ impl Account
     /// `validate_order_request_open` 验证开单请求的合法性，确保订单类型是受支持的。
     /// `match_orders` 处理市场事件，根据市场事件匹配相应的订单并生成交易。
     /// `get_orders_for_instrument` 获取与特定金融工具相关的订单，用于进一步的订单匹配操作。
-    /// `determine_fees_percent` 根据金融工具类型和订单方向确定适用的费用百分比。
+    /// `fees_percent` 根据金融工具类型和订单方向确定适用的费用百分比。
 
     pub fn validate_order_instruction(kind: OrderInstruction) -> Result<(), ExchangeError>
     {
@@ -1204,7 +1205,7 @@ impl Account
                         if let Some(best_bid) = instrument_orders.bids.last() {
                             let order_role = best_bid.state.order_role;
                             println!("[match_orders]: order_role: {:?}", order_role);
-                            let fees_percent = self.fees_percent(&kind, &order_role).expect("缺少手续费比例");
+                            let fees_percent = self.fees_percent(&kind, order_role).await.expect("缺少手续费比例");
 
                             // 使用计算出的手续费比例匹配买单
                             trades.append(&mut instrument_orders.match_bids(market_trade, fees_percent));
@@ -1217,7 +1218,7 @@ impl Account
                         if let Some(best_ask) = instrument_orders.asks.last() {
                             let order_role = best_ask.state.order_role;
                             println!("[match_orders]: order_role: {:?}", order_role);
-                            let fees_percent = self.fees_percent(&kind, &order_role).expect("缺少手续费比例");
+                            let fees_percent = self.fees_percent(&kind, order_role).await.expect("缺少手续费比例");
 
                             // 使用计算出的手续费比例匹配卖单
                             trades.append(&mut instrument_orders.match_asks(market_trade, fees_percent));
@@ -1253,22 +1254,21 @@ impl Account
     ///
     /// * 目前只支持 `Spot` 和 `Perpetual` 类型的金融工具。
     /// * 如果传入的 `InstrumentKind` 不受支持，函数会记录一个警告并返回 `None`。
-    fn fees_percent(&self, instrument_kind: &InstrumentKind, order_role: &OrderRole) -> Option<f64>
-    {
-        let commission_rates = &self.config.fees_book.get(instrument_kind)?;
 
-        match instrument_kind {
-            | InstrumentKind::Spot | InstrumentKind::Perpetual => match order_role {
-                | OrderRole::Maker => Some(commission_rates.maker_fees),
-                | OrderRole::Taker => Some(commission_rates.taker_fees),
-            },
-            | _ => {
-                warn!("Unsupported InstrumentKind: {:?}", instrument_kind);
-                None
-            }
+    pub(crate) async fn fees_percent(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExchangeError>
+    {
+        // 直接访问 account 的 config 字段
+        let commission_rates = self.config
+            .fees_book
+            .get(instrument_kind)
+            .cloned()
+            .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
+
+        match role {
+            | OrderRole::Maker => Ok(commission_rates.maker_fees),
+            | OrderRole::Taker => Ok(commission_rates.taker_fees),
         }
     }
-
 
     /// 处理客户端交易列表并更新账户余额及交易事件。
     ///
@@ -1754,7 +1754,7 @@ mod tests
     async fn test_get_fee()
     {
         let account = create_test_account();
-        let fee = account.await.get_fee(&InstrumentKind::Perpetual, OrderRole::Maker).await.unwrap();
+        let fee = account.await.fees_percent(&InstrumentKind::Perpetual, OrderRole::Maker).await.unwrap();
         assert_eq!(fee, 0.001);
     }
 
