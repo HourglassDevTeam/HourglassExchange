@@ -1,8 +1,8 @@
 use crate::{
     common::{
+        account_positions::{position_id::PositionId, Position},
         balance::Balance,
         instrument::Instrument,
-        position::{position_id::PositionId, Position},
     },
     vault::error::VaultError,
     Exchange,

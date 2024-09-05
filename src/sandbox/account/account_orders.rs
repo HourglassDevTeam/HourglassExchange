@@ -2,14 +2,14 @@ use crate::{
     common::{
         instrument::Instrument,
         order::{
-            identification::{machine_id::generate_machine_id, request_id::RequestId, OrderId},
+            identification::{machine_id::generate_machine_id, OrderId},
             order_instructions::OrderInstruction,
             states::{open::Open, request_open::RequestOpen},
             Order, OrderRole,
         },
         Side,
     },
-    error::ExecutionError,
+    error::ExchangeError,
     sandbox::{
         account::account_latency::{fluctuate_latency, AccountLatency},
         instrument_orders::InstrumentOrders,
@@ -84,7 +84,7 @@ impl AccountOrders
     }
 
     /// 生成一个新的 `RequestId`
-    ///
+    /// NOTE 可能暂时永不上。但是在日后的web版本中很可能会被用到。
     /// # 参数
     ///
     /// - `machine_id`: 用于标识生成 ID 的机器，最大值为 1023。
@@ -95,12 +95,12 @@ impl AccountOrders
     ///
     /// 返回一个唯一的 `RequestId`。
     /// NOTE that the client's login PC might change frequently. This method is not web-compatible now.
-    pub fn generate_request_id(&self, request: &Order<RequestOpen>) -> RequestId
-    {
-        let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
-        let request_ts = request.timestamp;
-        RequestId::new(request_ts as u64, self.machine_id, counter)
-    }
+    // pub fn generate_request_id(&self, request: &Order<RequestOpen>) -> RequestId
+    // {
+    //     let counter = self.request_counter.fetch_add(1, Ordering::SeqCst);
+    //     let request_ts = request.timestamp;
+    //     RequestId::new(request_ts as u64, self.machine_id, counter)
+    // }
 
     /// 生成一组预定义的延迟值数组，用于模拟订单延迟。
     ///
@@ -147,12 +147,11 @@ impl AccountOrders
 
     /// 返回指定 [`Instrument`] 的 [`InstrumentOrders`] 的可变引用。
 
-    pub fn get_ins_orders_mut(&self, instrument: &Instrument) -> Result<RefMut<Instrument, InstrumentOrders>, ExecutionError>
+    pub fn get_ins_orders_mut(&self, instrument: &Instrument) -> Result<RefMut<Instrument, InstrumentOrders>, ExchangeError>
     {
-        println!("[get_ins_orders_mut]: {:?}", instrument);
         self.instrument_orders_map
             .get_mut(instrument)
-            .ok_or_else(|| ExecutionError::SandBox(format!("Sandbox exchange is not configured for Instrument: {instrument}")))
+            .ok_or_else(|| ExchangeError::SandBox(format!("Sandbox exchange is not configured for Instrument: {instrument}")))
     }
 
     /// 为每个 [`Instrument`] 获取出价和要价 [`Order<Open>`]。
@@ -194,7 +193,7 @@ impl AccountOrders
         let adjusted_client_ts = order.timestamp + latency;
 
         // 创建并返回新的 RequestOpen 订单
-        Order { kind: order.kind,
+        Order { instruction: order.instruction,
                 exchange: order.exchange,
                 instrument: order.instrument,
                 cid: order.cid,
@@ -224,9 +223,9 @@ impl AccountOrders
     /// - 对于 `PostOnly` 类型的订单，调用 `determine_post_only_order_role` 来判断订单是否能作为 Maker，否则拒绝该订单。
     /// - 对于 `ImmediateOrCancel` 和 `FillOrKill` 类型的订单，总是返回 `OrderRole::Taker`，因为这些订单需要立即成交。
     /// - 对于 `GoodTilCancelled` 类型的订单，按照限价订单的逻辑来判断角色。
-    pub fn determine_maker_taker(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    pub fn determine_maker_taker(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>
     {
-        match order.kind {
+        match order.instruction {
             | OrderInstruction::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
 
             | OrderInstruction::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
@@ -263,7 +262,7 @@ impl AccountOrders
     /// - 对于卖单 (`Side::Sell`):
     ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
     ///   - 否则，返回 `OrderRole::Taker`。
-    pub(crate) fn determine_limit_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    pub(crate) fn determine_limit_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>
     {
         match order.side {
             | Side::Buy => {
@@ -285,6 +284,8 @@ impl AccountOrders
         }
     }
 
+
+    /// FIXME 这个逻辑提前到了 open_orders 中。所以可能产生重复。
     /// 判断 PostOnly 订单是否符合条件，并确定其是 Maker 还是被拒绝。
     ///
     /// 如果订单不符合 PostOnly 的条件（即买单价格低于当前市场价格，或卖单价格高于当前市场价格），
@@ -311,7 +312,7 @@ impl AccountOrders
     /// - 对于卖单 (`Side::Sell`):
     ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
     ///   - 否则，调用 `self.reject_post_only_order(order)` 拒绝订单，并返回错误。
-    pub(crate) fn determine_post_only_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExecutionError>
+    pub(crate) fn determine_post_only_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>
     {
         match order.side {
             | Side::Buy => {
@@ -319,7 +320,7 @@ impl AccountOrders
                     Ok(OrderRole::Maker)
                 }
                 else {
-                    Err(ExecutionError::OrderRejected("PostOnly order should be rejected".into()))
+                    Err(ExchangeError::PostOnlyViolation("PostOnly order should be rejected".into()))
                     // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
             }
@@ -328,28 +329,12 @@ impl AccountOrders
                     Ok(OrderRole::Maker)
                 }
                 else {
-                    Err(ExecutionError::OrderRejected("PostOnly order should be rejected".into()))
+                    Err(ExchangeError::PostOnlyViolation("PostOnly order should be rejected".into()))
                     // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
             }
         }
     }
-
-    // /// 拒绝不符合条件的 PostOnly 订单，并将其从待处理订单注册表中移除。
-    // ///
-    // /// 当一个 PostOnly 订单的价格不符合条件时（例如，买单价格低于市场价格，或卖单价格高于市场价格），
-    // /// 该函数将拒绝此订单，并将其从 `pending_registry` 中删除。
-    // ///
-    // /// # 参数
-    // ///
-    // /// - `order`: 待拒绝的 PostOnly 订单 (`Order<Pending>`)。
-    // ///
-    // /// # 返回值
-    // pub(crate) fn reject_post_only_order(&mut self, order: &Order<RequestOpen>) -> Result<OrderRole, ExecutionError>
-    // {
-    //     self.remove_order_from_pending_registry(order.state.request_id)?; // 移除订单
-    //     Err(ExecutionError::OrderRejected("PostOnly order rejected".into())) // 返回拒绝错误
-    // }
 
     /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
     /// 在 increment_request_counter 方法中，使用 Ordering::Relaxed 进行递增。
@@ -358,7 +343,7 @@ impl AccountOrders
         self.increment_order_counter();
 
         // 直接构建 Order<Open>
-        Order { kind: request.kind,
+        Order { instruction: request.instruction,
                 exchange: request.exchange,
                 instrument: request.instrument,
                 cid: request.cid,
@@ -386,7 +371,19 @@ impl AccountOrders
         self.order_counter.fetch_add(1, Ordering::Relaxed);
     }
 
-    /// 在 order_id 方法中，使用 [Ordering::Acquire] 确保读取到最新的计数器值。
+    /// 生成一个新的 [OrderId]。
+    ///
+    /// 该函数根据当前的系统时间戳和订单计数器生成一个唯一的 [OrderId]。
+    /// 系统时间戳以毫秒为单位计算，并结合机器 ID 和计数器来确保生成的 ID 唯一。
+    /// 由于计数器使用 [Ordering::SeqCst] 进行递增，确保了在多线程环境下的顺序一致性和原子性。
+    ///
+    /// # 返回值
+    ///
+    /// 返回一个唯一的 [OrderId]，该 ID 是基于当前的时间戳、机器 ID 和计数器生成的。
+    ///
+    /// # 错误处理
+    ///
+    /// 如果系统时间出现倒退，将导致程序崩溃并输出错误信息 "时间出现倒退"。
     pub fn order_id(&self) -> OrderId
     {
         let now_ts = SystemTime::now().duration_since(UNIX_EPOCH).expect("时间出现倒退").as_millis() as u64;
@@ -394,6 +391,14 @@ impl AccountOrders
         OrderId::new(now_ts, self.machine_id, counter)
     }
 
+    /// 更新账户的延迟值。
+    ///
+    /// 该函数通过调用 [fluctuate_latency] 方法来更新账户的延迟生成器，并根据当前的时间进行动态调整。
+    /// 更新后的延迟值将用于模拟订单的延迟，适用于回测或模拟环境。
+    ///
+    /// # 参数
+    ///
+    /// - current_time: 当前时间，以微秒为单位，作为调整延迟值的参考点。
     pub fn update_latency(&mut self, current_time: i64)
     {
         fluctuate_latency(&mut self.latency_generator, current_time);
@@ -405,9 +410,15 @@ mod tests
 {
     use super::*;
     use crate::{
-        common::instrument::{kind::InstrumentKind, Instrument},
+        common::{
+            instrument::{kind::InstrumentKind, Instrument},
+            order::identification,
+        },
         sandbox::account::account_latency::{AccountLatency, FluctuationMode},
+        Exchange,
     };
+    use client_order_id::ClientOrderId;
+    use identification::client_order_id;
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -518,5 +529,102 @@ mod tests
 
         let latency = account_orders.latency_generator;
         assert!(latency.current_value >= 10 && latency.current_value <= 100);
+    }
+
+    #[tokio::test]
+    async fn test_process_backtest_requestopen_with_a_simulated_latency()
+    {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
+        let mut account_orders = AccountOrders::new(123123, instruments, account_latency).await;
+
+        let order = Order { instruction: OrderInstruction::Limit,
+                            exchange: Exchange::Binance,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            cid: Some(ClientOrderId("unit_test".to_string())),
+                            timestamp: 1625232523000,
+                            side: Side::Buy,
+                            state: RequestOpen { reduce_only: false,
+                                                 price: 35000.0,
+                                                 size: 0.1 } };
+
+        let simulated_order = account_orders.process_backtest_requestopen_with_a_simulated_latency(order).await;
+        assert!(simulated_order.timestamp >= 1625232523000 + 10); // Assuming latency is at least 10
+        assert!(simulated_order.timestamp <= 1625232523000 + 100); // Assuming latency is at most 100
+    }
+
+    #[tokio::test]
+    async fn test_determine_maker_taker()
+    {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
+        let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
+
+        let order = Order { instruction: OrderInstruction::Limit,
+                            exchange: Exchange::Binance,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            cid: Some(ClientOrderId("unit_test".to_string())),
+                            timestamp: 1625232523000,
+                            side: Side::Buy,
+                            state: RequestOpen { reduce_only: false,
+                                                 price: 35000.0,
+                                                 size: 0.1 } };
+
+        let result = account_orders.determine_maker_taker(&order, 35000.0);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), OrderRole::Maker);
+    }
+
+    #[tokio::test]
+    async fn test_determine_post_only_order_role()
+    {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
+        let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
+
+        let order = Order { instruction: OrderInstruction::PostOnly,
+                            exchange: Exchange::Binance,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            cid: Some(ClientOrderId("unit_test".to_string())),
+                            timestamp: 1625232523000,
+                            side: Side::Buy,
+                            state: RequestOpen { reduce_only: false,
+                                                 price: 35000.0,
+                                                 size: 0.1 } };
+
+        let result = account_orders.determine_post_only_order_role(&order, 34999.0);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), OrderRole::Maker);
+
+        let reject_result = account_orders.determine_post_only_order_role(&order, 35001.0);
+        assert!(reject_result.is_err());
+        assert_eq!(reject_result.unwrap_err().to_string(),
+                   "[UniLinkExecution] : PostOnlyViolation");
+    }
+
+    #[tokio::test]
+    async fn test_build_order_open()
+    {
+        let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
+        let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
+        let mut account_orders = AccountOrders::new(123123, instruments, account_latency).await;
+
+        let order = Order { instruction: OrderInstruction::Limit,
+                            exchange: Exchange::Binance,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            cid: Some(ClientOrderId("unit_test".to_string())),
+                            timestamp: 1625232523000,
+                            side: Side::Buy,
+                            state: RequestOpen { reduce_only: false,
+                                                 price: 35000.0,
+                                                 size: 0.1 } };
+
+        let open_order = account_orders.build_order_open(order, OrderRole::Maker).await;
+
+        assert_eq!(open_order.state.price, 35000.0);
+        assert_eq!(open_order.state.size, 0.1);
+        assert_eq!(open_order.state.filled_quantity, 0.0);
+        assert_eq!(open_order.state.order_role, OrderRole::Maker);
+        assert!(open_order.state.id.value() > 0);
     }
 }

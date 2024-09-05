@@ -6,14 +6,14 @@ use std::{fmt, fmt::Display, sync::LazyLock};
 // - **定义和作用**：`ClientOrderId` 是由客户端生成的，主要用于客户端内部的订单管理和跟踪。它在客户端内唯一，可以帮助用户追踪订单状态，而不需要等待交易所生成的 `OrderID`。
 // - **设计合理性**：`ClientOrderId` 的设计对于提高用户体验非常有用，特别是在订单提交后用户可以立即获取订单状态信息。对于未来扩展成的Web或手机App，这种设计能够提供更好的响应速度和用户交互体验。然而，需要注意的是，`ClientOrderId` 在系统中应该保持唯一性，并与 `OrderID` 关联，以防止冲突。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
-pub struct ClientOrderId(pub Option<String>); // 可选的字符串类型辅助标识符
+pub struct ClientOrderId(pub String); // 可选的字符串类型辅助标识符
 
 // 为 ClientOrderId 实现格式化显示
 impl Display for ClientOrderId
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
-        write!(f, "{}", self.0.as_deref().unwrap_or("None"))
+        write!(f, "{}", self.0)
     }
 }
 
@@ -49,19 +49,13 @@ static ID_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9_-]{
 impl ClientOrderId
 {
     // 用户自定义或生成唯一的字符串ID
-    pub fn new(custom_id: Option<String>) -> Result<Self, String>
+    pub fn new(custom_id: String) -> Result<Self, String>
     {
-        if let Some(ref id) = custom_id {
-            if Self::validate_id_format(id) {
-                Ok(ClientOrderId(Some(id.clone())))
-            }
-            else {
-                Err("Invalid ClientOrderId format".into())
-            }
+        if Self::validate_id_format(&custom_id) {
+            Ok(ClientOrderId(custom_id))
         }
         else {
-            // If no custom ID is provided, return `None`.
-            Ok(ClientOrderId(None))
+            Err("Invalid ClientOrderId format".into())
         }
     }
 
@@ -71,6 +65,7 @@ impl ClientOrderId
         ID_REGEX.is_match(id)
     }
 }
+
 #[cfg(test)]
 mod tests
 {
@@ -81,9 +76,9 @@ mod tests
     {
         // 测试有效的ClientOrderId
         let valid_id = "validID123";
-        let client_order_id = ClientOrderId::new(Some(valid_id.to_string()));
+        let client_order_id = ClientOrderId::new(valid_id.to_string());
         assert!(client_order_id.is_ok());
-        assert_eq!(client_order_id.unwrap().0, Some(valid_id.to_string()));
+        assert_eq!(client_order_id.unwrap().0, valid_id.to_string());
     }
 
     #[test]
@@ -91,27 +86,18 @@ mod tests
     {
         // 测试无效的ClientOrderId（太短）
         let invalid_id_short = "abc";
-        let client_order_id = ClientOrderId::new(Some(invalid_id_short.to_string()));
+        let client_order_id = ClientOrderId::new(invalid_id_short.to_string());
         assert!(client_order_id.is_err());
 
         // 测试无效的ClientOrderId（包含不允许的字符）
         let invalid_id_chars = "abc!@#";
-        let client_order_id = ClientOrderId::new(Some(invalid_id_chars.to_string()));
+        let client_order_id = ClientOrderId::new(invalid_id_chars.to_string());
         assert!(client_order_id.is_err());
 
         // 测试无效的ClientOrderId（太长）
         let invalid_id_long = "a".repeat(21);
-        let client_order_id = ClientOrderId::new(Some(invalid_id_long));
+        let client_order_id = ClientOrderId::new(invalid_id_long);
         assert!(client_order_id.is_err());
-    }
-
-    #[test]
-    fn test_none_client_order_id()
-    {
-        // 测试没有提供ID的情况
-        let client_order_id = ClientOrderId::new(None);
-        assert!(client_order_id.is_ok());
-        assert_eq!(client_order_id.unwrap().0, None);
     }
 
     #[test]

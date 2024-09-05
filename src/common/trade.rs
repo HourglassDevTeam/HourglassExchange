@@ -1,13 +1,18 @@
 use serde::{Deserialize, Serialize};
-
 // 引入相关模块和结构体。
-use crate::common::{instrument::Instrument, order::identification::OrderId, Side};
+use crate::common::{
+    instrument::Instrument,
+    order::identification::{client_order_id::ClientOrderId, OrderId},
+    Side,
+};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct ClientTrade
 {
+    pub timestamp: i64,
     pub trade_id: ClientTradeId,
-    pub client_order_id: OrderId,
+    pub order_id: OrderId,
+    pub cid: Option<ClientOrderId>,
     pub instrument: Instrument,
     pub side: Side,
     pub price: f64,
@@ -15,7 +20,6 @@ pub struct ClientTrade
     pub fees: f64,
 }
 
-/// CONSIDER : type of ClientTradeId appropriate?
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct ClientTradeId(pub i64);
 

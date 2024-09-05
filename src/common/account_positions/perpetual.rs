@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common::position::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode};
+use crate::common::account_positions::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -55,6 +55,15 @@ pub struct PerpetualPositionBuilder
     liquidation_price: Option<f64>,
     margin: Option<f64>,
 }
+
+impl Default for PerpetualPositionBuilder
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
 #[allow(dead_code)]
 impl PerpetualPositionBuilder
 {
@@ -105,10 +114,10 @@ mod tests
     use super::*;
     use crate::{
         common::{
-            balance::{Balance, TokenBalance},
-            friction::{Fees, SpotFees},
+            account_positions::{position_id::PositionId, PositionDirectionMode, PositionMarginMode},
+            balance::{Balance, TokenBalance}
+            ,
             instrument::{kind::InstrumentKind, Instrument},
-            position::{position_id::PositionId, PositionDirectionMode, PositionMarginMode},
             token::Token,
             Side,
         },
@@ -126,7 +135,7 @@ mod tests
                                                                     instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
                                                                     side: Side::Buy,
                                                                     current_size: 1.0,
-                                                                    current_fees_total: Fees::Spot(SpotFees { maker_fee: 11.0, taker_fee: 9.0 }),
+                                                                    current_fees_total: 66.0,
                                                                     current_avg_price_gross: 50_000.0,
                                                                     current_symbol_price: 61_000.0,
                                                                     current_avg_price: 50_000.0,

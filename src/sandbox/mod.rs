@@ -1,5 +1,5 @@
 use crate::{
-    error::ExecutionError,
+    error::ExchangeError,
     network::{event::NetworkEvent, is_port_in_use},
     sandbox::sandbox_client::SandBoxClientEvent,
 };
@@ -94,12 +94,17 @@ impl SandBoxExchange
         while let Some(event) = self.event_sandbox_rx.recv().await {
             match event {
                 | SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.lock().await.fetch_orders_open_and_respond(response_tx).await,
-                | SandBoxClientEvent::FetchBalances(response_tx) => self.account.lock().await.fetch_balances_and_respond(response_tx).await,
-                // NOTE this is buggy. should return an open order or an error eventually, not pendings in the flight.
+                | SandBoxClientEvent::FetchTokenBalance(token, response_tx) => self.account.lock().await.fetch_token_balance_and_respond(&token, response_tx).await,
+                | SandBoxClientEvent::FetchTokenBalances(response_tx) => self.account.lock().await.fetch_token_balances_and_respond(response_tx).await,
                 | SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => self.account.lock().await.open_orders(open_requests, response_tx).await.expect("Failed to open."),
                 | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.lock().await.cancel_orders(cancel_requests, response_tx).await,
                 | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.lock().await.cancel_orders_all(response_tx).await,
-                // | SandBoxClientEvent::FetchMarketEvent(market_event) => self.account.lock().await.match_orders(market_event).await,
+                | SandBoxClientEvent::FetchAllPositions(response_tx) => self.account.lock().await.fetch_positions_and_respond(response_tx).await,
+                | SandBoxClientEvent::FetchLongPosition(instrument, response_tx) => self.account.lock().await.fetch_long_position_and_respond(&instrument, response_tx).await,
+                | SandBoxClientEvent::FetchShortPosition(instrument, response_tx) => self.account.lock().await.fetch_short_position_and_respond(&instrument, response_tx).await,
+                | SandBoxClientEvent::DepositTokens(deposit_request) => {
+                    self.account.lock().await.deposit_multiple_coins_and_respond(deposit_request.0, deposit_request.1).await;
+                }
             }
         }
     }
@@ -111,9 +116,8 @@ impl Default for ExchangeInitiator
     {
         let (_tx, rx) = mpsc::unbounded_channel();
         Self { event_sandbox_rx: Some(rx),
-               account: None
-               /* market_event_tx: None,
-                * data_source: None, */ }
+               account: None /* market_event_tx: None,
+                              * data_source: None, */ }
     }
 }
 pub struct ExchangeInitiator
@@ -129,9 +133,8 @@ impl ExchangeInitiator
     pub fn new() -> Self
     {
         Self { event_sandbox_rx: None,
-               account: None
-               /* market_event_tx: None,
-                * data_source: None, */ }
+               account: None /* market_event_tx: None,
+                              * data_source: None, */ }
     }
 
     pub fn event_sandbox_rx(self, value: UnboundedReceiver<SandBoxClientEvent>) -> Self
@@ -145,11 +148,11 @@ impl ExchangeInitiator
         Self { account: Some(value), ..self }
     }
 
-    pub fn initiate(self) -> Result<SandBoxExchange, ExecutionError>
+    pub fn initiate(self) -> Result<SandBoxExchange, ExchangeError>
     {
-        Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExecutionError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
+        Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExchangeError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
                              // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::InitiatorIncomplete("market_event_tx".to_string()))?,
-                             account: self.account.ok_or_else(|| ExecutionError::InitiatorIncomplete("account".to_string()))? })
+                             account: self.account.ok_or_else(|| ExchangeError::InitiatorIncomplete("account".to_string()))? })
     }
 
     // pub fn trade_event_source(self, value: TradeEventSource) -> Self
@@ -224,7 +227,6 @@ mod tests
         assert!(is_port_in_use(address));
         exchange.run_online().await;
     }
-
     // Function to check if a port is in use
     fn is_port_in_use(address: std::net::SocketAddr) -> bool
     {

@@ -6,10 +6,11 @@ use std::{cmp::Ordering, fmt};
 /// 订单初始状态。发送到client进行操作
 ///
 /// `RequestOpen` 用于表示一个初始订单状态。这个状态包含了订单的价格、大小，以及是否为 `reduce_only` 订单。
-#[derive(Copy, Clone, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct RequestOpen
 {
     pub reduce_only: bool,
+    /// NOTE to be checked
     pub price: f64,
     pub size: f64,
 }
@@ -52,6 +53,6 @@ impl Display for Order<RequestOpen>
     {
         write!(f,
                "Order {{ kind: {:?}, exchange: {:?}, instrument: {:?}, client_ts: {}, cid: {:?}, side: {:?}, state: {} }}",
-               self.kind, self.exchange, self.instrument, self.timestamp, self.cid, self.side, self.state)
+               self.instruction, self.exchange, self.instrument, self.timestamp, self.cid, self.side, self.state)
     }
 }

@@ -1,9 +1,9 @@
 use crate::{
     common::{
+        account_positions::{PositionDirectionMode, PositionMarginMode},
         instrument::kind::InstrumentKind,
-        position::{PositionDirectionMode, PositionMarginMode},
     },
-    error::ExecutionError,
+    error::ExchangeError,
     sandbox::utils::config_parser::read_config_file,
 };
 use serde::{Deserialize, Serialize};
@@ -13,13 +13,17 @@ use std::collections::HashMap;
 pub struct AccountConfig
 {
     pub margin_mode: MarginMode,
-    pub position_mode: PositionDirectionMode,
+    pub position_direction_mode: PositionDirectionMode,
     pub position_margin_mode: PositionMarginMode,
     pub commission_level: CommissionLevel,
     pub funding_rate: f64,
     pub account_leverage_rate: f64,
     pub fees_book: HashMap<InstrumentKind, CommissionRates>,
     pub execution_mode: SandboxMode,
+    // pub stop_loss_threshold: Option<f64>,    // 止损阈值，用于设置当资产价格向不利方向移动并达到该阈值时，自动平仓以避免进一步损失。
+    // pub take_profit_threshold: Option<f64>,  // 止盈阈值，用于在市场价格达到一定盈利目标时自动平仓以锁定利润。
+    // pub trailing_stop_loss: Option<f64>,   // 跟踪止损，用于动态调整止损价格，跟随市场价格的波动来保护盈利。当价格向有利方向移动时，止损价格也相应调整；当价格逆向移动时，止损触发。
+    // pub trailing_take_profit: Option<f64>,  // 跟踪止盈，与 trailing_stop_loss 类似，但它是在价格达到某个盈利水平后，动态设置止盈点以保证在价格下跌前锁定更多利润。
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -87,25 +91,25 @@ impl CommissionRatesInitiator
 
 impl AccountConfig
 {
-    pub fn new() -> Result<AccountConfig, ExecutionError>
+    pub fn new() -> Result<AccountConfig, ExchangeError>
     {
         read_config_file()
     }
 
-    pub fn get_maker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
+    pub fn get_maker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExchangeError>
     {
         self.fees_book
             .get(instrument_kind)
             .map(|rates| rates.maker_fees)
-            .ok_or_else(|| ExecutionError::SandBox(format!("Open fee rate for {:?} not found", instrument_kind)))
+            .ok_or_else(|| ExchangeError::SandBox(format!("Open fee rate for {:?} not found", instrument_kind)))
     }
 
-    pub fn get_taker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExecutionError>
+    pub fn get_taker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExchangeError>
     {
         self.fees_book
             .get(instrument_kind)
             .map(|rates| rates.taker_fees)
-            .ok_or_else(|| ExecutionError::SandBox(format!("Close fee rate for {:?} not found", instrument_kind)))
+            .ok_or_else(|| ExchangeError::SandBox(format!("Close fee rate for {:?} not found", instrument_kind)))
     }
 }
 
@@ -176,7 +180,7 @@ impl AccountConfigInitiator
     pub fn initiate(self) -> Result<AccountConfig, &'static str>
     {
         Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
-                           position_mode: self.position_mode.ok_or("position_mode is required")?,
+                           position_direction_mode: self.position_mode.ok_or("position_mode is required")?,
                            position_margin_mode: self.position_margin_mode.ok_or("position_mode is required")?,
                            commission_level: self.commission_level.ok_or("commission_level is required")?,
                            funding_rate: self.fund_fee_rate.ok_or("commission_level is required")?,

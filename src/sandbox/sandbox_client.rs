@@ -3,17 +3,20 @@ use mpsc::UnboundedSender;
 use oneshot::Sender;
 use tokio::sync::{mpsc, oneshot};
 
-use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrdersOpen, OpenOrders};
+use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchOrdersOpen, FetchTokenBalances, OpenOrders};
 
 use crate::{
     common::{
+        account_positions::{AccountPositions, Position},
         balance::TokenBalance,
+        instrument::Instrument,
         order::{
             states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel},
             Order,
         },
+        token::Token,
     },
-    AccountEvent, ClientExecution, Exchange, ExecutionError, RequestOpen,
+    AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
 
 #[derive(Debug)]
@@ -25,21 +28,27 @@ pub struct SandBoxClient
 
 // NOTE 模拟交易所客户端可向模拟交易所发送的命令
 // 定义类型别名以简化复杂的类型
-pub type OpenOrderResults = Vec<Result<Order<Open>, ExecutionError>>;
-pub type CancelOrderResults = Vec<Result<Order<Cancelled>, ExecutionError>>;
+pub type OpenOrderResults = Vec<Result<Order<Open>, ExchangeError>>;
+pub type CancelOrderResults = Vec<Result<Order<Cancelled>, ExchangeError>>;
 pub type RequestOpenOrders = (Vec<Order<RequestOpen>>, Sender<OpenOrderResults>);
 pub type RequestCancelOrders = (Vec<Order<RequestCancel>>, Sender<CancelOrderResults>);
+pub type DepositResults = Result<Vec<TokenBalance>, ExchangeError>;
+pub type DepositRequest = (Vec<(Token, f64)>, Sender<DepositResults>);
 
 // 模拟交易所客户端可向模拟交易所发送的命令
 #[derive(Debug)]
 pub enum SandBoxClientEvent
 {
-    // FetchMarketEvent(MarketEvent<MarketTrade>),
-    FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExecutionError>>),
-    FetchBalances(Sender<Result<Vec<TokenBalance>, ExecutionError>>),
+    DepositTokens(DepositRequest),
+    FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExchangeError>>),
+    FetchTokenBalances(Sender<Result<Vec<TokenBalance>, ExchangeError>>),
+    FetchTokenBalance(Token, Sender<Result<TokenBalance, ExchangeError>>),
+    FetchLongPosition(Instrument, Sender<Result<Option<Position>, ExchangeError>>),
+    FetchShortPosition(Instrument, Sender<Result<Option<Position>, ExchangeError>>),
+    FetchAllPositions(Sender<Result<AccountPositions, ExchangeError>>),
     OpenOrders(RequestOpenOrders),
     CancelOrders(RequestCancelOrders),
-    CancelOrdersAll(Sender<Result<Vec<Order<Cancelled>>, ExecutionError>>),
+    CancelOrdersAll(Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>),
 }
 
 #[async_trait]
@@ -55,11 +64,10 @@ impl ClientExecution for SandBoxClient
         let request_tx = config;
 
         // 使用 request_tx 和 market_event_rx 初始化 SandBoxClient
-        Self { request_tx
-               /* market_event_rx, */ }
+        Self { request_tx /* market_event_rx, */ }
     }
 
-    async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>
+    async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExchangeError>
     {
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送获取开放订单的请求。
@@ -71,19 +79,49 @@ impl ClientExecution for SandBoxClient
                    .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive FetchOrdersOpen response")
     }
 
-    async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>
+    async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExchangeError>
     {
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送获取账户余额的请求。
         self.request_tx
-            .send(FetchBalances(response_tx))
+            .send(FetchTokenBalances(response_tx))
             .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to send FetchBalances request");
         // 从模拟交易所接收账户余额的响应。
         response_rx.await
                    .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive FetchBalances response")
     }
 
-    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>
+    //  FetchAllPositions 的实现
+    async fn fetch_all_positions(&self) -> Result<AccountPositions, ExchangeError>
+    {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.request_tx
+            .send(SandBoxClientEvent::FetchAllPositions(response_tx))
+            .expect("[SandBoxClient] : Failed to send FetchAllPositions request");
+        response_rx.await.expect("[SandBoxClient] : Failed to receive FetchAllPositions response")
+    }
+
+    //  FetchLongPosition 的实现
+    async fn fetch_long_position(&self, instrument: Instrument) -> Result<Option<Position>, ExchangeError>
+    {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.request_tx
+            .send(SandBoxClientEvent::FetchLongPosition(instrument, response_tx))
+            .expect("[SandBoxClient] : Failed to send FetchLongPosition request");
+        response_rx.await.expect("[SandBoxClient] : Failed to receive FetchLongPosition response")
+    }
+
+    //  FetchShortPosition 的实现
+    async fn fetch_short_position(&self, instrument: Instrument) -> Result<Option<Position>, ExchangeError>
+    {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.request_tx
+            .send(SandBoxClientEvent::FetchShortPosition(instrument, response_tx))
+            .expect("[SandBoxClient] : Failed to send FetchShortPosition request");
+        response_rx.await.expect("[SandBoxClient] : Failed to receive FetchShortPosition response")
+    }
+
+    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExchangeError>>
     {
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送开启订单的请求。
@@ -95,7 +133,7 @@ impl ClientExecution for SandBoxClient
                    .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive OpenOrders response")
     }
 
-    async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>>
+    async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExchangeError>>
     {
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送取消订单的请求。
@@ -107,7 +145,7 @@ impl ClientExecution for SandBoxClient
                    .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive CancelOrders response")
     }
 
-    async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>
+    async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExchangeError>
     {
         // 创建一个 oneshot 通道以与模拟交易所通信。
         let (response_tx, response_rx) = oneshot::channel();
@@ -119,7 +157,18 @@ impl ClientExecution for SandBoxClient
         response_rx.await
                    .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive CancelOrdersAll response")
     }
+
+    // 实现 DepositTokens 的处理逻辑
+    async fn deposit_tokens(&self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError>
+    {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.request_tx
+            .send(SandBoxClientEvent::DepositTokens((deposits, response_tx)))
+            .expect("Failed to send DepositTokens request");
+        response_rx.await.expect("Failed to receive DepositTokens response")
+    }
 }
+
 #[cfg(test)]
 mod tests
 {
@@ -168,7 +217,7 @@ mod tests
         // 创建一个模拟的 SandBoxClientEvent 发射器和接收器
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
         // let (_market_event_tx, market_event_rx) = mpsc::unbounded_channel();
-        let (_response_tx, _response_rx) = oneshot::channel::<Result<Vec<Order<Cancelled>>, ExecutionError>>();
+        let (_response_tx, _response_rx) = oneshot::channel::<Result<Vec<Order<Cancelled>>, ExchangeError>>();
 
         // 初始化 SandBoxClient
         let client = SandBoxClient { request_tx: request_tx.clone() };

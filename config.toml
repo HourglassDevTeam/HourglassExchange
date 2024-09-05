@@ -1,5 +1,5 @@
 margin_mode = "SimpleMode"
-position_mode = "NetMode"
+position_direction_mode = "NetMode"
 position_margin_mode = "Isolated"
 commission_level = "Lv2"
 funding_rate = 0.0001

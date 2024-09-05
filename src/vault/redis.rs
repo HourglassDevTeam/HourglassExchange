@@ -13,16 +13,11 @@
 ///
 /// `PhantomData<Statistic>` 用于标记 `RedisVault` 和 `RedisVaultBuilder` 结构体中的 `Statistic` 泛型参数。
 /// 这意味着即使 `Statistic` 在运行时没有被直接使用，Rust 的类型系统仍然会确保在编译时检查这个泛型参数的类型安全性。
-use crate::error::ExecutionError;
-use crate::{
-    error::ExecutionError::RedisInitialisationError,
-    sandbox::account::account_config::SandboxMode,
-    vault::summariser::PositionSummariser,
-};
+use crate::error::ExchangeError;
+use crate::{error::ExchangeError::RedisInitialisationError, sandbox::account::account_config::SandboxMode, vault::summariser::PositionSummariser};
 use redis::Connection;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::marker::PhantomData;
-
 
 /// 用于通过 new() 构造函数方法构造 [`RedisVault`] 的配置。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, Deserialize, Serialize)]
@@ -35,7 +30,7 @@ pub struct Config
 pub struct RedisVault<Statistic>
     where Statistic: PositionSummariser + Serialize + DeserializeOwned
 {
-    sandbox_mode: SandboxMode,                     // 仓库的配置，存储在仓库中
+    sandbox_mode: SandboxMode,                 // 仓库的配置，存储在仓库中
     _statistic_marker: PhantomData<Statistic>, // 用于类型标记的幻象数据
     #[allow(dead_code)]
     conn: Connection,
@@ -53,8 +48,7 @@ impl<Statistic> RedisVault<Statistic> where Statistic: PositionSummariser + Seri
     /// 返回一个新的 `RedisVault` 实例，该实例可以用于与 Redis 数据库交互。
     pub fn new(conn: Connection, config: SandboxMode) -> Self
     {
-        Self {
-            sandbox_mode: config, // 存储提供的配置
+        Self { sandbox_mode: config, // 存储提供的配置
                _statistic_marker: PhantomData,
                conn }
     }
@@ -103,7 +97,7 @@ pub struct RedisVaultBuilder<Statistic>
     where Statistic: PositionSummariser + Serialize + DeserializeOwned
 {
     conn: Option<Connection>,                  // Redis 连接的可选值
-    config: Option<SandboxMode>,             // 添加配置选项
+    config: Option<SandboxMode>,               // 添加配置选项
     _statistic_marker: PhantomData<Statistic>, // 用于类型标记的幻象数据
 }
 impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser + Serialize + DeserializeOwned
@@ -131,10 +125,9 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
     }
 
     /// 构建 RedisVault 实例。
-    pub fn build(self) -> Result<RedisVault<Statistic>, ExecutionError>
+    pub fn build(self) -> Result<RedisVault<Statistic>, ExchangeError>
     {
-        Ok(RedisVault {
-            sandbox_mode: self.config.ok_or(RedisInitialisationError("config".to_string()))?, // 处理配置
+        Ok(RedisVault { sandbox_mode: self.config.ok_or(RedisInitialisationError("config".to_string()))?, // 处理配置
                         _statistic_marker: PhantomData,
                         conn: self.conn.ok_or(RedisInitialisationError("connection".to_string()))? /* 处理连接 */ })
     }
@@ -144,13 +137,13 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
 // where
 //     Statistic: PositionSummariser + Serialize + DeserializeOwned,
 // {
-//     fn set_open_position(&mut self, position: Position) -> Result<(), ExecutionError> {
+//     fn set_open_position(&mut self, account_positions: Position) -> Result<(), ExecutionError> {
 //         // 将 Position 对象序列化为 JSON 字符串
-//         let position_string = serde_json::to_string(&position)?;
+//         let position_string = serde_json::to_string(&account_positions)?;
 //
 //         // 将序列化后的 Position 存入 Redis
 //         self.conn
-//             .set(position.position_id.to_string(), position_string)
+//             .set(account_positions.position_id.to_string(), position_string)
 //             .map_err(|_| ExecutionError::WriteError)
 //     }
 //
@@ -191,25 +184,25 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
 //         position_id: &PositionId,
 //     ) -> Result<Option<Position>, ExecutionError> {
 //         // 获取并删除 Redis 中对应的 Position
-//         let position = self.get_open_position(position_id)?;
+//         let account_positions = self.get_open_position(position_id)?;
 //
 //         self.conn
 //             .del(position_id.to_string())
 //             .map_err(|_| ExecutionError::DeleteError)?;
 //
-//         Ok(position)
+//         Ok(account_positions)
 //     }
 //
 //     fn set_exited_position(
 //         &mut self,
 //         session_id: Uuid,
-//         position: Position,
+//         account_positions: Position,
 //     ) -> Result<(), ExecutionError> {
 //         // 将已退出的 Position 推入 Redis 列表
 //         self.conn
 //             .lpush(
 //                 determine_exited_positions_id(session_id),
-//                 serde_json::to_string(&position)?,
+//                 serde_json::to_string(&account_positions)?,
 //             )
 //             .map_err(|_| ExecutionError::WriteError)
 //     }

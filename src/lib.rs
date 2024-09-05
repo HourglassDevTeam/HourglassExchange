@@ -2,14 +2,17 @@ use std::fmt::{Debug, Display, Formatter};
 
 use crate::{
     common::{
+        account_positions::{AccountPositions, Position},
         balance::TokenBalance,
         event::AccountEvent,
+        instrument::Instrument,
         order::{
             states::{cancelled::Cancelled, request_cancel::RequestCancel, request_open::RequestOpen},
             Order,
         },
+        token::Token,
     },
-    error::ExecutionError,
+    error::ExchangeError,
 };
 use async_trait::async_trait;
 use common::order::states::open::Open;
@@ -36,11 +39,19 @@ pub trait ClientExecution
     type Config;
 
     async fn init(config: Self::Config, event_tx: UnboundedSender<AccountEvent>) -> Self;
-    async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExecutionError>;
-    async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExecutionError>;
-    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExecutionError>>;
-    async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExecutionError>>;
-    async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExecutionError>;
+    async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExchangeError>;
+    async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExchangeError>; // 补全 FetchAllPositions 的实现
+    async fn fetch_all_positions(&self) -> Result<AccountPositions, ExchangeError>; // 补全 FetchLongPosition 的实现
+    async fn fetch_long_position(&self, instrument: Instrument) -> Result<Option<Position>, ExchangeError>; // 补全 FetchShortPosition 的实现
+    async fn fetch_short_position(&self, instrument: Instrument) -> Result<Option<Position>, ExchangeError>;
+
+    // async fn fetch_balance(&self) -> Result<TokenBalance, ExchangeError>; // TODO
+
+    // async fn fetch_positions(&self) -> Result<AccountPositions, ExchangeError>;  // TODO
+    async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExchangeError>>;
+    async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExchangeError>>;
+    async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExchangeError>; // 实现 DepositTokens 的处理逻辑
+    async fn deposit_tokens(&self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError>;
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]

@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common::{
+        account_positions::AccountPositions,
         balance::TokenBalance,
         order::{
             states::{
@@ -11,7 +12,6 @@ use crate::{
             },
             Order,
         },
-        position::AccountPositions,
         trade::ClientTrade,
     },
     sandbox::account::account_config::AccountConfig,
@@ -33,7 +33,6 @@ pub enum AccountEventKind
 {
     // Order Events
     OrdersOpen(Vec<Order<Open>>),
-    OrdersNew(Vec<Order<Open>>),
     OrdersCancelled(Vec<Order<Cancelled>>),
     OrdersFilled(Vec<Order<FullyFill>>),
     OrdersPartiallyFilled(Vec<Order<PartialFill>>),
@@ -71,7 +70,7 @@ mod tests
     #[test]
     fn account_event_kind_should_serialize_and_deserialize_correctly()
     {
-        let kind = AccountEventKind::OrdersNew(vec![]);
+        let kind = AccountEventKind::OrdersOpen(vec![]);
         let serialized = serde_json::to_string(&kind).unwrap();
         let deserialized: AccountEventKind = serde_json::from_str(&serialized).unwrap();
         assert_eq!(kind, deserialized);
@@ -80,15 +79,14 @@ mod tests
     #[test]
     fn client_order_id_should_format_correctly()
     {
-        let client_order_id = ClientOrderId(Some(Uuid::new_v4().to_string())); // 直接生成一个字符串
-        assert_eq!(format!("{}", client_order_id), client_order_id.0.clone().unwrap());
+        let client_order_id = ClientOrderId(Uuid::new_v4().to_string()); // 直接生成一个字符串
+        assert_eq!(format!("{}", client_order_id), client_order_id.0.clone());
     }
 
     #[test]
     fn account_event_kind_should_handle_all_variants()
     {
         let kinds = vec![AccountEventKind::OrdersOpen(vec![]),
-                         AccountEventKind::OrdersNew(vec![]),
                          AccountEventKind::OrdersCancelled(vec![]),
                          AccountEventKind::OrdersFilled(vec![]),
                          AccountEventKind::OrdersPartiallyFilled(vec![]),

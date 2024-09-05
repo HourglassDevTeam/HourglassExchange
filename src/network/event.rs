@@ -33,11 +33,11 @@
 ///     let event_type = "OpenOrders";
 ///
 ///     // 2. 构建 payload
-///     let orders = vec![Order { kind: OrderInstruction::Limit,                                       // 订单类型，例如限价单
+///     let orders = vec![Order { instruction: OrderInstruction::Limit,                                       // 订单类型，例如限价单
 ///                               exchange: Exchange::Binance,                                           // 交易所名称
 ///                               instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual), // 交易对
 ///                               timestamp: chrono::Utc::now().timestamp_millis(),                      // 客户端下单时间戳
-///                               cid:  ClientOrderId(Option::from("OJBK".to_string())),     // 客户端订单 ID
+///                               cid:  Some(ClientOrderId("OJBK".to_string())),     // 客户端订单 ID
 ///                               side: Side::Buy,                                                       // 买卖方向
 ///                               state: RequestOpen { reduce_only: false, // 非减仓订单
 ///                                                    price: 50000.0,     // 下单价格
@@ -108,7 +108,7 @@ impl NetworkEvent
             }
             | "FetchBalances" => {
                 let (response_tx, _response_rx) = oneshot::channel();
-                Ok(SandBoxClientEvent::FetchBalances(response_tx))
+                Ok(SandBoxClientEvent::FetchTokenBalances(response_tx))
             }
             | "OpenOrders" => {
                 // 解析 payload 为 Vec<Order<RequestOpen>> 类型
@@ -153,11 +153,11 @@ mod tests
         let event_type = "OpenOrders";
 
         // 2. 构建 payload
-        let orders = vec![Order { kind: OrderInstruction::Limit,                                         // 订单类型，例如限价单
+        let orders = vec![Order { instruction: OrderInstruction::Limit,                                  // 订单类型，例如限价单
                                   exchange: Exchange::Binance,                                           // 交易所名称
                                   instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual), // 交易对
                                   timestamp: chrono::Utc::now().timestamp_millis(),                      // 客户端下单时间戳
-                                  cid: ClientOrderId(Option::from("OJBK".to_string())),                  // 客户端订单 ID
+                                  cid: Some(ClientOrderId("OJBK".to_string())),                          // 客户端订单 ID
                                   side: Side::Buy,                                                       // 买卖方向
                                   state: RequestOpen { reduce_only: false, // 非减仓订单
                                                        price: 50000.0,     // 下单价格
@@ -190,7 +190,7 @@ mod tests
 
         if let Ok(SandBoxClientEvent::OpenOrders((parsed_orders, _))) = parsed_event {
             assert_eq!(parsed_orders.len(), 1);
-            assert_eq!(parsed_orders[0].kind, OrderInstruction::Limit);
+            assert_eq!(parsed_orders[0].instruction, OrderInstruction::Limit);
             assert_eq!(parsed_orders[0].exchange, Exchange::Binance);
             assert_eq!(parsed_orders[0].instrument.base, "BTC".into());
             assert_eq!(parsed_orders[0].instrument.quote, "USDT".into());
