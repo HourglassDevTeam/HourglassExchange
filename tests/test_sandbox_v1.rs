@@ -202,7 +202,7 @@ async fn test_3_open_limit_buy_order(client: &SandBoxClient, test_3_ids: Ids, ev
     }
 
     match event_sandbox_rx.recv().await {
-        | Some(AccountEvent { kind: AccountEventKind::OrdersNew(new_orders),
+        | Some(AccountEvent { kind: AccountEventKind::OrdersOpen(new_orders),
                               .. }) => {
             println!("[test_3] : Orders new event received.");
             assert_eq!(new_orders.len(), 1);
@@ -265,10 +265,9 @@ async fn test_5_cancel_buy_order(client: &SandBoxClient, test_3_ids: Ids, event_
     assert_eq!(cancelled.len(), 1);
     assert_eq!(cancelled[0].clone().unwrap(), expected_cancelled);
 
-    // Check AccountEvent Order cancelled
+    // 先接收订单取消事件
     match event_sandbox_rx.try_recv() {
-        | Ok(AccountEvent { kind: AccountEventKind::OrdersCancelled(cancelled),
-                            .. }) => {
+        | Ok(AccountEvent { kind: AccountEventKind::OrdersCancelled(cancelled), .. }) => {
             println!("[test_5] : Orders cancelled event received.");
             assert_eq!(cancelled.len(), 1);
             assert_eq!(cancelled[0].clone(), expected_cancelled);
@@ -277,7 +276,6 @@ async fn test_5_cancel_buy_order(client: &SandBoxClient, test_3_ids: Ids, event_
             panic!("try_recv() consumed unexpected: {:?}", other);
         }
     }
-
     let current_px = 1.0; // 与订单中的价格匹配
                           // Check AccountEvent Balance for quote currency (USDT) has available balance increase
     match event_sandbox_rx.try_recv() {
@@ -358,9 +356,9 @@ async fn test_6_open_2x_limit_buy_orders(client: &SandBoxClient, test_6_ids_1: I
         }
     }
 
-    // Check AccountEvent OrdersNew for first order
+    // Check AccountEvent OrdersOpen for first order
     match event_sandbox_rx.try_recv() {
-        | Ok(AccountEvent { kind: AccountEventKind::OrdersNew(new_orders),
+        | Ok(AccountEvent { kind: AccountEventKind::OrdersOpen(new_orders),
                             .. }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone().cid, expected_order_new_1.cid);
@@ -384,9 +382,9 @@ async fn test_6_open_2x_limit_buy_orders(client: &SandBoxClient, test_6_ids_1: I
         }
     }
 
-    // Check AccountEvent OrdersNew for second order
+    // Check AccountEvent OrdersOpen for second order
     match event_sandbox_rx.try_recv() {
-        | Ok(AccountEvent { kind: AccountEventKind::OrdersNew(new_orders),
+        | Ok(AccountEvent { kind: AccountEventKind::OrdersOpen(new_orders),
                             .. }) => {
             assert_eq!(new_orders.len(), 1);
             assert_eq!(new_orders[0].clone().cid, expected_order_new_2.cid);

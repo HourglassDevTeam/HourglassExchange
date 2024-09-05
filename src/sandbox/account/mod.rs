@@ -716,13 +716,13 @@ impl Account
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub async fn apply_open_order_changes(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExchangeError>
     {
-        println!("[UniLinkExecution] : Starting apply_open_order_changes: {:?}, with balance: {:?}", open, required_balance);
+        // println!("[UniLinkExecution] : Starting apply_open_order_changes: {:?}, with balance: {:?}", open, required_balance);
 
         // 配置从直接访问 `self.config` 获取
-        let (position_mode, position_margin_mode) = (self.config.position_direction_mode.clone(), self.config.position_margin_mode.clone());
+        let position_margin_mode= self.config.position_margin_mode.clone();
 
-        println!("[UniLinkExecution] : Retrieved position_mode: {:?}, position_margin_mode: {:?}",
-                 position_mode, position_margin_mode);
+        // println!("[UniLinkExecution] : Retrieved position_mode: {:?}, position_margin_mode: {:?}",
+        //          position_mode, position_margin_mode);
 
         // 根据 PositionMarginMode 处理余额更新
         match (open.instrument.kind, position_margin_mode) {
@@ -1392,7 +1392,10 @@ impl Account
         };
 
         // 处理取消订单后的余额更新
-        let balance_event = self.apply_cancel_order_changes(&removed_order).unwrap();
+        let balance_event = match self.apply_cancel_order_changes(&removed_order) {
+            Ok(event) => event,
+            Err(e) => return Err(e), // 如果更新余额时发生错误，返回错误
+        };
 
         // 将订单从 `Order<Open>` 转换为 `Order<Cancelled>`
         let cancelled_order = Order::from(removed_order);
@@ -1407,8 +1410,11 @@ impl Account
             kind: AccountEventKind::OrdersCancelled(vec![cancelled_order.clone()]),
         };
 
-        self.send_account_event(balance_event)?;
+        // 发送账户事件
         self.send_account_event(orders_cancelled_event)?;
+        self.send_account_event(balance_event)?;
+
+
         Ok(cancelled_order)
     }
 
