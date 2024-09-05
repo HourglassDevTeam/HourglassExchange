@@ -939,7 +939,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                         }
                     }
 
-                    // 卖单处理空头仓位
+                    // 卖单处理空头仓位 // NOTE 有问题。
                     Side::Sell => {
                         if let Some(mut long_position) = self.positions.perpetual_pos_long.get_mut(&trade.instrument) {
                             if long_position.meta.current_size >= trade.quantity {
