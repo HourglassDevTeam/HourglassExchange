@@ -125,6 +125,11 @@ pub enum ExchangeError
 
     #[error("[UniLinkExecution] : Redis Initialisation Failure: {0}")]
     RedisInitialisationError(String),
+
     #[error("[UniLinkExecution] : MarketEventChannelClosed")]
     MarketEventChannelClosed,
+
+
+    #[error("[UniLinkExecution] : InvalidLeverage")]
+    InvalidLeverage(String),
 }

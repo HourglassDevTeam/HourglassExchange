@@ -510,6 +510,106 @@ impl Account
         Ok(())
     }
 
+
+    /// 检查仓位冲突并进行方向切换或平仓  [TODO] : TO BE CHECKED
+    pub fn switch_or_close_position(&mut self, new_position: Position) -> Result<(), ExchangeError> {
+        match new_position {
+            Position::Perpetual(new_pos) => match new_pos.meta.side {
+                Side::Buy => {
+                    if let Some(mut short_position) = self.positions.perpetual_pos_short.get_mut(&new_pos.meta.instrument) {
+                        if short_position.meta.current_size >= new_pos.meta.current_size {
+                            // 部分平仓
+                            short_position.meta.current_size -= new_pos.meta.current_size;
+                            return Ok(());
+                        } else {
+                            // 完全反向并创建新的多头仓位
+                            let remaining_size = new_pos.meta.current_size - short_position.meta.current_size;
+                            self.positions.perpetual_pos_short.remove(&new_pos.meta.instrument);
+                            let mut updated_position = new_pos.clone();
+                            updated_position.meta.current_size = remaining_size;
+                            self.positions.perpetual_pos_long.insert(new_pos.meta.instrument.clone(), updated_position);
+                        }
+                    } else {
+                        // 没有空头仓位，直接插入新的多头仓位
+                        self.positions.perpetual_pos_long.insert(new_pos.meta.instrument.clone(), new_pos);
+                    }
+                }
+                Side::Sell => {
+                    if let Some(mut long_position) = self.positions.perpetual_pos_long.get_mut(&new_pos.meta.instrument) {
+                        if long_position.meta.current_size >= new_pos.meta.current_size {
+                            // 部分平仓
+                            long_position.meta.current_size -= new_pos.meta.current_size;
+                            return Ok(());
+                        } else {
+                            // 完全反向并创建新的空头仓位
+                            let remaining_size = new_pos.meta.current_size - long_position.meta.current_size;
+                            self.positions.perpetual_pos_long.remove(&new_pos.meta.instrument);
+                            let mut updated_position = new_pos.clone();
+                            updated_position.meta.current_size = remaining_size;
+                            self.positions.perpetual_pos_short.insert(new_pos.meta.instrument.clone(), updated_position);
+                        }
+                    } else {
+                        // 没有多头仓位，直接插入新的空头仓位
+                        self.positions.perpetual_pos_short.insert(new_pos.meta.instrument.clone(), new_pos);
+                    }
+                }
+            },
+            Position::Future(new_pos) => match new_pos.meta.side {
+                Side::Buy => {
+                    if let Some(mut short_position) = self.positions.futures_pos_short.get_mut(&new_pos.meta.instrument) {
+                        if short_position.meta.current_size >= new_pos.meta.current_size {
+                            // 部分平仓
+                            short_position.meta.current_size -= new_pos.meta.current_size;
+                            return Ok(());
+                        } else {
+                            // 完全反向并创建新的多头仓位
+                            let remaining_size = new_pos.meta.current_size - short_position.meta.current_size;
+                            self.positions.futures_pos_short.remove(&new_pos.meta.instrument);
+                            let mut updated_position = new_pos.clone();
+                            updated_position.meta.current_size = remaining_size;
+                            self.positions.futures_pos_long.insert(new_pos.meta.instrument.clone(), updated_position);
+                        }
+                    } else {
+                        // 没有空头仓位，直接插入新的多头仓位
+                        self.positions.futures_pos_long.insert(new_pos.meta.instrument.clone(), new_pos);
+                    }
+                }
+                Side::Sell => {
+                    if let Some(mut long_position) = self.positions.futures_pos_long.get_mut(&new_pos.meta.instrument) {
+                        if long_position.meta.current_size >= new_pos.meta.current_size {
+                            // 部分平仓
+                            long_position.meta.current_size -= new_pos.meta.current_size;
+                            return Ok(());
+                        } else {
+                            // 完全反向并创建新的空头仓位
+                            let remaining_size = new_pos.meta.current_size - long_position.meta.current_size;
+                            self.positions.futures_pos_long.remove(&new_pos.meta.instrument);
+                            let mut updated_position = new_pos.clone();
+                            updated_position.meta.current_size = remaining_size;
+                            self.positions.futures_pos_short.insert(new_pos.meta.instrument.clone(), updated_position);
+                        }
+                    } else {
+                        // 没有多头仓位，直接插入新的空头仓位
+                        self.positions.futures_pos_short.insert(new_pos.meta.instrument.clone(), new_pos);
+                    }
+                }
+            },
+            // 对于其他类型的仓位（如LeveragedToken和Option），这里可以根据需求扩展类似的逻辑
+            _ => return Err(ExchangeError::InvalidInstrument("Unsupported position type for switching or closing".into())),
+        }
+
+        Ok(())
+    }
+
+    /// 在 create_position 过程中确保仓位的杠杆率不超过账户的最大杠杆率。  [TODO] : TO BE CHECKED & APPLIED
+    pub fn enforce_leverage_limits(&self, new_position: &PerpetualPosition) -> Result<(), ExchangeError> {
+        if new_position.pos_config.leverage > self.config.account_leverage_rate {
+            Err(ExchangeError::InvalidLeverage(format!("Leverage is beyond configured rate: {}", new_position.pos_config.leverage)))
+        } else {
+            Ok(())
+        }
+    }
+
     /// FIXME 该函数没有用上。
     ///
     /// 检查在`AccountPositions`中是否已经存在该`instrument`的某个仓位
