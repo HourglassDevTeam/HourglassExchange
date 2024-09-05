@@ -1217,7 +1217,7 @@ impl Account
     /// # 返回值
     ///
     /// 返回更新后的 `TokenBalance`。
-    pub fn deposit_coin(&mut self, token: Token, amount: f64) -> Result<TokenBalance, ExchangeError>
+    pub(crate) fn deposit_coin(&mut self, token: Token, amount: f64) -> Result<TokenBalance, ExchangeError>
     {
         let mut balance = self.balances.entry(token.clone()).or_insert_with(|| {
                                                                 Balance { time: Utc::now(),
@@ -1243,7 +1243,7 @@ impl Account
     /// # 返回值
     ///
     /// 返回更新后的 `TokenBalance` 列表。
-    pub fn deposit_multiple_coins(&mut self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError>
+    pub(crate) fn deposit_multiple_coins(&mut self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError>
     {
         let mut updated_balances = Vec::new();
 
@@ -1254,6 +1254,18 @@ impl Account
 
         Ok(updated_balances)
     }
+
+
+    /// 为账户充值 `u本位` 稳定币（USDT）。 并返回充值结果。
+    pub async fn deposit_multiple_coins_and_respond(
+        &mut self,
+        deposits: Vec<(Token, f64)>,
+        response_tx: Sender<Result<Vec<TokenBalance>, ExchangeError>>
+    ) {
+        let result = self.deposit_multiple_coins(deposits);
+        respond(response_tx, result);
+    }
+
 
     /// 为账户充值 `u本位` 稳定币（USDT）。
     ///

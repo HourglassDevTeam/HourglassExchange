@@ -5,6 +5,8 @@ use tokio::sync::{mpsc, oneshot};
 
 use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrdersOpen, OpenOrders};
 
+use crate::common::instrument::Instrument;
+use crate::common::position::Position;
 use crate::{
     common::{
         balance::TokenBalance,
@@ -17,8 +19,6 @@ use crate::{
     },
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
-use crate::common::instrument::Instrument;
-use crate::common::position::Position;
 
 #[derive(Debug)]
 pub struct SandBoxClient
@@ -33,18 +33,14 @@ pub type OpenOrderResults = Vec<Result<Order<Open>, ExchangeError>>;
 pub type CancelOrderResults = Vec<Result<Order<Cancelled>, ExchangeError>>;
 pub type RequestOpenOrders = (Vec<Order<RequestOpen>>, Sender<OpenOrderResults>);
 pub type RequestCancelOrders = (Vec<Order<RequestCancel>>, Sender<CancelOrderResults>);
-
-pub type DepositResults = Vec<Result<(Token, f64), ExchangeError>>;
-pub type WithdrawalResults = Vec<Result<(Token, f64), ExchangeError>>;
+pub type DepositResults = Result<Vec<TokenBalance>, ExchangeError>;
 pub type DepositRequest = (Vec<(Token, f64)>, Sender<DepositResults>);
-pub type WithdrawalRequest = (Vec<(Token, f64)>, Sender<WithdrawalResults>);
 
 // 模拟交易所客户端可向模拟交易所发送的命令
 #[derive(Debug)]
 pub enum SandBoxClientEvent
 {
-    Deposit(DepositRequest),
-    Withdrawal(WithdrawalRequest),
+    DepositTokens(DepositRequest),
     FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExchangeError>>),
     FetchBalances(Sender<Result<Vec<TokenBalance>, ExchangeError>>),
     FetchLongPosition(Instrument,Sender<Result<Option<Position>, ExchangeError>>),
