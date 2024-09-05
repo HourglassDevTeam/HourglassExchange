@@ -282,39 +282,99 @@ impl Default for PositionMetaBuilder
 }
 
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use super::*;
     use crate::common::{
-        balance::{Balance, TokenBalance}
-        ,
-        instrument::{kind::InstrumentKind, Instrument}
-        ,
-        token::Token,
+        instrument::{kind::InstrumentKind, Instrument},
         Side,
     };
+    use crate::common::order::identification::OrderId;
+    use crate::common::trade::{ClientTrade, ClientTradeId};
+
+    /// Helper function to create a ClientTrade for testing
+    fn create_test_trade() -> ClientTrade {
+        ClientTrade {
+            timestamp: 1625247600,
+            trade_id: ClientTradeId::from(1),  // This works fine
+            order_id: OrderId::new(1625247600, 1, 1),  // Use the constructor for OrderId
+            cid: None,
+            instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
+            side: Side::Buy,
+            price: 50_000.0,
+            quantity: 1.0,
+            fees: 2.0,
+        }
+    }
 
     #[test]
-    fn test_position_meta_update_avg_price_gross()
-    {
-        let mut meta = PositionMeta { position_id: PositionId(123124124124124),
-                                      enter_ts: 1625247600,
-                                      update_ts: 1625247601,
-                                      exit_balance: TokenBalance::new(Token::from("BTC"), Balance::new(0.0, 0.0, 0.0)),
-                                      exchange: Exchange::SandBox,
-                                      instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
-                                      side: Side::Buy,
-                                      current_size: 1.0,
-                                      current_fees_total:2.0,
-                                      current_avg_price_gross: 50_000.0,
-                                      current_symbol_price: 61_000.0,
-                                      current_avg_price: 50_000.0,
-                                      unrealised_pnl: 11_000.0,
-                                      realised_pnl: 0.0 };
+    fn test_create_position_meta_from_trade() {
+        let trade = create_test_trade();
+        let position_meta = PositionMeta::from_trade(&trade, 61_000.0);
 
+        assert_eq!(position_meta.current_size, trade.quantity);
+        assert_eq!(position_meta.current_avg_price, trade.price);
+        assert_eq!(position_meta.current_symbol_price, 61_000.0);
+        assert_eq!(position_meta.current_fees_total, trade.fees);
+    }
+
+    #[test]
+    fn test_update_avg_price_gross() {
+        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0);
         meta.update_avg_price_gross(60_000.0, 1.0);
 
-        assert_eq!(meta.current_avg_price_gross, 55_000.0);
-        assert_eq!(meta.current_size, 2.0);
+        assert_eq!(meta.current_avg_price_gross, 55_000.0);  // Updated gross avg price
+        assert_eq!(meta.current_size, 2.0);  // Size should be updated
+    }
+
+    #[test]
+    fn test_update_avg_price_with_fees() {
+        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0);
+        meta.update_avg_price(60_000.0, 1.0, 2.0);  // Include additional fees
+
+        assert!(meta.current_avg_price > meta.current_avg_price_gross);  // Avg price includes fees
+        assert_eq!(meta.current_size, 2.0);  // Size should be updated
+    }
+
+    #[test]
+    fn test_update_unrealised_pnl() {
+        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0);
+        meta.update_unrealised_pnl();
+
+        assert_eq!(meta.unrealised_pnl, 11_000.0);  // Difference between current price and avg price
+    }
+
+    #[test]
+    fn test_update_realised_pnl_and_clear_position() {
+        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0);
+        meta.update_realised_pnl(55_000.0);  // Closing at 55,000
+
+        assert_eq!(meta.realised_pnl, 5_000.0);  // Realised PnL should be 5,000
+        assert_eq!(meta.current_size, 0.0);  // Position should be closed
+        assert_eq!(meta.current_avg_price, 0.0);  // Avg price reset
+        assert_eq!(meta.current_avg_price_gross, 0.0);  // Avg price gross reset
+        assert_eq!(meta.current_fees_total, 0.0);  // Fees reset
+    }
+
+    #[test]
+    fn test_update_from_trade() {
+        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0);
+        let new_trade = ClientTrade {
+            timestamp: 1625248600,
+            trade_id: ClientTradeId::from(1),  // This works fine
+            order_id: OrderId::new(1625247600, 1, 1),  // Use the constructor for OrderId
+            cid: None,
+            instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
+            side: Side::Buy,
+            price: 60_000.0,
+            quantity: 1.0,
+            fees: 2.0,
+        };
+
+        meta.update_from_trade(&new_trade, 62_000.0);
+
+        assert_eq!(meta.current_size, 2.0);  // Size should be updated
+        assert_eq!(meta.current_avg_price, 55_000.0);  // The avg price should be exactly 55,000.0
+        assert_eq!(meta.current_symbol_price, 62_000.0);  // Symbol price updated
+        assert_eq!(meta.current_fees_total, 4.0);  // Fees should accumulate
     }
 }
