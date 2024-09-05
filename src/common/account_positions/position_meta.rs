@@ -104,7 +104,7 @@ impl PositionMeta
 
         // 考虑费用后的均价更新
         if self.current_size > 0.0 {
-            self.current_avg_price = (self.current_avg_price_gross * self.current_size - self.current_fees_total) / self.current_size;
+            self.current_avg_price = (self.current_avg_price_gross * self.current_size + self.current_fees_total) / self.current_size;
         }
     }
 
