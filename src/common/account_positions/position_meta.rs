@@ -49,7 +49,7 @@ impl PositionMeta {
     }
 
     /// 创建新的 `PositionMeta` 基于 `ClientTrade`
-    pub fn from_trade(trade: &ClientTrade, exchange: Exchange, current_symbol_price: f64) -> Self {
+    pub fn from_trade(trade: &ClientTrade,  current_symbol_price: f64) -> Self {
         let position_id = PositionId::new(&trade.instrument, trade.timestamp);
 
         Self {
@@ -57,16 +57,16 @@ impl PositionMeta {
             enter_ts: trade.timestamp,
             update_ts: trade.timestamp,
             exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, 0.0)),
-            exchange,
+            exchange: Exchange::SandBox,
             instrument: trade.instrument.clone(),
             side: trade.side,
             current_size: trade.quantity,
             current_fees_total: trade.fees,
-            current_avg_price_gross: trade.price, // NOTE to be checked
+            current_avg_price_gross: trade.price,
             current_symbol_price,
-            current_avg_price: trade.price, // NOTE to be checked
-            unrealised_pnl: 0.0,  // NOTE to be checked
-            realised_pnl: 0.0, // NOTE to be checked
+            current_avg_price: trade.price,
+            unrealised_pnl: 0.0,
+            realised_pnl: 0.0,
         }
     }
 }
@@ -74,8 +74,6 @@ impl PositionMeta {
 
 impl PositionMeta
 {
-    // CONSIDER 是否应该吧close fees成本计算进去
-    // TODO double check logic of initialisation.
     fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64) {
         let total_size = self.current_size + trade_size;
 
