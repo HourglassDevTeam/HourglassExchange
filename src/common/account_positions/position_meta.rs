@@ -42,6 +42,7 @@ impl PositionMeta {
         let trade_price = trade.price;
 
         // 更新均价，不需要重新计算费用
+        // NOTE that size is implicitly added in calculate_avg_price, which could lead to misunderstanding.
         self.calculate_avg_price(trade_price, trade_size);
 
         // 更新未实现盈亏

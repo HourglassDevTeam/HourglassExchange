@@ -340,7 +340,7 @@ impl Account
     /// - 如果 `reduce only` 订单的方向与现有持仓方向相同，则拒绝该订单，并继续处理下一个订单。
     /// - 如果在 `NetMode` 下存在方向冲突，则跳过该订单并继续处理下一个订单。
     ///
-    pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExchangeError>>>)
+    pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Open>, ExchangeError>>>)
                              -> Result<(), ExchangeError>
     {
         let mut open_results = Vec::new();
@@ -354,7 +354,7 @@ impl Account
                 // 检查是否是 reduce_only 订单
                 if request.state.reduce_only {
                     // 获取当前仓位
-                    let (long_pos, short_pos) = self.get_position_bothways(&request.instrument).await?;
+                    let (long_pos, short_pos) = self.get_position_both_ways(&request.instrument).await?;
 
                     // 如果已有相同方向的仓位，则拒绝 reduce only 订单
                     match request.side {
@@ -749,7 +749,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         Ok(None) // 没有找到对应的仓位
     }
 
-    pub async fn get_position_bothways(&self, instrument: &Instrument) -> Result<(Option<Position>, Option<Position>), ExchangeError>
+    pub async fn get_position_both_ways(&self, instrument: &Instrument) -> Result<(Option<Position>, Option<Position>), ExchangeError>
     {
         let positions = &self.positions; // 获取锁
 
@@ -923,7 +923,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                     Side::Buy => {
                         if let Some(mut long_position) = self.positions.perpetual_pos_long.get_mut(&trade.instrument) {
                             // 如果已经存在多头仓位，累加仓位大小
-                            long_position.meta.current_size += trade.quantity;
+                            // long_position.meta.current_size += trade.quantity;
                             long_position.meta.update_from_trade(&trade, trade.price);
                         } else {
                             // 创建新的多头仓位
@@ -2164,11 +2164,10 @@ mod tests
             fees: 0.05,
         };
 
-        account.manage_position_from_trade(additional_trade.clone()).await.unwrap();
+        account.manage_position_from_trade(additional_trade).await.unwrap();
 
         // 检查仓位是否正确更新
-        let positions = account.positions.perpetual_pos_long;
-        let pos = positions.get(&trade.instrument).unwrap();
+        let pos = account.positions.perpetual_pos_long.get(&trade.instrument).unwrap();
         assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
     }
 
