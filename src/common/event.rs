@@ -33,7 +33,6 @@ pub enum AccountEventKind
 {
     // Order Events
     OrdersOpen(Vec<Order<Open>>),
-    OrdersNew(Vec<Order<Open>>),
     OrdersCancelled(Vec<Order<Cancelled>>),
     OrdersFilled(Vec<Order<FullyFill>>),
     OrdersPartiallyFilled(Vec<Order<PartialFill>>),
@@ -71,7 +70,7 @@ mod tests
     #[test]
     fn account_event_kind_should_serialize_and_deserialize_correctly()
     {
-        let kind = AccountEventKind::OrdersNew(vec![]);
+        let kind = AccountEventKind::OrdersOpen(vec![]);
         let serialized = serde_json::to_string(&kind).unwrap();
         let deserialized: AccountEventKind = serde_json::from_str(&serialized).unwrap();
         assert_eq!(kind, deserialized);
@@ -88,7 +87,6 @@ mod tests
     fn account_event_kind_should_handle_all_variants()
     {
         let kinds = vec![AccountEventKind::OrdersOpen(vec![]),
-                         AccountEventKind::OrdersNew(vec![]),
                          AccountEventKind::OrdersCancelled(vec![]),
                          AccountEventKind::OrdersFilled(vec![]),
                          AccountEventKind::OrdersPartiallyFilled(vec![]),

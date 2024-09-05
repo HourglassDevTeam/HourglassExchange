@@ -8,6 +8,7 @@ use crate::common::{
     },
     token::Token,
 };
+use crate::common::order::identification::OrderId;
 
 /// 执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
@@ -29,17 +30,26 @@ pub enum ExchangeError
     #[error("[UniLinkExecution] : Order with ClientOrderId not found: {0}")]
     RequestNotFound(RequestId),
 
-    /// 找不到特定客户端订单ID的订单。
-    #[error("[UniLinkExecution] : Order with ClientOrderId not found: {0}")]
-    OrderNotFound(ClientOrderId),
+    /// 找不到特定客户端订单ID的订单，并同时输出 `ClientOrderId` 和 `OrderId`（如果存在）。
+    #[error("[UniLinkExecution] : Order with ClientOrderId: {client_order_id:?}, and OrderId: {order_id:?} not found")]
+    OrderNotFound {
+        client_order_id: Option<ClientOrderId>,  // 如果存在的话，输出 `ClientOrderId`
+        order_id: Option<OrderId>,               // 如果存在的话，输出 `OrderId`
+    },
 
-    /// 由于不支持的订单类型，无法开设订单。
+
+/// 由于不支持的订单类型，无法开设订单。
     #[error("[UniLinkExecution] : Unsupported order type, unable to place order: {0}")]
     UnsupportedOrderKind(OrderInstruction),
 
     /// 网络错误，无法连接到交易所。
     #[error("[UniLinkExecution] : Network error, unable to connect to exchange: {0}")]
     NetworkError(String),
+
+
+    /// 网络错误，无法连接到交易所。
+    #[error("[UniLinkExecution] : ReponseSenderError, unable to connect to client.")]
+    ReponseSenderError,
 
     /// 超时错误，操作超时。
     #[error("[UniLinkExecution] : Operation timed out: {0}")]

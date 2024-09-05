@@ -762,23 +762,36 @@ impl Account
 
     /// 当client取消[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
-    pub fn apply_cancel_order_changes(&mut self, cancelled: &Order<Open>) -> TokenBalance
+    pub fn apply_cancel_order_changes(&mut self, cancelled: &Order<Open>) -> Result<AccountEvent, ExchangeError>
     {
-        match cancelled.side {
-            | Side::Buy => {
+        let updated_balance = match cancelled.side {
+            Side::Buy => {
                 let mut balance = self.get_balance_mut(&cancelled.instrument.quote)
-                                      .expect("[UniLinkExecution] : Balance existence checked when opening Order");
+                    .expect("[UniLinkExecution] : Balance existence checked when opening Order");
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
-                TokenBalance::new(cancelled.instrument.quote.clone(), *balance)
+                *balance
             }
-            | Side::Sell => {
+            Side::Sell => {
                 let mut balance = self.get_balance_mut(&cancelled.instrument.base)
-                                      .expect("[UniLinkExecution] : Balance existence checked when opening Order");
+                    .expect("[UniLinkExecution] : Balance existence checked when opening Order");
                 balance.available += cancelled.state.remaining_quantity();
-                TokenBalance::new(cancelled.instrument.base.clone(), *balance)
+                *balance
             }
-        }
+        };
+
+        // 根据 `Side` 确定使用 `base` 或 `quote` 作为 `Token`
+        let token = match cancelled.side {
+            Side::Buy => cancelled.instrument.quote.clone(),
+            Side::Sell => cancelled.instrument.base.clone(),
+        };
+
+        Ok(AccountEvent {
+            exchange_timestamp: self.exchange_timestamp.load(Ordering::SeqCst),
+            exchange: Exchange::SandBox,
+            kind: AccountEventKind::Balance(TokenBalance::new(token, updated_balance)),
+        })
     }
+
 
     /// 从交易中更新余额并返回 [`AccountEvent`]
     pub async fn apply_trade_changes(&mut self, trade: &ClientTrade) -> Result<AccountEvent, ExchangeError>
@@ -999,7 +1012,7 @@ impl Account
         // 验证订单的基本合法性
         Self::validate_order_instruction(order.instruction)?;
 
-        // 判断订单类型是否为 PostOnly // NOTE 注意这是没有实现 OrderBook 的情况下的丐版实现。
+        // 判断订单类型是否为 PostOnly NOTE 注意这是没有实现 OrderBook 的情况下的丐版实现。
         if order.instruction == OrderInstruction::PostOnly {
             // 使用 current_price 进行检查，确保订单不会立即撮合
             match order.side {
@@ -1041,14 +1054,15 @@ impl Account
         let balance_event = self.apply_open_order_changes(&open_order, required_balance).await?;
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
-        self.account_event_tx
-            .send(balance_event)
-            .expect("Client offline - Failed to send AccountEvent::Balance");
+        // 使用 `send_account_event` 发送余额和订单事件
+        self.send_account_event(balance_event)?;
+        let order_event = AccountEvent {
+            exchange_timestamp,
+            exchange: Exchange::SandBox,
+            kind: AccountEventKind::OrdersOpen(vec![open_order.clone()]),
+        };
 
-        self.account_event_tx
-            .send(AccountEvent { exchange_timestamp, exchange: Exchange::SandBox, kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
-            .expect("Client offline - Failed to send AccountEvent::OrdersNew");
-
+        self.send_account_event(order_event)?;
         Ok(open_order)
     }
 
@@ -1106,32 +1120,38 @@ impl Account
 
         Ok(())
     }
-
-    pub fn validate_order_request_cancel(order: &Order<RequestCancel>) -> Result<(), ExchangeError>
-    {
+    pub fn validate_order_request_cancel(order: &Order<RequestCancel>) -> Result<(), ExchangeError> {
         // 检查是否提供了有效的 OrderId 或 ClientOrderId
         if order.state.id.is_none() && order.cid.is_none() {
-            return Err(ExchangeError::InvalidRequestCancel("Both OrderId and ClientOrderId are missing".into()));
+            return Err(ExchangeError::InvalidRequestCancel(
+                "Both OrderId and ClientOrderId are missing".into(),
+            ));
         }
 
-        // 如果提供了 OrderId，则检查其是否有效 FIXME 根据雪花算法的规则完善验证
+        // 如果提供了 OrderId，则检查其是否有效
         if let Some(id) = &order.state.id {
             if id.value() == 0 {
-                return Err(ExchangeError::InvalidRequestCancel("OrderId is missing or invalid".into()));
+                return Err(ExchangeError::InvalidRequestCancel(
+                    "OrderId is missing or invalid".into(),
+                ));
             }
         }
 
-        // 如果提供了 ClientOrderId， FIXME 根据正则表达式规则完善验证
+        // 如果提供了 ClientOrderId，则验证其格式是否有效
         if let Some(cid) = &order.cid {
-            // 在此处添加自定义的 ClientOrderId 有效性检查逻辑
-            if cid.0.is_empty() || cid.0.len() < 5 {
-                return Err(ExchangeError::InvalidRequestCancel("ClientOrderId is missing or invalid".into()));
+            // 使用 `validate_id_format` 方法验证 ClientOrderId 格式
+            if !ClientOrderId::validate_id_format(&cid.0) {
+                return Err(ExchangeError::InvalidRequestCancel(
+                    format!("Invalid ClientOrderId format: {}", cid.0),
+                ));
             }
         }
 
         // 检查基础货币和报价货币是否相同
         if order.instrument.base == order.instrument.quote {
-            return Err(ExchangeError::InvalidRequestCancel("Base and Quote tokens must be different".into()));
+            return Err(ExchangeError::InvalidRequestCancel(
+                "Base and Quote tokens must be different".into(),
+            ));
         }
 
         Ok(())
@@ -1216,45 +1236,66 @@ impl Account
         trades
     }
 
-    fn fees_percent(&self, kind: &InstrumentKind, role: &OrderRole) -> Option<f64>
+    /// 根据金融工具类型和订单角色返回相应的手续费百分比。
+    ///
+    /// # 参数
+    ///
+    /// * `kind` - 表示金融工具的种类，如 `Spot` 或 `Perpetual`。
+    /// * `role` - 表示订单的角色，如 `Maker` 或 `Taker`。
+    ///
+    /// # 返回值
+    ///
+    /// * `Option<f64>` - 返回适用于指定金融工具类型和订单角色的手续费百分比。
+    ///     - `Some(f64)` - 如果手续费配置存在，则返回对应的 `maker_fees` 或 `taker_fees`。
+    ///     - `None` - 如果手续费配置不存在或金融工具类型不受支持，返回 `None`。
+    ///
+    /// # 注意事项
+    ///
+    /// * 目前只支持 `Spot` 和 `Perpetual` 类型的金融工具。
+    /// * 如果传入的 `InstrumentKind` 不受支持，函数会记录一个警告并返回 `None`。
+    fn fees_percent(&self, instrument_kind: &InstrumentKind, order_role: &OrderRole) -> Option<f64>
     {
-        let commission_rates = &self.config.fees_book.get(kind)?;
+        let commission_rates = &self.config.fees_book.get(instrument_kind)?;
 
-        match kind {
-            | InstrumentKind::Spot | InstrumentKind::Perpetual => match role {
+        match instrument_kind {
+            | InstrumentKind::Spot | InstrumentKind::Perpetual => match order_role {
                 | OrderRole::Maker => Some(commission_rates.maker_fees),
                 | OrderRole::Taker => Some(commission_rates.taker_fees),
             },
             | _ => {
-                warn!("Unsupported InstrumentKind: {:?}", kind);
+                warn!("Unsupported InstrumentKind: {:?}", instrument_kind);
                 None
             }
         }
     }
 
-    // async fn get_orders_for_instrument(&self, instrument: &Instrument) -> Option<InstrumentOrders>
-    // {
-    //     // 获取 orders_lock 并在 match 之前完成对它的操作
-    //     let orders_result = {
-    //         let orders_lock = self.orders.write().await;
-    //         orders_lock.get_ins_orders_mut(instrument).map(|orders| orders.to_owned())
-    //     };
-    //
-    //     match orders_result {
-    //         | Ok(orders) => Some(orders),
-    //         | Err(error) => {
-    //             warn!(?error, %instrument, "Failed to match orders for unrecognized Instrument");
-    //             None
-    //         }
-    //     }
-    // }
 
-    async fn process_trades(&mut self, trades: Vec<ClientTrade>)
+    /// 处理客户端交易列表并更新账户余额及交易事件。
+    ///
+    /// 该方法接收多个 `ClientTrade` 实例，并依次处理每笔交易：
+    ///
+    /// 1. 更新账户的相关余额信息。
+    /// 2. 发送交易事件 `AccountEventKind::Trade`。
+    /// 3. 发送余额更新事件 `AccountEventKind::Balance`。
+    ///
+    /// # 参数
+    ///
+    /// * `client_trades` - 一个包含多个 `ClientTrade` 实例的向量，表示客户端生成的交易记录。
+    ///
+    /// # 错误处理
+    ///
+    /// * 如果在应用交易变化时发生错误，会记录警告日志并继续处理下一笔交易。
+    /// * 如果发送交易事件或余额事件失败，也会记录警告日志。
+    ///
+    /// # 注意事项
+    ///
+    /// * 当 `client_trades` 为空时，该方法不会执行任何操作。
+    async fn process_trades(&mut self, client_trades: Vec<ClientTrade>)
     {
-        if !trades.is_empty() {
+        if !client_trades.is_empty() {
             let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
-            for trade in trades {
+            for trade in client_trades {
                 // 直接调用 `self.apply_trade_changes` 来处理余额更新
                 let balance_event = match self.apply_trade_changes(&trade).await {
                     | Ok(event) => event,
@@ -1296,80 +1337,113 @@ impl Account
         response_tx.send(cancel_results).unwrap_or(());
     }
 
+
+    /// 原子性取消订单并更新相关的账户状态。
+    ///
+    /// 该方法尝试以原子操作的方式取消一个指定的订单，确保在取消订单后更新账户余额，并发送取消事件和余额更新事件。
+    ///
+    /// # 参数
+    ///
+    /// * `request` - 一个 `Order<RequestCancel>` 实例，表示客户端发送的订单取消请求。
+    ///
+    /// # 逻辑
+    ///
+    /// 1. 验证取消请求的合法性（例如是否提供了有效的 `OrderId` 或 `ClientOrderId`）。
+    /// 2. 使用读锁查找订单是否存在，确保最小化锁的持有时间。
+    /// 3. 根据订单方向（买或卖），查找并移除订单。
+    /// 4. 在移除订单后，更新相关余额并生成余额事件。
+    /// 5. 将 `Order<Open>` 转换为 `Order<Cancelled>`，并生成取消事件。
+    /// 6. 发送账户事件，包括取消订单事件和余额更新事件。
+    ///
+    /// # 返回值
+    ///
+    /// * 成功取消订单后，返回 `Order<Cancelled>`。
+    /// * 如果订单不存在，返回 `ExchangeError::OrderNotFound` 错误。
+    ///
+    /// # 错误处理
+    ///
+    /// * 如果订单验证失败或订单不存在，返回相应的 `ExchangeError`。
+    /// * 如果事件发送失败（如客户端离线），记录警告日志。
+    ///
+    /// # 锁机制
+    ///
+    /// * 在查找和移除订单时，使用读锁以减少写锁的持有时间，避免阻塞其他操作。
     pub async fn atomic_cancel(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExchangeError>
     {
+        // 首先验证取消请求的合法性
         Self::validate_order_request_cancel(&request)?;
-        println!("[Atomic cancel] : {:?}", request);
 
-        // 首先使用读锁来查找并验证订单是否存在，同时减少写锁的持有时
+        // 使用读锁来获取订单，减少锁的持有时间
         let removed_order = {
             let orders_guard = self.orders.read().await;
             let mut orders = orders_guard.get_ins_orders_mut(&request.instrument)?;
 
-            // 根据 `id` 或 `cid` 查找并移除订单
+            // 根据订单方向（买/卖）处理相应的订单集
             match request.side {
-                | Side::Buy => {
-                    let index = orders.bids
-                                      .par_iter()
-                                      .position_any(|bid| {
-                                          // 匹配 `OrderId` 或 `ClientOrderId`
-                                          bid.state.id == request.state.id.clone().unwrap() || bid.cid == request.cid
-                                      })
-                                      .ok_or_else(|| {
-                                          if let Some(cid) = &request.cid {
-                                              ExchangeError::OrderNotFound(cid.clone())
-                                          // 注意 ExchangeError::OrderNotFound 应该同时输出 `ClientOrderId`和 `OrderId`的值。
-                                          }
-                                          else {
-                                              ExchangeError::OrderNotFound(ClientOrderId("Unknown".into()))
-                                          }
-                                      })?;
+                Side::Buy => {
+                    let index = Self::find_matching_order(&orders.bids, &request)?;
                     orders.bids.remove(index)
                 }
-                | Side::Sell => {
-                    let index = orders.asks
-                                      .par_iter()
-                                      .position_any(|ask| {
-                                          // 匹配 `OrderId` 或 `ClientOrderId`
-                                          ask.state.id == request.state.id.clone().unwrap() || ask.cid == request.cid
-                                      })
-                                      .ok_or_else(|| {
-                                          if let Some(cid) = &request.cid {
-                                              ExchangeError::OrderNotFound(cid.clone())
-                                          // 注意 ExchangeError::OrderNotFound 应该同时输出 `ClientOrderId`和 `OrderId`的值。
-                                          }
-                                          else {
-                                              ExchangeError::OrderNotFound(ClientOrderId("Unknown".into()))
-                                          }
-                                      })?;
+                Side::Sell => {
+                    let index = Self::find_matching_order(&orders.asks, &request)?;
                     orders.asks.remove(index)
                 }
             }
         };
 
-        // 处理余额更新（不需要持有订单写锁）
-        let balance_event = self.apply_cancel_order_changes(&removed_order);
+        // 处理取消订单后的余额更新
+        let balance_event = self.apply_cancel_order_changes(&removed_order).unwrap();
 
-        // 将 Order<Open> 映射到 Order<Cancelled>
-        let cancelled = Order::from(removed_order);
+        // 将订单从 `Order<Open>` 转换为 `Order<Cancelled>`
+        let cancelled_order = Order::from(removed_order);
 
-        // 获取当前的 exchange_timestamp
+        // 获取当前的交易所时间戳
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
-        // 发送 AccountEvents 给客户端（不需要持有订单写锁）
-        self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::OrdersCancelled(vec![cancelled.clone()]) })
-            .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::OrdersCancelled");
+        // 发送订单取消事件
+        let orders_cancelled_event = AccountEvent {
+            exchange_timestamp,
+            exchange: Exchange::SandBox,
+            kind: AccountEventKind::OrdersCancelled(vec![cancelled_order.clone()]),
+        };
 
-        self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::Balance(balance_event) })
-            .expect("[UniLinkExecution] : Client is offline - failed to send AccountEvent::Balance");
+        self.send_account_event(balance_event)?;
+        self.send_account_event(orders_cancelled_event)?;
+        Ok(cancelled_order)
+    }
 
-        Ok(cancelled)
+
+    /// 查找匹配的订单，根据 `OrderId` 和 `ClientOrderId` 匹配。
+    fn find_matching_order(orders: &[Order<Open>], request: &Order<RequestCancel>) -> Result<usize, ExchangeError> {
+        orders.par_iter()
+            .position_any(|order| Self::order_ids_check(order, request))
+            .ok_or_else(|| ExchangeError::OrderNotFound {
+                client_order_id: request.cid.clone(),
+                order_id: request.state.id.clone(),
+            })
+    }
+
+    /// 判断订单是否匹配，根据 `OrderId` 或 `ClientOrderId` 进行匹配。
+    fn order_ids_check(order: &Order<Open>, request: &Order<RequestCancel>) -> bool {
+        let id_match = match &request.state.id {
+            Some(req_id) => &order.state.id == req_id, // 直接比较 `OrderId`
+            None => false,
+        };
+
+        let cid_match = match (&order.cid, &request.cid) {
+            (Some(order_cid), Some(req_cid)) => order_cid == req_cid, // 比较 `ClientOrderId`
+            _ => false,
+        };
+
+        // 如果有 `OrderId` 或 `ClientOrderId` 匹配，说明订单匹配
+        id_match || cid_match
+    }
+
+    /// 发送账户事件给客户端。
+    fn send_account_event(&self, account_event: AccountEvent) -> Result<(), ExchangeError> {
+        self.account_event_tx
+            .send(account_event)
+            .map_err(|_| ExchangeError::ReponseSenderError)
     }
 
     pub async fn cancel_orders_all(&mut self, response_tx: Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>)
@@ -1713,28 +1787,35 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_apply_cancel_order_changes()
-    {
+    async fn test_apply_cancel_order_changes() {
         let mut account = create_test_account().await;
 
-        let order = Order { instruction: OrderInstruction::Limit,
-                            exchange: Exchange::SandBox,
-                            instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
-                            timestamp: 1625247600000,
-                            cid: Some(ClientOrderId("validCID123".into())),
-                            side: Side::Buy,
-                            state: Open { id: OrderId::new(0, 0, 0),
-
-                                          price: 100.0,
-                                          size: 2.0,
-                                          filled_quantity: 0.0,
-                                          order_role: OrderRole::Maker } };
+        let order = Order {
+            instruction: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
+            timestamp: 1625247600000,
+            cid: Some(ClientOrderId("validCID123".into())),
+            side: Side::Buy,
+            state: Open {
+                id: OrderId::new(0, 0, 0),
+                price: 100.0,
+                size: 2.0,
+                filled_quantity: 0.0,
+                order_role: OrderRole::Maker,
+            },
+        };
 
         let balance_before = account.get_balance(&Token::from("USDT")).unwrap().available;
-        let token_balance = account.apply_cancel_order_changes(&order);
+        let account_event = account.apply_cancel_order_changes(&order).unwrap();
 
-        // 验证余额是否已更新
-        assert_eq!(token_balance.balance.available, balance_before + 200.0);
+        // 从 AccountEvent 提取 TokenBalance
+        if let AccountEventKind::Balance(token_balance) = account_event.kind {
+            // 验证余额是否已更新
+            assert_eq!(token_balance.balance.available, balance_before + 200.0);
+        } else {
+            panic!("Expected AccountEventKind::Balance");
+        }
     }
 
     #[tokio::test]
@@ -1973,9 +2054,10 @@ mod tests
                                              side: Side::Buy,
                                              state: RequestCancel { id: Some(OrderId(99999)) } /* 无效的OrderId */ };
 
-        let result = account.atomic_cancel(invalid_cancel_request).await;
+        let result = account.atomic_cancel(invalid_cancel_request.clone()).await;
+        // println!("Result: {:?}", result);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ExchangeError::OrderNotFound(ClientOrderId("validCID123".into())));
+        assert_eq!(result.unwrap_err(), ExchangeError::OrderNotFound { client_order_id: invalid_cancel_request.cid.clone(), order_id: Some(OrderId(99999)) });
     }
     #[tokio::test]
     async fn test_deposit_u_base()
