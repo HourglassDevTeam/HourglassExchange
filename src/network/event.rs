@@ -108,7 +108,7 @@ impl NetworkEvent
             }
             | "FetchBalances" => {
                 let (response_tx, _response_rx) = oneshot::channel();
-                Ok(SandBoxClientEvent::FetchBalances(response_tx))
+                Ok(SandBoxClientEvent::FetchTokenBalances(response_tx))
             }
             | "OpenOrders" => {
                 // 解析 payload 为 Vec<Order<RequestOpen>> 类型

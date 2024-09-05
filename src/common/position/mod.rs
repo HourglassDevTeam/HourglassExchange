@@ -20,8 +20,7 @@ use crate::{
 };
 use chrono::Utc;
 use dashmap::DashMap;
-use serde::ser::SerializeStruct;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 
 pub mod future;
@@ -46,16 +45,15 @@ pub struct AccountPositions
     pub option_pos_short_put: DashMap<Instrument, OptionPosition>,
 }
 
-impl Serialize for AccountPositions {
+impl Serialize for AccountPositions
+{
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+        where S: Serializer
     {
         // Helper function to convert DashMap to HashMap
         fn to_map<K, V>(positions: &DashMap<K, V>) -> HashMap<K, V>
-        where
-            K: Clone + Eq + std::hash::Hash,
-            V: Clone,
+            where K: Clone + Eq + std::hash::Hash,
+                  V: Clone
         {
             positions.iter().map(|r| (r.key().clone(), r.value().clone())).collect()
         }

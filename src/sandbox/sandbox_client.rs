@@ -3,7 +3,7 @@ use mpsc::UnboundedSender;
 use oneshot::Sender;
 use tokio::sync::{mpsc, oneshot};
 
-use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrdersOpen, OpenOrders};
+use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchOrdersOpen, FetchTokenBalances, OpenOrders};
 
 use crate::{
     common::{
@@ -41,7 +41,8 @@ pub enum SandBoxClientEvent
 {
     DepositTokens(DepositRequest),
     FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExchangeError>>),
-    FetchBalances(Sender<Result<Vec<TokenBalance>, ExchangeError>>),
+    FetchTokenBalances(Sender<Result<Vec<TokenBalance>, ExchangeError>>),
+    FetchTokenBalance(Token, Sender<Result<TokenBalance, ExchangeError>>),
     FetchLongPosition(Instrument, Sender<Result<Option<Position>, ExchangeError>>),
     FetchShortPosition(Instrument, Sender<Result<Option<Position>, ExchangeError>>),
     FetchAllPositions(Sender<Result<AccountPositions, ExchangeError>>),
@@ -53,9 +54,9 @@ pub enum SandBoxClientEvent
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    const CLIENT_KIND: Exchange = Exchange::SandBox;
-
     type Config = UnboundedSender<SandBoxClientEvent>;
+
+    const CLIENT_KIND: Exchange = Exchange::SandBox;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {
@@ -83,7 +84,7 @@ impl ClientExecution for SandBoxClient
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送获取账户余额的请求。
         self.request_tx
-            .send(FetchBalances(response_tx))
+            .send(FetchTokenBalances(response_tx))
             .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to send FetchBalances request");
         // 从模拟交易所接收账户余额的响应。
         response_rx.await

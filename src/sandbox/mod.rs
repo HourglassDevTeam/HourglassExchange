@@ -94,7 +94,8 @@ impl SandBoxExchange
         while let Some(event) = self.event_sandbox_rx.recv().await {
             match event {
                 | SandBoxClientEvent::FetchOrdersOpen(response_tx) => self.account.lock().await.fetch_orders_open_and_respond(response_tx).await,
-                | SandBoxClientEvent::FetchBalances(response_tx) => self.account.lock().await.fetch_token_balances_and_respond(response_tx).await,
+                | SandBoxClientEvent::FetchTokenBalance(token, response_tx) => self.account.lock().await.fetch_token_balance_and_respond(&token, response_tx).await,
+                | SandBoxClientEvent::FetchTokenBalances(response_tx) => self.account.lock().await.fetch_token_balances_and_respond(response_tx).await,
                 | SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => self.account.lock().await.open_orders(open_requests, response_tx).await.expect("Failed to open."),
                 | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.lock().await.cancel_orders(cancel_requests, response_tx).await,
                 | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.lock().await.cancel_orders_all(response_tx).await,
