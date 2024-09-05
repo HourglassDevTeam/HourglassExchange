@@ -21,7 +21,6 @@ use crate::{
 use chrono::Utc;
 use dashmap::DashMap;
 use serde::ser::SerializeStruct;
-/// FIXME  : code below needs to be restructured and fitted to the framework. need to provide enums?
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 
@@ -35,7 +34,7 @@ pub mod position_meta;
 #[derive(Clone, Debug)]
 pub struct AccountPositions
 {
-    pub margin_pos_long: DashMap<Instrument, LeveragedTokenPosition>, // NOTE useless in backtest
+    pub margin_pos_long: DashMap<Instrument, LeveragedTokenPosition>,
     pub margin_pos_short: DashMap<Instrument, LeveragedTokenPosition>,
     pub perpetual_pos_long: DashMap<Instrument, PerpetualPosition>,
     pub perpetual_pos_short: DashMap<Instrument, PerpetualPosition>,
@@ -47,33 +46,32 @@ pub struct AccountPositions
     pub option_pos_short_put: DashMap<Instrument, OptionPosition>,
 }
 
-impl Serialize for AccountPositions
-{
+impl Serialize for AccountPositions {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
+    where
+        S: Serializer,
     {
-        let margin_pos_long: HashMap<_, _> = self.margin_pos_long.iter().map(|r| (r.key().clone(), r.value().clone())).collect();
-        let margin_pos_short: HashMap<_, _> = self.margin_pos_short.iter().map(|r| (r.key().clone(), r.value().clone())).collect();
-        let perpetual_pos_long: HashMap<_, _> = self.perpetual_pos_long.iter().map(|r| (r.key().clone(), r.value().clone())).collect();
-        let perpetual_pos_short: HashMap<_, _> = self.perpetual_pos_short.iter().map(|r| (r.key().clone(), r.value().clone())).collect();
-        let futures_pos_long: HashMap<_, _> = self.futures_pos_long.iter().map(|r| (r.key().clone(), r.value().clone())).collect();
-        let futures_pos_short: HashMap<_, _> = self.futures_pos_short.iter().map(|r| (r.key().clone(), r.value().clone())).collect();
-        let option_pos_long_call: HashMap<_, _> = self.option_pos_long_call.iter().map(|r| (r.key().clone(), r.value().clone())).collect();
-        let option_pos_long_put: HashMap<_, _> = self.option_pos_long_put.iter().map(|r| (r.key().clone(), r.value().clone())).collect();
-        let option_pos_short_call: HashMap<_, _> = self.option_pos_short_call.iter().map(|r| (r.key().clone(), r.value().clone())).collect();
-        let option_pos_short_put: HashMap<_, _> = self.option_pos_short_put.iter().map(|r| (r.key().clone(), r.value().clone())).collect();
+        // Helper function to convert DashMap to HashMap
+        fn to_map<K, V>(positions: &DashMap<K, V>) -> HashMap<K, V>
+        where
+            K: Clone + Eq + std::hash::Hash,
+            V: Clone,
+        {
+            positions.iter().map(|r| (r.key().clone(), r.value().clone())).collect()
+        }
 
+        // Serialize all fields
         let mut state = serializer.serialize_struct("AccountPositions", 10)?;
-        state.serialize_field("margin_pos_long", &margin_pos_long)?;
-        state.serialize_field("margin_pos_short", &margin_pos_short)?;
-        state.serialize_field("perpetual_pos_long", &perpetual_pos_long)?;
-        state.serialize_field("perpetual_pos_short", &perpetual_pos_short)?;
-        state.serialize_field("futures_pos_long", &futures_pos_long)?;
-        state.serialize_field("futures_pos_short", &futures_pos_short)?;
-        state.serialize_field("option_pos_long_call", &option_pos_long_call)?;
-        state.serialize_field("option_pos_long_put", &option_pos_long_put)?;
-        state.serialize_field("option_pos_short_call", &option_pos_short_call)?;
-        state.serialize_field("option_pos_short_put", &option_pos_short_put)?;
+        state.serialize_field("margin_pos_long", &to_map(&self.margin_pos_long))?;
+        state.serialize_field("margin_pos_short", &to_map(&self.margin_pos_short))?;
+        state.serialize_field("perpetual_pos_long", &to_map(&self.perpetual_pos_long))?;
+        state.serialize_field("perpetual_pos_short", &to_map(&self.perpetual_pos_short))?;
+        state.serialize_field("futures_pos_long", &to_map(&self.futures_pos_long))?;
+        state.serialize_field("futures_pos_short", &to_map(&self.futures_pos_short))?;
+        state.serialize_field("option_pos_long_call", &to_map(&self.option_pos_long_call))?;
+        state.serialize_field("option_pos_long_put", &to_map(&self.option_pos_long_put))?;
+        state.serialize_field("option_pos_short_call", &to_map(&self.option_pos_short_call))?;
+        state.serialize_field("option_pos_short_put", &to_map(&self.option_pos_short_put))?;
         state.end()
     }
 }
@@ -334,7 +332,6 @@ impl AccountPositions
     }
 }
 
-/// NOTE : PositionMode 枚举定义了两种交易方向模式：
 ///  [NetMode] : 单向模式。在这种模式下，用户只能持有一个方向的仓位（多头或空头），而不能同时持有两个方向的仓位。
 ///  [LongShortMode] : 双向模式。在这种模式下，用户可以同时持有多头和空头仓位。这在一些复杂的交易策略中可能会有用，例如对冲策略。
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -344,8 +341,6 @@ pub enum PositionDirectionMode
     NetMode,       // Note one side per token per position
 }
 
-///  NOTE : PositionMarginMode has defined two modes of margin consumption.
-///
 ///  [Cross]: 交叉保证金模式。在这种模式下，所有仓位共享一个保证金池，盈亏共用。如果仓位的保证金不足，将从账户余额中提取以补充不足。
 ///  [Isolated]: 逐仓保证金模式。在这种模式下，每个仓位都有独立的保证金，盈亏互不影响。如果某个仓位的保证金不足，该仓位将被强制平仓，而不会影响到其他仓位。
 
