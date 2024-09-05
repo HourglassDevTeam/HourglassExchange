@@ -20,6 +20,10 @@ pub struct AccountConfig
     pub account_leverage_rate: f64,
     pub fees_book: HashMap<InstrumentKind, CommissionRates>,
     pub execution_mode: SandboxMode,
+    // pub stop_loss_threshold: Option<f64>,    // 止损阈值，用于设置当资产价格向不利方向移动并达到该阈值时，自动平仓以避免进一步损失。
+    // pub take_profit_threshold: Option<f64>,  // 止盈阈值，用于在市场价格达到一定盈利目标时自动平仓以锁定利润。
+    // pub trailing_stop_loss: Option<f64>,   // 跟踪止损，用于动态调整止损价格，跟随市场价格的波动来保护盈利。当价格向有利方向移动时，止损价格也相应调整；当价格逆向移动时，止损触发。
+    // pub trailing_take_profit: Option<f64>,  // 跟踪止盈，与 trailing_stop_loss 类似，但它是在价格达到某个盈利水平后，动态设置止盈点以保证在价格下跌前锁定更多利润。
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

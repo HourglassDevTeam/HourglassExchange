@@ -98,13 +98,16 @@ impl SandBoxExchange
                 | SandBoxClientEvent::OpenOrders((open_requests, response_tx)) => self.account.lock().await.open_orders(open_requests, response_tx).await.expect("Failed to open."),
                 | SandBoxClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.lock().await.cancel_orders(cancel_requests, response_tx).await,
                 | SandBoxClientEvent::CancelOrdersAll(response_tx) => self.account.lock().await.cancel_orders_all(response_tx).await,
-                | SandBoxClientEvent::CalculateAllPositions(response_tx) => self.account.lock().await.fetch_positions_and_respond(response_tx).await,
+                | SandBoxClientEvent::FetchAllPositions(response_tx) => self.account.lock().await.fetch_positions_and_respond(response_tx).await,
+                | SandBoxClientEvent::FetchLongPosition(instrument,response_tx) => self.account.lock().await.fetch_long_position_and_respond(&instrument,response_tx).await,
+                | SandBoxClientEvent::FetchShortPosition(instrument,response_tx) => self.account.lock().await.fetch_short_position_and_respond(&instrument,response_tx).await,
                 | SandBoxClientEvent::Deposit(_) => {
                     todo!()
                 } // FIXME Implement deposit
                 | SandBoxClientEvent::Withdrawal(_) => {
                     todo!()
                 } // FIXME Implement withdrawal
+
             }
         }
     }

@@ -182,6 +182,18 @@ impl Account
         respond(response_tx, Ok(positions));
     }
 
+    pub async fn fetch_long_position_and_respond(&self, instrument: &Instrument, response_tx: Sender<Result<Option<Position>, ExchangeError>>)
+    {
+        let position = self.get_position_long(instrument).await.unwrap();
+        respond(response_tx, Ok(position));
+    }
+
+    pub async fn fetch_short_position_and_respond(&self, instrument: &Instrument, response_tx: Sender<Result<Option<Position>, ExchangeError>>)
+    {
+        let position = self.get_position_short(instrument).await.unwrap();
+        respond(response_tx, Ok(position));
+    }
+
     /// 获取指定 `Instrument` 的多头仓位
     pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>
     {

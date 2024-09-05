@@ -17,6 +17,8 @@ use crate::{
     },
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
+use crate::common::instrument::Instrument;
+use crate::common::position::Position;
 
 #[derive(Debug)]
 pub struct SandBoxClient
@@ -45,7 +47,9 @@ pub enum SandBoxClientEvent
     Withdrawal(WithdrawalRequest),
     FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExchangeError>>),
     FetchBalances(Sender<Result<Vec<TokenBalance>, ExchangeError>>),
-    CalculateAllPositions(Sender<Result<AccountPositions, ExchangeError>>),
+    FetchLongPosition(Instrument,Sender<Result<Option<Position>, ExchangeError>>),
+    FetchShortPosition(Instrument,Sender<Result<Option<Position>, ExchangeError>>),
+    FetchAllPositions(Sender<Result<AccountPositions, ExchangeError>>),
     OpenOrders(RequestOpenOrders),
     CancelOrders(RequestCancelOrders),
     CancelOrdersAll(Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>),
@@ -54,9 +58,9 @@ pub enum SandBoxClientEvent
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    type Config = UnboundedSender<SandBoxClientEvent>;
-
     const CLIENT_KIND: Exchange = Exchange::SandBox;
+
+    type Config = UnboundedSender<SandBoxClientEvent>;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {
@@ -128,6 +132,7 @@ impl ClientExecution for SandBoxClient
                    .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive CancelOrdersAll response")
     }
 }
+
 #[cfg(test)]
 mod tests
 {
