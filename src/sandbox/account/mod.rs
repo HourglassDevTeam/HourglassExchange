@@ -922,8 +922,6 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                     // 买单处理多头仓位
                     Side::Buy => {
                         if let Some(mut long_position) = self.positions.perpetual_pos_long.get_mut(&trade.instrument) {
-                            // 如果已经存在多头仓位，累加仓位大小
-                            // long_position.meta.current_size += trade.quantity;
                             long_position.meta.update_from_trade(&trade, trade.price);
                         } else {
                             // 创建新的多头仓位
@@ -2123,7 +2121,6 @@ mod tests
         assert_eq!(pos.meta.current_size, 5.0);
     }
 
-
     #[tokio::test]
     async fn test_update_existing_long_position() {
         let mut account = create_test_account().await;
@@ -2219,5 +2216,80 @@ mod tests
         let pos = positions.get(&trade.instrument).unwrap();
         assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位
     }
+
+    #[tokio::test]
+    async fn test_close_long_position_completely() {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade {
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Buy,
+            price: 100.0,
+            quantity: 10.0,
+            fees: 0.1,
+        };
+
+        // 创建一个多头仓位
+        account.manage_position_from_trade(trade.clone()).await.unwrap();
+
+        // 完全平仓
+        let closing_trade = ClientTrade {
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Sell,
+            price: 100.0,
+            quantity: 10.0,
+            fees: 0.1,
+        };
+
+        account.manage_position_from_trade(closing_trade.clone()).await.unwrap();
+
+        // 检查仓位是否已被完全移除
+        let positions = account.positions.perpetual_pos_long;
+        println!("positions: {:#?}", positions);
+        assert!(!positions.contains_key(&trade.instrument)); // current_size == 0 but not removed from AccountPositions.
+    }
+
+
+    #[tokio::test]
+    async fn test_unsupported_instrument_kind() {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade {
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument {
+                base: Token("RRR".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Spot, // Spot Position is either not developed or not supported.
+            },
+            side: Side::Sell,
+            price: 100.0,
+            quantity: 10.0,
+            fees: 0.1,
+        };
+
+        // 执行管理仓位逻辑，应该返回错误
+        let result = account.manage_position_from_trade(trade.clone()).await;
+        assert!(result.is_err());
+    }
+
 
 }
