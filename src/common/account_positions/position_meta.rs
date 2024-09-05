@@ -94,7 +94,7 @@ impl PositionMeta
     }
 
     /// 更新 current_avg_price，同时考虑费用
-    pub fn update_avg_price(&mut self, trade_price: f64, trade_size: f64, trade_fees: f64)
+    pub fn update_avg_price_and_fees(&mut self, trade_price: f64, trade_size: f64, trade_fees: f64)
     {
         // 计算总费用（直接从 `ClientTrade` 中获取）
         self.current_fees_total += trade_fees;
@@ -104,7 +104,7 @@ impl PositionMeta
 
         // 考虑费用后的均价更新
         if self.current_size > 0.0 {
-            self.current_avg_price = (self.current_avg_price_gross * self.current_size + self.current_fees_total) / self.current_size;
+            self.current_avg_price = (self.current_avg_price_gross * self.current_size - self.current_fees_total) / self.current_size;
         }
     }
 
@@ -329,7 +329,7 @@ mod tests {
     #[test]
     fn test_update_avg_price_with_fees() {
         let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0);
-        meta.update_avg_price(60_000.0, 1.0, 2.0);  // Include additional fees
+        meta.update_avg_price_and_fees(60_000.0, 1.0, 2.0);  // Include additional fees
 
         assert!(meta.current_avg_price > meta.current_avg_price_gross);  // Avg price includes fees
         assert_eq!(meta.current_size, 2.0);  // Size should be updated
