@@ -129,7 +129,9 @@ pub enum ExchangeError
     #[error("[UniLinkExecution] : MarketEventChannelClosed")]
     MarketEventChannelClosed,
 
-
     #[error("[UniLinkExecution] : InvalidLeverage")]
     InvalidLeverage(String),
+
+    #[error("[UniLinkExecution] : PostOnlyViolation")]
+    PostOnlyViolation(String),
 }

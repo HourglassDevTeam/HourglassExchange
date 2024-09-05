@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common::{balance::TokenBalance, friction::Fees, instrument::Instrument, order::OrderRole, account_positions::position_id::PositionId, Side},
+    common::{account_positions::position_id::PositionId, balance::TokenBalance, friction::Fees, instrument::Instrument, order::OrderRole, Side},
     Exchange,
 };
 

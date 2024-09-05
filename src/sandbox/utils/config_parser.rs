@@ -53,8 +53,8 @@ mod tests
     use super::*;
     use crate::{
         common::{
-            instrument::kind::InstrumentKind,
             account_positions::{PositionDirectionMode, PositionMarginMode},
+            instrument::kind::InstrumentKind,
         },
         sandbox::account::account_config::{CommissionLevel, CommissionRates, MarginMode},
     };

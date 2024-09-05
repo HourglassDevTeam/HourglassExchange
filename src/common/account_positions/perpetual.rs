@@ -114,10 +114,10 @@ mod tests
     use super::*;
     use crate::{
         common::{
+            account_positions::{position_id::PositionId, PositionDirectionMode, PositionMarginMode},
             balance::{Balance, TokenBalance},
             friction::{Fees, SpotFees},
             instrument::{kind::InstrumentKind, Instrument},
-            account_positions::{position_id::PositionId, PositionDirectionMode, PositionMarginMode},
             token::Token,
             Side,
         },

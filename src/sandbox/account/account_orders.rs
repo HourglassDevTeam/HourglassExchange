@@ -284,6 +284,8 @@ impl AccountOrders
         }
     }
 
+
+    /// FIXME 这个逻辑提前到了 open_orders 中。所以可能产生重复。
     /// 判断 PostOnly 订单是否符合条件，并确定其是 Maker 还是被拒绝。
     ///
     /// 如果订单不符合 PostOnly 的条件（即买单价格低于当前市场价格，或卖单价格高于当前市场价格），
@@ -318,7 +320,7 @@ impl AccountOrders
                     Ok(OrderRole::Maker)
                 }
                 else {
-                    Err(ExchangeError::OrderRejected("PostOnly order should be rejected".into()))
+                    Err(ExchangeError::PostOnlyViolation("PostOnly order should be rejected".into()))
                     // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
             }
@@ -327,7 +329,7 @@ impl AccountOrders
                     Ok(OrderRole::Maker)
                 }
                 else {
-                    Err(ExchangeError::OrderRejected("PostOnly order should be rejected".into()))
+                    Err(ExchangeError::PostOnlyViolation("PostOnly order should be rejected".into()))
                     // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
             }

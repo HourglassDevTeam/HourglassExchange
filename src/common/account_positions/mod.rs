@@ -1,8 +1,5 @@
 use crate::{
     common::{
-        balance::{Balance, TokenBalance},
-        friction::{Fees, PerpetualFees},
-        instrument::{kind::InstrumentKind, Instrument},
         account_positions::{
             future::FuturePosition,
             leveraged_token::LeveragedTokenPosition,
@@ -11,6 +8,9 @@ use crate::{
             position_id::PositionId,
             position_meta::PositionMetaBuilder,
         },
+        balance::{Balance, TokenBalance},
+        friction::{Fees, PerpetualFees},
+        instrument::{kind::InstrumentKind, Instrument},
         trade::ClientTrade,
         Side,
     },

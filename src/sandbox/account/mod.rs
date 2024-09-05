@@ -638,44 +638,79 @@ impl Account
     }
 
 
-    /// 检查是否同时存在多头和空头仓位, 暂时只是 [DEBUG] 用。开仓的时候要检查是否符合条件
-    pub async fn check_position_direction_conflict(&self, instrument: &Instrument, new_order_side: Side /* 新的订单方向 */) -> Result<(), ExchangeError>
-    {
+    pub async fn check_position_direction_conflict(
+        &self,
+        instrument: &Instrument,
+        new_order_side: Side,
+        is_reduce_only: bool // 添加reduce_only标志
+    ) -> Result<(), ExchangeError> {
         let positions_lock = &self.positions;
 
         match instrument.kind {
             | InstrumentKind::Spot => {
-                return Err(ExchangeError::NotImplemented("Spot account_positions conflict check not implemented".into()));
+                return Err(ExchangeError::NotImplemented(
+                    "Spot account_positions conflict check not implemented".into(),
+                ));
             }
             | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
-                return Err(ExchangeError::NotImplemented("Commodity account_positions conflict check not implemented".into()));
+                return Err(ExchangeError::NotImplemented(
+                    "Commodity account_positions conflict check not implemented".into(),
+                ));
             }
             | InstrumentKind::Perpetual => {
-                // 比较新订单方向与当前持仓方向
-                let long_position_exists = positions_lock.perpetual_pos_long.iter().any(|pos| pos.meta.instrument == *instrument);
-                let short_position_exists = positions_lock.perpetual_pos_short.iter().any(|pos| pos.meta.instrument == *instrument);
+                let long_position_exists = positions_lock
+                    .perpetual_pos_long
+                    .iter()
+                    .any(|pos| pos.meta.instrument == *instrument);
+                let short_position_exists = positions_lock
+                    .perpetual_pos_short
+                    .iter()
+                    .any(|pos| pos.meta.instrument == *instrument);
+
+                // 如果订单是 reduce only，允许方向冲突
+                if is_reduce_only {
+                    return Ok(());
+                }
 
                 // 如果存在与订单方向相反的仓位，返回错误
-                if (new_order_side == Side::Buy && short_position_exists) || (new_order_side == Side::Sell && long_position_exists) {
+                if (new_order_side == Side::Buy && short_position_exists)
+                    || (new_order_side == Side::Sell && long_position_exists)
+                {
                     return Err(ExchangeError::InvalidDirection);
                 }
             }
             | InstrumentKind::Future => {
-                let long_position_exists = positions_lock.futures_pos_long.iter().any(|pos| pos.meta.instrument == *instrument);
-                let short_position_exists = positions_lock.futures_pos_short.iter().any(|pos| pos.meta.instrument == *instrument);
+                let long_position_exists = positions_lock
+                    .futures_pos_long
+                    .iter()
+                    .any(|pos| pos.meta.instrument == *instrument);
+                let short_position_exists = positions_lock
+                    .futures_pos_short
+                    .iter()
+                    .any(|pos| pos.meta.instrument == *instrument);
+
+                // 如果订单是 reduce only，允许方向冲突
+                if is_reduce_only {
+                    return Ok(());
+                }
 
                 // 如果存在与订单方向相反的仓位，返回错误
-                if (new_order_side == Side::Buy && short_position_exists) || (new_order_side == Side::Sell && long_position_exists) {
+                if (new_order_side == Side::Buy && short_position_exists)
+                    || (new_order_side == Side::Sell && long_position_exists)
+                {
                     return Err(ExchangeError::InvalidDirection);
                 }
             }
             | InstrumentKind::CryptoOption | InstrumentKind::CryptoLeveragedToken => {
-                return Err(ExchangeError::NotImplemented("Position conflict check for this instrument kind not implemented".into()));
+                return Err(ExchangeError::NotImplemented(
+                    "Position conflict check for this instrument kind not implemented".into(),
+                ));
             }
         }
 
         Ok(())
     }
+
 
     /// 当client创建[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
@@ -867,6 +902,30 @@ impl Account
         respond(response_tx, Ok(orders));
     }
 
+
+    /// 处理多个开仓订单请求，并执行相应操作。
+    ///
+    /// 对于每个开仓请求，该函数根据配置的 `PositionDirectionMode` 来判断是否允许方向冲突。如果是 `NetMode`，则会检查订单方向与当前持仓的方向是否冲突。
+    /// 如果订单标记为 `reduce only`，则不会进行方向冲突检查，但仍需判断订单方向与现有持仓方向是否一致。如果 `reduce only` 订单的方向与现有持仓方向相同，将拒绝该订单。
+    ///
+    /// # 参数
+    ///
+    /// * `open_requests` - 一个包含多个 `Order<RequestOpen>` 的向量，表示待处理的开仓请求。
+    /// * `response_tx` - 一个 `oneshot::Sender`，用于异步发送订单处理结果。
+    ///
+    /// # 逻辑
+    ///
+    /// 1. 首先检查订单的 `reduce only` 状态：
+    ///    - 如果是 `reduce only`，则跳过方向冲突检查，但如果订单方向与当前持仓方向相同，则拒绝该订单。
+    /// 2. 如果是 `NetMode` 且订单不是 `reduce only`，则调用 `check_position_direction_conflict` 检查当前持仓方向是否与订单冲突。
+    /// 3. 计算订单的当前价格，并尝试原子性开仓操作。
+    /// 4. 将每个订单的处理结果发送到 `response_tx`。
+    ///
+    /// # 错误处理
+    ///
+    /// - 如果 `reduce only` 订单的方向与现有持仓方向相同，则拒绝该订单，并继续处理下一个订单。
+    /// - 如果在 `NetMode` 下存在方向冲突，则跳过该订单并继续处理下一个订单。
+    ///
     pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExchangeError>>>)
                              -> Result<(), ExchangeError>
     {
@@ -878,7 +937,27 @@ impl Account
         for request in open_requests {
             // 如果是 NetMode，检查方向冲突
             if is_netmode {
-                if let Err(err) = self.check_position_direction_conflict(&request.instrument, request.side).await {
+                // 检查是否是 reduce_only 订单
+                if request.state.reduce_only {
+                    // 获取当前仓位
+                    let (long_pos, short_pos) = self.get_position_bothways(&request.instrument).await?;
+
+                    // 如果已有相同方向的仓位，则拒绝 reduce only 订单
+                    match request.side {
+                        Side::Buy => {
+                            if long_pos.is_some() {
+                                open_results.push(Err(ExchangeError::InvalidDirection));
+                                continue; // 跳过这个订单
+                            }
+                        }
+                        Side::Sell => {
+                            if short_pos.is_some() {
+                                open_results.push(Err(ExchangeError::InvalidDirection));
+                                continue; // 跳过这个订单
+                            }
+                        }
+                    }
+                } else if let Err(err) = self.check_position_direction_conflict(&request.instrument, request.side, request.state.reduce_only).await {
                     open_results.push(Err(err));
                     continue; // 跳过这个订单，处理下一个
                 }
@@ -886,18 +965,18 @@ impl Account
 
             // 处理订单请求
             let processed_request = match self.config.execution_mode {
-                | SandboxMode::Backtest => self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await,
-                | _ => request, // 实时模式下直接使用原始请求
+                SandboxMode::Backtest => self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await,
+                _ => request, // 实时模式下直接使用原始请求
             };
 
             // 计算当前价格
             let current_price = match processed_request.side {
-                | Side::Buy => {
+                Side::Buy => {
                     let token = &processed_request.instrument.base;
                     let balance = self.get_balance(token)?;
                     balance.current_price
                 }
-                | Side::Sell => {
+                Side::Sell => {
                     let token = &processed_request.instrument.quote;
                     let balance = self.get_balance(token)?;
                     balance.current_price
@@ -916,42 +995,60 @@ impl Account
         Ok(())
     }
 
-    pub async fn attempt_atomic_open(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError>
-    {
+    pub async fn attempt_atomic_open(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError> {
+        // 验证订单的基本合法性
         Self::validate_order_instruction(order.instruction)?;
-        // println!("[attempt_atomic_open]: {:?}", order);
-        // 提前声明所需的变量
+
+        // 判断订单类型是否为 PostOnly // NOTE 注意这是没有实现 OrderBook 的情况下的丐版实现。
+        if order.instruction == OrderInstruction::PostOnly {
+            // 使用 current_price 进行检查，确保订单不会立即撮合
+            match order.side {
+                Side::Buy => {
+                    // 如果买单的价格大于等于当前价格，订单可能会立即撮合为 Taker
+                    if order.state.price >= current_price {
+                        return Err(ExchangeError::PostOnlyViolation(
+                            "PostOnly Buy order would immediately match the market price".into(),
+                        ));
+                    }
+                }
+                Side::Sell => {
+                    // 如果卖单的价格小于等于当前价格，订单可能会立即撮合为 Taker
+                    if order.state.price <= current_price {
+                        return Err(ExchangeError::PostOnlyViolation(
+                            "PostOnly Sell order would immediately match the market price".into(),
+                        ));
+                    }
+                }
+            }
+        }
+
+        // 继续执行订单的原子操作逻辑
         let order_role = {
-            let orders_guard = self.orders.read().await; // 使用读锁来判断订单角色
+            let orders_guard = self.orders.read().await;
             orders_guard.determine_maker_taker(&order, current_price)?
         };
-        // println!("[attempt_atomic_open]: order_role: {:?}", order_role);
-        // 计算所需的可用余额，尽量避免锁操作
+
         let (token, required_balance) = self.required_available_balance(&order, current_price).await;
-        // println!("[attempt_atomic_open]: required_balance: {:?}", required_balance);
-        // 检查余额是否充足，并在锁定后更新订单
         self.has_sufficient_available_balance(token, required_balance)?;
+
         let open_order = {
-            let mut orders_guard = self.orders.write().await; // 使用写锁来创建订单
+            let mut orders_guard = self.orders.write().await;
             let open_order = orders_guard.build_order_open(order, order_role).await;
             orders_guard.get_ins_orders_mut(&open_order.instrument)?.add_order_open(open_order.clone());
             open_order
         };
-        // println!("[attempt_atomic_open]: open_order: {:?}", open_order);
-        // 应用订单变更并发送事件 NOTE test3 failed because of this line.
+
         let balance_event = self.apply_open_order_changes(&open_order, required_balance).await?;
-        // println!("[attempt_atomic_open]: balance_event: {:?}",balance_event);
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
-        // println!("[attempt_atomic_open]: exchange_timestamp: {:?}",exchange_timestamp);
-        self.account_event_tx
-            .send(balance_event)
-            .expect("[attempt_atomic_open]: Client offline - Failed to send AccountEvent::Balance");
 
         self.account_event_tx
-            .send(AccountEvent { exchange_timestamp,
-                                 exchange: Exchange::SandBox,
-                                 kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
-            .expect("[attempt_atomic_open]:  Client offline - Failed to send AccountEvent::Trade");
+            .send(balance_event)
+            .expect("Client offline - Failed to send AccountEvent::Balance");
+
+        self.account_event_tx
+            .send(AccountEvent { exchange_timestamp, exchange: Exchange::SandBox, kind: AccountEventKind::OrdersNew(vec![open_order.clone()]) })
+            .expect("Client offline - Failed to send AccountEvent::OrdersNew");
+
         Ok(open_order)
     }
 

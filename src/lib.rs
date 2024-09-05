@@ -2,6 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 
 use crate::{
     common::{
+        account_positions::{AccountPositions, Position},
         balance::TokenBalance,
         event::AccountEvent,
         instrument::Instrument,
@@ -9,7 +10,6 @@ use crate::{
             states::{cancelled::Cancelled, request_cancel::RequestCancel, request_open::RequestOpen},
             Order,
         },
-        account_positions::{AccountPositions, Position},
         token::Token,
     },
     error::ExchangeError,

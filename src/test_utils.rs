@@ -2,6 +2,13 @@
 
 use crate::{
     common::{
+        account_positions::{
+            future::{FuturePosition, FuturePositionConfig},
+            perpetual::{PerpetualPosition, PerpetualPositionConfig},
+            position_id::PositionId,
+            position_meta::PositionMeta,
+            AccountPositions, PositionDirectionMode, PositionMarginMode,
+        },
         balance::{Balance, TokenBalance},
         friction::{Fees, FutureFees, PerpetualFees},
         instrument::{kind::InstrumentKind, Instrument},
@@ -10,13 +17,6 @@ use crate::{
             order_instructions::OrderInstruction,
             states::{open::Open, request_open::RequestOpen},
             Order, OrderRole,
-        },
-        account_positions::{
-            future::{FuturePosition, FuturePositionConfig},
-            perpetual::{PerpetualPosition, PerpetualPositionConfig},
-            position_id::PositionId,
-            position_meta::PositionMeta,
-            AccountPositions, PositionDirectionMode, PositionMarginMode,
         },
         token::Token,
         Side,

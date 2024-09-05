@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use unilink_execution::{
     common::{
+        account_positions::AccountPositions,
         balance::Balance,
         event::AccountEvent,
         instrument::{kind::InstrumentKind, Instrument},
@@ -20,7 +21,6 @@ use unilink_execution::{
             states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
             Order, OrderRole,
         },
-        account_positions::AccountPositions,
         token::Token,
         Side,
     },

@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common::{
+        account_positions::AccountPositions,
         balance::TokenBalance,
         order::{
             states::{
@@ -11,7 +12,6 @@ use crate::{
             },
             Order,
         },
-        account_positions::AccountPositions,
         trade::ClientTrade,
     },
     sandbox::account::account_config::AccountConfig,
