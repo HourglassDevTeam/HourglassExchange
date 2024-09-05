@@ -68,7 +68,7 @@ mod tests
         // 创建一个临时的TOML配置，符合`AccountConfig`结构体的定义
         let toml_content = r#"
     margin_mode = "SimpleMode"
-    position_mode = "NetMode"
+    position_direction_mode = "NetMode"
     position_margin_mode = "Isolated"
     commission_level = "Lv2"
     funding_rate = 0.0001
@@ -110,7 +110,7 @@ mod tests
         let config = result.unwrap();
 
         assert_eq!(config.margin_mode, MarginMode::SimpleMode);
-        assert_eq!(config.position_mode, PositionDirectionMode::NetMode);
+        assert_eq!(config.position_direction_mode, PositionDirectionMode::NetMode);
         assert_eq!(config.position_margin_mode, PositionMarginMode::Isolated);
         assert_eq!(config.commission_level, CommissionLevel::Lv2);
         assert_eq!(config.account_leverage_rate, 100.0);

@@ -44,7 +44,7 @@ use std::{
     },
     time::{SystemTime, UNIX_EPOCH},
 };
-use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
+use tokio::sync::{mpsc, oneshot, RwLock};
 use tracing::warn;
 use uuid::Uuid;
 
@@ -65,7 +65,7 @@ pub struct Account
     pub config: AccountConfig,                      // 帐户配置
     pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
     pub balances: DashMap<Token, Balance>,               // 帐户余额
-    pub positions: Arc<Mutex<AccountPositions>>,         //帐户持仓
+    pub positions: AccountPositions,         //帐户持仓
     // pub vault: Vault,
 }
 
@@ -91,7 +91,7 @@ pub struct AccountInitiator
     config: Option<AccountConfig>,
     orders: Option<Arc<RwLock<AccountOrders>>>,
     balances: Option<DashMap<Token, Balance>>,
-    positions: Option<Arc<Mutex<AccountPositions>>>,
+    positions: Option<AccountPositions>,
 }
 
 impl Default for AccountInitiator
@@ -139,7 +139,7 @@ impl AccountInitiator
 
     pub fn positions(mut self, value: AccountPositions) -> Self
     {
-        self.positions = Some(Arc::new(Mutex::new(value)));
+        self.positions = Some(value);
         self
     }
 
@@ -155,6 +155,7 @@ impl AccountInitiator
                      positions: self.positions.ok_or("positions are required")? })
     }
 }
+
 
 impl Account
 {
@@ -177,42 +178,35 @@ impl Account
 
     pub async fn fetch_positions_and_respond(&self, response_tx: Sender<Result<AccountPositions, ExchangeError>>)
     {
-        let positions = self.positions.lock().await.clone();
+        let positions = self.positions.clone();
         respond(response_tx, Ok(positions));
     }
 
-    /// 获取指定 `Instrument` 的仓位
-    pub async fn get_position(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>
+    /// 获取指定 `Instrument` 的多头仓位
+    pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>
     {
-        let positions = &self.positions.lock().await; // 获取锁
+        let positions = &self.positions; // 获取锁
 
         match instrument.kind {
             | InstrumentKind::Spot => {
                 return Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)));
             }
             | InstrumentKind::Perpetual => {
-                let perpetual_positions = &positions.perpetual_pos;
+                let perpetual_positions = &positions.perpetual_pos_long;
                 if let Some(position) = perpetual_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
                     return Ok(Some(Position::Perpetual(position.clone())));
                 }
             }
             | InstrumentKind::Future => {
-                let futures_positions = &positions.futures_pos;
-                if let Some(position) = futures_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
-                    return Ok(Some(Position::Future(position.clone())));
-                }
+                todo!()
+
             }
             | InstrumentKind::CryptoOption => {
-                let option_positions = &positions.option_pos;
-                if let Some(position) = option_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
-                    return Ok(Some(Position::Option(position.clone())));
-                }
+                todo!()
+
             }
             | InstrumentKind::CryptoLeveragedToken => {
-                let margin_positions = &positions.margin_pos;
-                if let Some(position) = margin_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
-                    return Ok(Some(Position::LeveragedToken(position.clone())));
-                }
+                todo!()
             }
             | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
                 todo!("Commodity positions are not yet implemented");
@@ -220,6 +214,72 @@ impl Account
         }
 
         Ok(None) // 没有找到对应的仓位
+    }
+
+    /// 获取指定 `Instrument` 的空头仓位
+    pub async fn get_position_short(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>
+    {
+        let positions = &self.positions; // 获取锁
+
+        match instrument.kind {
+            | InstrumentKind::Spot => {
+                return Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)));
+            }
+            | InstrumentKind::Perpetual => {
+                let perpetual_positions = &positions.perpetual_pos_short;
+                if let Some(position) = perpetual_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
+                    return Ok(Some(Position::Perpetual(position.clone())));
+                }
+            }
+            | InstrumentKind::Future => {
+                todo!()
+
+            }
+            | InstrumentKind::CryptoOption => {
+                todo!()
+
+            }
+            | InstrumentKind::CryptoLeveragedToken => {
+                todo!()
+            }
+            | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
+                todo!("Commodity positions are not yet implemented");
+            }
+        }
+
+        Ok(None) // 没有找到对应的仓位
+    }
+    pub async fn get_position_bothways(
+        &self,
+        instrument: &Instrument
+    ) -> Result<(Option<Position>, Option<Position>), ExchangeError> {
+        let positions = &self.positions; // 获取锁
+
+        match instrument.kind {
+            InstrumentKind::Spot => {
+                Err(ExchangeError::InvalidInstrument(format!(
+                    "Spots do not support positions: {:?}",
+                    instrument
+                )))
+            }
+            InstrumentKind::Perpetual => {
+                let long_pos = positions.perpetual_pos_long.get(instrument).map(|pos| Position::Perpetual(pos.clone()));
+                let short_pos = positions.perpetual_pos_short.get(instrument).map(|pos| Position::Perpetual(pos.clone()));
+                Ok((long_pos, short_pos))
+            }
+            InstrumentKind::Future => {
+                todo!()
+            }
+            InstrumentKind::CryptoOption => {
+                todo!()
+            }
+            InstrumentKind::CryptoLeveragedToken => {
+                todo!()
+            }
+            InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
+                todo!("Commodity positions are not yet implemented");
+            }
+        }
     }
 
     /// 返回指定[`Token`]的[`Balance`]的引用。
@@ -282,7 +342,7 @@ impl Account
 
     pub fn determine_position_direction_mode(&self) -> Result<PositionDirectionMode, ExchangeError>
     {
-        let position_mode = self.config.position_mode.clone();
+        let position_mode = self.config.position_direction_mode.clone();
         Ok(position_mode)
     }
 
@@ -322,26 +382,31 @@ impl Account
     /// # 返回值
     ///
     /// 如果更新成功，返回 `Ok(())`，否则返回一个 `ExecutionError`。
-    async fn set_perpetual_position(&mut self, pos: PerpetualPosition) -> Result<(), ExchangeError>
-    {
+    async fn set_perpetual_position(&mut self, pos: PerpetualPosition) -> Result<(), ExchangeError> {
         // 获取账户的锁，确保在更新仓位信息时没有并发访问的问题
-        let positions_lock = &mut self.positions.lock().await;
+        let positions_lock = &mut self.positions;
 
-        // 获取永续合约仓位的可变引用
-        let perpetual_positions = &mut positions_lock.perpetual_pos;
+        // 根据仓位的 `side` 字段决定是多头仓位还是空头仓位
+        match pos.meta.side {
+            Side::Buy => {
+                // 获取永续合约多头仓位的可变引用
+                let long_positions = &positions_lock.perpetual_pos_long;
 
-        // 查找是否存在与传入 `pos` 相同的 `instrument`
-        if let Some(existing_pos) = perpetual_positions.iter_mut().find(|p| p.meta.instrument == pos.meta.instrument) {
-            // 如果找到了相同的 `instrument`，则更新现有仓位信息
-            *existing_pos = pos;
-        }
-        else {
-            // 如果没有找到相同的 `instrument`，将新的仓位添加到永续合约仓位列表中
-            perpetual_positions.push(pos);
+                // 插入或更新永续合约多头仓位
+                long_positions.insert(pos.meta.instrument.clone(), pos);
+            }
+            Side::Sell => {
+                // 获取永续合约空头仓位的可变引用
+                let short_positions = &positions_lock.perpetual_pos_short;
+
+                // 插入或更新永续合约空头仓位
+                short_positions.insert(pos.meta.instrument.clone(), pos);
+            }
         }
 
         Ok(())
     }
+
 
     /// 更新 FuturePosition 的方法（占位符）
     async fn set_future_position(&mut self, _pos: FuturePosition) -> Result<(), ExchangeError>
@@ -363,65 +428,82 @@ impl Account
 
     /// 检查在 AccountPositions 中是否已经存在该 instrument 的某个仓位
     /// 需要首先从 open 订单中确定 InstrumentKind，因为仓位类型各不相同
-    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExchangeError>
-    {
-        let positions_lock = &self.positions.lock().await; // 获取锁
+    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExchangeError> {
+        let positions_lock = &self.positions; // 获取锁
 
-        // 直接调用 AccountPositions 中的 has_position 方法
-        if positions_lock.has_position(&open.instrument) {
-            return Ok(true);
+        match open.side {
+            Side::Buy => {
+                // 检查是否持有多头仓位
+                if positions_lock.has_long_position(&open.instrument) {
+                    return Ok(true);
+                }
+            }
+            Side::Sell => {
+                // 检查是否持有空头仓位
+                if positions_lock.has_short_position(&open.instrument) {
+                    return Ok(true);
+                }
+            }
         }
 
         Ok(false)
     }
 
-    async fn check_position_direction_conflict(&self, instrument: &Instrument, side: Side) -> Result<(), ExchangeError>
-    {
-        let positions_lock = &self.positions.lock().await;
+    /// 检查是否同时存在多头和空头仓位, 暂时只是 [DEBUG] 用。开仓的时候要检查是否符合条件
+    pub async fn check_position_direction_conflict(
+        &self,
+        instrument: &Instrument,
+        new_order_side: Side, // 新的订单方向
+    ) -> Result<(), ExchangeError> {
+        let positions_lock = &self.positions;
 
         match instrument.kind {
-            | InstrumentKind::Spot => {
-                return Err(ExchangeError::NotImplemented("Spot position conflict check not implemented".into()));
+            InstrumentKind::Spot => {
+                return Err(ExchangeError::NotImplemented(
+                    "Spot position conflict check not implemented".into(),
+                ));
             }
-            | InstrumentKind::CommodityOption => {
-                return Err(ExchangeError::NotImplemented("CommodityOption position conflict check not implemented".into()));
+            InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
+                return Err(ExchangeError::NotImplemented(
+                    "Commodity position conflict check not implemented".into(),
+                ));
             }
-            | InstrumentKind::CommodityFuture => {
-                return Err(ExchangeError::NotImplemented("CommodityFuture position conflict check not implemented".into()));
-            }
-            | InstrumentKind::Perpetual => {
-                let perpetual_positions = &positions_lock.perpetual_pos;
-                for pos in perpetual_positions {
-                    if pos.meta.instrument == *instrument && pos.meta.side != side {
-                        return Err(ExchangeError::InvalidDirection);
-                    }
+            InstrumentKind::Perpetual => {
+                // 比较新订单方向与当前持仓方向
+                let long_position_exists = positions_lock.perpetual_pos_long
+                    .iter()
+                    .any(|pos| pos.meta.instrument == *instrument);
+                let short_position_exists = positions_lock.perpetual_pos_short
+                    .iter()
+                    .any(|pos| pos.meta.instrument == *instrument);
+
+                // 如果存在与订单方向相反的仓位，返回错误
+                if (new_order_side == Side::Buy && short_position_exists)
+                    || (new_order_side == Side::Sell && long_position_exists) {
+                    return Err(ExchangeError::InvalidDirection);
                 }
             }
-            | InstrumentKind::Future => {
-                let futures_positions = &positions_lock.futures_pos;
-                for pos in futures_positions {
-                    if pos.meta.instrument == *instrument && pos.meta.side != side {
-                        return Err(ExchangeError::InvalidDirection);
-                    }
+            InstrumentKind::Future => {
+                let long_position_exists = positions_lock.futures_pos_long
+                    .iter()
+                    .any(|pos| pos.meta.instrument == *instrument);
+                let short_position_exists = positions_lock.futures_pos_short
+                    .iter()
+                    .any(|pos| pos.meta.instrument == *instrument);
+
+                // 如果存在与订单方向相反的仓位，返回错误
+                if (new_order_side == Side::Buy && short_position_exists)
+                    || (new_order_side == Side::Sell && long_position_exists) {
+                    return Err(ExchangeError::InvalidDirection);
                 }
             }
-            | InstrumentKind::CryptoOption => {
-                let option_positions = &positions_lock.option_pos;
-                for pos in option_positions {
-                    if pos.meta.instrument == *instrument && pos.meta.side != side {
-                        return Err(ExchangeError::InvalidDirection);
-                    }
-                }
-            }
-            | InstrumentKind::CryptoLeveragedToken => {
-                let margin_positions = &positions_lock.margin_pos;
-                for pos in margin_positions {
-                    if pos.meta.instrument == *instrument && pos.meta.side != side {
-                        return Err(ExchangeError::InvalidDirection);
-                    }
-                }
+            InstrumentKind::CryptoOption | InstrumentKind::CryptoLeveragedToken => {
+                return Err(ExchangeError::NotImplemented(
+                    "Position conflict check for this instrument kind not implemented".into(),
+                ));
             }
         }
+
         Ok(())
     }
 
@@ -432,31 +514,11 @@ impl Account
         println!("[UniLinkExecution] : Starting apply_open_order_changes: {:?}, with balance: {:?}", open, required_balance);
 
         // 配置从直接访问 `self.config` 获取
-        let (position_mode, position_margin_mode) = (self.config.position_mode.clone(), self.config.position_margin_mode.clone());
+        let (position_mode, position_margin_mode) = (self.config.position_direction_mode.clone(), self.config.position_margin_mode.clone());
 
         println!("[UniLinkExecution] : Retrieved position_mode: {:?}, position_margin_mode: {:?}",
                  position_mode, position_margin_mode);
 
-        // 根据不同的 InstrumentKind 进行处理
-        match open.instrument.kind {
-            | InstrumentKind::Spot => {
-                todo!("[UniLinkExecution] : Spot handling is not implemented yet");
-            }
-            | InstrumentKind::CryptoOption => {
-                todo!("[UniLinkExecution] : Option handling is not implemented yet");
-            }
-            | InstrumentKind::CommodityFuture => {
-                todo!("[UniLinkExecution] : Commodity future handling is not implemented yet");
-            }
-            | InstrumentKind::CommodityOption => {
-                todo!("[UniLinkExecution] : Commodity option handling is not implemented yet");
-            }
-            | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
-                if position_mode == PositionDirectionMode::NetMode {
-                    self.check_position_direction_conflict(&open.instrument, open.side).await?;
-                }
-            }
-        }
 
         // 根据 PositionMarginMode 处理余额更新
         match (open.instrument.kind, position_margin_mode) {
@@ -636,40 +698,69 @@ impl Account
         respond(response_tx, Ok(orders));
     }
 
-    pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExchangeError>>>)
-                             -> Result<(), ExchangeError>
-    {
+    pub async fn open_orders(
+        &mut self,
+        open_requests: Vec<Order<RequestOpen>>,
+        response_tx: oneshot::Sender<Vec<Result<Order<Open>, ExchangeError>>>,
+    ) -> Result<(), ExchangeError> {
         let mut open_results = Vec::new();
 
+        // 获取当前的 position_direction_mode 并提前判断是否需要进行方向冲突检查
+        let is_netmode = self.config.position_direction_mode == PositionDirectionMode::NetMode;
+
         for request in open_requests {
+            // 如果是 NetMode，检查方向冲突
+            if is_netmode {
+                if let Err(err) = self
+                    .check_position_direction_conflict(&request.instrument, request.side)
+                    .await
+                {
+                    open_results.push(Err(err));
+                    continue; // 跳过这个订单，处理下一个
+                }
+            }
+
+            // 处理订单请求
             let processed_request = match self.config.execution_mode {
-                | SandboxMode::Backtest => self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await,
-                | _ => request, // 实时模式下直接使用原始请求
+                SandboxMode::Backtest => {
+                    self.orders
+                        .write()
+                        .await
+                        .process_backtest_requestopen_with_a_simulated_latency(request)
+                        .await
+                }
+                _ => request, // 实时模式下直接使用原始请求
             };
 
+            // 计算当前价格
             let current_price = match processed_request.side {
-                | Side::Buy => {
+                Side::Buy => {
                     let token = &processed_request.instrument.base;
                     let balance = self.get_balance(token)?;
                     balance.current_price
                 }
-                | Side::Sell => {
+                Side::Sell => {
                     let token = &processed_request.instrument.quote;
                     let balance = self.get_balance(token)?;
                     balance.current_price
                 }
             };
 
+            // 尝试开仓，处理结果
             let open_result = self.attempt_atomic_open(current_price, processed_request).await;
             open_results.push(open_result);
         }
 
         if let Err(e) = response_tx.send(open_results) {
-            return Err(ExchangeError::SandBox(format!("Failed to send open order results: {:?}", e)));
+            return Err(ExchangeError::SandBox(format!(
+                "Failed to send open order results: {:?}",
+                e
+            )));
         }
 
         Ok(())
     }
+
 
     pub async fn attempt_atomic_open(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError>
     {
@@ -1268,7 +1359,7 @@ mod tests
     use super::*;
     use crate::{
         common::order::{identification::OrderId, states::request_open::RequestOpen},
-        test_utils::{create_test_account, create_test_future_position_with_side, create_test_perpetual_position},
+        test_utils::{create_test_account, create_test_perpetual_position},
     };
 
     #[tokio::test]
@@ -1372,7 +1463,7 @@ mod tests
         account.set_perpetual_position(perpetual_position.clone()).await.unwrap();
 
         // 验证仓位是否已更新
-        let position_result = account.get_position(&instrument).await;
+        let position_result = account.get_position_long(&instrument).await;
         assert!(position_result.is_ok());
         assert!(matches!(position_result.unwrap(), Some(Position::Perpetual(_))));
     }
@@ -1418,7 +1509,7 @@ mod tests
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
         let perpetual_position = create_test_perpetual_position(instrument.clone());
         account.set_position(Position::Perpetual(perpetual_position)).await.unwrap();
-        let position_result = account.get_position(&instrument).await;
+        let position_result = account.get_position_long(&instrument).await;
         assert!(position_result.is_ok());
         assert!(position_result.unwrap().is_some());
     }
@@ -1442,7 +1533,7 @@ mod tests
         let account = create_test_account().await;
 
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-        let position = account.get_position(&instrument).await.unwrap();
+        let position = account.get_position_long(&instrument).await.unwrap();
         assert!(position.is_none());
     }
 
@@ -1572,50 +1663,6 @@ mod tests
         assert_eq!(balance.available, 8.0); // 原始余额是 10.0，减去 2.0 后应该是 8.0
     }
 
-    #[tokio::test]
-    async fn test_check_position_direction_conflict()
-    {
-        let account = create_test_account().await;
-
-        // 情况1：没有冲突的情况下调用
-        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-        let result = account.check_position_direction_conflict(&instrument, Side::Buy).await;
-        assert!(result.is_ok());
-
-        // 情况2：模拟存在冲突的Perpetual仓位，注意这里 `side` 是 `Sell`
-        let perpetual_position = create_test_perpetual_position(instrument.clone());
-        account.positions.lock().await.perpetual_pos.push(perpetual_position);
-
-        let result = account.check_position_direction_conflict(&instrument, Side::Sell).await;
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ExchangeError::InvalidDirection);
-
-        // 情况3：模拟不存在冲突的Future仓位
-        let instrument_future = Instrument::from(("ETH", "USDT", InstrumentKind::Future));
-        let result = account.check_position_direction_conflict(&instrument_future, Side::Buy).await;
-        assert!(result.is_ok());
-
-        // 情况4：模拟存在冲突的Future仓位，注意这里 `side` 是 `Sell`
-        let future_position = create_test_future_position_with_side(instrument_future.clone(), Side::Sell);
-        account.positions.lock().await.futures_pos.push(future_position);
-
-        let result = account.check_position_direction_conflict(&instrument_future, Side::Buy).await;
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ExchangeError::InvalidDirection);
-
-        // 情况5：其他 InstrumentKind 还没有实现，因此我们只需要检查它们是否返回未实现的错误
-        let instrument_spot = Instrument::from(("ETH", "USDT", InstrumentKind::Spot));
-        let result = account.check_position_direction_conflict(&instrument_spot, Side::Buy).await;
-        assert!(matches!(result, Err(ExchangeError::NotImplemented(_))));
-
-        let instrument_commodity_future = Instrument::from(("ETH", "USDT", InstrumentKind::CommodityFuture));
-        let result = account.check_position_direction_conflict(&instrument_commodity_future, Side::Buy).await;
-        assert!(matches!(result, Err(ExchangeError::NotImplemented(_))));
-
-        let instrument_commodity_option = Instrument::from(("ETH", "USDT", InstrumentKind::CommodityOption));
-        let result = account.check_position_direction_conflict(&instrument_commodity_option, Side::Buy).await;
-        assert!(matches!(result, Err(ExchangeError::NotImplemented(_))));
-    }
 
     #[tokio::test]
     async fn test_handle_trade_data()

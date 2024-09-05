@@ -13,7 +13,7 @@ use std::collections::HashMap;
 pub struct AccountConfig
 {
     pub margin_mode: MarginMode,
-    pub position_mode: PositionDirectionMode,
+    pub position_direction_mode: PositionDirectionMode,
     pub position_margin_mode: PositionMarginMode,
     pub commission_level: CommissionLevel,
     pub funding_rate: f64,
@@ -176,7 +176,7 @@ impl AccountConfigInitiator
     pub fn initiate(self) -> Result<AccountConfig, &'static str>
     {
         Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
-                           position_mode: self.position_mode.ok_or("position_mode is required")?,
+                           position_direction_mode: self.position_mode.ok_or("position_mode is required")?,
                            position_margin_mode: self.position_margin_mode.ok_or("position_mode is required")?,
                            commission_level: self.commission_level.ok_or("commission_level is required")?,
                            funding_rate: self.fund_fee_rate.ok_or("commission_level is required")?,

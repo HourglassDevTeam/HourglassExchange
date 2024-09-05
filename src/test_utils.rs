@@ -36,7 +36,7 @@ use std::{
     sync::{atomic::AtomicI64, Arc},
     time::{SystemTime, UNIX_EPOCH},
 };
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// 创建一个测试用的 `Instrument` 实例。
@@ -53,7 +53,7 @@ pub fn create_test_account_config() -> AccountConfig
     let leverage_rate = 1.0;
 
     AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
-                    position_mode: PositionDirectionMode::NetMode,
+                    position_direction_mode: PositionDirectionMode::NetMode,
                     position_margin_mode: PositionMarginMode::Isolated,
                     commission_level: CommissionLevel::Lv1,
                     funding_rate: 0.0,
@@ -120,7 +120,7 @@ pub async fn create_test_account() -> Account
                                              taker_fees: 0.002 };
 
     let mut account_config = AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
-                                             position_mode: PositionDirectionMode::NetMode,
+                                             position_direction_mode: PositionDirectionMode::NetMode,
                                              position_margin_mode: PositionMarginMode::Isolated,
                                              commission_level: CommissionLevel::Lv1,
                                              funding_rate: 0.0,
@@ -130,10 +130,18 @@ pub async fn create_test_account() -> Account
 
     account_config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
-    let positions = AccountPositions { margin_pos: Vec::new(),
-                                       perpetual_pos: Vec::new(),
-                                       futures_pos: Vec::new(),
-                                       option_pos: Vec::new() };
+    let positions = AccountPositions {
+        margin_pos_long: DashMap::new(),
+        margin_pos_short:  DashMap::new(),
+        perpetual_pos_long:  DashMap::new(),
+        perpetual_pos_short:  DashMap::new(),
+        futures_pos_long:  DashMap::new(),
+        futures_pos_short:  DashMap::new(),
+        option_pos_long_call:  DashMap::new(),
+        option_pos_long_put:  DashMap::new(),
+        option_pos_short_call:  DashMap::new(),
+        option_pos_short_put:  DashMap::new(),
+    };
 
     let machine_id = generate_machine_id().unwrap();
 
@@ -144,7 +152,7 @@ pub async fn create_test_account() -> Account
               account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
               config: account_config,
               balances,
-              positions:Arc::new(Mutex::new(positions)),
+              positions,
               orders: Arc::new(RwLock::new(AccountOrders::new(machine_id,
                                                               vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))],
                                                               AccountLatency { fluctuation_mode: FluctuationMode::Sine,
