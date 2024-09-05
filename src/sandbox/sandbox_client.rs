@@ -5,16 +5,15 @@ use tokio::sync::{mpsc, oneshot};
 
 use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchBalances, FetchOrdersOpen, OpenOrders};
 
-use crate::common::instrument::Instrument;
-use crate::common::position::Position;
 use crate::{
     common::{
         balance::TokenBalance,
+        instrument::Instrument,
         order::{
             states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel},
             Order,
         },
-        position::AccountPositions,
+        position::{AccountPositions, Position},
         token::Token,
     },
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
@@ -43,8 +42,8 @@ pub enum SandBoxClientEvent
     DepositTokens(DepositRequest),
     FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExchangeError>>),
     FetchBalances(Sender<Result<Vec<TokenBalance>, ExchangeError>>),
-    FetchLongPosition(Instrument,Sender<Result<Option<Position>, ExchangeError>>),
-    FetchShortPosition(Instrument,Sender<Result<Option<Position>, ExchangeError>>),
+    FetchLongPosition(Instrument, Sender<Result<Option<Position>, ExchangeError>>),
+    FetchShortPosition(Instrument, Sender<Result<Option<Position>, ExchangeError>>),
     FetchAllPositions(Sender<Result<AccountPositions, ExchangeError>>),
     OpenOrders(RequestOpenOrders),
     CancelOrders(RequestCancelOrders),
@@ -54,9 +53,9 @@ pub enum SandBoxClientEvent
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    const CLIENT_KIND: Exchange = Exchange::SandBox;
-
     type Config = UnboundedSender<SandBoxClientEvent>;
+
+    const CLIENT_KIND: Exchange = Exchange::SandBox;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {
@@ -89,6 +88,36 @@ impl ClientExecution for SandBoxClient
         // 从模拟交易所接收账户余额的响应。
         response_rx.await
                    .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive FetchBalances response")
+    }
+
+    //  FetchAllPositions 的实现
+    async fn fetch_all_positions(&self) -> Result<AccountPositions, ExchangeError>
+    {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.request_tx
+            .send(SandBoxClientEvent::FetchAllPositions(response_tx))
+            .expect("[SandBoxClient] : Failed to send FetchAllPositions request");
+        response_rx.await.expect("[SandBoxClient] : Failed to receive FetchAllPositions response")
+    }
+
+    //  FetchLongPosition 的实现
+    async fn fetch_long_position(&self, instrument: Instrument) -> Result<Option<Position>, ExchangeError>
+    {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.request_tx
+            .send(SandBoxClientEvent::FetchLongPosition(instrument, response_tx))
+            .expect("[SandBoxClient] : Failed to send FetchLongPosition request");
+        response_rx.await.expect("[SandBoxClient] : Failed to receive FetchLongPosition response")
+    }
+
+    //  FetchShortPosition 的实现
+    async fn fetch_short_position(&self, instrument: Instrument) -> Result<Option<Position>, ExchangeError>
+    {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.request_tx
+            .send(SandBoxClientEvent::FetchShortPosition(instrument, response_tx))
+            .expect("[SandBoxClient] : Failed to send FetchShortPosition request");
+        response_rx.await.expect("[SandBoxClient] : Failed to receive FetchShortPosition response")
     }
 
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExchangeError>>
@@ -126,6 +155,16 @@ impl ClientExecution for SandBoxClient
         // 从模拟交易所接收取消所有订单的响应。
         response_rx.await
                    .expect("[UniLinkExecution] : Sandbox exchange is currently offline - Failed to receive CancelOrdersAll response")
+    }
+
+    // 实现 DepositTokens 的处理逻辑
+    async fn deposit_tokens(&self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError>
+    {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.request_tx
+            .send(SandBoxClientEvent::DepositTokens((deposits, response_tx)))
+            .expect("Failed to send DepositTokens request");
+        response_rx.await.expect("Failed to receive DepositTokens response")
     }
 }
 
