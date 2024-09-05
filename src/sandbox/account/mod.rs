@@ -161,7 +161,7 @@ impl AccountInitiator
 
 impl Account
 {
-    /// [PART 0] - [账户初始化与配置]
+    /// [PART 1] - [账户初始化与配置]
     ///
     pub fn initiate() -> AccountInitiator
     {
@@ -251,7 +251,7 @@ impl Account
     /// # 返回值
     ///
     /// 返回更新后的 `TokenBalance`。
-    pub fn deposit_u_base(&mut self, amount: f64) -> Result<TokenBalance, ExchangeError>
+    pub fn deposit_usdt(&mut self, amount: f64) -> Result<TokenBalance, ExchangeError>
     {
         let usdt_token = Token("USDT".into());
         self.deposit_coin(usdt_token, amount)
@@ -266,7 +266,7 @@ impl Account
     /// # 返回值
     ///
     /// 返回更新后的 `TokenBalance`。
-    pub fn deposit_b_base(&mut self, amount: f64) -> Result<TokenBalance, ExchangeError>
+    pub fn deposit_bitcoin(&mut self, amount: f64) -> Result<TokenBalance, ExchangeError>
     {
         let btc_token = Token("BTC".into());
         self.deposit_coin(btc_token, amount)
@@ -283,7 +283,7 @@ impl Account
     /// # 返回值
     ///
     /// 返回更新后的 `TokenBalance` 列表，其中包含更新后的 BTC 和 USDT 余额。
-    pub fn buy_b_with_u(&mut self, usdt_amount: f64, btc_price: f64) -> Result<Vec<TokenBalance>, ExchangeError>
+    pub fn topup_bitcoin_with_usdt(&mut self, usdt_amount: f64, btc_price: f64) -> Result<Vec<TokenBalance>, ExchangeError>
     {
         let usdt_token = Token("USDT".into());
         let btc_token = Token("BTC".into());
@@ -308,7 +308,7 @@ impl Account
     }
 
 
-    /// [PART 1] - [订单管理].
+    /// [PART 2] - [订单管理].
     pub async fn fetch_orders_open_and_respond(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExchangeError>>)
     {
         let orders = self.orders.read().await.fetch_all();
@@ -1757,7 +1757,7 @@ mod tests
         let mut account = create_test_account().await;
         let btc_amount = 0.5;
 
-        let balance = account.deposit_b_base(btc_amount).unwrap();
+        let balance = account.deposit_bitcoin(btc_amount).unwrap();
 
         assert_eq!(balance.token, Token("BTC".into()));
         assert_eq!(balance.balance.total, btc_amount);
@@ -1816,7 +1816,7 @@ mod tests
         } // `initial_balance` 的作用域在此结束，释放了不可变借用
 
         // 进行充值操作
-        let balance = account.deposit_u_base(usdt_amount).unwrap();
+        let balance = account.deposit_usdt(usdt_amount).unwrap();
 
         // 充值后再次查询 USDT 余额
         let updated_balance = account.get_balance(&Token::from("USDT")).unwrap();
@@ -1836,10 +1836,10 @@ mod tests
         let btc_price = 50_000.0;
 
         // 首先充值 USDT
-        account.deposit_u_base(usdt_amount).unwrap();
+        account.deposit_usdt(usdt_amount).unwrap();
 
         // 为 BTC 手动初始化一个余额（尽管余额为 0，但可以避免配置报错）
-        account.deposit_b_base(0.0).unwrap();
+        account.deposit_bitcoin(0.0).unwrap();
 
         // 购买前查询 USDT 和 BTC 余额，提取实际值以避免生命周期问题
         let usdt_initial_balance = account.get_balance(&Token::from("USDT")).as_deref().unwrap().clone();
@@ -1852,7 +1852,7 @@ mod tests
         assert_eq!(btc_initial_balance.total, 0.0);
 
         // 用 USDT 购买 BTC
-        account.buy_b_with_u(usdt_amount, btc_price).unwrap();
+        account.topup_bitcoin_with_usdt(usdt_amount, btc_price).unwrap();
 
         // 购买后查询 USDT 和 BTC 余额
         let usdt_balance = account.get_balance(&Token::from("USDT")).unwrap();
