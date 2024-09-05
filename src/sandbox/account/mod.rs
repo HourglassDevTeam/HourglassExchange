@@ -9,7 +9,7 @@ use crate::{
             states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
             Order, OrderRole,
         },
-        position::{
+        account_positions::{
             future::FuturePosition, leveraged_token::LeveragedTokenPosition, option::OptionPosition, perpetual::PerpetualPosition, AccountPositions, Position,
             PositionDirectionMode, PositionMarginMode,
         },
@@ -367,13 +367,13 @@ impl Account
     }
 
     /// 更新指定 `Instrument` 的仓位
-    pub async fn set_position(&mut self, position: Position) -> Result<(), ExchangeError>
+    pub async fn create_position(&mut self, position: Position) -> Result<(), ExchangeError>
     {
         match position {
-            | Position::Perpetual(pos) => self.set_perpetual_position(pos).await,
-            | Position::Future(pos) => self.set_future_position(pos).await,
-            | Position::Option(pos) => self.set_option_position(pos).await,
-            | Position::LeveragedToken(pos) => self.set_leveraged_token_position(pos).await,
+            | Position::Perpetual(pos) => self.create_perpetual_position(pos).await,
+            | Position::Future(pos) => self.create_future_position(pos).await,
+            | Position::Option(pos) => self.create_option_position(pos).await,
+            | Position::LeveragedToken(pos) => self.create_leveraged_token_position(pos).await,
         }
     }
 
@@ -390,7 +390,7 @@ impl Account
     /// # 返回值
     ///
     /// 如果更新成功，返回 `Ok(())`，否则返回一个 `ExecutionError`。
-    async fn set_perpetual_position(&mut self, pos: PerpetualPosition) -> Result<(), ExchangeError>
+    async fn create_perpetual_position(&mut self, pos: PerpetualPosition) -> Result<(), ExchangeError>
     {
         // 获取账户的锁，确保在更新仓位信息时没有并发访问的问题
         let positions_lock = &mut self.positions;
@@ -417,37 +417,71 @@ impl Account
     }
 
     /// 更新 FuturePosition 的方法（占位符）
-    async fn set_future_position(&mut self, _pos: FuturePosition) -> Result<(), ExchangeError>
+    async fn create_future_position(&mut self, _pos: FuturePosition) -> Result<(), ExchangeError>
     {
         todo!("[UniLinkExecution] : Updating Future positions is not yet implemented")
     }
 
     /// 更新 OptionPosition 的方法（占位符）
-    async fn set_option_position(&mut self, _pos: OptionPosition) -> Result<(), ExchangeError>
+    async fn create_option_position(&mut self, _pos: OptionPosition) -> Result<(), ExchangeError>
     {
         todo!("[UniLinkExecution] : Updating Option positions is not yet implemented")
     }
 
+
+    /// 更新或合并仓位
+    pub fn merge_or_update_position(&mut self, new_position: Position) {
+        match new_position {
+            Position::Perpetual(p) => match p.meta.side {
+                Side::Buy => {
+                    let positions = &mut self.positions.perpetual_pos_long;
+                    if let Some(mut existing_position) = positions.get_mut(&p.meta.instrument) {
+                        // 合并现有的多头仓位
+                        existing_position.meta.current_size += p.meta.current_size;
+                    } else {
+                        // 插入新仓位
+                        positions.insert(p.meta.instrument.clone(), p);
+                    }
+                }
+                Side::Sell => {
+                    let positions = &mut self.positions.perpetual_pos_short;
+                    if let Some(mut existing_position) = positions.get_mut(&p.meta.instrument) {
+                        // 合并现有的空头仓位
+                        existing_position.meta.current_size += p.meta.current_size;
+                    } else {
+                        // 插入新仓位
+                        positions.insert(p.meta.instrument.clone(), p);
+                    }
+                }
+            },
+            _ => { todo!() }
+        }
+    }
+
+
     /// 更新 LeveragedTokenPosition 的方法（占位符）
-    async fn set_leveraged_token_position(&mut self, _pos: LeveragedTokenPosition) -> Result<(), ExchangeError>
+    async fn create_leveraged_token_position(&mut self, _pos: LeveragedTokenPosition) -> Result<(), ExchangeError>
     {
         todo!("[UniLinkExecution] : Updating Leveraged Token positions is not yet implemented")
     }
 
-    /// 检查在 AccountPositions 中是否已经存在该 instrument 的某个仓位
-    /// 需要首先从 open 订单中确定 InstrumentKind，因为仓位类型各不相同
+    /// FIXME 该函数没有用上。
+    ///
+    /// 检查在`AccountPositions`中是否已经存在该`instrument`的某个仓位
+    /// 需要首先从 open 订单中确定 InstrumentKind, 因为仓位类型各不相同
+    ///
     pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExchangeError>
     {
         let positions_lock = &self.positions; // 获取锁
 
         match open.side {
-            | Side::Buy => {
+            Side::Buy => {
                 // 检查是否持有多头仓位
                 if positions_lock.has_long_position(&open.instrument) {
                     return Ok(true);
                 }
             }
-            | Side::Sell => {
+            Side::Sell => {
                 // 检查是否持有空头仓位
                 if positions_lock.has_short_position(&open.instrument) {
                     return Ok(true);
@@ -465,10 +499,10 @@ impl Account
 
         match instrument.kind {
             | InstrumentKind::Spot => {
-                return Err(ExchangeError::NotImplemented("Spot position conflict check not implemented".into()));
+                return Err(ExchangeError::NotImplemented("Spot account_positions conflict check not implemented".into()));
             }
             | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
-                return Err(ExchangeError::NotImplemented("Commodity position conflict check not implemented".into()));
+                return Err(ExchangeError::NotImplemented("Commodity account_positions conflict check not implemented".into()));
             }
             | InstrumentKind::Perpetual => {
                 // 比较新订单方向与当前持仓方向
@@ -1419,7 +1453,7 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_set_perpetual_position()
+    async fn test_create_perpetual_position()
     {
         let mut account = create_test_account().await;
 
@@ -1427,7 +1461,7 @@ mod tests
         let perpetual_position = create_test_perpetual_position(instrument.clone());
 
         // 设置新的仓位
-        account.set_perpetual_position(perpetual_position.clone()).await.unwrap();
+        account.create_perpetual_position(perpetual_position.clone()).await.unwrap();
 
         // 验证仓位是否已更新
         let position_result = account.get_position_long(&instrument).await;
@@ -1470,12 +1504,12 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_set_position()
+    async fn test_create_position()
     {
         let mut account = create_test_account().await;
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
         let perpetual_position = create_test_perpetual_position(instrument.clone());
-        account.set_position(Position::Perpetual(perpetual_position)).await.unwrap();
+        account.create_position(Position::Perpetual(perpetual_position)).await.unwrap();
         let position_result = account.get_position_long(&instrument).await;
         assert!(position_result.is_ok());
         assert!(position_result.unwrap().is_some());

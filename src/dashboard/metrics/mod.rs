@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 // use serde::{Deserialize, Serialize};
 // use crate::common::balance::Balance;
-// use crate::common::position::Position;
+// use crate::common::account_positions::Position;
 // use crate::dashboard::summary::PositionSummariser;
 
 /// `EquitySnapshot` 结构体表示在某个时间点上的总权益值，与 [`Balance.total`](Balance) 对应。
@@ -47,16 +47,16 @@ impl Default for EquitySnapshot
 //
 // impl PositionSummariser for EquitySnapshot {
 //     /// Updates using the input [`Position`]'s PnL & associated timestamp.
-//     fn update(&mut self, position: &Position) {
-//         match position.meta.exit_balance {
+//     fn update(&mut self, account_positions: &Position) {
+//         match account_positions.meta.exit_balance {
 //             None => {
 //                 // Position is not exited, so simulate
-//                 self.time = position.meta.update_time;
-//                 self.total += position.unrealised_profit_loss;
+//                 self.time = account_positions.meta.update_time;
+//                 self.total += account_positions.unrealised_profit_loss;
 //             }
 //             Some(exit_balance) => {
 //                 self.time = exit_balance.time;
-//                 self.total += position.realised_profit_loss;
+//                 self.total += account_positions.realised_profit_loss;
 //             }
 //         }
 //     }
@@ -65,36 +65,36 @@ impl Default for EquitySnapshot
 // #[cfg(test)]
 // mod tests {
 //     use super::*;
-//     use crate::test_util::position;
+//     use crate::test_util::account_positions;
 //     use chrono::Duration;
 //     use std::ops::Add;
 //
 //     #[test]
 //     fn equity_point_update() {
 //         fn equity_update_position_closed(exit_time: DateTime<Utc>, result_pnl: f64) -> Position {
-//             let mut position = position();
-//             position.meta.exit_balance = Some(Balance {
+//             let mut account_positions = account_positions();
+//             account_positions.meta.exit_balance = Some(Balance {
 //                 time: exit_time,
 //                 total: 100.0,
 //                 available: 100.0,
 //             });
-//             position.realised_profit_loss = result_pnl;
-//             position
+//             account_positions.realised_profit_loss = result_pnl;
+//             account_positions
 //         }
 //
 //         fn equity_update_position_open(
 //             last_update_time: DateTime<Utc>,
 //             unreal_pnl: f64,
 //         ) -> Position {
-//             let mut position = position();
-//             position.meta.exit_balance = None;
-//             position.meta.update_time = last_update_time;
-//             position.unrealised_profit_loss = unreal_pnl;
-//             position
+//             let mut account_positions = account_positions();
+//             account_positions.meta.exit_balance = None;
+//             account_positions.meta.update_time = last_update_time;
+//             account_positions.unrealised_profit_loss = unreal_pnl;
+//             account_positions
 //         }
 //
 //         struct TestCase {
-//             position: Position,
+//             account_positions: Position,
 //             expected_equity: f64,
 //             expected_time: DateTime<Utc>,
 //         }
@@ -108,39 +108,39 @@ impl Default for EquitySnapshot
 //
 //         let test_cases = vec![
 //             TestCase {
-//                 position: equity_update_position_closed(base_time.add(Duration::days(1)), 10.0),
+//                 account_positions: equity_update_position_closed(base_time.add(Duration::days(1)), 10.0),
 //                 expected_equity: 110.0,
 //                 expected_time: base_time.add(Duration::days(1)),
 //             },
 //             TestCase {
-//                 position: equity_update_position_open(base_time.add(Duration::days(2)), -10.0),
+//                 account_positions: equity_update_position_open(base_time.add(Duration::days(2)), -10.0),
 //                 expected_equity: 100.0,
 //                 expected_time: base_time.add(Duration::days(2)),
 //             },
 //             TestCase {
-//                 position: equity_update_position_closed(base_time.add(Duration::days(3)), -55.9),
+//                 account_positions: equity_update_position_closed(base_time.add(Duration::days(3)), -55.9),
 //                 expected_equity: 44.1,
 //                 expected_time: base_time.add(Duration::days(3)),
 //             },
 //             TestCase {
-//                 position: equity_update_position_open(base_time.add(Duration::days(4)), 68.7),
+//                 account_positions: equity_update_position_open(base_time.add(Duration::days(4)), 68.7),
 //                 expected_equity: 112.8,
 //                 expected_time: base_time.add(Duration::days(4)),
 //             },
 //             TestCase {
-//                 position: equity_update_position_closed(base_time.add(Duration::days(5)), 99999.0),
+//                 account_positions: equity_update_position_closed(base_time.add(Duration::days(5)), 99999.0),
 //                 expected_equity: 100111.8,
 //                 expected_time: base_time.add(Duration::days(5)),
 //             },
 //             TestCase {
-//                 position: equity_update_position_open(base_time.add(Duration::days(5)), 0.2),
+//                 account_positions: equity_update_position_open(base_time.add(Duration::days(5)), 0.2),
 //                 expected_equity: 100112.0,
 //                 expected_time: base_time.add(Duration::days(5)),
 //             },
 //         ];
 //
 //         for (index, test) in test_cases.into_iter().enumerate() {
-//             equity_point.update(&test.position);
+//             equity_point.update(&test.account_positions);
 //             let equity_diff = equity_point.total - test.expected_equity;
 //             assert!(equity_diff < 1e-10, "Test case {} failed at assert", index);
 //             assert_eq!(
