@@ -3,7 +3,7 @@ use crate::common::account_positions::position_meta::PositionMeta;
 use crate::{
     common::{
         account_positions::{
-            future::FuturePosition, leveraged_token::LeveragedTokenPosition, option::OptionPosition, perpetual::PerpetualPosition, AccountPositions, Position,
+           perpetual::PerpetualPosition, AccountPositions, Position,
             PositionDirectionMode, PositionMarginMode,
         },
         balance::{Balance, BalanceDelta, TokenBalance},
@@ -887,16 +887,6 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     }
 
 
-    /// 更新指定 `Instrument` 的仓位
-    pub async fn create_position(&mut self, position: Position) -> Result<(), ExchangeError>
-    {
-        match position {
-            | Position::Perpetual(pos) => self.create_perpetual_position(pos).await,
-            | Position::Future(pos) => self.create_future_position(pos).await,
-            | Position::Option(pos) => self.create_option_position(pos).await,
-            | Position::LeveragedToken(pos) => self.create_leveraged_token_position(pos).await,
-        }
-    }
 
     /// FIXME 该函数没有用上。
     ///
@@ -925,95 +915,18 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         Ok(false)
     }
 
-    /// 更新 PerpetualPosition 的方法
-    ///
-    /// 这个方法用于更新账户中的永续合约仓位信息。如果当前账户中已经存在
-    /// 对应金融工具（`Instrument`）的仓位，则更新其信息；否则，将新的仓位
-    /// 添加到永续合约仓位列表中。
-    ///
-    /// # 参数
-    ///
-    /// * `pos` - 需要更新的 `PerpetualPosition` 对象。
-    ///
-    /// # 返回值
-    ///
-    /// 如果更新成功，返回 `Ok(())`，否则返回一个 `ExecutionError`。
-    async fn create_perpetual_position(&mut self, pos: PerpetualPosition) -> Result<(), ExchangeError>
-    {
-        // 获取账户的锁，确保在更新仓位信息时没有并发访问的问题
-        let positions_lock = &mut self.positions;
-
-        // 根据仓位的 `side` 字段决定是多头仓位还是空头仓位
-        match pos.meta.side {
-            | Side::Buy => {
-                // 获取永续合约多头仓位的可变引用
-                let long_positions = &positions_lock.perpetual_pos_long;
-
-                // 插入或更新永续合约多头仓位
-                long_positions.insert(pos.meta.instrument.clone(), pos);
-            }
-            | Side::Sell => {
-                // 获取永续合约空头仓位的可变引用
-                let short_positions = &positions_lock.perpetual_pos_short;
-
-                // 插入或更新永续合约空头仓位
-                short_positions.insert(pos.meta.instrument.clone(), pos);
-            }
-        }
-
-        Ok(())
-    }
-
-    /// 更新 FuturePosition 的方法（占位符）
-    async fn create_future_position(&mut self, _pos: FuturePosition) -> Result<(), ExchangeError>
-    {
-        todo!("[UniLinkExecution] : Updating Future positions is not yet implemented")
-    }
-
-    /// 更新 OptionPosition 的方法（占位符）
-    async fn create_option_position(&mut self, _pos: OptionPosition) -> Result<(), ExchangeError>
-    {
-        todo!("[UniLinkExecution] : Updating Option positions is not yet implemented")
-    }
-
-
-    /// 更新 LeveragedTokenPosition 的方法（占位符）
-    async fn create_leveraged_token_position(&mut self, _pos: LeveragedTokenPosition) -> Result<(), ExchangeError>
-    {
-        todo!("[UniLinkExecution] : Updating Leveraged Token positions is not yet implemented")
-    }
-
-    pub async fn manage_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+    pub async fn manage_position_from_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
         match trade.instrument.kind {
             InstrumentKind::Perpetual => {
                 match trade.side {
                     // 买单处理多头仓位
                     Side::Buy => {
-                        // 如果有空头仓位，先平空头仓位
-                        if let Some(mut short_position) = self.positions.perpetual_pos_short.get_mut(&trade.instrument) {
-                            if short_position.meta.current_size >= trade.quantity {
-                                short_position.meta.current_size -= trade.quantity;
-                            } else {
-                                // 如果空头仓位不足以完全平仓，计算剩余未平仓部分
-                                self.positions.perpetual_pos_short.remove(&trade.instrument);
-
-                                // 创建新的多头仓位
-                                let new_position = PerpetualPosition {
-                                    meta: PositionMeta::from_trade(&trade, trade.price),
-                                    pos_config: PerpetualPositionConfig {
-                                        pos_margin_mode: self.config.position_margin_mode.clone(),
-                                        leverage: self.config.account_leverage_rate,
-                                        position_mode: self.config.position_direction_mode.clone(),
-                                    },
-                                    liquidation_price: 0.0, // 初始化的平仓价格
-                                    margin: 0.0,            // 初始化的保证金
-                                };
-
-                                // 插入新的多头仓位
-                                self.positions.perpetual_pos_long.insert(trade.instrument.clone(), new_position);
-                            }
+                        if let Some(mut long_position) = self.positions.perpetual_pos_long.get_mut(&trade.instrument) {
+                            // 如果已经存在多头仓位，累加仓位大小
+                            long_position.meta.current_size += trade.quantity;
+                            long_position.meta.update_from_trade(&trade, trade.price);
                         } else {
-                            // 没有空头仓位，直接创建多头仓位
+                            // 创建新的多头仓位
                             let new_position = PerpetualPosition {
                                 meta: PositionMeta::from_trade(&trade, trade.price),
                                 pos_config: PerpetualPositionConfig {
@@ -1021,8 +934,8 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                     leverage: self.config.account_leverage_rate,
                                     position_mode: self.config.position_direction_mode.clone(),
                                 },
-                                liquidation_price: 0.0, // 初始化的平仓价格
-                                margin: 0.0,            // 初始化的保证金
+                                liquidation_price: 0.0,
+                                margin: 0.0,
                             };
                             self.positions.perpetual_pos_long.insert(trade.instrument.clone(), new_position);
                         }
@@ -1034,10 +947,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                             if long_position.meta.current_size >= trade.quantity {
                                 long_position.meta.current_size -= trade.quantity;
                             } else {
-                                // 如果多头仓位不足以完全平仓，计算剩余未平仓部分
                                 self.positions.perpetual_pos_long.remove(&trade.instrument);
-
-                                // 创建新的空头仓位
                                 let new_position = PerpetualPosition {
                                     meta: PositionMeta::from_trade(&trade, trade.price),
                                     pos_config: PerpetualPositionConfig {
@@ -1045,15 +955,13 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                         leverage: self.config.account_leverage_rate,
                                         position_mode: self.config.position_direction_mode.clone(),
                                     },
-                                    liquidation_price: 0.0, // 初始化的平仓价格
-                                    margin: 0.0,            // 初始化的保证金
+                                    liquidation_price: 0.0,
+                                    margin: 0.0,
                                 };
-
-                                // 插入新的空头仓位
                                 self.positions.perpetual_pos_short.insert(trade.instrument.clone(), new_position);
                             }
                         } else {
-                            // 没有多头仓位，直接创建空头仓位
+                            // 没有多头仓位，创建空头仓位
                             let new_position = PerpetualPosition {
                                 meta: PositionMeta::from_trade(&trade, trade.price),
                                 pos_config: PerpetualPositionConfig {
@@ -1061,8 +969,8 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                     leverage: self.config.account_leverage_rate,
                                     position_mode: self.config.position_direction_mode.clone(),
                                 },
-                                liquidation_price: 0.0, // 初始化的平仓价格
-                                margin: 0.0,            // 初始化的保证金
+                                liquidation_price: 0.0,
+                                margin: 0.0,
                             };
                             self.positions.perpetual_pos_short.insert(trade.instrument.clone(), new_position);
                         }
@@ -1070,12 +978,12 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 }
             }
 
-            // 对于其他类型仓位（期货、现货等）可以根据需要扩展逻辑
             _ => return Err(ExchangeError::InvalidInstrument("Unsupported instrument type".into())),
         }
 
         Ok(())
     }
+
 
     /// 在 create_position 过程中确保仓位的杠杆率不超过账户的最大杠杆率。  [TODO] : TO BE CHECKED & APPLIED
     pub fn enforce_leverage_limits(&self, new_position: &PerpetualPosition) -> Result<(), ExchangeError> {
@@ -1564,8 +1472,9 @@ mod tests
     use super::*;
     use crate::{
         common::order::{identification::OrderId, states::request_open::RequestOpen},
-        test_utils::{create_test_account, create_test_perpetual_position},
+        test_utils::create_test_account,
     };
+    use crate::common::trade::ClientTradeId;
 
     #[tokio::test]
     async fn test_validate_order_request_open()
@@ -1640,22 +1549,6 @@ mod tests
     }
 
 
-    #[tokio::test]
-    async fn test_create_perpetual_position()
-    {
-        let mut account = create_test_account().await;
-
-        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-        let perpetual_position = create_test_perpetual_position(instrument.clone());
-
-        // 设置新的仓位
-        account.create_perpetual_position(perpetual_position.clone()).await.unwrap();
-
-        // 验证仓位是否已更新
-        let position_result = account.get_position_long(&instrument).await;
-        assert!(position_result.is_ok());
-        assert!(matches!(position_result.unwrap(), Some(Position::Perpetual(_))));
-    }
 
     #[tokio::test]
     async fn test_apply_cancel_order_changes() {
@@ -1687,18 +1580,6 @@ mod tests
         } else {
             panic!("Expected AccountEventKind::Balance");
         }
-    }
-
-    #[tokio::test]
-    async fn test_create_position()
-    {
-        let mut account = create_test_account().await;
-        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-        let perpetual_position = create_test_perpetual_position(instrument.clone());
-        account.create_position(Position::Perpetual(perpetual_position)).await.unwrap();
-        let position_result = account.get_position_long(&instrument).await;
-        assert!(position_result.is_ok());
-        assert!(position_result.unwrap().is_some());
     }
 
     #[tokio::test]
@@ -2177,4 +2058,167 @@ mod tests
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), ExchangeError::InsufficientBalance(instrument.quote));
     }
+
+
+    #[tokio::test]
+    async fn test_create_new_long_position() {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade {
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(1),
+            order_id: OrderId(1),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Buy,
+            price: 100.0,
+            quantity: 10.0,
+            fees: 0.1,
+        };
+
+        // 执行管理仓位逻辑
+        let result = account.manage_position_from_trade(trade.clone()).await;
+        assert!(result.is_ok());
+
+        // 检查多头仓位是否成功创建
+        let positions = account.positions.perpetual_pos_long;
+        assert!(positions.contains_key(&trade.instrument));
+        let pos = positions.get(&trade.instrument).unwrap();
+        assert_eq!(pos.meta.current_size, 10.0);
+    }
+
+
+    #[tokio::test]
+    async fn test_create_new_short_position() {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade {
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(2),
+            order_id: OrderId(2),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Sell,
+            price: 100.0,
+            quantity: 5.0,
+            fees: 0.05,
+        };
+
+        // 执行管理仓位逻辑
+        let result = account.manage_position_from_trade(trade.clone()).await;
+        assert!(result.is_ok());
+
+        // 检查空头仓位是否成功创建
+        let positions = account.positions.perpetual_pos_short;
+        assert!(positions.contains_key(&trade.instrument));
+        let pos = positions.get(&trade.instrument).unwrap();
+        assert_eq!(pos.meta.current_size, 5.0);
+    }
+
+
+    #[tokio::test]
+    async fn test_update_existing_long_position() {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade {
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(3),
+            order_id: OrderId(3),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Buy,
+            price: 100.0,
+            quantity: 10.0,
+            fees: 0.1,
+        };
+
+        // 创建一个多头仓位
+        account.manage_position_from_trade(trade.clone()).await.unwrap();
+
+        // 再次买入增加仓位
+        let additional_trade = ClientTrade {
+            timestamp: 1690000100,
+            trade_id: ClientTradeId(4),
+            order_id: OrderId(4),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Buy,
+            price: 100.0,
+            quantity: 5.0,
+            fees: 0.05,
+        };
+
+        account.manage_position_from_trade(additional_trade.clone()).await.unwrap();
+
+        // 检查仓位是否正确更新
+        let positions = account.positions.perpetual_pos_long;
+        let pos = positions.get(&trade.instrument).unwrap();
+        assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
+    }
+
+
+    #[tokio::test]
+    async fn test_close_long_position_partially() {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade {
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Buy,
+            price: 100.0,
+            quantity: 10.0,
+            fees: 0.1,
+        };
+
+        // 创建一个多头仓位
+        account.manage_position_from_trade(trade.clone()).await.unwrap();
+
+        // 部分平仓
+        let closing_trade = ClientTrade {
+            timestamp: 1690000200,
+            trade_id: ClientTradeId(6),
+            order_id: OrderId(6),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Sell,
+            price: 100.0,
+            quantity: 5.0,
+            fees: 0.05,
+        };
+
+        account.manage_position_from_trade(closing_trade.clone()).await.unwrap();
+
+        // 检查仓位是否部分平仓
+        let positions = account.positions.perpetual_pos_long;
+        let pos = positions.get(&trade.instrument).unwrap();
+        assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位
+    }
+
 }
