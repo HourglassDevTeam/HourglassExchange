@@ -1,7 +1,9 @@
+use crate::common::balance::Balance;
 use serde::{Deserialize, Serialize};
 
+use crate::common::trade::ClientTrade;
 use crate::{
-    common::{account_positions::position_id::PositionId, balance::TokenBalance, friction::Fees, instrument::Instrument, order::OrderRole, Side},
+    common::{account_positions::position_id::PositionId, balance::TokenBalance, instrument::Instrument, Side},
     Exchange,
 };
 
@@ -16,7 +18,7 @@ pub struct PositionMeta
     pub instrument: Instrument,       // 静态数据
     pub side: Side,                   // 静态数据
     pub current_size: f64,            // 实时更新
-    pub current_fees_total: Fees,     // 实时更新
+    pub current_fees_total: f64,     // 实时更新
     pub current_avg_price_gross: f64, // 实时更新，即没有考虑费用或其他扣减项的情况下计算的平均持仓价格。
     pub current_symbol_price: f64,    // 实时更新，当前交易标的（symbol，如股票、期货合约、加密货币等）的最新市场价格。
     pub current_avg_price: f64,       // 实时更新
@@ -24,61 +26,88 @@ pub struct PositionMeta
     pub realised_pnl: f64,            // 静态更新（平仓时更新）
 }
 
+
+impl PositionMeta {
+    /// 根据 `ClientTrade` 创建或更新 `PositionMeta`
+    pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) {
+        // 更新持仓的最新价格和交易时间戳
+        self.update_ts = trade.timestamp;
+        self.current_symbol_price = current_symbol_price;
+
+        // 直接更新当前的交易费用总和
+        self.current_fees_total += trade.fees;
+
+        // 计算新的持仓均价和交易数量
+        let trade_size = trade.quantity;
+        let trade_price = trade.price;
+
+        // 更新均价，不需要重新计算费用
+        self.calculate_avg_price(trade_price, trade_size);
+
+        // 更新未实现盈亏
+        self.update_unrealised_pnl();
+    }
+
+    /// 创建新的 `PositionMeta` 基于 `ClientTrade`
+    pub fn from_trade(trade: &ClientTrade, exchange: Exchange, current_symbol_price: f64) -> Self {
+        let position_id = PositionId::new(&trade.instrument, trade.timestamp);
+
+        Self {
+            position_id,
+            enter_ts: trade.timestamp,
+            update_ts: trade.timestamp,
+            exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, 0.0)),
+            exchange,
+            instrument: trade.instrument.clone(),
+            side: trade.side,
+            current_size: trade.quantity,
+            current_fees_total: trade.fees,
+            current_avg_price_gross: trade.price, // NOTE to be checked
+            current_symbol_price,
+            current_avg_price: trade.price, // NOTE to be checked
+            unrealised_pnl: 0.0,  // NOTE to be checked
+            realised_pnl: 0.0, // NOTE to be checked
+        }
+    }
+}
+
+
 impl PositionMeta
 {
     // CONSIDER 是否应该吧close fees成本计算进去
     // TODO double check logic of initialisation.
-    fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64, include_fees: bool, order_role: OrderRole)
-    {
+    fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64) {
         let total_size = self.current_size + trade_size;
+
         if total_size > 0.0 {
+            // 计算新的持仓均价（未考虑费用的粗略均价）
             self.current_avg_price_gross = (self.current_avg_price_gross * self.current_size + trade_price * trade_size) / total_size;
             self.current_size = total_size;
         }
 
-        let total_fees = if include_fees {
-            match &self.current_fees_total {
-                | Fees::Spot(fee) => match order_role {
-                    | OrderRole::Maker => fee.maker_fee * self.current_size,
-                    | OrderRole::Taker => fee.taker_fee * self.current_size,
-                },
-                | Fees::Future(fee) => match order_role {
-                    | OrderRole::Maker => fee.maker_fee * self.current_size,
-                    | OrderRole::Taker => fee.taker_fee * self.current_size,
-                },
-                | Fees::Perpetual(fee) => match order_role {
-                    | OrderRole::Maker => fee.maker_fee * self.current_size,
-                    | OrderRole::Taker => fee.taker_fee * self.current_size,
-                },
-                | Fees::Option(fee) => fee.trade_fee * self.current_size,
-            }
-        }
-        else {
-            0.0
-        };
-
-        if self.current_size > 0.0 {
-            self.current_avg_price = (self.current_avg_price_gross * self.current_size + total_fees) / self.current_size;
-        }
-        else {
-            self.current_avg_price = self.current_avg_price_gross;
-        }
+        // 更新平均价格（默认 gross 作为基础）
+        self.current_avg_price = self.current_avg_price_gross;
     }
 
-    /// 更新 current_avg_price_gross
-    pub fn update_avg_price_gross(&mut self, trade_price: f64, trade_size: f64, transaction_type: OrderRole)
+    /// 更新 current_avg_price_gross，不考虑费用
+    pub fn update_avg_price_gross(&mut self, trade_price: f64, trade_size: f64)
     {
-        self.calculate_avg_price(trade_price, trade_size, false, transaction_type);
+        self.calculate_avg_price(trade_price, trade_size);
     }
 
     /// 更新 current_avg_price，同时考虑费用
-    pub fn update_avg_price(&mut self, trade_price: f64, trade_size: f64, fees: Fees, order_role: OrderRole)
+    pub fn update_avg_price(&mut self, trade_price: f64, trade_size: f64, trade_fees: f64)
     {
-        // 更新 current_fees_total，基于新交易的费用
-        self.current_fees_total = fees;
+        // 计算总费用（直接从 `ClientTrade` 中获取）
+        self.current_fees_total += trade_fees;
 
-        // 调用通用方法计算并更新平均价格
-        self.calculate_avg_price(trade_price, trade_size, true, order_role);
+        // 调用方法更新均价（不处理费用，在外部考虑费用）
+        self.calculate_avg_price(trade_price, trade_size);
+
+        // 考虑费用后的均价更新
+        if self.current_size > 0.0 {
+            self.current_avg_price = (self.current_avg_price_gross * self.current_size + self.current_fees_total) / self.current_size;
+        }
     }
 
     /// 更新 current_symbol_price
@@ -86,14 +115,13 @@ impl PositionMeta
     {
         self.current_symbol_price = new_symbol_price;
     }
-
-    /// FIXME ：检验逻辑 更新 unrealised_pnl
+    /// 更新 unrealised_pnl
     pub fn update_unrealised_pnl(&mut self)
     {
         self.unrealised_pnl = (self.current_symbol_price - self.current_avg_price) * self.current_size;
     }
 
-    /// FIXME ：检验逻辑 更新 realised_pnl
+    /// 更新 realised_pnl 并清空持仓
     pub fn update_realised_pnl(&mut self, closing_price: f64)
     {
         self.realised_pnl = (closing_price - self.current_avg_price) * self.current_size;
@@ -101,6 +129,7 @@ impl PositionMeta
         self.current_size = 0.0;
         self.current_avg_price = 0.0;
         self.current_avg_price_gross = 0.0;
+        self.current_fees_total = 0.0;  // 清空费用
     }
 }
 
@@ -114,7 +143,7 @@ pub struct PositionMetaBuilder
     instrument: Option<Instrument>,
     side: Option<Side>,
     current_size: Option<f64>,
-    current_fees_total: Option<Fees>,
+    current_fees_total: Option<f64>,
     current_avg_price_gross: Option<f64>,
     current_symbol_price: Option<f64>,
     current_avg_price: Option<f64>,
@@ -191,7 +220,7 @@ impl PositionMetaBuilder
         self
     }
 
-    pub fn current_fees_total(mut self, current_fees_total: Fees) -> Self
+    pub fn current_fees_total(mut self, current_fees_total: f64) -> Self
     {
         self.current_fees_total = Some(current_fees_total);
         self
@@ -259,10 +288,10 @@ mod tests
 {
     use super::*;
     use crate::common::{
-        balance::{Balance, TokenBalance},
-        friction::{Fees, SpotFees},
-        instrument::{kind::InstrumentKind, Instrument},
-        order::OrderRole,
+        balance::{Balance, TokenBalance}
+        ,
+        instrument::{kind::InstrumentKind, Instrument}
+        ,
         token::Token,
         Side,
     };
@@ -278,14 +307,14 @@ mod tests
                                       instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
                                       side: Side::Buy,
                                       current_size: 1.0,
-                                      current_fees_total: Fees::Spot(SpotFees { maker_fee: 9.0, taker_fee: 7.8 }),
+                                      current_fees_total:2.0,
                                       current_avg_price_gross: 50_000.0,
                                       current_symbol_price: 61_000.0,
                                       current_avg_price: 50_000.0,
                                       unrealised_pnl: 11_000.0,
                                       realised_pnl: 0.0 };
 
-        meta.update_avg_price_gross(60_000.0, 1.0, OrderRole::Taker);
+        meta.update_avg_price_gross(60_000.0, 1.0);
 
         assert_eq!(meta.current_avg_price_gross, 55_000.0);
         assert_eq!(meta.current_size, 2.0);

@@ -1,5 +1,9 @@
 use crate::{
     common::{
+        account_positions::{
+            future::FuturePosition, leveraged_token::LeveragedTokenPosition, option::OptionPosition, perpetual::PerpetualPosition, AccountPositions, Position,
+            PositionDirectionMode, PositionMarginMode,
+        },
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
@@ -9,17 +13,13 @@ use crate::{
             states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
             Order, OrderRole,
         },
-        account_positions::{
-            future::FuturePosition, leveraged_token::LeveragedTokenPosition, option::OptionPosition, perpetual::PerpetualPosition, AccountPositions, Position,
-            PositionDirectionMode, PositionMarginMode,
-        },
         token::Token,
         trade::ClientTrade,
         Side,
     },
     error::ExchangeError,
     sandbox::{
-        account::account_config::{SandboxMode},
+        account::account_config::SandboxMode,
         clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
     },
     Exchange,
@@ -47,6 +47,7 @@ use std::{
 use tokio::sync::{mpsc, oneshot, RwLock};
 use tracing::warn;
 use uuid::Uuid;
+// use crate::common::account_positions::position_meta::PositionMeta;
 
 pub mod account_config;
 pub mod account_latency;
@@ -463,13 +464,6 @@ impl Account
         self.send_account_event(order_event)?;
         Ok(open_order)
     }
-
-    /// [PART 4]
-    /// `validate_order_instruction` 验证订单的合法性，确保订单类型是受支持的。
-    /// `validate_order_request_open` 验证开单请求的合法性，确保订单类型是受支持的。
-    /// `match_orders` 处理市场事件，根据市场事件匹配相应的订单并生成交易。
-    /// `get_orders_for_instrument` 获取与特定金融工具相关的订单，用于进一步的订单匹配操作。
-    /// `fees_percent` 根据金融工具类型和订单方向确定适用的费用百分比。
 
     pub fn validate_order_instruction(kind: OrderInstruction) -> Result<(), ExchangeError>
     {
@@ -987,171 +981,91 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         todo!("[UniLinkExecution] : Updating Leveraged Token positions is not yet implemented")
     }
 
-    /// 更新、合并或平仓 [TODO] : TO BE CHECKED
-    pub fn merge_or_update_position(&mut self, new_position: Position, trade_quantity: f64) -> Result<(), ExchangeError> {
-        match new_position {
-            Position::Perpetual(p) => match p.meta.side {
-                Side::Buy => {
-                    let positions = &mut self.positions.perpetual_pos_long;
-                    if let Some(mut existing_position) = positions.get_mut(&p.meta.instrument) {
-                        // 检查是否要平仓
-                        if existing_position.meta.current_size > trade_quantity {
-                            existing_position.meta.current_size -= trade_quantity;
-                        } else {
-                            // 完全平仓，移除仓位
-                            positions.remove(&p.meta.instrument);
-                        }
-                    } else {
-                        // 插入新仓位
-                        positions.insert(p.meta.instrument.clone(), p);
-                    }
-                }
-                Side::Sell => {
-                    let positions = &mut self.positions.perpetual_pos_short;
-                    if let Some(mut existing_position) = positions.get_mut(&p.meta.instrument) {
-                        // 检查是否要平仓
-                        if existing_position.meta.current_size > trade_quantity {
-                            existing_position.meta.current_size -= trade_quantity;
-                        } else {
-                            // 完全平仓，移除仓位
-                            positions.remove(&p.meta.instrument);
-                        }
-                    } else {
-                        // 插入新仓位
-                        positions.insert(p.meta.instrument.clone(), p);
-                    }
-                }
-            },
-            Position::Future(f) => match f.meta.side {
-                Side::Buy => {
-                    let positions = &mut self.positions.futures_pos_long;
-                    if let Some(mut existing_position) = positions.get_mut(&f.meta.instrument) {
-                        // 检查是否要平仓
-                        if existing_position.meta.current_size > trade_quantity {
-                            existing_position.meta.current_size -= trade_quantity;
-                        } else {
-                            // 完全平仓，移除仓位
-                            positions.remove(&f.meta.instrument);
-                        }
-                    } else {
-                        // 插入新仓位
-                        positions.insert(f.meta.instrument.clone(), f);
-                    }
-                }
-                Side::Sell => {
-                    let positions = &mut self.positions.futures_pos_short;
-                    if let Some(mut existing_position) = positions.get_mut(&f.meta.instrument) {
-                        // 检查是否要平仓
-                        if existing_position.meta.current_size > trade_quantity {
-                            existing_position.meta.current_size -= trade_quantity;
-                        } else {
-                            // 完全平仓，移除仓位
-                            positions.remove(&f.meta.instrument);
-                        }
-                    } else {
-                        // 插入新仓位
-                        positions.insert(f.meta.instrument.clone(), f);
-                    }
-                }
-            },
-            _ => {
-                // 处理其他类型的仓位，如Option或其他类型的仓位
-                return Err(ExchangeError::InvalidInstrument("Unsupported position type for merging or updating".into()));
-            }
-        }
-        Ok(())
-    }
-
-
-    /// 检查仓位冲突并进行方向切换或平仓  [TODO] : TO BE CHECKED
-    pub fn switch_or_close_position(&mut self, new_position: Position) -> Result<(), ExchangeError> {
-        match new_position {
-            Position::Perpetual(new_pos) => match new_pos.meta.side {
-                Side::Buy => {
-                    if let Some(mut short_position) = self.positions.perpetual_pos_short.get_mut(&new_pos.meta.instrument) {
-                        if short_position.meta.current_size >= new_pos.meta.current_size {
-                            // 部分平仓
-                            short_position.meta.current_size -= new_pos.meta.current_size;
-                            return Ok(());
-                        } else {
-                            // 完全反向并创建新的多头仓位
-                            let remaining_size = new_pos.meta.current_size - short_position.meta.current_size;
-                            self.positions.perpetual_pos_short.remove(&new_pos.meta.instrument);
-                            let mut updated_position = new_pos.clone();
-                            updated_position.meta.current_size = remaining_size;
-                            self.positions.perpetual_pos_long.insert(new_pos.meta.instrument.clone(), updated_position);
-                        }
-                    } else {
-                        // 没有空头仓位，直接插入新的多头仓位
-                        self.positions.perpetual_pos_long.insert(new_pos.meta.instrument.clone(), new_pos);
-                    }
-                }
-                Side::Sell => {
-                    if let Some(mut long_position) = self.positions.perpetual_pos_long.get_mut(&new_pos.meta.instrument) {
-                        if long_position.meta.current_size >= new_pos.meta.current_size {
-                            // 部分平仓
-                            long_position.meta.current_size -= new_pos.meta.current_size;
-                            return Ok(());
-                        } else {
-                            // 完全反向并创建新的空头仓位
-                            let remaining_size = new_pos.meta.current_size - long_position.meta.current_size;
-                            self.positions.perpetual_pos_long.remove(&new_pos.meta.instrument);
-                            let mut updated_position = new_pos.clone();
-                            updated_position.meta.current_size = remaining_size;
-                            self.positions.perpetual_pos_short.insert(new_pos.meta.instrument.clone(), updated_position);
-                        }
-                    } else {
-                        // 没有多头仓位，直接插入新的空头仓位
-                        self.positions.perpetual_pos_short.insert(new_pos.meta.instrument.clone(), new_pos);
-                    }
-                }
-            },
-            Position::Future(new_pos) => match new_pos.meta.side {
-                Side::Buy => {
-                    if let Some(mut short_position) = self.positions.futures_pos_short.get_mut(&new_pos.meta.instrument) {
-                        if short_position.meta.current_size >= new_pos.meta.current_size {
-                            // 部分平仓
-                            short_position.meta.current_size -= new_pos.meta.current_size;
-                            return Ok(());
-                        } else {
-                            // 完全反向并创建新的多头仓位
-                            let remaining_size = new_pos.meta.current_size - short_position.meta.current_size;
-                            self.positions.futures_pos_short.remove(&new_pos.meta.instrument);
-                            let mut updated_position = new_pos.clone();
-                            updated_position.meta.current_size = remaining_size;
-                            self.positions.futures_pos_long.insert(new_pos.meta.instrument.clone(), updated_position);
-                        }
-                    } else {
-                        // 没有空头仓位，直接插入新的多头仓位
-                        self.positions.futures_pos_long.insert(new_pos.meta.instrument.clone(), new_pos);
-                    }
-                }
-                Side::Sell => {
-                    if let Some(mut long_position) = self.positions.futures_pos_long.get_mut(&new_pos.meta.instrument) {
-                        if long_position.meta.current_size >= new_pos.meta.current_size {
-                            // 部分平仓
-                            long_position.meta.current_size -= new_pos.meta.current_size;
-                            return Ok(());
-                        } else {
-                            // 完全反向并创建新的空头仓位
-                            let remaining_size = new_pos.meta.current_size - long_position.meta.current_size;
-                            self.positions.futures_pos_long.remove(&new_pos.meta.instrument);
-                            let mut updated_position = new_pos.clone();
-                            updated_position.meta.current_size = remaining_size;
-                            self.positions.futures_pos_short.insert(new_pos.meta.instrument.clone(), updated_position);
-                        }
-                    } else {
-                        // 没有多头仓位，直接插入新的空头仓位
-                        self.positions.futures_pos_short.insert(new_pos.meta.instrument.clone(), new_pos);
-                    }
-                }
-            },
-            // 对于其他类型的仓位（如LeveragedToken和Option），这里可以根据需求扩展类似的逻辑
-            _ => return Err(ExchangeError::InvalidInstrument("Unsupported position type for switching or closing".into())),
-        }
-
-        Ok(())
-    }
+    /// 根据 `ClientTrade` 更新或创建仓位
+    // pub async fn manage_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+    //     // 根据 `ClientTrade` 中的 `instrument` 确定仓位
+    //     match trade.instrument.kind {
+    //         InstrumentKind::Perpetual => {
+    //             match trade.side {
+    //                 // 买单处理多头仓位
+    //                 Side::Buy => {
+    //                     if let Some(mut short_position) = self.positions.perpetual_pos_short.get_mut(&trade.instrument) {
+    //                         // 先进行平仓处理
+    //                         if short_position.meta.current_size >= trade.quantity {
+    //                             short_position.meta.current_size -= trade.quantity;
+    //                         } else {
+    //                             // 完全平仓并创建多头仓位
+    //                             let remaining_size = trade.quantity - short_position.meta.current_size;
+    //                             self.positions.perpetual_pos_short.remove(&trade.instrument);
+    //                             let new_position = PerpetualPosition {
+    //                                 meta: PositionMeta {
+    //                                     instrument: trade.instrument.clone(),
+    //                                     side: Side::Buy,
+    //                                     current_size: remaining_size,
+    //                                     ..Default::default()
+    //                                 },
+    //                                 ..Default::default()
+    //                             };
+    //                             self.positions.perpetual_pos_long.insert(trade.instrument.clone(), new_position);
+    //                         }
+    //                     } else {
+    //                         // 没有空头仓位，直接创建多头仓位
+    //                         let new_position = PerpetualPosition {
+    //                             meta: PositionMeta {
+    //                                 instrument: trade.instrument.clone(),
+    //                                 side: Side::Buy,
+    //                                 current_size: trade.quantity,
+    //                                 ..Default::default()
+    //                             },
+    //                             ..Default::default()
+    //                         };
+    //                         self.positions.perpetual_pos_long.insert(trade.instrument.clone(), new_position);
+    //                     }
+    //                 }
+    //
+    //                 // 卖单处理空头仓位
+    //                 Side::Sell => {
+    //                     if let Some(mut long_position) = self.positions.perpetual_pos_long.get_mut(&trade.instrument) {
+    //                         if long_position.meta.current_size >= trade.quantity {
+    //                             long_position.meta.current_size -= trade.quantity;
+    //                         } else {
+    //                             // 完全平仓并创建空头仓位
+    //                             let remaining_size = trade.quantity - long_position.meta.current_size;
+    //                             self.positions.perpetual_pos_long.remove(&trade.instrument);
+    //                             let new_position = PerpetualPosition {
+    //                                 meta: PositionMeta {
+    //                                     instrument: trade.instrument.clone(),
+    //                                     side: Side::Sell,
+    //                                     current_size: remaining_size,
+    //                                     ..Default::default()
+    //                                 },
+    //                                 ..Default::default()
+    //                             };
+    //                             self.positions.perpetual_pos_short.insert(trade.instrument.clone(), new_position);
+    //                         }
+    //                     } else {
+    //                         // 没有多头仓位，直接创建空头仓位
+    //                         let new_position = PerpetualPosition {
+    //                             meta: PositionMeta {
+    //                                 instrument: trade.instrument.clone(),
+    //                                 side: Side::Sell,
+    //                                 current_size: trade.quantity,
+    //                                 ..Default::default()
+    //                             },
+    //                             ..Default::default()
+    //                         };
+    //                         self.positions.perpetual_pos_short.insert(trade.instrument.clone(), new_position);
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //
+    //         // 对于其他类型仓位（期货、现货等）可以根据需要扩展逻辑
+    //         _ => return Err(ExchangeError::InvalidInstrument("Unsupported instrument type".into())),
+    //     }
+    //
+    //     Ok(())
+    // }
 
     /// 在 create_position 过程中确保仓位的杠杆率不超过账户的最大杠杆率。  [TODO] : TO BE CHECKED & APPLIED
     pub fn enforce_leverage_limits(&self, new_position: &PerpetualPosition) -> Result<(), ExchangeError> {

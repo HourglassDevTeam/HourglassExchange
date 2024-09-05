@@ -9,7 +9,6 @@ use crate::{
             position_meta::PositionMetaBuilder,
         },
         balance::{Balance, TokenBalance},
-        friction::{Fees, PerpetualFees},
         instrument::{kind::InstrumentKind, Instrument},
         trade::ClientTrade,
         Side,
@@ -155,16 +154,10 @@ impl AccountPositions
     /// TODO check init logic
     pub async fn build_new_perpetual_position(&self, config: &AccountConfig, trade: &ClientTrade, exchange_ts: i64) -> Result<PerpetualPosition, ExchangeError>
     {
-        let maker_rate = config.get_maker_fee_rate(&trade.instrument.kind)?;
-        let taker_rate = config.get_taker_fee_rate(&trade.instrument.kind)?;
         let position_mode = config.position_direction_mode.clone();
         let position_margin_mode = config.position_margin_mode.clone();
         // 计算初始保证金
         let initial_margin = trade.price * trade.quantity / config.account_leverage_rate;
-        // 计算费用
-        let maker_fee = trade.quantity * trade.price * maker_rate;
-        let taker_fee = trade.quantity * trade.price * taker_rate;
-        let funding_fee = trade.quantity * trade.price * config.funding_rate;
 
         // 根据 Instrument 和 Side 动态生成 position_id
         let position_meta = PositionMetaBuilder::new().position_id(PositionId::new(&trade.instrument.clone(), trade.timestamp))
@@ -180,9 +173,7 @@ impl AccountPositions
                                                       .instrument(trade.instrument.clone())
                                                       .side(trade.side)
                                                       .current_size(trade.quantity)
-                                                      .current_fees_total(Fees::Perpetual(PerpetualFees { maker_fee,
-                                                                                                          taker_fee, // 假设平仓费率与开仓费率相同
-                                                                                                          funding_fee }))
+                                                      .current_fees_total(trade.fees)
                                                       .current_avg_price_gross(trade.price)
                                                       .current_symbol_price(trade.price)
                                                       .current_avg_price(trade.price)
@@ -406,9 +397,7 @@ mod tests
                                                                                                             available: trade_size } })
                                                             .exchange(Exchange::Binance)
                                                             .current_size(trade_size)
-                                                            .current_fees_total(Fees::Perpetual(PerpetualFees { maker_fee: 0.1 * trade_size,
-                                                                                                                taker_fee: 0.1 * trade_size,
-                                                                                                                funding_fee: 0.0 }))
+                                                            .current_fees_total(0.2)
                                                             .current_avg_price_gross(initial_trade_price)
                                                             .current_symbol_price(current_market_price)
                                                             .current_avg_price(initial_trade_price)

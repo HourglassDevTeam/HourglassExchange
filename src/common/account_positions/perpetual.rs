@@ -115,8 +115,8 @@ mod tests
     use crate::{
         common::{
             account_positions::{position_id::PositionId, PositionDirectionMode, PositionMarginMode},
-            balance::{Balance, TokenBalance},
-            friction::{Fees, SpotFees},
+            balance::{Balance, TokenBalance}
+            ,
             instrument::{kind::InstrumentKind, Instrument},
             token::Token,
             Side,
@@ -135,7 +135,7 @@ mod tests
                                                                     instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
                                                                     side: Side::Buy,
                                                                     current_size: 1.0,
-                                                                    current_fees_total: Fees::Spot(SpotFees { maker_fee: 11.0, taker_fee: 9.0 }),
+                                                                    current_fees_total: 66.0,
                                                                     current_avg_price_gross: 50_000.0,
                                                                     current_symbol_price: 61_000.0,
                                                                     current_avg_price: 50_000.0,
