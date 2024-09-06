@@ -1139,6 +1139,8 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 println!("[UniLinkEx] : Removing long position...");
                                 long_positions_write.remove(&trade.instrument);
                             } else if should_remove_and_reverse {
+                                // FIXME 在处理 should_remove_and_reverse 的情况下，平掉多头并反向开空头了，但似乎没有更新已实现的盈亏。
+                                // FIXME 应类似 long_positions_write.get(&trade.instrument).unwrap().meta.update_realised_pnl(trade.price);
                                 println!("[UniLinkEx] : should_remove_and_reverse...");
                                 long_positions_write.remove(&trade.instrument);
                                 drop(long_positions_write); // 显式释放写锁

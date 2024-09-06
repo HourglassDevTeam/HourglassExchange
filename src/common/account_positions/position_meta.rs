@@ -27,6 +27,11 @@ pub struct PositionMeta
     pub realised_pnl: f64,            // 静态更新（平仓时更新）
 }
 
+
+
+/// FIXME 虽然 Net Mode 和 LongShort Mode 在很多地方可以复用相似的逻辑，
+///         但为了减少未来可能的逻辑混淆和复杂性，建议进一步明确两种模式的职责，
+///         尤其是在处理复杂的反向开仓和部分平仓的情况下。
 impl PositionMeta {
     /// 根据 `ClientTrade` 和模式更新仓位
     pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64, mode: PositionDirectionMode) {
@@ -128,6 +133,8 @@ impl PositionMeta
 
 
     /// 更新 current_avg_price，同时考虑费用
+    /// 在 update_avg_price_and_fees 方法中，您试图在计算平均价格时加入费用，但当前的计算公式可能会导致均价计算不准确。
+    /// 特别是在考虑交易费用的情况下，费用应被视为独立于价格的一项成本，而不是直接加入到价格中去。
     pub fn update_avg_price_and_fees(&mut self, trade_price: f64, trade_size: f64, trade_fees: f64)
     {
         // 计算总费用（直接从 `ClientTrade` 中获取）
@@ -156,12 +163,18 @@ impl PositionMeta
     }
 
     /// 更新 unrealised_pnl
+    /// FIXME 在更新未实现盈亏时，现在使用 self.current_size 来计算，但是在反向仓位或部分平仓的情况下，可能会有问题，
+    /// FIXME 因为仓位大小已经发生变化。建议确保每次在更新未实现盈亏时，考虑实际持仓方向和剩余仓位大小。
     pub fn update_unrealised_pnl(&mut self)
     {
         self.unrealised_pnl = (self.current_symbol_price - self.current_avg_price) * self.current_size;
     }
 
     /// 更新 realised_pnl 并清空持仓
+    /// FIXME
+    ///     - 在 update_realised_pnl 方法中，您在平仓时计算已实现盈亏后将持仓重置为 0，这对 Net Mode 是合理的，
+    ///     - 但是在 LongShort Mode 或反向开仓时，可能需要根据情况保留部分持仓或反转方向，而不是直接将所有仓位重置为 0。
+    ///
     pub fn update_realised_pnl(&mut self, closing_price: f64)
     {
         self.realised_pnl = (closing_price - self.current_avg_price) * self.current_size;
