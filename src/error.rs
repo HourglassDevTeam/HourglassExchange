@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::common::order::identification::OrderId;
 use crate::common::{
     order::{
         identification::{client_order_id::ClientOrderId, request_id::RequestId},
@@ -8,7 +9,6 @@ use crate::common::{
     },
     token::Token,
 };
-use crate::common::order::identification::OrderId;
 
 /// 执行过程中可能遇到的错误。
 #[derive(Error, PartialEq, PartialOrd, Debug, Clone, Deserialize, Serialize)]
@@ -144,4 +144,10 @@ pub enum ExchangeError
 
     #[error("[UniLinkExecution] : PostOnlyViolation")]
     PostOnlyViolation(String),
+
+    #[error("[UniLinkExecution] : ReduceOnlyViolation")]
+    ReduceOnlyViolation,
+
+    #[error("[UniLinkExecution] : UnsupportedInstrumentKind")]
+    UnsupportedInstrumentKind,
 }

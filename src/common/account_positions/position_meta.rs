@@ -26,31 +26,18 @@ pub struct PositionMeta
     pub realised_pnl: f64,            // 静态更新（平仓时更新）
 }
 
-
 impl PositionMeta {
-    /// 根据 `ClientTrade` 创建或更新 `PositionMeta`
+    /// 根据 `ClientTrade` 更新现有仓位
     pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) {
-        // 更新持仓的最新价格和交易时间戳
         self.update_ts = trade.timestamp;
         self.current_symbol_price = current_symbol_price;
-
-        // 直接更新当前的交易费用总和
         self.current_fees_total += trade.fees;
-
-        // 计算新的持仓均价和交易数量
-        let trade_size = trade.quantity;
-        let trade_price = trade.price;
-
-        // 更新均价，不需要重新计算费用
-        // NOTE that size is implicitly added in calculate_avg_price, which could lead to misunderstanding.
-        self.calculate_avg_price(trade_price, trade_size);
-
-        // 更新未实现盈亏
+        self.update_avg_price(trade.price, trade.quantity);
         self.update_unrealised_pnl();
     }
 
     /// 创建新的 `PositionMeta` 基于 `ClientTrade`
-    pub fn from_trade(trade: &ClientTrade,  current_symbol_price: f64) -> Self {
+    pub fn from_trade(trade: &ClientTrade, current_symbol_price: f64) -> Self {
         let position_id = PositionId::new(&trade.instrument, trade.timestamp);
 
         Self {
@@ -70,12 +57,43 @@ impl PositionMeta {
             realised_pnl: 0.0,
         }
     }
+
+    /// Handle new position creation in reverse with remaining quantity.
+    pub fn from_trade_with_remaining(trade: &ClientTrade, current_symbol_price: f64, side: Side, remaining_quantity: f64) -> Self {
+        let mut new_meta = PositionMeta::from_trade(trade, current_symbol_price);
+        new_meta.current_size = remaining_quantity;
+        new_meta.side = side;
+        new_meta
+    }
+
+    /// Update or create a position based on a new trade.
+    /// This handles both regular updates and reverse position logic.
+    pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) -> Self {
+        if self.side == trade.side {
+            // Update position normally if the trade is in the same direction
+            self.update_from_trade(trade, current_symbol_price);
+            self.clone() // Return the updated position
+        } else {
+            // If trade side is opposite, reduce or close the current position and possibly open a new one.
+            let remaining_quantity = trade.quantity - self.current_size;
+            if remaining_quantity >= 0.0 {
+                // Fully close the current position and reverse the position with remaining quantity
+                self.update_realised_pnl(trade.price);
+                PositionMeta::from_trade_with_remaining(trade, current_symbol_price, trade.side, remaining_quantity)
+            } else {
+                // Partial close, no reverse, just reduce the size
+                self.current_size -= trade.quantity;
+                self.update_realised_pnl(trade.price);
+                self.clone() // Return the updated position
+            }
+        }
+    }
 }
 
 
 impl PositionMeta
 {
-    fn calculate_avg_price(&mut self, trade_price: f64, trade_size: f64) {
+    fn update_avg_price(&mut self, trade_price: f64, trade_size: f64) {
         let total_size = self.current_size + trade_size;
 
         if total_size > 0.0 {
@@ -88,11 +106,6 @@ impl PositionMeta
         self.current_avg_price = self.current_avg_price_gross;
     }
 
-    /// 更新 current_avg_price_gross，不考虑费用
-    pub fn update_avg_price_gross(&mut self, trade_price: f64, trade_size: f64)
-    {
-        self.calculate_avg_price(trade_price, trade_size);
-    }
 
     /// 更新 current_avg_price，同时考虑费用
     pub fn update_avg_price_and_fees(&mut self, trade_price: f64, trade_size: f64, trade_fees: f64)
@@ -101,7 +114,7 @@ impl PositionMeta
         self.current_fees_total += trade_fees;
 
         // 调用方法更新均价（不处理费用，在外部考虑费用）
-        self.calculate_avg_price(trade_price, trade_size);
+        self.update_avg_price(trade_price, trade_size);
 
         // 考虑费用后的均价更新
         if self.current_size > 0.0 {
@@ -285,12 +298,12 @@ impl Default for PositionMetaBuilder
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::order::identification::OrderId;
+    use crate::common::trade::{ClientTrade, ClientTradeId};
     use crate::common::{
         instrument::{kind::InstrumentKind, Instrument},
         Side,
     };
-    use crate::common::order::identification::OrderId;
-    use crate::common::trade::{ClientTrade, ClientTradeId};
 
     /// Helper function to create a ClientTrade for testing
     fn create_test_trade() -> ClientTrade {
@@ -318,14 +331,7 @@ mod tests {
         assert_eq!(position_meta.current_fees_total, trade.fees);
     }
 
-    #[test]
-    fn test_update_avg_price_gross() {
-        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0);
-        meta.update_avg_price_gross(60_000.0, 1.0);
 
-        assert_eq!(meta.current_avg_price_gross, 55_000.0);  // Updated gross avg price
-        assert_eq!(meta.current_size, 2.0);  // Size should be updated
-    }
 
     #[test]
     fn test_update_avg_price_with_fees() {
