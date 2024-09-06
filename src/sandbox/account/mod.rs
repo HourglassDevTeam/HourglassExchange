@@ -674,13 +674,13 @@ impl Account
             | Ok(results) => {
                 let cancelled_orders: Vec<_> = results.into_iter().collect::<Result<Vec<_>, _>>().expect("Failed to collect cancel results");
                 response_tx.send(Ok(cancelled_orders)).unwrap_or_else(|_| {
-                    eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all response");
+                    eprintln!("[UniLinkEx] : Failed to send cancel_orders_all response");
                 });
             }
             | Err(_) => {
                 response_tx.send(Err(ExchangeError::InternalError("Failed to receive cancel results".to_string())))
                     .unwrap_or_else(|_| {
-                        eprintln!("[UniLinkExecution] : Failed to send cancel_orders_all error response");
+                        eprintln!("[UniLinkEx] : Failed to send cancel_orders_all error response");
                     });
             }
         }
@@ -954,7 +954,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     /// 更新 OptionPosition 的方法（占位符）
     async fn create_option_position(&mut self, _pos: OptionPosition) -> Result<(), ExchangeError>
     {
-        todo!("[UniLinkExecution] : Updating Option positions is not yet implemented")
+        todo!("[UniLinkEx] : Updating Option positions is not yet implemented")
     }
 
     #[allow(dead_code)]
@@ -962,7 +962,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     /// 更新 LeveragedTokenPosition 的方法（占位符）
     async fn create_leveraged_token_position(&mut self, _pos: LeveragedTokenPosition) -> Result<(), ExchangeError>
     {
-        todo!("[UniLinkExecution] : Updating Leveraged Token positions is not yet implemented")
+        todo!("[UniLinkEx] : Updating Leveraged Token positions is not yet implemented")
     }
 
     /// FIXME 该函数没有用上。
@@ -995,7 +995,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     /// 根据[PositionDirectionMode]分流
     ///
     pub async fn update_position_from_client_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
-        println!("[UniLinkExecution] : Received a new trade: {:#?}", trade);
+        println!("[UniLinkEx] : Received a new trade: {:#?}", trade);
 
         match trade.instrument.kind {
             InstrumentKind::Perpetual => {
@@ -1011,7 +1011,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 }
             }
             _ => {
-                println!("[UniLinkExecution] : Unsupported instrument kind.");
+                println!("[UniLinkEx] : Unsupported instrument kind.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
         }
@@ -1022,13 +1022,13 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     pub async fn update_position_long_short_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
         match trade.side {
             Side::Buy => {
-                println!("[UniLinkExecution] : Processing Buy trade for Long/Short Mode...");
+                println!("[UniLinkEx] : Processing Buy trade for Long/Short Mode...");
 
                 // 获取写锁更新或创建多头仓位
                 let mut long_positions = self.positions.perpetual_pos_long.write().await;
                 if let Some(position) = long_positions.get_mut(&trade.instrument) {
                     // 如果已经持有多头仓位，更新仓位
-                    println!("[UniLinkExecution] : Updating existing long position...");
+                    println!("[UniLinkEx] : Updating existing long position...");
                     position.meta.update_from_trade(&trade, trade.price, PositionDirectionMode::LongShort);
                 } else {
                     // 显式释放写锁
@@ -1044,13 +1044,13 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
             }
 
             Side::Sell => {
-                println!("[UniLinkExecution] : Processing Sell trade for Long/Short Mode...");
+                println!("[UniLinkEx] : Processing Sell trade for Long/Short Mode...");
 
                 // 获取写锁更新或创建空头仓位
                 let mut short_positions = self.positions.perpetual_pos_short.write().await;
                 if let Some(position) = short_positions.get_mut(&trade.instrument) {
                     // 如果已经持有空头仓位，更新仓位
-                    println!("[UniLinkExecution] : Updating existing short position...");
+                    println!("[UniLinkEx] : Updating existing short position...");
                     position.meta.update_from_trade(&trade, trade.price, PositionDirectionMode::LongShort);
                 } else {
                     // 显式释放写锁
@@ -1071,19 +1071,19 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
 
     /// 注意 这个函数是可以用来从客户端收到的交易中更新仓位，但是目前只适合 [PositionDirectionMode::Net Mode].
     pub async fn update_position_net_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
-        println!("[UniLinkExecution] : Received a new trade: {:#?}", trade);
+        println!("[UniLinkEx] : Received a new trade: {:#?}", trade);
 
         match trade.instrument.kind {
             InstrumentKind::Perpetual => {
                 match trade.side {
                     Side::Buy => {
-                        println!("[UniLinkExecution] : Processing long trade for Perpetual...");
+                        println!("[UniLinkEx] : Processing long trade for Perpetual...");
 
                         // 使用写锁更新或创建多头仓位
                         {
                             let mut long_positions = self.positions.perpetual_pos_long.write().await;
                             if let Some(position) = long_positions.get_mut(&trade.instrument) {
-                                println!("[UniLinkExecution] : Updating existing long position...");
+                                println!("[UniLinkEx] : Updating existing long position...");
                                 position.meta.update_from_trade(&trade, trade.price, PositionDirectionMode::Net);
                                 return Ok(());
                             }
@@ -1095,11 +1095,11 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                         // 再次获取写锁插入新的仓位
                         let mut long_positions = self.positions.perpetual_pos_long.write().await;
                         long_positions.insert(trade.instrument.clone(), new_position);
-                        println!("[UniLinkExecution] : New long position created: {:#?}", long_positions);
+                        println!("[UniLinkEx] : New long position created: {:#?}", long_positions);
                     }
 
                     Side::Sell => {
-                        println!("[UniLinkExecution] : Processing short trade for Perpetual...");
+                        println!("[UniLinkEx] : Processing short trade for Perpetual...");
 
                         let should_remove_position;
                         let should_remove_and_reverse;
@@ -1114,7 +1114,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 remaining_quantity = trade.quantity - position.meta.current_size;
                             } else {
                                 // 没有多头仓位，无需进一步处理
-                                println!("[UniLinkExecution] : No existing long position, creating a new short position...");
+                                println!("[UniLinkEx] : No existing long position, creating a new short position...");
                                 let new_position = PerpetualPosition {
                                     meta: PositionMeta::create_from_trade(&trade, trade.price),
                                     pos_config: PerpetualPositionConfig {
@@ -1126,7 +1126,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                     margin: 0.0,
                                 };
                                 self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
-                                println!("[UniLinkExecution] : New short position created: {:#?}", self.positions.perpetual_pos_short);
+                                println!("[UniLinkEx] : New short position created: {:#?}", self.positions.perpetual_pos_short);
                                 return Ok(());
                             }
                         }
@@ -1136,10 +1136,10 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                             let mut long_positions_write = self.positions.perpetual_pos_long.write().await;
 
                             if should_remove_position {
-                                println!("[UniLinkExecution] : Removing long position...");
+                                println!("[UniLinkEx] : Removing long position...");
                                 long_positions_write.remove(&trade.instrument);
                             } else if should_remove_and_reverse {
-                                println!("[UniLinkExecution] : should_remove_and_reverse...");
+                                println!("[UniLinkEx] : should_remove_and_reverse...");
                                 long_positions_write.remove(&trade.instrument);
                                 drop(long_positions_write); // 显式释放写锁
 
@@ -1156,7 +1156,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
                             } else {
                                 // 部分平仓
-                                println!("[UniLinkExecution] : Partially closing long position...");
+                                println!("[UniLinkEx] : Partially closing long position...");
                                 if let Some(position) = long_positions_write.get_mut(&trade.instrument) {
                                     position.meta.current_size -= trade.quantity;
                                 }
@@ -1167,17 +1167,17 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
             }
 
             InstrumentKind::Future => {
-                println!("[UniLinkExecution] : Futures trading is not yet supported.");
+                println!("[UniLinkEx] : Futures trading is not yet supported.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
 
             InstrumentKind::Spot => {
-                println!("[UniLinkExecution] : Spot trading is not yet supported.");
+                println!("[UniLinkEx] : Spot trading is not yet supported.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
 
             _ => {
-                println!("[UniLinkExecution] : Unsupported instrument kind.");
+                println!("[UniLinkEx] : Unsupported instrument kind.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
         }
@@ -1239,12 +1239,12 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub async fn apply_open_order_changes(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExchangeError>
     {
-        // println!("[UniLinkExecution] : Starting apply_open_order_changes: {:?}, with balance: {:?}", open, required_balance);
+        // println!("[UniLinkEx] : Starting apply_open_order_changes: {:?}, with balance: {:?}", open, required_balance);
 
         // 配置从直接访问 `self.config` 获取
         let position_margin_mode= self.config.position_margin_mode.clone();
 
-        // println!("[UniLinkExecution] : Retrieved position_mode: {:?}, position_margin_mode: {:?}",
+        // println!("[UniLinkEx] : Retrieved position_mode: {:?}, position_margin_mode: {:?}",
         //          position_mode, position_margin_mode);
 
         // 根据 PositionMarginMode 处理余额更新
@@ -1266,7 +1266,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
             },
             | (_, _) => {
                 return Err(ExchangeError::SandBox(format!(
-                    "[UniLinkExecution] : Unsupported InstrumentKind or PositionMarginMode for open order: {:?}",
+                    "[UniLinkEx] : Unsupported InstrumentKind or PositionMarginMode for open order: {:?}",
                     open.instrument.kind
                 )));
             }
@@ -1290,13 +1290,13 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         let updated_balance = match cancelled.side {
             Side::Buy => {
                 let mut balance = self.get_balance_mut(&cancelled.instrument.quote)
-                    .expect("[UniLinkExecution] : Balance existence checked when opening Order");
+                    .expect("[UniLinkEx] : Balance existence checked when opening Order");
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
                 *balance
             }
             Side::Sell => {
                 let mut balance = self.get_balance_mut(&cancelled.instrument.base)
-                    .expect("[UniLinkExecution] : Balance existence checked when opening Order");
+                    .expect("[UniLinkEx] : Balance existence checked when opening Order");
                 balance.available += cancelled.state.remaining_quantity();
                 *balance
             }
@@ -1363,7 +1363,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 let base_balance = self.apply_balance_delta(base, base_delta);
                 let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
-                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().expect("[UniLinkExecution] : Failed to get exchange timestamp"),
+                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().expect("[UniLinkEx] : Failed to get exchange timestamp"),
                     exchange: Exchange::SandBox,
                     kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) })
             }
@@ -1591,12 +1591,12 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                     kind: AccountEventKind::Trade(trade) })
                 {
                     // 如果发送交易事件失败，记录警告日志
-                    warn!("[UniLinkExecution] : Client offline - Failed to send AccountEvent::Trade: {:?}", err);
+                    warn!("[UniLinkEx] : Client offline - Failed to send AccountEvent::Trade: {:?}", err);
                 }
 
                 if let Err(err) = self.account_event_tx.send(balance_event) {
                     // 如果发送余额事件失败，记录警告日志
-                    warn!("[UniLinkExecution] : Client offline - Failed to send AccountEvent::Balance: {:?}", err);
+                    warn!("[UniLinkEx] : Client offline - Failed to send AccountEvent::Balance: {:?}", err);
                 }
             }
         }
@@ -1663,7 +1663,7 @@ pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
 {
     tokio::spawn(async move {
         response_tx.send(response)
-                   .expect("[UniLinkExecution] : SandBoxExchange failed to send oneshot response to execution request")
+                   .expect("[UniLinkEx] : SandBoxExchange failed to send oneshot response to execution request")
     });
 }
 

@@ -15,23 +15,23 @@ use crate::common::{
 pub enum ExchangeError
 {
     /// 缺少属性，无法构建组件。
-    #[error("[UniLinkExecution] : Unable to construct component due to missing property: {0}")]
+    #[error("[UniLinkEx] : Unable to construct component due to missing property: {0}")]
     InitiatorIncomplete(String),
 
     /// 模拟交易所出错。
-    #[error("[UniLinkExecution] : Sandbox error: {0}")]
+    #[error("[UniLinkEx] : Sandbox error: {0}")]
     SandBox(String),
 
     /// 余额不足，无法开单。
-    #[error("[UniLinkExecution] : Insufficient balance for symbol {0}, unable to place order")]
+    #[error("[UniLinkEx] : Insufficient balance for symbol {0}, unable to place order")]
     InsufficientBalance(Token),
 
     /// 找不到特定客户端订单ID的订单。
-    #[error("[UniLinkExecution] : Order with ClientOrderId not found: {0}")]
+    #[error("[UniLinkEx] : Order with ClientOrderId not found: {0}")]
     RequestNotFound(RequestId),
 
     /// 找不到特定客户端订单ID的订单，并同时输出 `ClientOrderId` 和 `OrderId`（如果存在）。
-    #[error("[UniLinkExecution] : Order with ClientOrderId: {client_order_id:?}, and OrderId: {order_id:?} not found")]
+    #[error("[UniLinkEx] : Order with ClientOrderId: {client_order_id:?}, and OrderId: {order_id:?} not found")]
     OrderNotFound {
         client_order_id: Option<ClientOrderId>,  // 如果存在的话，输出 `ClientOrderId`
         order_id: Option<OrderId>,               // 如果存在的话，输出 `OrderId`
@@ -39,115 +39,115 @@ pub enum ExchangeError
 
 
 /// 由于不支持的订单类型，无法开设订单。
-    #[error("[UniLinkExecution] : Unsupported order type, unable to place order: {0}")]
+    #[error("[UniLinkEx] : Unsupported order type, unable to place order: {0}")]
     UnsupportedOrderKind(OrderInstruction),
 
     /// 网络错误，无法连接到交易所。
-    #[error("[UniLinkExecution] : Network error, unable to connect to exchange: {0}")]
+    #[error("[UniLinkEx] : Network error, unable to connect to exchange: {0}")]
     NetworkError(String),
 
 
     /// 网络错误，无法连接到交易所。
-    #[error("[UniLinkExecution] : ReponseSenderError, unable to connect to client.")]
+    #[error("[UniLinkEx] : ReponseSenderError, unable to connect to client.")]
     ReponseSenderError,
 
     /// 超时错误，操作超时。
-    #[error("[UniLinkExecution] : Operation timed out: {0}")]
+    #[error("[UniLinkEx] : Operation timed out: {0}")]
     Timeout(String),
 
     /// 请求已存在。
-    #[error("[UniLinkExecution] : Order already exists: {0}")]
+    #[error("[UniLinkEx] : Order already exists: {0}")]
     RequestAlreadyExists(RequestId),
 
     /// 订单已存在。
-    #[error("[UniLinkExecution] : Order already exists: {0}")]
+    #[error("[UniLinkEx] : Order already exists: {0}")]
     OrderAlreadyExists(ClientOrderId),
 
     /// 订单被拒绝。
-    #[error("[UniLinkExecution] : Order rejected: {0}")]
+    #[error("[UniLinkEx] : Order rejected: {0}")]
     OrderRejected(String),
 
     /// 交易所维护中，无法执行操作。
-    #[error("[UniLinkExecution] : Exchange under maintenance, unable to perform operation")]
+    #[error("[UniLinkEx] : Exchange under maintenance, unable to perform operation")]
     ExchangeMaintenance,
 
     /// 无效的开单方向。
-    #[error("[UniLinkExecution] : Invalid order direction")]
+    #[error("[UniLinkEx] : Invalid order direction")]
     InvalidDirection,
 
     /// 无效的ID。
-    #[error("[UniLinkExecution] : Invalid ID")]
+    #[error("[UniLinkEx] : Invalid ID")]
     InvalidID,
 
     /// 未知的交易所错误。
-    #[error("[UniLinkExecution] : Unknown exchange error: {0}")]
+    #[error("[UniLinkEx] : Unknown exchange error: {0}")]
     UnknownExchangeError(String),
 
     /// 无效的交易对。
-    #[error("[UniLinkExecution] : Invalid trading pair: {0}")]
+    #[error("[UniLinkEx] : Invalid trading pair: {0}")]
     InvalidTradingPair(String),
 
     /// 无效的日期。
-    #[error("[UniLinkExecution] : Invalid dates: {0}")]
+    #[error("[UniLinkEx] : Invalid dates: {0}")]
     InvalidDates(String),
 
     /// API 限制，达到调用限制。
-    #[error("[UniLinkExecution] : API limit reached, unable to proceed")]
+    #[error("[UniLinkEx] : API limit reached, unable to proceed")]
     ApiLimitReached,
 
     /// 权限不足，无法执行操作。
-    #[error("[UniLinkExecution] : Insufficient permissions to perform operation")]
+    #[error("[UniLinkEx] : Insufficient permissions to perform operation")]
     InsufficientPermissions,
 
     /// 无效的签名。
-    #[error("[UniLinkExecution] : Invalid signature provided")]
+    #[error("[UniLinkEx] : Invalid signature provided")]
     InvalidSignature,
 
     /// 解析配置失败。
-    #[error("[UniLinkExecution] : Failed to parse configuration: {0}")]
+    #[error("[UniLinkEx] : Failed to parse configuration: {0}")]
     ConfigParseError(String),
 
     /// 配置缺少。
-    #[error("[UniLinkExecution] : Missing configuration: {0}")]
+    #[error("[UniLinkEx] : Missing configuration: {0}")]
     ConfigMissing(String),
 
     /// 解析响应失败。
-    #[error("[UniLinkExecution] : Failed to parse response: {0}")]
+    #[error("[UniLinkEx] : Failed to parse response: {0}")]
     ResponseParseError(String),
 
     /// 内部错误。
-    #[error("[UniLinkExecution] : Internal error: {0}")]
+    #[error("[UniLinkEx] : Internal error: {0}")]
     InternalError(String),
 
     /// 无效的金融工具。
-    #[error("[UniLinkExecution] : Invalid instrument: {0}")]
+    #[error("[UniLinkEx] : Invalid instrument: {0}")]
     InvalidInstrument(String),
 
     /// NotImplemented。
-    #[error("[UniLinkExecution] : Invalid instrument: {0}")]
+    #[error("[UniLinkEx] : Invalid instrument: {0}")]
     NotImplemented(String),
 
-    #[error("[UniLinkExecution] : Invalid RequestOpen: {0}")]
+    #[error("[UniLinkEx] : Invalid RequestOpen: {0}")]
     InvalidRequestOpen(String),
 
-    #[error("[UniLinkExecution] : Invalid RequestCancel: {0}")]
+    #[error("[UniLinkEx] : Invalid RequestCancel: {0}")]
     InvalidRequestCancel(String),
 
-    #[error("[UniLinkExecution] : Redis Initialisation Failure: {0}")]
+    #[error("[UniLinkEx] : Redis Initialisation Failure: {0}")]
     RedisInitialisationError(String),
 
-    #[error("[UniLinkExecution] : MarketEventChannelClosed")]
+    #[error("[UniLinkEx] : MarketEventChannelClosed")]
     MarketEventChannelClosed,
 
-    #[error("[UniLinkExecution] : InvalidLeverage")]
+    #[error("[UniLinkEx] : InvalidLeverage")]
     InvalidLeverage(String),
 
-    #[error("[UniLinkExecution] : PostOnlyViolation")]
+    #[error("[UniLinkEx] : PostOnlyViolation")]
     PostOnlyViolation(String),
 
-    #[error("[UniLinkExecution] : ReduceOnlyViolation")]
+    #[error("[UniLinkEx] : ReduceOnlyViolation")]
     ReduceOnlyViolation,
 
-    #[error("[UniLinkExecution] : UnsupportedInstrumentKind")]
+    #[error("[UniLinkEx] : UnsupportedInstrumentKind")]
     UnsupportedInstrumentKind,
 }

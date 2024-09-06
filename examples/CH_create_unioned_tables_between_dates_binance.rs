@@ -17,10 +17,10 @@ async fn main()
 {
     // 检测是否为 release 模式
     #[cfg(debug_assertions)]
-    println!("[UniLinkExecution] : Running in debug mode");
+    println!("[UniLinkEx] : Running in debug mode");
 
     #[cfg(not(debug_assertions))]
-    println!("[UniLinkExecution] : Running in release mode");
+    println!("[UniLinkEx] : Running in release mode");
 
     #[cfg(feature = "lark")]
     {
@@ -103,9 +103,9 @@ async fn main()
                         for table in &tables_for_task {
                             map.remove(table);
                         }
-                        println!("[UniLinkExecution] : Successfully created table: {}.{}", database, new_table_name);
+                        println!("[UniLinkEx] : Successfully created table: {}.{}", database, new_table_name);
                     }
-                    | Err(e) => eprintln!("[UniLinkExecution] : Error creating table: {}", e),
+                    | Err(e) => eprintln!("[UniLinkEx] : Error creating table: {}", e),
                 }
             }).await
               .unwrap();
@@ -113,11 +113,11 @@ async fn main()
             // 更新进度
             processed_tables += tables.len();
             let progress = (processed_tables as f64 / total_tables as f64) * 100.0;
-            println!("[UniLinkExecution] : Overall progress: Processed {} / {} tables ({:.2}%)",
+            println!("[UniLinkEx] : Overall progress: Processed {} / {} tables ({:.2}%)",
                      processed_tables, total_tables, progress);
         }
         else {
-            println!("[UniLinkExecution] : No data for date: {}", date_str);
+            println!("[UniLinkEx] : No data for date: {}", date_str);
         }
 
         // 迭代到下一天
@@ -126,9 +126,9 @@ async fn main()
 
     #[cfg(feature = "lark")]
     {
-        let message = MessageText::new(&format!("[UniLinkExecution] : Union tables creation is done for {} tables", total_tables));
+        let message = MessageText::new(&format!("[UniLinkEx] : Union tables creation is done for {} tables", total_tables));
         bot.send_message(message).await.unwrap();
     }
 
-    println!("[UniLinkExecution] : Union tables creation is done for {} tables", total_tables);
+    println!("[UniLinkEx] : Union tables creation is done for {} tables", total_tables);
 }

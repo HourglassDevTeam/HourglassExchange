@@ -17,7 +17,7 @@ async fn main()
     //     .from( &database_name, &table_name)
     //     .order("timestamp", Some("DESC"))
     //     .build();
-    // println!("[UniLinkExecution] : Constructed query {}", query);
+    // println!("[UniLinkEx] : Constructed query {}", query);
     //
     // let client_ref = client.client.read().await;
     // let mut cursor = client_ref.query(&query).fetch::<ClickhousePublicTrade>().unwrap();

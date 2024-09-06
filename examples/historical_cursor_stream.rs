@@ -43,16 +43,16 @@ async fn main()
 
                                 if tx.send(trade).is_err() {
                                     // 如果发送失败（例如接收者已关闭），退出循环
-                                    eprintln!("[UniLinkExecution] : Failed to send trade, receiver might be closed.");
+                                    eprintln!("[UniLinkEx] : Failed to send trade, receiver might be closed.");
                                     break;
                                 }
                             }
                             | Ok(None) => {
-                                println!("[UniLinkExecution] : Cursor data processing for date {} is complete.", date_str_clone);
+                                println!("[UniLinkEx] : Cursor data processing for date {} is complete.", date_str_clone);
                                 break;
                             }
                             | Err(_e) => {
-                                eprintln!("[UniLinkExecution] : No data available for date {}. Skipping to next date.", date_str_clone);
+                                eprintln!("[UniLinkEx] : No data available for date {}. Skipping to next date.", date_str_clone);
                                 break;
                             }
                         }
@@ -61,11 +61,11 @@ async fn main()
 
                 // 等待 `cursor_task` 完成
                 if let Err(e) = cursor_task.await {
-                    eprintln!("[UniLinkExecution] : Cursor task for {} was aborted: {:?}", date_str, e);
+                    eprintln!("[UniLinkEx] : Cursor task for {} was aborted: {:?}", date_str, e);
                 }
             }
             | Err(e) => {
-                eprintln!("[UniLinkExecution] : Error fetching trades for {}: {:?}", date_str, e);
+                eprintln!("[UniLinkEx] : Error fetching trades for {}: {:?}", date_str, e);
             }
         }
 

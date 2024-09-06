@@ -285,9 +285,9 @@ impl AccountPositions {
     /// 检查账户中是否持有指定交易工具的多头仓位
     pub(crate) async fn has_long_position(&self, instrument: &Instrument) -> bool {
         match instrument.kind {
-            InstrumentKind::Spot => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of Spot as of yet."),
-            InstrumentKind::CommodityOption => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of CommodityOption as of yet."),
-            InstrumentKind::CommodityFuture => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
+            InstrumentKind::Spot => todo!("[UniLinkEx] : The system does not support creation or processing of positions of Spot as of yet."),
+            InstrumentKind::CommodityOption => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityOption as of yet."),
+            InstrumentKind::CommodityFuture => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
             InstrumentKind::Perpetual => {
                 let positions = self.perpetual_pos_long.read().await;
                 positions.iter().any(|(key, _)| key == instrument)
@@ -310,9 +310,9 @@ impl AccountPositions {
     /// 检查账户中是否持有指定交易工具的空头仓位
     pub(crate) async fn has_short_position(&self, instrument: &Instrument) -> bool {
         match instrument.kind {
-            InstrumentKind::Spot => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of Spot as of yet."),
-            InstrumentKind::CommodityOption => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of CommodityOption as of yet."),
-            InstrumentKind::CommodityFuture => todo!("[UniLinkExecution] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
+            InstrumentKind::Spot => todo!("[UniLinkEx] : The system does not support creation or processing of positions of Spot as of yet."),
+            InstrumentKind::CommodityOption => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityOption as of yet."),
+            InstrumentKind::CommodityFuture => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
             InstrumentKind::Perpetual => {
                 let positions = self.perpetual_pos_short.read().await;
                 positions.iter().any(|(key, _)| key == instrument)
