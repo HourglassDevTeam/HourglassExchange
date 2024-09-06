@@ -691,7 +691,7 @@ impl Account
 /// 获取指定 `Instrument` 的多头仓位
 pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>
 {
-    let positions = &self.positions; // 获取锁
+    let positions = &self.positions;
 
     match instrument.kind {
         | InstrumentKind::Spot => {
@@ -699,8 +699,13 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         }
         | InstrumentKind::Perpetual => {
             let perpetual_positions = &positions.perpetual_pos_long;
-            if let Some(position) = perpetual_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
-                return Ok(Some(Position::Perpetual(position.clone())));
+
+            // 获取读锁
+            let read_lock = perpetual_positions.read().await;
+
+            // 在读锁上调用 `iter()` 遍历 HashMap
+            if let Some(position) = read_lock.iter().find(|(_, pos)| pos.meta.instrument == *instrument) {
+                return Ok(Some(Position::Perpetual(position.1.clone())));
             }
         }
         | InstrumentKind::Future => {
@@ -726,25 +731,30 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         let positions = &self.positions; // 获取锁
 
         match instrument.kind {
-            | InstrumentKind::Spot => {
+            InstrumentKind::Spot => {
                 return Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)));
             }
-            | InstrumentKind::Perpetual => {
+            InstrumentKind::Perpetual => {
                 let perpetual_positions = &positions.perpetual_pos_short;
-                if let Some(position) = perpetual_positions.iter().find(|pos| pos.meta.instrument == *instrument) {
+
+                // 获取读锁
+                let read_lock = perpetual_positions.read().await;
+
+                // 通过读锁访问 HashMap
+                if let Some((_, position)) = read_lock.iter().find(|(_, pos)| pos.meta.instrument == *instrument) {
                     return Ok(Some(Position::Perpetual(position.clone())));
                 }
             }
-            | InstrumentKind::Future => {
+            InstrumentKind::Future => {
                 todo!()
             }
-            | InstrumentKind::CryptoOption => {
+            InstrumentKind::CryptoOption => {
                 todo!()
             }
-            | InstrumentKind::CryptoLeveragedToken => {
+            InstrumentKind::CryptoLeveragedToken => {
                 todo!()
             }
-            | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
+            InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
                 todo!("Commodity positions are not yet implemented");
             }
         }
@@ -752,27 +762,35 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         Ok(None) // 没有找到对应的仓位
     }
 
+
+
     pub async fn get_position_both_ways(&self, instrument: &Instrument) -> Result<(Option<Position>, Option<Position>), ExchangeError>
     {
         let positions = &self.positions; // 获取锁
 
         match instrument.kind {
-            | InstrumentKind::Spot => Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument))),
-            | InstrumentKind::Perpetual => {
-                let long_pos = positions.perpetual_pos_long.get(instrument).map(|pos| Position::Perpetual(pos.clone()));
-                let short_pos = positions.perpetual_pos_short.get(instrument).map(|pos| Position::Perpetual(pos.clone()));
+            InstrumentKind::Spot => Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument))),
+            InstrumentKind::Perpetual => {
+                // 获取读锁
+                let long_pos_lock = positions.perpetual_pos_long.read().await;
+                let short_pos_lock = positions.perpetual_pos_short.read().await;
+
+                // 通过读锁访问 HashMap
+                let long_pos = long_pos_lock.get(instrument).map(|pos| Position::Perpetual(pos.clone()));
+                let short_pos = short_pos_lock.get(instrument).map(|pos| Position::Perpetual(pos.clone()));
+
                 Ok((long_pos, short_pos))
             }
-            | InstrumentKind::Future => {
+            InstrumentKind::Future => {
                 todo!()
             }
-            | InstrumentKind::CryptoOption => {
+            InstrumentKind::CryptoOption => {
                 todo!()
             }
-            | InstrumentKind::CryptoLeveragedToken => {
+            InstrumentKind::CryptoLeveragedToken => {
                 todo!()
             }
-            | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
+            InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
                 todo!("Commodity positions are not yet implemented");
             }
         }
@@ -836,14 +854,17 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 ));
             }
             | InstrumentKind::Perpetual => {
-                let long_position_exists = positions_lock
-                    .perpetual_pos_long
+                // 获取读锁
+                let long_pos_read_lock = positions_lock.perpetual_pos_long.read().await;
+                let short_pos_read_lock = positions_lock.perpetual_pos_short.read().await;
+
+                // 在持有读锁的情况下调用 `iter()` 遍历 HashMap
+                let long_position_exists = long_pos_read_lock
                     .iter()
-                    .any(|pos| pos.meta.instrument == *instrument);
-                let short_position_exists = positions_lock
-                    .perpetual_pos_short
+                    .any(|(_, pos)| pos.meta.instrument == *instrument);
+                let short_position_exists = short_pos_read_lock
                     .iter()
-                    .any(|pos| pos.meta.instrument == *instrument);
+                    .any(|(_, pos)| pos.meta.instrument == *instrument);
 
                 // 如果订单是 reduce only，允许方向冲突
                 if is_reduce_only {
@@ -858,14 +879,16 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 }
             }
             | InstrumentKind::Future => {
-                let long_position_exists = positions_lock
-                    .futures_pos_long
+                // 获取读锁
+                let long_pos_read_lock = positions_lock.futures_pos_long.read().await;
+                let short_pos_read_lock = positions_lock.futures_pos_short.read().await;
+
+                let long_position_exists = long_pos_read_lock
                     .iter()
-                    .any(|pos| pos.meta.instrument == *instrument);
-                let short_position_exists = positions_lock
-                    .futures_pos_short
+                    .any(|(_, pos)| pos.meta.instrument == *instrument);
+                let short_position_exists = short_pos_read_lock
                     .iter()
-                    .any(|pos| pos.meta.instrument == *instrument);
+                    .any(|(_, pos)| pos.meta.instrument == *instrument);
 
                 // 如果订单是 reduce only，允许方向冲突
                 if is_reduce_only {
@@ -888,6 +911,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
 
         Ok(())
     }
+
 
 
     /// 更新 PerpetualPosition 的方法
@@ -946,20 +970,19 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     /// 检查在`AccountPositions`中是否已经存在该`instrument`的某个仓位
     /// 需要首先从 open 订单中确定 InstrumentKind, 因为仓位类型各不相同
     ///
-    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExchangeError>
-    {
+    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExchangeError> {
         let positions_lock = &self.positions; // 获取锁
 
         match open.side {
             Side::Buy => {
                 // 检查是否持有多头仓位
-                if positions_lock.has_long_position(&open.instrument) {
+                if positions_lock.has_long_position(&open.instrument).await {
                     return Ok(true);
                 }
             }
             Side::Sell => {
                 // 检查是否持有空头仓位
-                if positions_lock.has_short_position(&open.instrument) {
+                if positions_lock.has_short_position(&open.instrument).await {
                     return Ok(true);
                 }
             }
@@ -968,55 +991,54 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         Ok(false)
     }
 
-
     /// 注意 这个函数是可以用来从客户端收到的交易中更新仓位，但是目前只适合 [PositionDirectionMode::Net Mode].
     pub async fn update_position_from_client_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
         println!("[UniLinkExecution] : Received a new trade: {:#?}", trade);
 
-        // 首先根据 instrument kind 进行分类处理
         match trade.instrument.kind {
             InstrumentKind::Perpetual => {
                 match trade.side {
-                    // 处理买单（long）仓位
                     Side::Buy => {
                         println!("[UniLinkExecution] : Processing long trade for Perpetual...");
 
-                        let maybe_position = self.positions.perpetual_pos_long.get_mut(&trade.instrument);
-
-                        if let Some(mut position) = maybe_position {
-                            // 更新现有的多头仓位
-                            println!("[UniLinkExecution] : Updating existing long position...");
-                            position.meta.update_from_trade(&trade, trade.price);
-                        } else {
-                            // 创建新的多头仓位
-                            println!("[UniLinkExecution] : No existing long position, creating a new one...");
-                            drop(maybe_position); // 显式释放引用
-                            let new_position = self.create_perpetual_position(trade.clone()).await?;
-                            self.positions.perpetual_pos_long.insert(trade.instrument.clone(), new_position);
-                            println!("[UniLinkExecution] : New long position created: {:#?}", self.positions.perpetual_pos_long);
+                        // 使用写锁更新或创建多头仓位
+                        {
+                            let mut long_positions = self.positions.perpetual_pos_long.write().await;
+                            if let Some(position) = long_positions.get_mut(&trade.instrument) {
+                                println!("[UniLinkExecution] : Updating existing long position...");
+                                position.meta.update_from_trade(&trade, trade.price);
+                                return Ok(());
+                            }
                         }
+
+                        // 在锁释放后调用 self.create_perpetual_position
+                        let new_position = self.create_perpetual_position(trade.clone()).await?;
+
+                        // 再次获取写锁插入新的仓位
+                        let mut long_positions = self.positions.perpetual_pos_long.write().await;
+                        long_positions.insert(trade.instrument.clone(), new_position);
+                        println!("[UniLinkExecution] : New long position created: {:#?}", long_positions);
                     }
 
-                    // 处理卖单（short）仓位
                     Side::Sell => {
                         println!("[UniLinkExecution] : Processing short trade for Perpetual...");
 
-                        // 获取当前的 long 仓位，并决定是否需要移除
-                        if let Some(position) = self.positions.perpetual_pos_long.get(&trade.instrument) {
-                            let should_remove_position = position.meta.current_size == trade.quantity;
-                            let should_remove_and_reverse = position.meta.current_size < trade.quantity;
-                            let remaining_quantity = trade.quantity - position.meta.current_size;
-                            drop(position); // 显式释放引用
-                            if should_remove_position {
-                                println!("[UniLinkExecution] : Removing long position...");
-                                self.positions.perpetual_pos_long.remove(&trade.instrument);
-                            }
+                        let should_remove_position;
+                        let should_remove_and_reverse;
+                        let remaining_quantity;
 
-                            if should_remove_and_reverse {
-                                println!("[UniLinkExecution] : should_remove_and_reverse...");
-                                self.positions.perpetual_pos_long.remove(&trade.instrument);
-                                let new_position = PerpetualPosition{
-                                    meta: PositionMeta::from_trade_with_remaining(&trade, trade.price,Side::Sell, remaining_quantity),
+                        {
+                            // 先获取读锁以检查 long 仓位
+                            let long_positions_read = self.positions.perpetual_pos_long.read().await;
+                            if let Some(position) = long_positions_read.get(&trade.instrument) {
+                                should_remove_position = position.meta.current_size == trade.quantity;
+                                should_remove_and_reverse = position.meta.current_size < trade.quantity;
+                                remaining_quantity = trade.quantity - position.meta.current_size;
+                            } else {
+                                // 没有多头仓位，无需进一步处理
+                                println!("[UniLinkExecution] : No existing long position, creating a new short position...");
+                                let new_position = PerpetualPosition {
+                                    meta: PositionMeta::from_trade(&trade, trade.price),
                                     pos_config: PerpetualPositionConfig {
                                         pos_margin_mode: self.config.position_margin_mode.clone(),
                                         leverage: self.config.account_leverage_rate,
@@ -1025,55 +1047,57 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                     liquidation_price: 0.0,
                                     margin: 0.0,
                                 };
-                                self.positions.perpetual_pos_short.insert(trade.instrument.clone(), new_position);
+                                self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
+                                println!("[UniLinkExecution] : New short position created: {:#?}", self.positions.perpetual_pos_short);
                                 return Ok(());
                             }
-
-                            else {// 这里应该是 position.meta.current_size > trade.quantity 的情况
-                                let maybe_position = self.positions.perpetual_pos_long.get_mut(&trade.instrument);
-                                if let Some(mut position) = maybe_position {
-                                    if position.meta.current_size > trade.quantity {
-                                        // 部分平仓
-                                        println!("[UniLinkExecution] : Partially closing long position...");
-                                        position.meta.current_size -= trade.quantity;
-                                        return Ok(());
-                                    }
-                                }
-                            }
-                            //  还要处理 position.meta.current_size < trade.quantity的情况，这种情况下应该先平掉多头仓位。然后反向用剩余的两
                         }
 
-                        // 处理没有现有 long 仓位的情况，或者仓位已经完全移除
-                        println!("[UniLinkExecution] : No existing long position, creating a new short position...");
-                        let new_position = PerpetualPosition {
-                            meta: PositionMeta::from_trade(&trade, trade.price),
-                            pos_config: PerpetualPositionConfig {
-                                pos_margin_mode: self.config.position_margin_mode.clone(),
-                                leverage: self.config.account_leverage_rate,
-                                position_mode: self.config.position_direction_mode.clone(),
-                            },
-                            liquidation_price: 0.0,
-                            margin: 0.0,
-                        };
-                        self.positions.perpetual_pos_short.insert(trade.instrument.clone(), new_position);
-                        println!("[UniLinkExecution] : New short position created: {:#?}", self.positions.perpetual_pos_short);
+                        {
+                            // 释放读锁后获取写锁进行更新
+                            let mut long_positions_write = self.positions.perpetual_pos_long.write().await;
+
+                            if should_remove_position {
+                                println!("[UniLinkExecution] : Removing long position...");
+                                long_positions_write.remove(&trade.instrument);
+                            } else if should_remove_and_reverse {
+                                println!("[UniLinkExecution] : should_remove_and_reverse...");
+                                long_positions_write.remove(&trade.instrument);
+                                drop(long_positions_write); // 显式释放写锁
+
+                                let new_position = PerpetualPosition {
+                                    meta: PositionMeta::from_trade_with_remaining(&trade, trade.price, Side::Sell, remaining_quantity),
+                                    pos_config: PerpetualPositionConfig {
+                                        pos_margin_mode: self.config.position_margin_mode.clone(),
+                                        leverage: self.config.account_leverage_rate,
+                                        position_mode: self.config.position_direction_mode.clone(),
+                                    },
+                                    liquidation_price: 0.0,
+                                    margin: 0.0,
+                                };
+                                self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
+                            } else {
+                                // 部分平仓
+                                println!("[UniLinkExecution] : Partially closing long position...");
+                                if let Some(position) = long_positions_write.get_mut(&trade.instrument) {
+                                    position.meta.current_size -= trade.quantity;
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            // TODO: 添加 Futures 的处理逻辑
             InstrumentKind::Future => {
                 println!("[UniLinkExecution] : Futures trading is not yet supported.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
 
-            // TODO: 添加 Spot 的处理逻辑
             InstrumentKind::Spot => {
                 println!("[UniLinkExecution] : Spot trading is not yet supported.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
 
-            // 其他未定义的 instrument kind，返回错误
             _ => {
                 println!("[UniLinkExecution] : Unsupported instrument kind.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
@@ -1082,6 +1106,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
 
         Ok(())
     }
+
 
 
 
@@ -2185,12 +2210,11 @@ mod tests
         assert!(result.is_ok());
 
         // 检查多头仓位是否成功创建
-        let positions = account.positions.perpetual_pos_long;
-        assert!(positions.contains_key(&trade.instrument));
-        let pos = positions.get(&trade.instrument).unwrap();
-        assert_eq!(pos.meta.current_size, 10.0);
+        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
+        assert!(positions.contains_key(&trade.instrument)); // 检查 HashMap 中是否有该键
+        let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
+        assert_eq!(pos.meta.current_size, 10.0); // 检查仓位大小
     }
-
 
     #[tokio::test]
     async fn test_create_new_short_position() {
@@ -2217,10 +2241,10 @@ mod tests
         assert!(result.is_ok());
 
         // 检查空头仓位是否成功创建
-        let positions = account.positions.perpetual_pos_short;
-        assert!(positions.contains_key(&trade.instrument));
-        let pos = positions.get(&trade.instrument).unwrap();
-        assert_eq!(pos.meta.current_size, 5.0);
+        let positions = account.positions.perpetual_pos_short.read().await; // 获取读锁
+        assert!(positions.contains_key(&trade.instrument)); // 检查 HashMap 中是否有该键
+        let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
+        assert_eq!(pos.meta.current_size, 5.0); // 检查仓位大小
     }
 
     #[tokio::test]
@@ -2266,7 +2290,8 @@ mod tests
         account.update_position_from_client_trade(additional_trade).await.unwrap();
 
         // 检查仓位是否正确更新
-        let pos = account.positions.perpetual_pos_long.get(&trade.instrument).unwrap();
+        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
+        let pos = positions.get(&trade.instrument).unwrap(); // 获取仓位
         assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
     }
 
@@ -2314,10 +2339,11 @@ mod tests
         account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
 
         // 检查仓位是否部分平仓
-        let positions = account.positions.perpetual_pos_long;
-        let pos = positions.get(&trade.instrument).unwrap();
-        assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位
+        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
+        let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
+        assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
     }
+
 
     #[tokio::test]
     async fn test_close_long_position_completely() {
@@ -2362,7 +2388,7 @@ mod tests
         account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
 
         // 检查仓位是否已被完全移除
-        let positions = account.positions.perpetual_pos_long;
+        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
         println!("positions: {:#?}", positions);
         assert!(!positions.contains_key(&trade.instrument));
     }
@@ -2411,11 +2437,11 @@ mod tests
         account.update_position_from_client_trade(reverse_trade.clone()).await.unwrap();
 
         // 检查多头仓位是否已被完全移除
-        let long_positions = account.positions.perpetual_pos_long;
+        let long_positions = account.positions.perpetual_pos_long.read().await;
         assert!(!long_positions.contains_key(&trade.instrument));
 
         // 检查新的空头仓位是否已创建，并且大小正确（剩余 5.0）
-        let short_positions = account.positions.perpetual_pos_short;
+        let short_positions = account.positions.perpetual_pos_short.read().await;
         assert!(short_positions.contains_key(&trade.instrument));
         let short_position = short_positions.get(&trade.instrument).unwrap();
         assert_eq!(short_position.meta.current_size, 5.0);  // 剩余仓位应该是 5.0
@@ -2423,31 +2449,29 @@ mod tests
     }
 
 
-    // #[tokio::test]
-    // async fn test_unsupported_instrument_kind() {
-    //     let mut account = create_test_account().await;
-    //
-    //     let trade = ClientTrade {
-    //         timestamp: 1690000000,
-    //         trade_id: ClientTradeId(5),
-    //         order_id: OrderId(5),
-    //         cid: None,
-    //         instrument: Instrument {
-    //             base: Token("RRR".to_string()),
-    //             quote: Token("USDT".to_string()),
-    //             kind: InstrumentKind::Spot, // Spot Position is either not developed or not supported.
-    //         },
-    //         side: Side::Sell,
-    //         price: 100.0,
-    //         quantity: 10.0,
-    //         fees: 0.1,
-    //     };
-    //
-    //     // 执行管理仓位逻辑，应该返回错误
-    //     let result = account.update_position_from_client_trade(trade.clone()).await;
-    //     println!("result: {:#?}", result);
-    //     assert!(result.is_err());
-    // }
+    #[tokio::test]
+    async fn test_unsupported_instrument_kind() {
+        let mut account = create_test_account().await;
 
+        let trade = ClientTrade {
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument {
+                base: Token("RRR".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Spot, // Spot Position is either not developed or not supported.
+            },
+            side: Side::Sell,
+            price: 100.0,
+            quantity: 10.0,
+            fees: 0.1,
+        };
 
+        // 执行管理仓位逻辑，应该返回错误
+        let result = account.update_position_from_client_trade(trade.clone()).await;
+        println!("result: {:#?}", result);
+        assert!(result.is_err());
+    }
 }

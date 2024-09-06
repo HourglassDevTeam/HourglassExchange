@@ -130,16 +130,16 @@ pub async fn create_test_account() -> Account
 
     account_config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
-    let positions = AccountPositions { margin_pos_long: DashMap::new(),
-                                       margin_pos_short: DashMap::new(),
-                                       perpetual_pos_long: DashMap::new(),
-                                       perpetual_pos_short: DashMap::new(),
-                                       futures_pos_long: DashMap::new(),
-                                       futures_pos_short: DashMap::new(),
-                                       option_pos_long_call: DashMap::new(),
-                                       option_pos_long_put: DashMap::new(),
-                                       option_pos_short_call: DashMap::new(),
-                                       option_pos_short_put: DashMap::new() };
+    let positions = AccountPositions { margin_pos_long: Arc::new(RwLock::new(HashMap::new())),
+                                       margin_pos_short: Arc::new(RwLock::new(HashMap::new())),
+                                       perpetual_pos_long:Arc::new(RwLock::new(HashMap::new())),
+                                       perpetual_pos_short:Arc::new(RwLock::new(HashMap::new())),
+                                       futures_pos_long:Arc::new(RwLock::new(HashMap::new())),
+                                       futures_pos_short:Arc::new(RwLock::new(HashMap::new())),
+                                       option_pos_long_call:Arc::new(RwLock::new(HashMap::new())),
+                                       option_pos_long_put:Arc::new(RwLock::new(HashMap::new())),
+                                       option_pos_short_call:Arc::new(RwLock::new(HashMap::new())),
+                                       option_pos_short_put: Arc::new(RwLock::new(HashMap::new()))};
 
     let machine_id = generate_machine_id().unwrap();
 
