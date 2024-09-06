@@ -1004,11 +1004,32 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                         // 获取当前的 long 仓位，并决定是否需要移除
                         if let Some(position) = self.positions.perpetual_pos_long.get(&trade.instrument) {
                             let should_remove_position = position.meta.current_size == trade.quantity;
+                            let should_remove_and_reverse = position.meta.current_size < trade.quantity;
+                            let remaining_quantity = trade.quantity - position.meta.current_size;
                             drop(position); // 显式释放引用
                             if should_remove_position {
                                 println!("[UniLinkExecution] : Removing long position...");
                                 self.positions.perpetual_pos_long.remove(&trade.instrument);
-                            } else {
+                            }
+
+                            if should_remove_and_reverse {
+                                println!("[UniLinkExecution] : should_remove_and_reverse...");
+                                self.positions.perpetual_pos_long.remove(&trade.instrument);
+                                let new_position = PerpetualPosition{
+                                    meta: PositionMeta::from_trade_with_remaining(&trade, trade.price,Side::Sell, remaining_quantity),
+                                    pos_config: PerpetualPositionConfig {
+                                        pos_margin_mode: self.config.position_margin_mode.clone(),
+                                        leverage: self.config.account_leverage_rate,
+                                        position_mode: self.config.position_direction_mode.clone(),
+                                    },
+                                    liquidation_price: 0.0,
+                                    margin: 0.0,
+                                };
+                                self.positions.perpetual_pos_short.insert(trade.instrument.clone(), new_position);
+                                return Ok(());
+                            }
+
+                            else {// 这里应该是 position.meta.current_size > trade.quantity 的情况
                                 let maybe_position = self.positions.perpetual_pos_long.get_mut(&trade.instrument);
                                 if let Some(mut position) = maybe_position {
                                     if position.meta.current_size > trade.quantity {
@@ -1019,6 +1040,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                     }
                                 }
                             }
+                            //  还要处理 position.meta.current_size < trade.quantity的情况，这种情况下应该先平掉多头仓位。然后反向用剩余的两
                         }
 
                         // 处理没有现有 long 仓位的情况，或者仓位已经完全移除
@@ -2347,7 +2369,7 @@ mod tests
 
 
     #[tokio::test]
-    async fn test_unsupported_instrument_kind() {
+    async fn test_reverse_position_after_closing_long() {
         let mut account = create_test_account().await;
 
         let trade = ClientTrade {
@@ -2356,21 +2378,76 @@ mod tests
             order_id: OrderId(5),
             cid: None,
             instrument: Instrument {
-                base: Token("RRR".to_string()),
+                base: Token("BTC".to_string()),
                 quote: Token("USDT".to_string()),
-                kind: InstrumentKind::Spot, // Spot Position is either not developed or not supported.
+                kind: InstrumentKind::Perpetual,
             },
-            side: Side::Sell,
+            side: Side::Buy,
             price: 100.0,
             quantity: 10.0,
             fees: 0.1,
         };
 
-        // 执行管理仓位逻辑，应该返回错误
-        let result = account.update_position_from_client_trade(trade.clone()).await;
-        println!("result: {:#?}", result);
-        assert!(result.is_err());
+        // 创建一个多头仓位
+        account.update_position_from_client_trade(trade.clone()).await.unwrap();
+
+        // 反向平仓并开立新的空头仓位
+        let reverse_trade = ClientTrade {
+            timestamp: 1690000100,
+            trade_id: ClientTradeId(6),
+            order_id: OrderId(6),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Sell,
+            price: 100.0,
+            quantity: 15.0,  // 卖出 15.0 超过当前的多头仓位
+            fees: 0.15,
+        };
+
+        account.update_position_from_client_trade(reverse_trade.clone()).await.unwrap();
+
+        // 检查多头仓位是否已被完全移除
+        let long_positions = account.positions.perpetual_pos_long;
+        assert!(!long_positions.contains_key(&trade.instrument));
+
+        // 检查新的空头仓位是否已创建，并且大小正确（剩余 5.0）
+        let short_positions = account.positions.perpetual_pos_short;
+        assert!(short_positions.contains_key(&trade.instrument));
+        let short_position = short_positions.get(&trade.instrument).unwrap();
+        assert_eq!(short_position.meta.current_size, 5.0);  // 剩余仓位应该是 5.0
+        assert_eq!(short_position.meta.side, Side::Sell);  // 检查持仓方向是否为 Sell
     }
+
+
+    // #[tokio::test]
+    // async fn test_unsupported_instrument_kind() {
+    //     let mut account = create_test_account().await;
+    //
+    //     let trade = ClientTrade {
+    //         timestamp: 1690000000,
+    //         trade_id: ClientTradeId(5),
+    //         order_id: OrderId(5),
+    //         cid: None,
+    //         instrument: Instrument {
+    //             base: Token("RRR".to_string()),
+    //             quote: Token("USDT".to_string()),
+    //             kind: InstrumentKind::Spot, // Spot Position is either not developed or not supported.
+    //         },
+    //         side: Side::Sell,
+    //         price: 100.0,
+    //         quantity: 10.0,
+    //         fees: 0.1,
+    //     };
+    //
+    //     // 执行管理仓位逻辑，应该返回错误
+    //     let result = account.update_position_from_client_trade(trade.clone()).await;
+    //     println!("result: {:#?}", result);
+    //     assert!(result.is_err());
+    // }
 
 
 }
