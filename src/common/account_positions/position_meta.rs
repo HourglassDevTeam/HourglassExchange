@@ -61,7 +61,8 @@ impl PositionMeta {
     /// 创建新的 `PositionMeta` 基于 `ClientTrade`
 
     pub fn create_from_trade(trade: &ClientTrade, current_symbol_price: f64) -> Self {
-        let new_meta = PositionMeta {
+        
+        PositionMeta {
             position_id: PositionId::new(&trade.instrument, trade.timestamp),
             enter_ts: trade.timestamp,
             update_ts: trade.timestamp,
@@ -76,8 +77,7 @@ impl PositionMeta {
             current_avg_price: trade.price,
             unrealised_pnl: 0.0,
             realised_pnl: 0.0,
-        };
-        new_meta
+        }
     }
 
 

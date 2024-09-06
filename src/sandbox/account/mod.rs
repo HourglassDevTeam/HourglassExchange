@@ -1233,7 +1233,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     pub async fn fetch_token_balance_and_respond(&self, token: &Token, response_tx: Sender<Result<TokenBalance, ExchangeError>>)
     {
         let balance_ref = self.get_balance(token).unwrap();
-        let token_balance = TokenBalance::new(token.clone(), balance_ref.clone());
+        let token_balance = TokenBalance::new(token.clone(), *balance_ref);
         respond(response_tx, Ok(token_balance));
     }
 
