@@ -28,24 +28,28 @@ pub struct PositionMeta
 }
 
 impl PositionMeta {
+    /// 根据 `ClientTrade` 和模式更新仓位
     pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64, mode: PositionDirectionMode) {
         self.update_ts = trade.timestamp;
         self.current_symbol_price = current_symbol_price;
 
+        // 更新当前交易的总费用（独立于模式的部分）
+        self.current_fees_total += trade.fees;
+
         match mode {
             PositionDirectionMode::Net => {
-                // 更新 Net Mode 逻辑
-                self.current_fees_total += trade.fees;
+                // Net Mode 逻辑：直接更新均价和持仓大小
                 self.update_avg_price(trade.price, trade.quantity);
                 self.update_unrealised_pnl();
             }
             PositionDirectionMode::LongShort => {
-                // 针对 LongShort Mode 进行更新
+                // LongShort Mode 逻辑：根据方向更新多头或空头
                 if trade.side == Side::Buy {
-                    todo!()
+                    self.update_long_position(trade.price, trade.quantity);
                 } else {
-                    todo!()
+                    self.update_short_position(trade.price, trade.quantity);
                 }
+                self.update_unrealised_pnl();  // 同样可以在 LongShort 中调用以分别计算
             }
         }
     }
@@ -107,6 +111,8 @@ impl PositionMeta {
 
 impl PositionMeta
 {
+
+    /// Net Mode 下更新均价和持仓大小
     fn update_avg_price(&mut self, trade_price: f64, trade_size: f64) {
         let total_size = self.current_size + trade_size;
 
@@ -136,11 +142,19 @@ impl PositionMeta
         }
     }
 
-    /// 更新 current_symbol_price
-    pub fn update_symbol_price(&mut self, new_symbol_price: f64)
-    {
-        self.current_symbol_price = new_symbol_price;
+
+    /// LongShort Mode 下更新多头仓位
+    fn update_long_position(&mut self, trade_price: f64, trade_size: f64) {
+        // 更新多头均价和持仓大小（与 `Net Mode` 中类似，但仅限多头）
+        self.update_avg_price(trade_price, trade_size);
     }
+
+    /// LongShort Mode 下更新空头仓位
+    fn update_short_position(&mut self, trade_price: f64, trade_size: f64) {
+        // 更新空头逻辑，可以扩展为适应更多逻辑
+        self.update_avg_price(trade_price, trade_size);
+    }
+
     /// 更新 unrealised_pnl
     pub fn update_unrealised_pnl(&mut self)
     {
