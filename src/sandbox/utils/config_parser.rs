@@ -68,7 +68,7 @@ mod tests
         // 创建一个临时的TOML配置，符合`AccountConfig`结构体的定义
         let toml_content = r#"
     margin_mode = "SimpleMode"
-    position_direction_mode = "NetMode"
+    position_direction_mode = "Net"
     position_margin_mode = "Isolated"
     commission_level = "Lv2"
     funding_rate = 0.0001
