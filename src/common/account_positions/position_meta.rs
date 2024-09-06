@@ -52,26 +52,26 @@ impl PositionMeta {
     /// 创建新的 `PositionMeta` 基于 `ClientTrade`
 
     pub fn from_trade(trade: &ClientTrade, current_symbol_price: f64, mode: PositionDirectionMode) -> Self {
-        let new_meta = PositionMeta {
-            position_id: PositionId::new(&trade.instrument, trade.timestamp),
-            enter_ts: trade.timestamp,
-            update_ts: trade.timestamp,
-            exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, 0.0)),
-            exchange: Exchange::SandBox,
-            instrument: trade.instrument.clone(),
-            side: trade.side,
-            current_size: trade.quantity,
-            current_fees_total: trade.fees,
-            current_avg_price_gross: trade.price,
-            current_symbol_price,
-            current_avg_price: trade.price,
-            unrealised_pnl: 0.0,
-            realised_pnl: 0.0,
-        };
+
 
         match mode {
             PositionDirectionMode::Net => {
-                // Net模式的初始化逻辑
+                PositionMeta {
+                    position_id: PositionId::new(&trade.instrument, trade.timestamp),
+                    enter_ts: trade.timestamp,
+                    update_ts: trade.timestamp,
+                    exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, 0.0)),
+                    exchange: Exchange::SandBox,
+                    instrument: trade.instrument.clone(),
+                    side: trade.side,
+                    current_size: trade.quantity,
+                    current_fees_total: trade.fees,
+                    current_avg_price_gross: trade.price,
+                    current_symbol_price,
+                    current_avg_price: trade.price,
+                    unrealised_pnl: 0.0,
+                    realised_pnl: 0.0,
+                }
             }
             PositionDirectionMode::LongShort => {
                 // LongShort模式的初始化逻辑
@@ -82,8 +82,6 @@ impl PositionMeta {
                 }
             }
         }
-
-        new_meta
     }
 
 
