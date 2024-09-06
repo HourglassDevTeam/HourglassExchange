@@ -991,8 +991,86 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         Ok(false)
     }
 
+
+    /// 根据[PositionDirectionMode]分流
+    ///
+    pub async fn update_position_from_client_trade(&mut self, trade: ClientTrade, mode: PositionDirectionMode) -> Result<(), ExchangeError> {
+        println!("[UniLinkExecution] : Received a new trade: {:#?}", trade);
+
+        match trade.instrument.kind {
+            InstrumentKind::Perpetual => {
+                match mode {
+                    PositionDirectionMode::Net => {
+                        // Net Mode 逻辑
+                        self.update_position_net_mode(trade).await?;
+                    }
+                    PositionDirectionMode::LongShort => {
+                        // LongShort Mode 逻辑
+                        self.update_position_long_short_mode(trade).await?;
+                    }
+                }
+            }
+            _ => {
+                println!("[UniLinkExecution] : Unsupported instrument kind.");
+                return Err(ExchangeError::UnsupportedInstrumentKind);
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn update_position_long_short_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+        match trade.side {
+            Side::Buy => {
+                println!("[UniLinkExecution] : Processing Buy trade for Long/Short Mode...");
+
+                // 获取写锁更新或创建多头仓位
+                let mut long_positions = self.positions.perpetual_pos_long.write().await;
+                if let Some(position) = long_positions.get_mut(&trade.instrument) {
+                    // 如果已经持有多头仓位，更新仓位
+                    println!("[UniLinkExecution] : Updating existing long position...");
+                    position.meta.update_from_trade(&trade, trade.price, PositionDirectionMode::LongShort);
+                } else {
+                    // 显式释放写锁
+                    drop(long_positions);
+
+                    // 释放锁后创建新的仓位
+                    let new_position = self.create_perpetual_position(trade.clone()).await?;
+
+                    // 再次获取写锁插入新的仓位
+                    let mut long_positions = self.positions.perpetual_pos_long.write().await;
+                    long_positions.insert(trade.instrument.clone(), new_position);
+                }
+            }
+
+            Side::Sell => {
+                println!("[UniLinkExecution] : Processing Sell trade for Long/Short Mode...");
+
+                // 获取写锁更新或创建空头仓位
+                let mut short_positions = self.positions.perpetual_pos_short.write().await;
+                if let Some(position) = short_positions.get_mut(&trade.instrument) {
+                    // 如果已经持有空头仓位，更新仓位
+                    println!("[UniLinkExecution] : Updating existing short position...");
+                    position.meta.update_from_trade(&trade, trade.price, PositionDirectionMode::LongShort);
+                } else {
+                    // 显式释放写锁
+                    drop(short_positions);
+
+                    // 释放锁后创建新的空头仓位
+                    let new_position = self.create_perpetual_position(trade.clone()).await?;
+
+                    // 再次获取写锁插入新的仓位
+                    let mut short_positions = self.positions.perpetual_pos_short.write().await;
+                    short_positions.insert(trade.instrument.clone(), new_position);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// 注意 这个函数是可以用来从客户端收到的交易中更新仓位，但是目前只适合 [PositionDirectionMode::Net Mode].
-    pub async fn update_position_from_client_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+    pub async fn update_position_net_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
         println!("[UniLinkExecution] : Received a new trade: {:#?}", trade);
 
         match trade.instrument.kind {
@@ -2234,7 +2312,7 @@ mod tests
         };
 
         // 执行管理仓位逻辑
-        let result = account.update_position_from_client_trade(trade.clone()).await;
+        let result = account.update_position_from_client_trade(trade.clone(),PositionDirectionMode::Net).await;
         assert!(result.is_ok());
 
         // 检查多头仓位是否成功创建
@@ -2265,7 +2343,7 @@ mod tests
         };
 
         // 执行管理仓位逻辑
-        let result = account.update_position_from_client_trade(trade.clone()).await;
+        let result = account.update_position_from_client_trade(trade.clone(),PositionDirectionMode::Net).await;
         assert!(result.is_ok());
 
         // 检查空头仓位是否成功创建
@@ -2296,7 +2374,7 @@ mod tests
         };
 
         // 创建一个多头仓位
-        account.update_position_from_client_trade(trade.clone()).await.unwrap();
+        account.update_position_from_client_trade(trade.clone(),PositionDirectionMode::Net).await.unwrap();
 
         // 再次买入增加仓位
         let additional_trade = ClientTrade {
@@ -2315,7 +2393,7 @@ mod tests
             fees: 0.05,
         };
 
-        account.update_position_from_client_trade(additional_trade).await.unwrap();
+        account.update_position_from_client_trade(additional_trade,PositionDirectionMode::Net).await.unwrap();
 
         // 检查仓位是否正确更新
         let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
@@ -2345,7 +2423,7 @@ mod tests
         };
 
         // 创建一个多头仓位
-        account.update_position_from_client_trade(trade.clone()).await.unwrap();
+        account.update_position_from_client_trade(trade.clone(),PositionDirectionMode::Net).await.unwrap();
 
         // 部分平仓
         let closing_trade = ClientTrade {
@@ -2364,7 +2442,7 @@ mod tests
             fees: 0.05,
         };
 
-        account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
+        account.update_position_from_client_trade(closing_trade.clone(),PositionDirectionMode::Net).await.unwrap();
 
         // 检查仓位是否部分平仓
         let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
@@ -2394,7 +2472,7 @@ mod tests
         };
 
         // 创建一个多头仓位
-        account.update_position_from_client_trade(trade.clone()).await.unwrap();
+        account.update_position_from_client_trade(trade.clone(),PositionDirectionMode::Net).await.unwrap();
 
         // 完全平仓
         let closing_trade = ClientTrade {
@@ -2413,7 +2491,7 @@ mod tests
             fees: 0.1,
         };
 
-        account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
+        account.update_position_from_client_trade(closing_trade.clone(),PositionDirectionMode::Net).await.unwrap();
 
         // 检查仓位是否已被完全移除
         let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
@@ -2443,7 +2521,7 @@ mod tests
         };
 
         // 创建一个多头仓位
-        account.update_position_from_client_trade(trade.clone()).await.unwrap();
+        account.update_position_from_client_trade(trade.clone(),PositionDirectionMode::Net).await.unwrap();
 
         // 反向平仓并开立新的空头仓位
         let reverse_trade = ClientTrade {
@@ -2462,7 +2540,7 @@ mod tests
             fees: 0.15,
         };
 
-        account.update_position_from_client_trade(reverse_trade.clone()).await.unwrap();
+        account.update_position_from_client_trade(reverse_trade.clone(),PositionDirectionMode::Net).await.unwrap();
 
         // 检查多头仓位是否已被完全移除
         let long_positions = account.positions.perpetual_pos_long.read().await;
@@ -2498,7 +2576,7 @@ mod tests
         };
 
         // 执行管理仓位逻辑，应该返回错误
-        let result = account.update_position_from_client_trade(trade.clone()).await;
+        let result = account.update_position_from_client_trade(trade.clone(),PositionDirectionMode::Net).await;
         println!("result: {:#?}", result);
         assert!(result.is_err());
     }
