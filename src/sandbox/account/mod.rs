@@ -917,7 +917,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     /// 更新 PerpetualPosition 的方法
     async fn create_perpetual_position(&mut self, trade: ClientTrade) -> Result<PerpetualPosition, ExchangeError>
     {
-        let meta = PositionMeta::from_trade(&trade, trade.price);
+        let meta = PositionMeta::create_from_trade(&trade, trade.price);
         let new_position = PerpetualPosition {
             meta,
             pos_config: PerpetualPositionConfig {
@@ -935,7 +935,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     /// 更新 FuturePosition 的方法（占位符）
     async fn create_future_position(&mut self, trade: ClientTrade) -> Result<FuturePosition, ExchangeError>
     {
-        let meta = PositionMeta::from_trade(&trade, trade.price);
+        let meta = PositionMeta::create_from_trade(&trade, trade.price);
         let new_position = FuturePosition {
             meta,
             pos_config: FuturePositionConfig {
@@ -1038,7 +1038,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 // 没有多头仓位，无需进一步处理
                                 println!("[UniLinkExecution] : No existing long position, creating a new short position...");
                                 let new_position = PerpetualPosition {
-                                    meta: PositionMeta::from_trade(&trade, trade.price),
+                                    meta: PositionMeta::create_from_trade(&trade, trade.price),
                                     pos_config: PerpetualPositionConfig {
                                         pos_margin_mode: self.config.position_margin_mode.clone(),
                                         leverage: self.config.account_leverage_rate,
