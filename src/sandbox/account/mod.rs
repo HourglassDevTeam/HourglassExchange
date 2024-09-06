@@ -1107,7 +1107,35 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         Ok(())
     }
 
-
+    // NOTE this one is under heavy development and should be tested with caution.
+    // async fn update_long_short_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+    //     // 新增的 Long Short Mode 逻辑
+    //     match trade.side {
+    //         Side::Buy => {
+    //             let mut long_positions = self.positions.perpetual_pos_long.write().await;
+    //             if let Some(position) = long_positions.get_mut(&trade.instrument) {
+    //                 // 更新多头仓位
+    //                 position.meta.update_from_trade(&trade, trade.price, PositionDirectionMode::LongShortMode);
+    //             } else {
+    //                 // 新增多头仓位
+    //                 let new_position = self.create_perpetual_position(trade.clone()).await?;
+    //                 long_positions.insert(trade.instrument.clone(), new_position);
+    //             }
+    //         }
+    //         Side::Sell => {
+    //             let mut short_positions = self.positions.perpetual_pos_short.write().await;
+    //             if let Some(position) = short_positions.get_mut(&trade.instrument) {
+    //                 // 更新空头仓位
+    //                 position.meta.update_from_trade(&trade, trade.price, PositionDirectionMode::LongShort);
+    //             } else {
+    //                 // 新增空头仓位
+    //                 let new_position = self.create_perpetual_position(trade.clone()).await?;
+    //                 short_positions.insert(trade.instrument.clone(), new_position);
+    //             }
+    //         }
+    //     }
+    //     Ok(())
+    // }
 
 
     /// 在 create_position 过程中确保仓位的杠杆率不超过账户的最大杠杆率。  [TODO] : TO BE CHECKED & APPLIED
