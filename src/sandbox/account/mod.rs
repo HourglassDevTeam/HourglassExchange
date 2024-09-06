@@ -349,7 +349,7 @@ impl Account
         let mut open_results = Vec::new();
 
         // 获取当前的 position_direction_mode 并提前判断是否需要进行方向冲突检查
-        let is_netmode = self.config.position_direction_mode == PositionDirectionMode::NetMode;
+        let is_netmode = self.config.position_direction_mode == PositionDirectionMode::Net;
 
         for request in open_requests {
             // 如果是 NetMode，检查方向冲突
@@ -917,7 +917,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     /// 更新 PerpetualPosition 的方法
     async fn create_perpetual_position(&mut self, trade: ClientTrade) -> Result<PerpetualPosition, ExchangeError>
     {
-        let meta = PositionMeta::from_trade(&trade, trade.price);
+        let meta = PositionMeta::from_trade(&trade, trade.price,self.config.position_direction_mode.clone());
         let new_position = PerpetualPosition {
             meta,
             pos_config: PerpetualPositionConfig {
@@ -935,7 +935,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     /// 更新 FuturePosition 的方法（占位符）
     async fn create_future_position(&mut self, trade: ClientTrade) -> Result<FuturePosition, ExchangeError>
     {
-        let meta = PositionMeta::from_trade(&trade, trade.price);
+        let meta = PositionMeta::from_trade(&trade, trade.price,self.config.position_direction_mode.clone());
         let new_position = FuturePosition {
             meta,
             pos_config: FuturePositionConfig {
@@ -1006,7 +1006,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                             let mut long_positions = self.positions.perpetual_pos_long.write().await;
                             if let Some(position) = long_positions.get_mut(&trade.instrument) {
                                 println!("[UniLinkExecution] : Updating existing long position...");
-                                position.meta.update_from_trade(&trade, trade.price);
+                                position.meta.update_from_trade(&trade, trade.price, self.config.position_direction_mode.clone());
                                 return Ok(());
                             }
                         }
@@ -1038,7 +1038,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 // 没有多头仓位，无需进一步处理
                                 println!("[UniLinkExecution] : No existing long position, creating a new short position...");
                                 let new_position = PerpetualPosition {
-                                    meta: PositionMeta::from_trade(&trade, trade.price),
+                                    meta: PositionMeta::from_trade(&trade, trade.price, self.config.position_direction_mode.clone()),
                                     pos_config: PerpetualPositionConfig {
                                         pos_margin_mode: self.config.position_margin_mode.clone(),
                                         leverage: self.config.account_leverage_rate,

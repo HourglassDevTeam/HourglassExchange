@@ -110,7 +110,7 @@ mod tests
         let config = result.unwrap();
 
         assert_eq!(config.margin_mode, MarginMode::SimpleMode);
-        assert_eq!(config.position_direction_mode, PositionDirectionMode::NetMode);
+        assert_eq!(config.position_direction_mode, PositionDirectionMode::Net);
         assert_eq!(config.position_margin_mode, PositionMarginMode::Isolated);
         assert_eq!(config.commission_level, CommissionLevel::Lv2);
         assert_eq!(config.account_leverage_rate, 100.0);

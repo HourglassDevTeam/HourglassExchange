@@ -143,7 +143,8 @@ mod tests
                                                                     realised_pnl: 0.0 },
                                                pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                                                      leverage: 1.0,
-                                                                                     position_mode: PositionDirectionMode::LongShortMode },
+                                                                                     position_mode: PositionDirectionMode::LongShort
+                                               },
                                                liquidation_price: 100.0,
                                                margin: 10.0 };
         position.update_liquidation_price(150.0);

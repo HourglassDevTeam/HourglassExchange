@@ -6,6 +6,7 @@ use crate::{
     common::{account_positions::position_id::PositionId, balance::TokenBalance, instrument::Instrument, Side},
     Exchange,
 };
+use crate::common::account_positions::PositionDirectionMode;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionMeta
@@ -27,21 +28,32 @@ pub struct PositionMeta
 }
 
 impl PositionMeta {
-    /// 根据 `ClientTrade` 更新现有仓位
-    pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) {
+    pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64, mode: PositionDirectionMode) {
         self.update_ts = trade.timestamp;
         self.current_symbol_price = current_symbol_price;
-        self.current_fees_total += trade.fees;
-        self.update_avg_price(trade.price, trade.quantity);
-        self.update_unrealised_pnl();
+
+        match mode {
+            PositionDirectionMode::Net => {
+                // 更新 Net Mode 逻辑
+                self.current_fees_total += trade.fees;
+                self.update_avg_price(trade.price, trade.quantity);
+                self.update_unrealised_pnl();
+            }
+            PositionDirectionMode::LongShort => {
+                // 针对 LongShort Mode 进行更新
+                if trade.side == Side::Buy {
+                    todo!()
+                } else {
+                    todo!()
+                }
+            }
+        }
     }
-
     /// 创建新的 `PositionMeta` 基于 `ClientTrade`
-    pub fn from_trade(trade: &ClientTrade, current_symbol_price: f64) -> Self {
-        let position_id = PositionId::new(&trade.instrument, trade.timestamp);
 
-        Self {
-            position_id,
+    pub fn from_trade(trade: &ClientTrade, current_symbol_price: f64, mode: PositionDirectionMode) -> Self {
+        let new_meta = PositionMeta {
+            position_id: PositionId::new(&trade.instrument, trade.timestamp),
             enter_ts: trade.timestamp,
             update_ts: trade.timestamp,
             exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, 0.0)),
@@ -55,12 +67,29 @@ impl PositionMeta {
             current_avg_price: trade.price,
             unrealised_pnl: 0.0,
             realised_pnl: 0.0,
+        };
+
+        match mode {
+            PositionDirectionMode::Net => {
+                // Net模式的初始化逻辑
+            }
+            PositionDirectionMode::LongShort => {
+                // LongShort模式的初始化逻辑
+                if trade.side == Side::Buy {
+                    todo!()
+                } else {
+                    todo!()
+                }
+            }
         }
+
+        new_meta
     }
+
 
     /// Handle new position creation in reverse with remaining quantity.
     pub fn from_trade_with_remaining(trade: &ClientTrade, current_symbol_price: f64, side: Side, remaining_quantity: f64) -> Self {
-        let mut new_meta = PositionMeta::from_trade(trade, current_symbol_price);
+        let mut new_meta = PositionMeta::from_trade(trade, current_symbol_price,PositionDirectionMode::Net);
         new_meta.current_size = remaining_quantity;
         new_meta.side = side;
         new_meta
@@ -68,10 +97,10 @@ impl PositionMeta {
 
     /// Update or create a position based on a new trade.
     /// This handles both regular updates and reverse position logic.
-    pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) -> Self {
+    pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64, mode: PositionDirectionMode) -> Self {
         if self.side == trade.side {
             // Update position normally if the trade is in the same direction
-            self.update_from_trade(trade, current_symbol_price);
+            self.update_from_trade(trade, current_symbol_price, mode);
             self.clone() // Return the updated position
         } else {
             // If trade side is opposite, reduce or close the current position and possibly open a new one.
@@ -323,7 +352,7 @@ mod tests {
     #[test]
     fn test_create_position_meta_from_trade() {
         let trade = create_test_trade();
-        let position_meta = PositionMeta::from_trade(&trade, 61_000.0);
+        let position_meta = PositionMeta::from_trade(&trade, 61_000.0,PositionDirectionMode::Net);
 
         assert_eq!(position_meta.current_size, trade.quantity);
         assert_eq!(position_meta.current_avg_price, trade.price);
@@ -335,7 +364,7 @@ mod tests {
 
     #[test]
     fn test_update_avg_price_with_fees() {
-        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0);
+        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0,PositionDirectionMode::Net);
         meta.update_avg_price_and_fees(60_000.0, 1.0, 2.0);  // Include additional fees
 
         assert!(meta.current_avg_price > meta.current_avg_price_gross);  // Avg price includes fees
@@ -344,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_update_unrealised_pnl() {
-        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0);
+        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0,PositionDirectionMode::Net);
         meta.update_unrealised_pnl();
 
         assert_eq!(meta.unrealised_pnl, 11_000.0);  // Difference between current price and avg price
@@ -352,7 +381,7 @@ mod tests {
 
     #[test]
     fn test_update_realised_pnl_and_clear_position() {
-        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0);
+        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0,PositionDirectionMode::Net);
         meta.update_realised_pnl(55_000.0);  // Closing at 55,000
 
         assert_eq!(meta.realised_pnl, 5_000.0);  // Realised PnL should be 5,000
@@ -364,7 +393,7 @@ mod tests {
 
     #[test]
     fn test_update_from_trade() {
-        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0);
+        let mut meta = PositionMeta::from_trade(&create_test_trade(), 61_000.0,PositionDirectionMode::Net);
         let new_trade = ClientTrade {
             timestamp: 1625248600,
             trade_id: ClientTradeId::from(1),  // This works fine
@@ -377,7 +406,7 @@ mod tests {
             fees: 2.0,
         };
 
-        meta.update_from_trade(&new_trade, 62_000.0);
+        meta.update_from_trade(&new_trade, 62_000.0,PositionDirectionMode::Net);
 
         assert_eq!(meta.current_size, 2.0);  // Size should be updated
         assert_eq!(meta.current_avg_price, 55_000.0);  // The avg price should be exactly 55,000.0

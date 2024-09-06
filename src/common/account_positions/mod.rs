@@ -338,8 +338,8 @@ impl AccountPositions {
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionDirectionMode
 {
-    LongShortMode, // Note long/short, only applicable to Futures/Swap
-    NetMode,       // Note one side per token per account_positions
+    LongShort, // Note long/short, only applicable to Futures/Swap
+    Net,       // Note one side per token per account_positions
 }
 
 ///  [Cross]: 交叉保证金模式。在这种模式下，所有仓位共享一个保证金池，盈亏共用。如果仓位的保证金不足，将从账户余额中提取以补充不足。
@@ -421,7 +421,8 @@ mod tests
                             margin: initial_margin,
                             pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                                   leverage,
-                                                                  position_mode: PositionDirectionMode::NetMode } }
+                                                                  position_mode: PositionDirectionMode::Net
+                            } }
     }
 
     #[tokio::test] // 使用 tokio 的异步测试宏

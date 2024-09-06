@@ -53,7 +53,7 @@ pub fn create_test_account_config() -> AccountConfig
     let leverage_rate = 1.0;
 
     AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
-                    position_direction_mode: PositionDirectionMode::NetMode,
+                    position_direction_mode: PositionDirectionMode::Net,
                     position_margin_mode: PositionMarginMode::Isolated,
                     commission_level: CommissionLevel::Lv1,
                     funding_rate: 0.0,
@@ -120,7 +120,7 @@ pub async fn create_test_account() -> Account
                                              taker_fees: 0.002 };
 
     let mut account_config = AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
-                                             position_direction_mode: PositionDirectionMode::NetMode,
+                                             position_direction_mode: PositionDirectionMode::Net,
                                              position_margin_mode: PositionMarginMode::Isolated,
                                              commission_level: CommissionLevel::Lv1,
                                              funding_rate: 0.0,
@@ -179,7 +179,8 @@ pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPositi
                                              realised_pnl: 0.0 },
                         pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                               leverage: 1.0,
-                                                              position_mode: PositionDirectionMode::LongShortMode },
+                                                              position_mode: PositionDirectionMode::LongShort
+                        },
                         liquidation_price: 0.0,
                         margin: 0.0 }
 }
@@ -204,7 +205,8 @@ pub fn create_test_future_position_with_side(instrument: Instrument, side: Side)
                                           realised_pnl: 0.0 },
                      pos_config: FuturePositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                         leverage: 1.0,
-                                                        position_mode: PositionDirectionMode::LongShortMode },
+                                                        position_mode: PositionDirectionMode::LongShort
+                     },
                      liquidation_price: 0.0,
                      margin: 0.0,
                      funding_fee: 0.0 }
