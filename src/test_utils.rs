@@ -115,8 +115,8 @@ pub async fn create_test_account() -> Account
 {
     let leverage_rate = 1.0;
     let balances = DashMap::new();
-    balances.insert(Token::from("ETH"), Balance::new(10.0, 10.0, 1.0));
-    balances.insert(Token::from("USDT"), Balance::new(10_000.0, 10_000.0, 1.0));
+    balances.insert(Token::from("ETH"), Balance::new(10.0, 10.0, Some(16305.0)));
+    balances.insert(Token::from("USDT"), Balance::new(10_000.0, 10_000.0, Some(1.0)));
 
     let commission_rates = CommissionRates { maker_fees: 0.001,
                                              taker_fees: 0.002 };
@@ -174,7 +174,7 @@ pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPositi
                                              enter_ts: 0,
                                              update_ts: 0,
                                              exit_balance: TokenBalance { token: instrument.base.clone(),
-                                                                          balance: Balance::new(0.0, 0.0, 1.0) },
+                                                                          balance: Balance::new(0.0, 0.0, Some(1.0)) },
                                              exchange: Exchange::SandBox,
                                              instrument,
                                              side: Side::Buy,
@@ -199,7 +199,7 @@ pub fn create_test_future_position_with_side(instrument: Instrument, side: Side)
                                           enter_ts: 0,
                                           update_ts: 0,
                                           exit_balance: TokenBalance { token: instrument.base.clone(),
-                                                                       balance: Balance::new(0.0, 0.0, 1.0) },
+                                                                       balance: Balance::new(0.0, 0.0, Some(1.0)) },
                                           exchange: Exchange::SandBox,
                                           instrument,
                                           side,

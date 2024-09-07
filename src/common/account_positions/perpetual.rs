@@ -129,7 +129,7 @@ mod tests
         let mut position = PerpetualPosition { meta: PositionMeta { position_id: PositionId(123124124124124),
                                                                     enter_ts: 1625247600,
                                                                     update_ts: 1625247601,
-                                                                    exit_balance: TokenBalance::new(Token::from("BTC"), Balance::new(0.0, 0.0, 0.0)),
+                                                                    exit_balance: TokenBalance::new(Token::from("BTC"), Balance::new(0.0, 0.0, Some(0.0))),
                                                                     exchange: Exchange::SandBox,
                                                                     instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
                                                                     side: Side::Buy,

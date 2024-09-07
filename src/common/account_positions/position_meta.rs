@@ -54,7 +54,7 @@ impl PositionMeta
         PositionMeta { position_id: PositionId::new(&trade.instrument, trade.timestamp),
                        enter_ts: trade.timestamp,
                        update_ts: trade.timestamp,
-                       exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, 0.0)),
+                       exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, Some(0.0))),
                        exchange: trade.exchange,
                        instrument: trade.instrument.clone(),
                        side: trade.side,

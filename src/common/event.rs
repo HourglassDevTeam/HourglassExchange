@@ -90,7 +90,7 @@ mod tests
                          AccountEventKind::OrdersCancelled(vec![]),
                          AccountEventKind::OrdersFilled(vec![]),
                          AccountEventKind::OrdersPartiallyFilled(vec![]),
-                         AccountEventKind::Balance(TokenBalance::new(Token::from("BTC"), Balance::new(100.0, 50.0, 20000.0))),
+                         AccountEventKind::Balance(TokenBalance::new(Token::from("BTC"), Balance::new(100.0, 50.0, Some(20000.0)))),
                          // AccountEventKind::Trade(ClientTrade::default()),
                          AccountEventKind::Balances(vec![]),
                          /* AccountEventKind::Positions(AccountPositions::default()),

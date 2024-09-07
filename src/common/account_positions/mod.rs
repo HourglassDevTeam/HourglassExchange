@@ -175,8 +175,8 @@ impl AccountPositions
                                                       .exit_balance(TokenBalance { // 初始化为 exit_balance
                                                                                    token: trade.instrument.base.clone(),
                                                                                    balance: Balance { time: Utc::now(),
-                                                                                                      current_price: trade.price,
-                                                                                                      total: trade.size,
+                                                                                       current_price: None,
+                                                                                       total: trade.size,
                                                                                                       available: trade.size } })
                                                       .exchange(Exchange::SandBox)
                                                       .instrument(trade.instrument.clone())
@@ -411,7 +411,7 @@ mod tests
                                                             .update_ts(1625097600000)
                                                             .exit_balance(TokenBalance { token: instrument.base.clone(),
                                                                                          balance: Balance { time: Utc::now(),
-                                                                                                            current_price: current_market_price,
+                                                                                                            current_price: Some(current_market_price),
                                                                                                             total: trade_size,
                                                                                                             available: trade_size } })
                                                             .exchange(Exchange::Binance)
