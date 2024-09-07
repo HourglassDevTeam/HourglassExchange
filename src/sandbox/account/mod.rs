@@ -1,3 +1,4 @@
+use crate::common::account_positions::perpetual;
 use crate::common::account_positions::future::{FuturePosition, FuturePositionConfig};
 use crate::common::account_positions::leveraged_token::LeveragedTokenPosition;
 use crate::common::account_positions::option::OptionPosition;
@@ -1149,8 +1150,10 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 long_positions_write.remove(&trade.instrument); // NOTE 如果平仓的持仓要记录下来，那在这步之前还要更新盈亏。
                             } else if should_remove_and_reverse {
                                 // FIXME 在处理 should_remove_and_reverse 的情况下，平掉多头并反向开空头了，但似乎没有更新已实现的盈亏。
-                                // FIXME 应类似 long_positions_write.get(&trade.instrument).unwrap().meta.update_realised_pnl(trade.price);
-                                println!("[UniLinkEx] : should_remove_and_reverse...");
+                                println!("[UniLinkEx] : Removing and reversing...");
+                                let long: &mut PerpetualPosition = long_positions_write.get_mut(&trade.instrument).unwrap();
+                                long.meta.update_realised_pnl(trade.price);
+                                self.closed_positions.insert_perpetual_pos_long(long.clone()).await;
                                 long_positions_write.remove(&trade.instrument);
                                 drop(long_positions_write); // 显式释放写锁
 
