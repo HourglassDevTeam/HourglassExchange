@@ -368,7 +368,7 @@ impl Account
             };
 
             // 尝试开仓，处理结果
-            let open_result = self.attempt_atomic_open(processed_request).await;
+            let open_result = self.atomic_open(processed_request).await;
             open_results.push(open_result);
         }
 
@@ -434,7 +434,7 @@ impl Account
     }
 
     /// NOTE 目前只适合永续合约的交易
-    pub async fn attempt_atomic_open(&mut self, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError>
+    pub async fn atomic_open(&mut self, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError>
     {
         // 验证订单的基本合法性
         Self::validate_order_instruction(order.instruction)?;
@@ -1353,7 +1353,7 @@ impl Account
                 let leverage_rate = self.config.account_leverage_rate;
                 let quote_delta = match side {
                     | Side::Buy => {
-                        // 买入时减少的是 quote 资金
+                        // 买入时减少的也是 quote 资金
                         BalanceDelta { total: (-trade.size * trade.price - fee) * leverage_rate,
                                        available: -fee * leverage_rate}
                     }
@@ -2272,7 +2272,7 @@ mod tests
                                                               reduce_only: false } };
 
         // 尝试开单，所需资金为 200 USDT，但当前账户只有 1 USDT
-        let result = account.attempt_atomic_open(open_order_request).await;
+        let result = account.atomic_open(open_order_request).await;
 
         // 断言开单失败，且返回的错误是余额不足
         assert!(result.is_err());
