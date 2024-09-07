@@ -1,8 +1,6 @@
-use serde::{Deserialize, Serialize};
-use crate::common::account_positions::position_id::PositionId;
 use crate::common::instrument::Instrument;
-use crate::common::instrument::kind::InstrumentKind;
 use crate::common::Side;
+use serde::{Deserialize, Serialize};
 
 /// [`Position`] 更新事件。该事件发生在接收到新的 [`MarketEvent`] 数据时。
 ///
@@ -12,8 +10,8 @@ use crate::common::Side;
 /// 该结构体在量化交易系统中至关重要，因为它能够实时跟踪仓位的变化，特别是在价格波动的情况下，帮助交易者和策略及时调整仓位。
 ///
 /// # 字段说明
-/// - `side`: 仓位的方向，例如买入`Side::Buy`或卖出`Side::Sell`
-/// - `instrument`: 交易标的的详细信息，包括基础Token和报价Token
+/// - `side`: 仓位的方向，例如买入`Side::Buy`或卖出`Side::Sell` // NOTE 不确定需不需要。作为验证字段而存在。
+/// - `instrument`: 交易标的的详细信息，包括基础Token和报价Token // NOTE 不确定需不需要。作为验证字段而存在。
 /// - `update_time`: 仓位更新的时间戳，通常是一个 UNIX 时间戳，表示最后一次更新的时间
 /// - `size_delta`: 当前仓位变化量，通常以资产的数量表示
 /// - `current_symbol_price`: 当前交易标的的市场价格，可能是买入价或卖出价
@@ -24,8 +22,6 @@ use crate::common::Side;
 /// 在接收到市场事件（如价格变化、订单执行等）后，系统会生成对应的 `PositionDelta` 实例并传递给相关组件或服务，以更新仓位的状态。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionDelta {
-    pub side: Side,                         // 静态数据
-    pub instrument: Instrument,             // 静态数据
     pub update_time: i64,                   // 实时数据
     pub size_delta:f64,                   // 实时数据
     pub current_symbol_price: f64,          // 实时数据
