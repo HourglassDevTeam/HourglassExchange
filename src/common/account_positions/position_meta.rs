@@ -30,7 +30,6 @@ pub struct PositionMeta
 ///         尤其是在处理复杂的反向开仓和部分平仓的情况下。
 impl PositionMeta
 {
-    /// 根据 `ClientTrade` 和模式更新仓位
     /// 根据 `ClientTrade` 更新仓位
     pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64)
     {
