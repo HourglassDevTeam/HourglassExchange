@@ -66,7 +66,7 @@ impl PositionMeta
                        realised_pnl: 0.0 }
     }
 
-    /// `[NET-MODE ONLY]`
+    /// this function is for `PositionDirectionMode::Net` only
     /// Handle new position creation in reverse with remaining quantity.
     pub fn create_from_trade_with_remaining(trade: &ClientTrade, side: Side, remaining_quantity: f64) -> Self
     {
