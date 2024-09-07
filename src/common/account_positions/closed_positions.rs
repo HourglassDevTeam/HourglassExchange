@@ -37,6 +37,20 @@ pub struct AccountClosedPositions
 
 #[allow(dead_code)]
 impl AccountClosedPositions {
+    pub fn init() -> Self {
+        Self {
+            margin_pos_long: Arc::new(RwLock::new(HashMap::new())),
+            margin_pos_short: Arc::new(RwLock::new(HashMap::new())),
+            perpetual_pos_long: Arc::new(RwLock::new(HashMap::new())),
+            perpetual_pos_short: Arc::new(RwLock::new(HashMap::new())),
+            futures_pos_long: Arc::new(RwLock::new(HashMap::new())),
+            futures_pos_short: Arc::new(RwLock::new(HashMap::new())),
+            option_pos_long_call: Arc::new(RwLock::new(HashMap::new())),
+            option_pos_long_put: Arc::new(RwLock::new(HashMap::new())),
+            option_pos_short_call: Arc::new(RwLock::new(HashMap::new())),
+            option_pos_short_put: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
     /// 插入方法，推断 `Instrument` 并插入 `LeveragedTokenPosition` 到 `margin_pos_long`
     pub async fn insert_margin_pos_long(&self, position: LeveragedTokenPosition) {
         let instrument = position.meta.instrument.clone(); // 从 position 中推断出 instrument

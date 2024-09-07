@@ -53,7 +53,6 @@ use tokio::sync::{mpsc, oneshot, RwLock};
 use tracing::warn;
 use uuid::Uuid;
 use crate::common::account_positions::closed_positions::AccountClosedPositions;
-// use crate::common::account_positions::position_meta::PositionMeta;
 
 pub mod account_config;
 pub mod account_latency;
@@ -72,8 +71,8 @@ pub struct Account
     pub config: AccountConfig,                           // 帐户配置
     pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
     pub balances: DashMap<Token, Balance>,               // 帐户余额
-    pub positions: AccountPositions,                     // 帐户持仓 TO BE changed into Arc<Mutex<Hashmap>>
-    // pub closed_positions:AccountClosedPositions
+    pub positions: AccountPositions,                     // 帐户持仓
+    pub closed_positions:AccountClosedPositions
     // pub vault: Vault,
 }
 
