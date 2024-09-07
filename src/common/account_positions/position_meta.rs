@@ -6,7 +6,6 @@ use crate::{
     common::{account_positions::position_id::PositionId, balance::TokenBalance, instrument::Instrument, Side},
     Exchange,
 };
-use crate::common::account_positions::PositionDirectionMode;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionMeta
@@ -140,21 +139,8 @@ impl PositionMeta
         }
     }
 
-
-    /// LongShort Mode 下更新多头仓位
-    fn update_long_position(&mut self, trade_price: f64, trade_size: f64) {
-        // 更新多头均价和持仓大小（与 `Net Mode` 中类似，但仅限多头）
-        self.update_avg_price(trade_price, trade_size);
-    }
-
-    /// LongShort Mode 下更新空头仓位
-    fn update_short_position(&mut self, trade_price: f64, trade_size: f64) {
-        // 更新空头逻辑，可以扩展为适应更多逻辑
-        self.update_avg_price(trade_price, trade_size);
-    }
-
     /// 更新 unrealised_pnl
-    /// FIXME 在更新未实现盈亏时，现在使用 self.current_size 来计算，但是在反向仓位或部分平仓的情况下，可能会有问题，
+    /// FIXME 在更新未实现盈亏时，现在使用 self.current_size 来计算，但是在反向仓位或部分平仓的情况下，会不会有问题，
     /// FIXME 因为仓位大小已经发生变化。建议确保每次在更新未实现盈亏时，考虑实际持仓方向和剩余仓位大小。
     pub fn update_unrealised_pnl(&mut self)
     {
@@ -162,10 +148,6 @@ impl PositionMeta
     }
 
     /// 更新 realised_pnl 并清空持仓
-    /// FIXME
-    ///     - 在 update_realised_pnl 方法中，您在平仓时计算已实现盈亏后将持仓重置为 0，这对 Net Mode 是合理的，
-    ///     - 但是在 LongShort Mode 或反向开仓时，可能需要根据情况保留部分持仓或反转方向，而不是直接将所有仓位重置为 0。
-    ///
     pub fn update_realised_pnl(&mut self, closing_price: f64)
     {
         self.realised_pnl = (closing_price - self.current_avg_price) * self.current_size;
