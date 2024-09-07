@@ -1118,9 +1118,9 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                             // 先获取读锁以检查 long 仓位
                             let long_positions_read = self.positions.perpetual_pos_long.read().await;
                             if let Some(position) = long_positions_read.get(&trade.instrument) {
-                                should_remove_position = position.meta.current_size == trade.quantity;
-                                should_remove_and_reverse = position.meta.current_size < trade.quantity;
-                                remaining_quantity = trade.quantity - position.meta.current_size;
+                                should_remove_position = position.meta.current_size == trade.size;
+                                should_remove_and_reverse = position.meta.current_size < trade.size;
+                                remaining_quantity = trade.size - position.meta.current_size;
                             } else {
                                 // 没有多头仓位，无需进一步处理
                                 println!("[UniLinkEx] : No existing long position, creating a new short position...");
@@ -1189,7 +1189,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
 
                                 if let Some(position) = long_positions_write.get_mut(&trade.instrument) {
                                     // 根据交易数量减少仓位大小
-                                    position.meta.current_size -= trade.quantity;
+                                    position.meta.current_size -= trade.size;
                                 }
                             }
                         }
@@ -1372,19 +1372,19 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let (base_delta, quote_delta) = match side {
                     | Side::Buy => {
-                        let base_increase = trade.quantity;
+                        let base_increase = trade.size;
                         // Note: available was already decreased by the opening of the Side::Buy order
                         let base_delta = BalanceDelta { total: base_increase,
                             available: base_increase };
-                        let quote_delta = BalanceDelta { total: -trade.quantity * trade.price - fee,
+                        let quote_delta = BalanceDelta { total: -trade.size * trade.price - fee,
                             available: -fee };
                         (base_delta, quote_delta)
                     }
                     | Side::Sell => {
                         // Note: available was already decreased by the opening of the Side::Sell order
-                        let base_delta = BalanceDelta { total: -trade.quantity,
+                        let base_delta = BalanceDelta { total: -trade.size,
                             available: 0.0 };
-                        let quote_increase = (trade.quantity * trade.price) - fee;
+                        let quote_increase = (trade.size * trade.price) - fee;
                         let quote_delta = BalanceDelta { total: quote_increase,
                             available: quote_increase };
                         (base_delta, quote_delta)
@@ -2148,7 +2148,7 @@ mod tests
         // 检查是否生成了正确数量的交易事件
         assert_eq!(trades.len(), 1);
         let trade = &trades[0];
-        assert_eq!(trade.quantity, 2.0);
+        assert_eq!(trade.size, 2.0);
         assert_eq!(trade.price, 100.0);
 
         // 检查余额是否已更新
@@ -2209,7 +2209,7 @@ mod tests
         // 检查是否生成了正确数量的交易事件
         assert_eq!(trades.len(), 1);
         let trade = &trades[0];
-        assert_eq!(trade.quantity, 2.0);
+        assert_eq!(trade.size, 2.0);
         assert_eq!(trade.price, 100.0);
 
         // 检查余额是否已更新
@@ -2309,7 +2309,7 @@ mod tests
             },
             side: Side::Buy,
             price: 100.0,
-            quantity: 10.0,
+            size: 10.0,
             fees: 0.1,
         };
 
@@ -2341,7 +2341,7 @@ mod tests
             },
             side: Side::Sell,
             price: 100.0,
-            quantity: 5.0,
+            size: 5.0,
             fees: 0.05,
         };
 
@@ -2373,7 +2373,7 @@ mod tests
             },
             side: Side::Buy,
             price: 100.0,
-            quantity: 10.0,
+            size: 10.0,
             fees: 0.1,
         };
 
@@ -2394,7 +2394,7 @@ mod tests
             },
             side: Side::Buy,
             price: 100.0,
-            quantity: 5.0,
+            size: 5.0,
             fees: 0.05,
         };
 
@@ -2424,7 +2424,7 @@ mod tests
             },
             side: Side::Buy,
             price: 100.0,
-            quantity: 10.0,
+            size: 10.0,
             fees: 0.1,
         };
 
@@ -2445,7 +2445,7 @@ mod tests
             },
             side: Side::Sell,
             price: 100.0,
-            quantity: 5.0,
+            size: 5.0,
             fees: 0.05,
         };
 
@@ -2475,7 +2475,7 @@ mod tests
             },
             side: Side::Buy,
             price: 100.0,
-            quantity: 10.0,
+            size: 10.0,
             fees: 0.1,
         };
 
@@ -2496,7 +2496,7 @@ mod tests
             },
             side: Side::Sell,
             price: 100.0,
-            quantity: 10.0,
+            size: 10.0,
             fees: 0.1,
         };
 
@@ -2526,7 +2526,7 @@ mod tests
             },
             side: Side::Buy,
             price: 100.0,
-            quantity: 10.0,
+            size: 10.0,
             fees: 0.1,
         };
 
@@ -2547,7 +2547,7 @@ mod tests
             },
             side: Side::Sell,
             price: 100.0,
-            quantity: 15.0,  // 卖出 15.0 超过当前的多头仓位
+            size: 15.0,  // 卖出 15.0 超过当前的多头仓位
             fees: 0.15,
         };
 
@@ -2583,7 +2583,7 @@ mod tests
             },
             side: Side::Sell,
             price: 100.0,
-            quantity: 10.0,
+            size: 10.0,
             fees: 0.1,
         };
 

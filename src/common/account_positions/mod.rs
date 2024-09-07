@@ -170,7 +170,7 @@ impl AccountPositions {
         let position_mode = config.position_direction_mode.clone();
         let position_margin_mode = config.position_margin_mode.clone();
         // 计算初始保证金
-        let initial_margin = trade.price * trade.quantity / config.account_leverage_rate;
+        let initial_margin = trade.price * trade.size / config.account_leverage_rate;
 
         // 根据 Instrument 和 Side 动态生成 position_id
         let position_meta = PositionMetaBuilder::new().position_id(PositionId::new(&trade.instrument.clone(), trade.timestamp))
@@ -180,12 +180,13 @@ impl AccountPositions {
                                                                                    token: trade.instrument.base.clone(),
                                                                                    balance: Balance { time: Utc::now(),
                                                                                                       current_price: trade.price,
-                                                                                                      total: trade.quantity,
-                                                                                                      available: trade.quantity } })
+                                                                                                      total: trade.size,
+                                                                                                      available: trade.size
+                                                                                   } })
                                                       .exchange(Exchange::SandBox)
                                                       .instrument(trade.instrument.clone())
                                                       .side(trade.side)
-                                                      .current_size(trade.quantity)
+                                                      .current_size(trade.size)
                                                       .current_fees_total(trade.fees)
                                                       .current_avg_price_gross(trade.price)
                                                       .current_symbol_price(trade.price)
@@ -197,10 +198,10 @@ impl AccountPositions {
 
         // 计算 liquidation_price
         let liquidation_price = if trade.side == Side::Buy {
-            trade.price * (1.0 - initial_margin / (trade.quantity * trade.price))
+            trade.price * (1.0 - initial_margin / (trade.size * trade.price))
         }
         else {
-            trade.price * (1.0 + initial_margin / (trade.quantity * trade.price))
+            trade.price * (1.0 + initial_margin / (trade.size * trade.price))
         };
         let pos_config = PerpetualPositionConfig { pos_margin_mode: position_margin_mode,
                                                    leverage: config.account_leverage_rate,

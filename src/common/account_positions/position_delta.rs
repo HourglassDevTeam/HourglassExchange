@@ -1,6 +1,6 @@
-use crate::common::instrument::Instrument;
-use crate::common::Side;
 use serde::{Deserialize, Serialize};
+use crate::common::Side;
+use crate::common::trade::ClientTrade;
 
 /// [`Position`] 更新事件。该事件发生在接收到新的 [`MarketEvent`] 数据时。
 ///
@@ -11,9 +11,8 @@ use serde::{Deserialize, Serialize};
 ///
 /// # 字段说明
 /// - `side`: 仓位的方向，例如买入`Side::Buy`或卖出`Side::Sell` // NOTE 不确定需不需要。作为验证字段而存在。
-/// - `instrument`: 交易标的的详细信息，包括基础Token和报价Token // NOTE 不确定需不需要。作为验证字段而存在。
 /// - `update_time`: 仓位更新的时间戳，通常是一个 UNIX 时间戳，表示最后一次更新的时间
-/// - `size_delta`: 当前仓位变化量，通常以资产的数量表示
+/// - `size`: 待处理的仓位变化量的大小，通常以资产的数量表示
 /// - `current_symbol_price`: 当前交易标的的市场价格，可能是买入价或卖出价
 ///
 /// # 用途
@@ -26,7 +25,26 @@ pub struct PositionDelta {
     // pub side: Side,
     // 交易标的的详细信息，包括基础资产和报价资产
     // pub instrument: Instrument,
+    pub side: Side,
     pub update_time: i64,                   // 实时数据
-    pub size_delta:f64,                   // 实时数据
+    pub size:f64,                   // 实时数据
     pub current_symbol_price: f64,          // 实时数据
+}
+
+impl From<&ClientTrade> for PositionDelta {
+    /// 从 `ClientTrade` 转换为 `PositionDelta`
+    ///
+    /// # 参数
+    /// - `client_trade`: 包含交易的详细信息。
+    ///
+    /// # 返回值
+    /// 返回一个新的 `PositionDelta`，其中包含交易时的相关数据，如更新的时间、交易数量、当前市场价格等。
+    fn from(client_trade: &ClientTrade) -> Self {
+        PositionDelta {
+            side: client_trade.side,
+            update_time: client_trade.timestamp,          // 使用交易的时间戳作为更新时间
+            size: client_trade.size,            // 使用交易的数量作为仓位的变化量
+            current_symbol_price: client_trade.price,     // 使用交易的价格作为当前市场价格
+        }
+    }
 }

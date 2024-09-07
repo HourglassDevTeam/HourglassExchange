@@ -40,7 +40,7 @@ impl PositionMeta {
         self.current_fees_total += trade.fees;
 
         // 更新均价和持仓大小
-        self.update_avg_price(trade.price, trade.quantity);
+        self.update_avg_price(trade.price, trade.size);
 
         // 更新未实现盈亏
         self.update_unrealised_pnl();
@@ -58,7 +58,7 @@ impl PositionMeta {
             exchange: trade.exchange,
             instrument: trade.instrument.clone(),
             side: trade.side,
-            current_size: trade.quantity,
+            current_size: trade.size,
             current_fees_total: trade.fees,
             current_avg_price_gross: trade.price,
             current_symbol_price: trade.price,
@@ -88,14 +88,14 @@ impl PositionMeta {
             self.clone() // Return the updated position
         } else {
             // If trade side is opposite, reduce or close the current position and possibly open a new one.
-            let remaining_quantity = trade.quantity - self.current_size;
+            let remaining_quantity = trade.size - self.current_size;
             if remaining_quantity >= 0.0 {
                 // Fully close the current position and reverse the position with remaining quantity
                 self.update_realised_pnl(trade.price);
                 PositionMeta::create_from_trade_with_remaining(trade, trade.side, current_symbol_price)
             } else {
                 // Partial close, no reverse, just reduce the size
-                self.current_size -= trade.quantity;
+                self.current_size -= trade.size;
                 self.update_realised_pnl(trade.price);
                 self.clone() // Return the updated position
             }
@@ -330,7 +330,7 @@ mod tests {
             instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
             side: Side::Buy,
             price: 50_000.0,
-            quantity: 1.0,
+            size: 1.0,
             fees: 2.0,
         }
     }
@@ -340,7 +340,7 @@ mod tests {
         let trade = create_test_trade();
         let position_meta = PositionMeta::create_from_trade(&trade);
 
-        assert_eq!(position_meta.current_size, trade.quantity);
+        assert_eq!(position_meta.current_size, trade.size);
         assert_eq!(position_meta.current_avg_price, trade.price);
         assert_eq!(position_meta.current_symbol_price, 50000.0);
         assert_eq!(position_meta.current_fees_total, trade.fees);
@@ -389,7 +389,7 @@ mod tests {
             instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
             side: Side::Buy,
             price: 60_000.0,
-            quantity: 1.0,
+            size: 1.0,
             fees: 2.0,
         };
 

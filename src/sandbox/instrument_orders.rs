@@ -210,7 +210,7 @@ impl InstrumentOrders
                          instrument: order.instrument.clone(),
                          side: order.side,
                          price: order.state.price,
-                         quantity: trade_quantity,
+                         size: trade_quantity,
                          fees: fee })
     }
 
