@@ -22,6 +22,10 @@ use serde::{Deserialize, Serialize};
 /// 在接收到市场事件（如价格变化、订单执行等）后，系统会生成对应的 `PositionDelta` 实例并传递给相关组件或服务，以更新仓位的状态。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionDelta {
+    // 仓位的方向，例如买入（Side::Buy）或卖出（Side::Sell）
+    // pub side: Side,
+    // 交易标的的详细信息，包括基础资产和报价资产
+    // pub instrument: Instrument,
     pub update_time: i64,                   // 实时数据
     pub size_delta:f64,                   // 实时数据
     pub current_symbol_price: f64,          // 实时数据
