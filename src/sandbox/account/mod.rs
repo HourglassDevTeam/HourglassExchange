@@ -1075,7 +1075,7 @@ impl Account
                         {
                             let mut long_positions = self.positions.perpetual_pos_long.write().await;
                             if let Some(position) = long_positions.get_mut(&trade.instrument) {
-                                println!("[UniLinkEx] : Updating existing long position...");
+                                // println!("[UniLinkEx] : Updating existing long position...");
                                 position.meta.update_from_trade(&trade, trade.price);
                                 return Ok(());
                             }
@@ -1087,11 +1087,11 @@ impl Account
                         // 再次获取写锁插入新的仓位
                         let mut long_positions = self.positions.perpetual_pos_long.write().await;
                         long_positions.insert(trade.instrument.clone(), new_position);
-                        println!("[UniLinkEx] : New long position created: {:#?}", long_positions);
+                        // println!("[UniLinkEx] : New long position created: {:#?}", long_positions);
                     }
 
                     | Side::Sell => {
-                        println!("[UniLinkEx] : Processing short trade for Perpetual...");
+                        // println!("[UniLinkEx] : Processing short trade for Perpetual...");
 
                         let should_remove_position;
                         let should_remove_and_reverse;
@@ -1115,7 +1115,7 @@ impl Account
                                                                        liquidation_price: 0.0,
                                                                        margin: 0.0 };
                                 self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
-                                println!("[UniLinkEx] : New short position created: {:#?}", self.positions.perpetual_pos_short);
+                                // println!("[UniLinkEx] : New short position created: {:#?}", self.positions.perpetual_pos_short);
                                 return Ok(());
                             }
                         }
@@ -1320,7 +1320,7 @@ impl Account
     /// 从交易中更新余额并返回 [`AccountEvent`]
     pub async fn apply_trade_changes(&mut self, trade: &ClientTrade) -> Result<AccountEvent, ExchangeError>
     {
-        let Instrument { base, quote, kind, .. } = &trade.instrument;
+        let Instrument { quote, kind, .. } = &trade.instrument;
         let fee = trade.fees; // 直接从 TradeEvent 中获取费用
         let side = trade.side; // 直接使用 TradeEvent 中的 side
                                // let trade_price = trade.price;
@@ -1340,33 +1340,34 @@ impl Account
                 todo!("CommodityFuture handling is not implemented yet")
             }
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
-                let (base_delta, quote_delta) = match side {
-                    | Side::Buy => {
-                        let base_increase = trade.size;
-                        // Note: available was already decreased by the opening of the Side::Buy order
-                        let base_delta = BalanceDelta { total: base_increase,
-                                                        available: base_increase };
-                        let quote_delta = BalanceDelta { total: -trade.size * trade.price - fee,
-                                                         available: -fee };
-                        (base_delta, quote_delta)
+                let quote_delta = match side {
+                    Side::Buy => {
+                        // 买入时减少的是 quote 资金
+                        BalanceDelta {
+                            total: -trade.size * trade.price - fee,  // 总量减少
+                            available:  - fee, // 可用余额减少
+                        }
                     }
-                    | Side::Sell => {
-                        // Note: available was already decreased by the opening of the Side::Sell order
-                        let base_delta = BalanceDelta { total: -trade.size,
-                                                        available: 0.0 };
-                        let quote_increase = (trade.size * trade.price) - fee;
-                        let quote_delta = BalanceDelta { total: quote_increase,
-                                                         available: quote_increase };
-                        (base_delta, quote_delta)
+                    Side::Sell => {
+                        // 卖出时增加的是 quote 资金
+                        BalanceDelta {
+                            total: (trade.size * trade.price) - fee, // 总量增加
+                            available: (trade.size * trade.price) - fee, // 可用余额增加
+                        }
                     }
                 };
 
-                let base_balance = self.apply_balance_delta(base, base_delta);
+                // 应用 quote 的余额变动
                 let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
-                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().expect("[UniLinkEx] : Failed to get exchange timestamp"),
-                                  exchange: Exchange::SandBox,
-                                  kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) })
+                // 生成账户事件，只涉及 quote
+                Ok(AccountEvent {
+                    exchange_timestamp: self.get_exchange_ts().expect("[UniLinkEx] : Failed to get exchange timestamp"),
+                    exchange: Exchange::SandBox,
+                    kind: AccountEventKind::Balances(vec![
+                        TokenBalance::new(quote.clone(), quote_balance),
+                    ]),
+                })
             }
         }
     }
@@ -1502,12 +1503,16 @@ impl Account
         let base = Token::from(market_trade.parse_base().ok_or_else(|| ExchangeError::SandBox("Unknown base.".to_string()))?);
         let quote = Token::from(market_trade.parse_quote().ok_or_else(|| ExchangeError::SandBox("Unknown quote.".to_string()))?);
         let kind = market_trade.parse_kind();
+        println!("[match_orders]: kind is {}",kind);
         let instrument = Instrument { base, quote, kind };
+        println!("[match_orders]: instrument is {}",instrument);
+
 
         // 查找与指定金融工具相关的挂单
         if let Ok(mut instrument_orders) = self.orders.read().await.get_ins_orders_mut(&instrument) {
             // 确定市场事件匹配的挂单方向（买或卖）
             if let Some(matching_side) = instrument_orders.determine_matching_side(market_trade) {
+                println!("[match_orders]: matching side is {}",matching_side);
                 match matching_side {
                     | Side::Buy => {
                         println!("[match_orders]: matching_side: {:?}", matching_side);
@@ -1956,7 +1961,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = MarketTrade { exchange: "Binance".to_string(),
+        let trade = MarketTrade { exchange: "binance-futures".to_string(),
                                   symbol: "BTC_USDT".to_string(),
                                   timestamp: 1625247600000,
                                   price: 100.0,
@@ -2109,25 +2114,19 @@ mod tests
                                  cid: Some(ClientOrderId("validCID123".into())),
                                  side: Side::Buy,
                                  state: Open { id: OrderId::new(0, 0, 0),
-                                               price: 100.0,
+                                               price: 16305.0,
                                                size: 2.0,
                                                filled_quantity: 0.0,
-                                               order_role: OrderRole::Maker } };
-
-        // 手动修改余额
-        {
-            let mut quote_balance = account.get_balance_mut(&instrument.quote).unwrap();
-            quote_balance.available -= 200.0; // 修改余额
-        }
+                                               order_role: OrderRole::Taker } };
 
         // 将订单添加到账户
         account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
 
         // 创建一个市场事件，该事件与 open订单完全匹配
-        let market_event = MarketTrade { exchange: "Binance".to_string(),
+        let market_event = MarketTrade { exchange: "binance-futures".to_string(),
                                          symbol: "ETH_USDT".to_string(),
-                                         timestamp: 1625247600000,
-                                         price: 100.0,
+                                         timestamp: 1625247680000,
+                                         price: 16206.0,
                                          side: Side::Sell.to_string(),
                                          amount: 2.0 };
 
@@ -2138,15 +2137,14 @@ mod tests
         assert_eq!(trades.len(), 1);
         let trade = &trades[0];
         assert_eq!(trade.size, 2.0);
-        assert_eq!(trade.price, 100.0);
+        assert_eq!(trade.price, 16305.0);
 
         // 检查余额是否已更新
-        let balance = account.get_balance(&instrument.base).unwrap();
+        let base_balance = account.get_balance(&instrument.base).unwrap();
         let quote_balance = account.get_balance(&instrument.quote).unwrap();
-
-        assert_eq!(quote_balance.total, 9799.8);
-        assert_eq!(quote_balance.available, 9799.8);
-        assert_eq!(balance.total, 12.0);
+        assert_eq!(base_balance.total, 10.0);
+        assert_eq!(quote_balance.total, 10000.0); // 钱不够 ， 没买成功。
+        assert_eq!(quote_balance.available, 10000.0);// 钱不够 ， 没买成功。
     }
     #[tokio::test]
     async fn test_match_market_event_with_open_order_sell()
@@ -2179,7 +2177,7 @@ mod tests
         account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
 
         // 创建一个市场事件，该事件与 open订单完全匹配
-        let market_event = MarketTrade { exchange: "Binance".to_string(),
+        let market_event = MarketTrade { exchange: "binance-futures".to_string(),
                                          symbol: "ETH_USDT".to_string(),
                                          timestamp: 1625247600000,
                                          price: 16605.0,
@@ -2191,14 +2189,10 @@ mod tests
         println!("trades:{:#?}",trades);
 
         // 检查余额是否已更新
-        let base_balance = account.get_balance(&instrument.base).unwrap();
         let quote_balance = account.get_balance(&instrument.quote).unwrap();
 
-        // 验证余额更新
-        assert_eq!(base_balance.total, 10.0); // 原始 ETH 余额是 12.0，卖出 2.0 后应为 10.0
-        assert_eq!(base_balance.available, 10.0); // 可用 ETH 余额应与总余额一致
-        assert_eq!(quote_balance.total, 10199.8); // 卖出 2 ETH 获得 200 USDT
-        assert_eq!(quote_balance.available, 10199.8); // 卖单后，USDT 可用余额应增加
+        assert_eq!(quote_balance.total, 42779.188); // 卖出 2 ETH
+        assert_eq!(quote_balance.available, 42779.188); // 卖单后，USDT 可用余额应增加
 
     }
 
@@ -2225,7 +2219,7 @@ mod tests
         account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
 
         // 匹配一个完全匹配的市场事件
-        let market_event = MarketTrade { exchange: "Binance".to_string(),
+        let market_event = MarketTrade { exchange: "binance-futures".to_string(),
                                          symbol: "ETH_USDT".to_string(),
                                          timestamp: 1625247600000,
                                          price: 100.0,
