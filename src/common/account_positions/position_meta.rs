@@ -18,7 +18,7 @@ pub struct PositionMeta
     pub instrument: Instrument,       // 静态数据
     pub side: Side,                   // 静态数据
     pub current_size: f64,            // 实时更新
-    pub current_fees_total: f64,     // 实时更新
+    pub current_fees_total: f64,      // 实时更新
     pub current_avg_price_gross: f64, // 实时更新，即没有考虑费用或其他扣减项的情况下计算的平均持仓价格。
     pub current_symbol_price: f64,    // 实时更新，当前交易标的（symbol，如股票、期货合约、加密货币等）的最新市场价格。
     pub current_avg_price: f64,       // 实时更新

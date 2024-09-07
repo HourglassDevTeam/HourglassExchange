@@ -1,5 +1,6 @@
 // src/test_utils
 
+use tokio::sync::Mutex;
 use crate::{
     common::{
         account_positions::{
@@ -150,7 +151,9 @@ pub async fn create_test_account() -> Account
                                                               AccountLatency { fluctuation_mode: FluctuationMode::Sine,
                                                                                maximum: 300,
                                                                                minimum: 0,
-                                                                               current_value: 0 }).await)) }
+                                                                               current_value: 0 }).await)),
+        single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
+    }
 }
 
 /// 创建一个测试用的 `PerpetualPosition` 实例。

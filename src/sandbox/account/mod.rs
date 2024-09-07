@@ -49,10 +49,12 @@ use std::{
     },
     time::{SystemTime, UNIX_EPOCH},
 };
-use tokio::sync::{mpsc, oneshot, RwLock};
+use std::collections::HashMap;
+use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 use uuid::Uuid;
 use crate::common::account_positions::exited_positions::AccountExitedPositions;
+use crate::sandbox::clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook;
 
 pub mod account_config;
 pub mod account_latency;
@@ -70,11 +72,13 @@ pub struct Account
     pub account_event_tx: UnboundedSender<AccountEvent>, // 帐户事件发送器
     pub config: AccountConfig,                           // 帐户配置
     pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
+    pub single_level_order_book:Arc<Mutex<HashMap<Instrument, SingleLevelOrderBook>>>, // 将最新的价格存到订单簿里面去
     pub balances: DashMap<Token, Balance>,               // 每个币种的细分余额
     pub positions: AccountPositions,                     // 帐户持仓
     pub exited_positions: AccountExitedPositions
     // pub vault: Vault,
 }
+
 
 // 手动实现 Clone trait
 impl Clone for Account
@@ -87,7 +91,8 @@ impl Clone for Account
                   account_event_tx: self.account_event_tx.clone(),
                   config: self.config.clone(),
                   orders: Arc::clone(&self.orders),
-                  balances: self.balances.clone(),
+            single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
+            balances: self.balances.clone(),
                   positions: self.positions.clone(),
                   exited_positions: self.exited_positions.clone()
         }
@@ -166,7 +171,8 @@ impl AccountInitiator
                      orders: self.orders.ok_or("orders are required")?,
                      balances: self.balances.ok_or("balances are required")?,
                      positions: self.positions.ok_or("positions are required")?,
-                     exited_positions: self.closed_positions.ok_or("closed_positions sink are required")?
+            single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
+            exited_positions: self.closed_positions.ok_or("closed_positions sink are required")?
         })
     }
 }
@@ -1411,6 +1417,10 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         *base_balance
     }
 
+
+
+    /// FIXME 严重错误，current_price应该分`bid_price`和`ask_price`.
+    ///
     pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&'a Token, f64)
     {
         match order.instrument.kind {
@@ -1418,13 +1428,18 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 | Side::Buy => (&order.instrument.quote, current_price * order.state.size),
                 | Side::Sell => (&order.instrument.base, order.state.size),
             },
+            // 永续合约作为衍生品要基于 quote 货币计算所需资金
             | InstrumentKind::Perpetual => match order.side {
+                // 买单逻辑保持不变
                 | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
-                | Side::Sell => (&order.instrument.base, order.state.size * self.config.account_leverage_rate),
+                // 卖单逻辑也应考虑 current_price
+                | Side::Sell => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
             },
+            // 期货合约作为衍生品要基于 quote 货币计算所需资金
             | InstrumentKind::Future => match order.side {
                 | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
-                | Side::Sell => (&order.instrument.base, order.state.size * self.config.account_leverage_rate),
+                // 同样修正期货的卖单逻辑
+                | Side::Sell => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
             },
             | InstrumentKind::CryptoOption => {
                 todo!("CryptoOption is not supported yet")

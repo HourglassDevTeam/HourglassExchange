@@ -266,7 +266,7 @@ impl AccountOrders
     {
         match order.side {
             | Side::Buy => {
-                if order.state.price >= current_price {
+                if order.state.price < current_price {
                     Ok(OrderRole::Maker)
                 }
                 else {
@@ -274,7 +274,7 @@ impl AccountOrders
                 }
             }
             | Side::Sell => {
-                if order.state.price <= current_price {
+                if order.state.price > current_price {
                     Ok(OrderRole::Maker)
                 }
                 else {
@@ -316,16 +316,15 @@ impl AccountOrders
     {
         match order.side {
             | Side::Buy => {
-                if order.state.price >= current_price {
+                if order.state.price < current_price {
                     Ok(OrderRole::Maker)
                 }
                 else {
                     Err(ExchangeError::PostOnlyViolation("PostOnly order should be rejected".into()))
-                    // 返回需要拒绝的错误，但不立即执行拒绝操作
                 }
             }
             | Side::Sell => {
-                if order.state.price <= current_price {
+                if order.state.price > current_price {
                     Ok(OrderRole::Maker)
                 }
                 else {
@@ -572,7 +571,7 @@ mod tests
 
         let result = account_orders.determine_maker_taker(&order, 35000.0);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), OrderRole::Maker);
+        assert_eq!(result.unwrap(), OrderRole::Taker);
     }
 
     #[tokio::test]
@@ -582,25 +581,29 @@ mod tests
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
-        let order = Order { instruction: OrderInstruction::PostOnly,
-                            exchange: Exchange::Binance,
-                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-                            cid: Some(ClientOrderId("unit_test".to_string())),
-                            timestamp: 1625232523000,
-                            side: Side::Buy,
-                            state: RequestOpen { reduce_only: false,
-                                                 price: 35000.0,
-                                                 size: 0.1 } };
+        let order = Order {
+            instruction: OrderInstruction::PostOnly,
+            exchange: Exchange::Binance,
+            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+            cid: Some(ClientOrderId("unit_test".to_string())),
+            timestamp: 1625232523000,
+            side: Side::Buy,
+            state: RequestOpen {
+                reduce_only: false,
+                price: 35000.0, // 买单价格
+                size: 0.1
+            }
+        };
 
-        let result = account_orders.determine_post_only_order_role(&order, 34999.0);
-        assert!(result.is_ok());
+        // 成功场景：Post-Only 买单，挂单价格低于市场价格，成为 Maker
+        let result = account_orders.determine_post_only_order_role(&order, 35001.0);
         assert_eq!(result.unwrap(), OrderRole::Maker);
 
-        let reject_result = account_orders.determine_post_only_order_role(&order, 35001.0);
-        assert!(reject_result.is_err());
-        assert_eq!(reject_result.unwrap_err().to_string(),
-                   "[UniLinkEx] : PostOnlyViolation");
+        // 失败场景：Post-Only 买单，挂单价格高于市场价格，违反条件，应该返回错误
+        let reject_result = account_orders.determine_post_only_order_role(&order, 34999.0);
+        assert_eq!(reject_result.unwrap_err().to_string(), "[UniLinkEx] : PostOnlyViolation");
     }
+
 
     #[tokio::test]
     async fn test_build_order_open()
