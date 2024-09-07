@@ -1,4 +1,3 @@
-use crate::common::account_positions::perpetual;
 use crate::common::account_positions::future::{FuturePosition, FuturePositionConfig};
 use crate::common::account_positions::leveraged_token::LeveragedTokenPosition;
 use crate::common::account_positions::option::OptionPosition;
@@ -1145,18 +1144,32 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                             // 释放读锁后获取写锁进行更新
                             let mut long_positions_write = self.positions.perpetual_pos_long.write().await;
 
+                            // 根据交易情况检查是否需要移除或反向处理仓位
                             if should_remove_position {
-                                println!("[UniLinkEx] : Removing long position...");
-                                long_positions_write.remove(&trade.instrument); // NOTE 如果平仓的持仓要记录下来，那在这步之前还要更新盈亏。
-                            } else if should_remove_and_reverse {
-                                // FIXME 在处理 should_remove_and_reverse 的情况下，平掉多头并反向开空头了，但似乎没有更新已实现的盈亏。
-                                println!("[UniLinkEx] : Removing and reversing...");
-                                let long: &mut PerpetualPosition = long_positions_write.get_mut(&trade.instrument).unwrap();
-                                long.meta.update_realised_pnl(trade.price);
-                                self.closed_positions.insert_perpetual_pos_long(long.clone()).await;
+                                println!("[UniLinkEx] : 移除多头仓位...");
+                                // 获取对多头仓位的可变引用
+                                let long_position = long_positions_write.get_mut(&trade.instrument).unwrap();
+                                // 更新该仓位的已实现盈亏
+                                long_position.meta.update_realised_pnl(trade.price);
+                                // 将平仓的仓位插入已平仓仓位列表
+                                self.closed_positions.insert_perpetual_pos_long(long_position.clone()).await;
+                                // 从长仓位映射中移除该仓位
                                 long_positions_write.remove(&trade.instrument);
-                                drop(long_positions_write); // 显式释放写锁
+                            }
 
+                            else if should_remove_and_reverse {
+                                println!("[UniLinkEx] : 移除并反向开仓...");
+                                // 获取对多头仓位的可变引用
+                                let long_position = long_positions_write.get_mut(&trade.instrument).unwrap();
+                                // 更新该仓位的已实现盈亏
+                                long_position.meta.update_realised_pnl(trade.price);
+                                // 将平仓的仓位插入已平仓仓位列表
+                                self.closed_positions.insert_perpetual_pos_long(long_position.clone()).await;
+                                // 从长仓位映射中移除该仓位
+                                long_positions_write.remove(&trade.instrument);
+                                // 显式释放对 long_positions_write 的写锁
+                                drop(long_positions_write);
+                                // 基于交易创建新的空头仓位
                                 let new_position = PerpetualPosition {
                                     meta: PositionMeta::create_from_trade_with_remaining(&trade, Side::Sell, remaining_quantity),
                                     pos_config: PerpetualPositionConfig {
@@ -1167,11 +1180,14 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                     liquidation_price: 0.0,
                                     margin: 0.0,
                                 };
+                                // 将新的空头仓位插入空头仓位映射中
                                 self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
                             } else {
-                                // 部分平仓
-                                println!("[UniLinkEx] : Partially closing long position...");
+                                // 处理部分平仓
+                                println!("[UniLinkEx] : 部分平仓多头仓位...");
+
                                 if let Some(position) = long_positions_write.get_mut(&trade.instrument) {
+                                    // 根据交易数量减少仓位大小
                                     position.meta.current_size -= trade.quantity;
                                 }
                             }
