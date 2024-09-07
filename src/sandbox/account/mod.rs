@@ -1399,14 +1399,29 @@ impl Account
     }
 
     /// [PART 5] - [交易处理]
-    ///
-    ///
+
+    /// 更新交易所时间辍
+    fn update_exchange_ts(&self, timestamp: i64)
+    {
+        let adjusted_timestamp = match self.config.execution_mode {
+            | SandboxMode::Backtest => timestamp,                                                            // 在回测模式下使用传入的时间戳
+            | SandboxMode::Online => SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64, // 在实时模式下使用当前时间
+        };
+        self.exchange_timestamp.store(adjusted_timestamp, Ordering::SeqCst);
+    }
+
+    async fn update_single_level_orderbook(&mut self, trade: &MarketTrade,instrument: &Instrument){
+        self.single_level_order_book.lock().await.get_mut(instrument).unwrap().update_from_trade(trade);
+    }
+
+
     /// 处理交易数据的方法
     pub async fn handle_trade_data(&mut self, trade: MarketTrade) -> Result<(), ExchangeError>
     {
         // 更新时间戳
         self.update_exchange_ts(trade.timestamp);
         self.match_orders(&trade).await?;
+        self.update_single_level_orderbook(&trade, ).await;
         Ok(())
     }
 
@@ -1585,15 +1600,6 @@ impl Account
         // 直接访问 account 的 exchange_timestamp 字段
         let exchange_ts = self.exchange_timestamp.load(Ordering::SeqCst);
         Ok(exchange_ts)
-    }
-
-    fn update_exchange_ts(&self, timestamp: i64)
-    {
-        let adjusted_timestamp = match self.config.execution_mode {
-            | SandboxMode::Backtest => timestamp,                                                            // 在回测模式下使用传入的时间戳
-            | SandboxMode::Online => SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64, // 在实时模式下使用当前时间
-        };
-        self.exchange_timestamp.store(adjusted_timestamp, Ordering::SeqCst);
     }
 
     /// 查找匹配的订单，根据 `OrderId` 和 `ClientOrderId` 匹配。

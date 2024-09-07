@@ -1,5 +1,7 @@
+use crate::Token;
 use crate::{common::instrument::kind::InstrumentKind, sandbox::clickhouse_api::queries_operations::Row};
 use serde::{Deserialize, Serialize};
+use crate::common::instrument::Instrument;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
@@ -18,22 +20,47 @@ impl MarketTrade
 {
     pub fn parse_kind(&self) -> InstrumentKind
     {
-        // 检查符号是否包含下划线
-        if self.symbol.contains('_') {
-            // 检查符号中是否包含多个下划线
-            if self.symbol.matches('_').count() > 1 {
-                InstrumentKind::Future
-            }
-            else {
-                // 如果符号包含一个下划线，假设为永续合约
+        let parts: Vec<&str> = self.symbol.split('_').collect();
+
+        if parts.len() == 2 {
+            // 假设以 `perpetual` 结尾的为永续合约 FIXME 这个是非常不正确的临时处理方式。以后还是要用MarketEvent来包裹MarketTrade
+            if parts[1].to_lowercase().ends_with("futures") {
                 InstrumentKind::Perpetual
+            } else {
+                InstrumentKind::Spot
+            }
+        }
+        else if parts.len() > 2 {
+            // 假设以 `future` 结尾的为期货
+            if parts.last().unwrap().to_lowercase().ends_with("future") {
+                InstrumentKind::Future
+            } else {
+                InstrumentKind::Spot // 默认处理为现货，如果结尾不是 `future`
             }
         }
         else {
-            // 处理没有下划线的符号
-            // 这里可以添加更多逻辑来区分现货、加密期权等
-            // 目前，如果没有下划线，我们假设为现货工具
-            todo!()
+            InstrumentKind::Spot // 没有下划线，默认现货工具
+        }
+    }
+
+    pub fn parse_instrument(&self) -> Option<Instrument> {
+        let parts: Vec<&str> = self.symbol.split('_').collect();
+
+        if parts.len() >= 2 {
+            let base = Token(parts[0].to_string());
+            let quote = Token(parts[1].to_string());
+
+            // 根据symbol的格式来解析InstrumentKind
+            let kind = self.parse_kind();
+
+            Some(Instrument {
+                base,
+                quote,
+                kind,
+            })
+        } else {
+            // 没有下划线，可能是现货或其他类型（需要进一步逻辑处理）
+            None
         }
     }
 }
