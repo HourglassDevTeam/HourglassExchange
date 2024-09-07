@@ -193,7 +193,7 @@ async fn test_3_open_limit_buy_order(client: &SandBoxClient, test_3_ids: Ids, ev
     match event_sandbox_rx.recv().await {
         | Some(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
                               .. }) => {
-            let expected = TokenBalance::new("USDT", Balance::new(200.0, 149.0, current_px));
+            let expected = TokenBalance::new("USDT", Balance::new(200.0, 149.0, Some(current_px)));
             assert_balance_equal_ignore_time(&USDT_balance.balance, &expected.balance);
         }
         | other => {
@@ -282,7 +282,7 @@ async fn test_5_cancel_buy_order(client: &SandBoxClient, test_3_ids: Ids, event_
     match event_sandbox_rx.try_recv() {
         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
                             .. }) => {
-            let expected = TokenBalance::new("USDT", Balance::new(200.0, 249.0, current_px));
+            let expected = TokenBalance::new("USDT", Balance::new(200.0, 249.0, Some(current_px)));
             println!("[test_5] : Balance event received.");
             assert_eq!(USDT_balance.balance.total, expected.balance.total);
             assert_eq!(USDT_balance.balance.available, expected.balance.available);
@@ -348,7 +348,7 @@ async fn test_6_open_2x_limit_buy_orders(client: &SandBoxClient, test_6_ids_1: I
     match event_sandbox_rx.try_recv() {
         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
                             .. }) => {
-            let expected = TokenBalance::new("USDT", Balance::new(200.0, 148.0, current_px));
+            let expected = TokenBalance::new("USDT", Balance::new(200.0, 148.0, Some(current_px)));
             assert_eq!(USDT_balance.balance.total, expected.balance.total);
             assert_eq!(USDT_balance.balance.available, expected.balance.available);
         }
@@ -374,7 +374,7 @@ async fn test_6_open_2x_limit_buy_orders(client: &SandBoxClient, test_6_ids_1: I
         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
                             .. }) => {
             // Expected USDT Balance.available = 9_900 - (200.0 * 1.0)
-            let expected = TokenBalance::new("USDT", Balance::new(200.0, 147.0, current_px));
+            let expected = TokenBalance::new("USDT", Balance::new(200.0, 147.0, Some(current_px)));
             assert_eq!(USDT_balance.balance.total, expected.balance.total);
             assert_eq!(USDT_balance.balance.available, expected.balance.available);
         }
@@ -453,7 +453,7 @@ async fn test_11_cancel_all_orders(client: &SandBoxClient, test_6_ids_1: Ids, ev
     match event_sandbox_rx.try_recv() {
         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
                             .. }) => {
-            let expected_balance = TokenBalance::new("USDT", Balance::new(200.0, 250.0, current_px));
+            let expected_balance = TokenBalance::new("USDT", Balance::new(200.0, 250.0, Some(current_px)));
             println!("[test_11] : Balance event received.");
             assert_eq!(USDT_balance.balance.total, expected_balance.balance.total);
             assert_eq!(USDT_balance.balance.available, expected_balance.balance.available);

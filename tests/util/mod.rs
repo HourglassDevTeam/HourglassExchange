@@ -44,8 +44,8 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
     let balances = DashMap::new();
     let token1 = Token::from("ETH");
     let token2 = Token::from("USDT");
-    balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
-    balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
+    balances.insert(token1.clone(), Balance::new(100.0, 50.0, Some(1.0)));
+    balances.insert(token2.clone(), Balance::new(200.0, 150.0, Some(1.0)));
 
     // Creating initial positions with the updated structure
     let positions = AccountPositions::init();
@@ -125,8 +125,8 @@ pub async fn initial_balances() -> HashMap<Token, Balance>
     let mut balances = HashMap::new();
     let token1 = Token::from("ETH");
     let token2 = Token::from("USDT");
-    balances.insert(token1.clone(), Balance::new(100.0, 50.0, 1.0));
-    balances.insert(token2.clone(), Balance::new(200.0, 150.0, 1.0));
+    balances.insert(token1.clone(), Balance::new(100.0, 50.0, Some(1.0)));
+    balances.insert(token2.clone(), Balance::new(200.0, 150.0, Some(1.0)));
     balances
 }
 
