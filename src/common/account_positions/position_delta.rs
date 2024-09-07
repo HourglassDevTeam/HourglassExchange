@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 use crate::common::account_positions::position_id::PositionId;
+use crate::common::instrument::Instrument;
+use crate::common::instrument::kind::InstrumentKind;
+use crate::common::Side;
 
 /// [`Position`] 更新事件。该事件发生在接收到新的 [`MarketEvent`] 数据时。
 ///
@@ -21,16 +24,9 @@ use crate::common::account_positions::position_id::PositionId;
 /// 在接收到市场事件（如价格变化、订单执行等）后，系统会生成对应的 `PositionDelta` 实例并传递给相关组件或服务，以更新仓位的状态。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct PositionDelta {
-    /// [`Position`] 的唯一标识符，由交易所、交易符号以及进入时间生成。
-    pub position_id: PositionId,
-    /// 更新事件的时间戳，记录该次更新发生的时间。
-    pub update_time: i64,
-    /// NOTE 数量的变化,这里暂定是有方向的。
-    pub size_delta:f64,
-    /// 当前交易标的（symbol）的收盘价格，即市场上最新的价格。
-    pub current_symbol_price: f64,
-    /// 当前仓位的总价值，计算方式为 abs(Quantity) * current_symbol_price。
-    pub current_value_gross: f64,
-    /// 未实现的盈亏，表示在仓位未平仓的情况下基于当前市场价格计算的盈亏。
-    pub unrealised_profit_loss: f64,
+    pub side: Side,                         // 静态数据
+    pub instrument: Instrument,             // 静态数据
+    pub update_time: i64,                   // 实时数据
+    pub current_size:f64,                   // 实时数据
+    pub current_symbol_price: f64,          // 实时数据
 }
