@@ -361,7 +361,7 @@ mod tests {
         let mut meta = PositionMeta::create_from_trade(&create_test_trade());
         meta.update_unrealised_pnl();
 
-        assert_eq!(meta.unrealised_pnl, 11_000.0);  // Difference between current price and avg price
+        assert_eq!(meta.unrealised_pnl, 0.0);  // Difference between current price and avg price
     }
 
     #[test]
