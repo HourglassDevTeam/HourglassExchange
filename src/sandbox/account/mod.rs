@@ -1020,7 +1020,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 }
             }
             _ => {
-                println!("[UniLinkEx] : Unsupported or illegal instrument kind.");
+                println!("[UniLinkEx] : Unsupported yet or illegal instrument kind.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
         }
