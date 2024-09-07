@@ -52,7 +52,7 @@ use std::{
 use tokio::sync::{mpsc, oneshot, RwLock};
 use tracing::warn;
 use uuid::Uuid;
-use crate::common::account_positions::closed_positions::AccountClosedPositions;
+use crate::common::account_positions::closed::AccountClosedPositions;
 
 pub mod account_config;
 pub mod account_latency;

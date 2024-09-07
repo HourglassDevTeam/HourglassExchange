@@ -38,7 +38,7 @@ use std::{
 };
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use crate::common::account_positions::closed_positions::AccountClosedPositions;
+use crate::common::account_positions::closed::AccountClosedPositions;
 
 /// 创建一个测试用的 `Instrument` 实例。
 pub fn create_test_instrument(kind: InstrumentKind) -> Instrument

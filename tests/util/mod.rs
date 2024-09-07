@@ -36,7 +36,7 @@ use unilink_execution::{
     test_utils::create_test_account_config,
     Exchange,
 };
-use unilink_execution::common::account_positions::closed_positions::AccountClosedPositions;
+use unilink_execution::common::account_positions::closed::AccountClosedPositions;
 
 /// Initializes and runs a sample exchange with predefined settings and a test order.
 pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<AccountEvent>, event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>)
