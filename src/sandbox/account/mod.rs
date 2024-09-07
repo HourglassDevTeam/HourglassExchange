@@ -1311,7 +1311,35 @@ impl Account
 
         match kind {
             | InstrumentKind::Spot => {
-                todo!("Spot handling is not implemented yet");
+                let base=&trade.instrument.base;
+                let quote=&trade.instrument.quote;
+                let (base_delta, quote_delta) = match side {
+                    | Side::Buy => {
+                        let base_increase = trade.size;
+                        // Note: available was already decreased by the opening of the Side::Buy order
+                        let base_delta = BalanceDelta { total: base_increase,
+                            available: base_increase };
+                        let quote_delta = BalanceDelta { total: -trade.size * trade.price - fee,
+                            available: -fee };
+                        (base_delta, quote_delta)
+                    }
+                    | Side::Sell => {
+                        // Note: available was already decreased by the opening of the Side::Sell order
+                        let base_delta = BalanceDelta { total: -trade.size,
+                            available: 0.0 };
+                        let quote_increase = (trade.size * trade.price) - fee;
+                        let quote_delta = BalanceDelta { total: quote_increase,
+                            available: quote_increase };
+                        (base_delta, quote_delta)
+                    }
+                };
+
+                let base_balance = self.apply_balance_delta(base, base_delta);
+                let quote_balance = self.apply_balance_delta(quote, quote_delta);
+
+                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().expect("[UniLinkEx] : Failed to get exchange timestamp"),
+                    exchange: Exchange::SandBox,
+                    kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) })
             }
             | InstrumentKind::CryptoOption => {
                 todo!("Option handling is not implemented yet");
@@ -1325,12 +1353,12 @@ impl Account
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let quote_delta = match side {
                     | Side::Buy => {
-                        // 买入时减少的是 quote 资金
+                        // 买入时减少的是 quote 资金 // NOTE 要算上杠杆率吗？？？？？？
                         BalanceDelta { total: -trade.size * trade.price - fee, // 总量减少
                                        available: -fee                         /* 可用余额减少 */ }
                     }
                     | Side::Sell => {
-                        // 卖出时增加的是 quote 资金
+                        // 卖出时增加的是 quote 资金 // NOTE 要算上杠杆率吗？？？？？？
                         BalanceDelta { total: (trade.size * trade.price) - fee,     // 总量增加
                                        available: (trade.size * trade.price) - fee  /* 可用余额增加 */ }
                     }
@@ -1357,8 +1385,6 @@ impl Account
         *base_balance
     }
 
-    /// FIXME 严重错误，current_price应该分`bid_price`和`ask_price`.
-    ///     日后 current_token_price 可以直接从`SingleLevelOrderBook`中获取。
     /// 注意 这个返回的f64 value 还没有包括交易手续费。日后要加上去。
     pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>) -> (&'a Token, f64)
     {
@@ -1423,6 +1449,21 @@ impl Account
         self.exchange_timestamp.store(adjusted_timestamp, Ordering::SeqCst);
     }
 
+    /// 创建或更新一个单级别的订单簿（SingleLevelOrderBook），基于传入的市场交易（MarketTrade）。
+    ///
+    /// # 参数
+    /// - `trade`: 引用 `MarketTrade` 类型的交易信息，用于从中提取 `instrument` 并更新对应的订单簿。
+    ///
+    /// # 实现步骤
+    /// 1. 从 `trade` 中解析出 `instrument`，如果解析失败，程序会 panic（`unwrap`）。
+    /// 2. 获取 `single_level_order_book` 的互斥锁以安全地访问共享资源。
+    /// 3. 使用 `instrument` 作为键，查找对应的单级别订单簿，如果没有则创建一个新的订单簿。
+    /// 4. 使用 `trade` 更新该 `instrument` 对应的订单簿。
+    ///
+    /// # 备注
+    /// - `SingleLevelOrderBook::from(trade)` 是一个基于 `trade` 初始化订单簿的工厂方法。
+    /// - 该函数异步锁定了 `single_level_order_book`，并且通过 `.await` 实现对共享数据的安全访问。
+    ///
     async fn create_or_single_level_orderbook_from_market_trade(&mut self, trade: &MarketTrade)
     {
         let instrument = trade.parse_instrument().unwrap();
@@ -1532,7 +1573,7 @@ impl Account
         Ok(trades)
     }
 
-    /// 根据金融工具类型和订单角色返回相应的手续费百分比。
+    /// 根据金融工具类型和订单角色返回相应的手续费百分比。 NOTE 需要扩展并支持现货和期货。
     ///
     /// # 参数
     ///
@@ -1549,7 +1590,7 @@ impl Account
     ///
     /// * 目前只支持 `Spot` 和 `Perpetual` 类型的金融工具。
     /// * 如果传入的 `InstrumentKind` 不受支持，函数会记录一个警告并返回 `None`。
-
+    ///
     pub(crate) async fn fees_percent(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExchangeError>
     {
         // 直接访问 account 的 config 字段
