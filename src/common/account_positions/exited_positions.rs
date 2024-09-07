@@ -21,7 +21,7 @@ use crate::common::account_positions::position_id::PositionId;
 ///     鉴于平仓的仓位不再有唯一性，要使用PositionId作为Key
 ///
 #[derive(Clone, Debug)]
-pub struct AccountClosedPositions
+pub struct AccountExitedPositions
 
 {
     pub margin_pos_long: Arc<RwLock<HashMap<PositionId, LeveragedTokenPosition>>>,
@@ -38,7 +38,7 @@ pub struct AccountClosedPositions
 
 
 #[allow(dead_code)]
-impl AccountClosedPositions {
+impl AccountExitedPositions {
     pub fn init() -> Self {
         Self {
             margin_pos_long: Arc::new(RwLock::new(HashMap::new())),
@@ -147,7 +147,7 @@ impl AccountClosedPositions {
     }
 }
 
-impl Serialize for AccountClosedPositions
+impl Serialize for AccountExitedPositions
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -182,7 +182,7 @@ impl Serialize for AccountClosedPositions
 
 // Manually implement PartialEq for ClosedPositions
 
-impl PartialEq for AccountClosedPositions
+impl PartialEq for AccountExitedPositions
 {
     fn eq(&self, other: &Self) -> bool {
         fn hashmap_eq<K, V>(a: &Arc<RwLock<HashMap<K, V>>>, b: &Arc<RwLock<HashMap<K, V>>>) -> bool
@@ -212,7 +212,7 @@ impl PartialEq for AccountClosedPositions
     }
 }
 
-impl<'de> Deserialize<'de> for AccountClosedPositions {
+impl<'de> Deserialize<'de> for AccountExitedPositions {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -233,7 +233,7 @@ impl<'de> Deserialize<'de> for AccountClosedPositions {
 
         let data = ClosedPositionsData::deserialize(deserializer)?;
 
-        Ok(AccountClosedPositions {
+        Ok(AccountExitedPositions {
             margin_pos_long: Arc::new(RwLock::new(data.margin_pos_long)),
             margin_pos_short: Arc::new(RwLock::new(data.margin_pos_short)),
             perpetual_pos_long: Arc::new(RwLock::new(data.perpetual_pos_long)),

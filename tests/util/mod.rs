@@ -36,7 +36,7 @@ use unilink_execution::{
     test_utils::create_test_account_config,
     Exchange,
 };
-use unilink_execution::common::account_positions::closed::AccountClosedPositions;
+use unilink_execution::common::account_positions::exited_positions::AccountExitedPositions;
 
 /// Initializes and runs a sample exchange with predefined settings and a test order.
 pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<AccountEvent>, event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>)
@@ -50,7 +50,7 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
 
     // Creating initial positions with the updated structure
     let positions = AccountPositions::init();
-    let closed_positions = AccountClosedPositions::init();
+    let closed_positions = AccountExitedPositions::init();
 
     let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
     let account_orders = AccountOrders::new(0, vec![instrument.clone()], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
@@ -89,7 +89,7 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
                                                     orders: orders_arc,
                                                     balances,
                                                     positions,
-                                                    closed_positions,
+        exited_positions: closed_positions,
                                                     account_event_tx: event_account_tx
 
     }));

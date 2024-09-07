@@ -38,7 +38,7 @@ use std::{
 };
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use crate::common::account_positions::closed::AccountClosedPositions;
+use crate::common::account_positions::exited_positions::AccountExitedPositions;
 
 /// 创建一个测试用的 `Instrument` 实例。
 pub fn create_test_instrument(kind: InstrumentKind) -> Instrument
@@ -132,7 +132,7 @@ pub async fn create_test_account() -> Account
     account_config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
 
     let positions = AccountPositions::init();
-    let closed_positions = AccountClosedPositions::init();
+    let closed_positions = AccountExitedPositions::init();
 
     let machine_id = generate_machine_id().unwrap();
 
@@ -144,7 +144,7 @@ pub async fn create_test_account() -> Account
               config: account_config,
               balances,
               positions,
-        closed_positions,
+        exited_positions: closed_positions,
               orders: Arc::new(RwLock::new(AccountOrders::new(machine_id,
                                                               vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))],
                                                               AccountLatency { fluctuation_mode: FluctuationMode::Sine,

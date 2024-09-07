@@ -50,6 +50,7 @@ impl PositionSummariser for DrawdownSummary
 {
     fn update(&mut self, position: &Position)
     {
+        //  Only update DrawdownSummary with closed Positions
         // 通过模式匹配获取不同头寸类型的 `exit_balance` 和时间戳，并构造 `EquitySnapshot`
         let equity_point = match position {
             // 如果是 Perpetual 类型头寸
@@ -73,15 +74,51 @@ impl PositionSummariser for DrawdownSummary
         }
     }
 }
-impl TableBuilder for DrawdownSummary
-{
-    fn titles(&self) -> Row
-    {
+
+
+
+/// `DrawdownSummary` 模块用于跟踪和汇总投资组合或交易策略中的回撤情况，包括最大回撤、平均回撤及其持续时间。
+///
+/// # 模块功能
+/// `DrawdownSummary` 提供了一套综合性指标来评估策略的下行风险，包括：
+/// - **最大回撤 (`max_drawdown`)**：历史上从峰值到谷底的最大跌幅，反映策略的最糟糕表现。
+/// - **平均回撤 (`avg_drawdown`)**：在多个回撤周期中的平均值，帮助了解策略的典型表现。
+/// - **回撤持续时间**：计算回撤从开始到恢复的持续时间，评估策略从损失中恢复所需的时间。
+///
+/// 这些指标可以通过 `TableBuilder` 生成表格形式的结果，方便直观地展示策略的风险情况。
+///
+/// # 计算原理
+/// - **实时更新**：每当交易头寸结束时，会生成一个 `EquitySnapshot`，表示当前总权益，并用于更新当前回撤的状态。如果发现策略从低谷恢复到新的峰值，当前回撤就结束，会记录并更新最大和平均回撤。
+///
+/// # 实现细节
+/// 实现了 `PositionSummariser` 和 `TableBuilder` 接口，分别用于更新回撤信息和生成表格输出。
+
+impl TableBuilder for DrawdownSummary {
+    /// `titles` 方法用于定义表格的列标题
+    ///
+    /// # 返回值
+    /// 返回一个包含表格列标题的 `Row` 对象：
+    /// - "Max Drawdown"：最大回撤金额。
+    /// - "Max Drawdown Days"：最大回撤的持续天数。
+    /// - "Avg. Drawdown"：平均回撤金额。
+    /// - "Avg. Drawdown Days"：平均回撤的持续天数。
+    ///
+    /// 这些标题帮助清晰地展示每个回撤相关的关键指标。
+    fn titles(&self) -> Row {
         row!["Max Drawdown", "Max Drawdown Days", "Avg. Drawdown", "Avg. Drawdown Days",]
     }
 
-    fn row(&self) -> Row
-    {
+    /// `row` 方法用于生成当前 `DrawdownSummary` 的表格数据行。
+    ///
+    /// # 返回值
+    /// 返回一个包含当前最大回撤、回撤天数、平均回撤和平均回撤天数的 `Row` 对象：
+    /// - 使用 `self.max_drawdown.drawdown.drawdown` 获取最大回撤金额，并格式化为小数点后三位。
+    /// - 使用 `self.max_drawdown.drawdown.duration.num_days()` 获取最大回撤持续的天数。
+    /// - 使用 `self.avg_drawdown.mean_drawdown` 获取平均回撤金额，并格式化为小数点后三位。
+    /// - 使用 `self.avg_drawdown.mean_duration.num_days()` 获取平均回撤的持续天数。
+    ///
+    /// 这些数据行使得策略的下行表现可以以表格形式直观展示。
+    fn row(&self) -> Row {
         row![format!("{:.3}", self.max_drawdown.drawdown.drawdown),
              self.max_drawdown.drawdown.duration.num_days().to_string(),
              format!("{:.3}", self.avg_drawdown.mean_drawdown),
@@ -89,12 +126,21 @@ impl TableBuilder for DrawdownSummary
     }
 }
 
-impl DrawdownSummary
-{
-    pub fn new(starting_equity: f64) -> Self
-    {
+impl DrawdownSummary {
+    /// `new` 方法用于创建一个新的 `DrawdownSummary` 实例。
+    ///
+    /// # 参数
+    /// - `starting_equity`：初始权益金额，用于初始化当前回撤。
+    ///
+    /// # 返回值
+    /// 返回一个新的 `DrawdownSummary` 对象，包含初始的最大回撤、平均回撤和当前回撤值：
+    /// - `current_drawdown` 初始化为使用 `starting_equity` 的 `Drawdown` 对象，用于跟踪当前的回撤状态。
+    /// - `avg_drawdown` 初始化为空的 `AvgDrawdown` 对象，用于跟踪所有回撤的平均情况。
+    /// - `max_drawdown` 初始化为空的 `MaxDrawdown` 对象，用于记录历史上的最大回撤。
+    ///
+    pub fn new(starting_equity: f64) -> Self {
         Self { current_drawdown: Drawdown::init(starting_equity),
-               avg_drawdown: AvgDrawdown::init(),
-               max_drawdown: MaxDrawdown::init() }
+            avg_drawdown: AvgDrawdown::init(),
+            max_drawdown: MaxDrawdown::init() }
     }
 }

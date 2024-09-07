@@ -52,7 +52,7 @@ use std::{
 use tokio::sync::{mpsc, oneshot, RwLock};
 use tracing::warn;
 use uuid::Uuid;
-use crate::common::account_positions::closed::AccountClosedPositions;
+use crate::common::account_positions::exited_positions::AccountExitedPositions;
 
 pub mod account_config;
 pub mod account_latency;
@@ -72,7 +72,7 @@ pub struct Account
     pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
     pub balances: DashMap<Token, Balance>,               // 每个币种的细分余额
     pub positions: AccountPositions,                     // 帐户持仓
-    pub closed_positions:AccountClosedPositions
+    pub exited_positions: AccountExitedPositions
     // pub vault: Vault,
 }
 
@@ -89,7 +89,7 @@ impl Clone for Account
                   orders: Arc::clone(&self.orders),
                   balances: self.balances.clone(),
                   positions: self.positions.clone(),
-                  closed_positions: self.closed_positions.clone()
+                  exited_positions: self.exited_positions.clone()
         }
 
     }
@@ -102,7 +102,7 @@ pub struct AccountInitiator
     orders: Option<Arc<RwLock<AccountOrders>>>,
     balances: Option<DashMap<Token, Balance>>,
     positions: Option<AccountPositions>,
-    closed_positions: Option<AccountClosedPositions>,
+    closed_positions: Option<AccountExitedPositions>,
 }
 
 impl Default for AccountInitiator
@@ -166,7 +166,7 @@ impl AccountInitiator
                      orders: self.orders.ok_or("orders are required")?,
                      balances: self.balances.ok_or("balances are required")?,
                      positions: self.positions.ok_or("positions are required")?,
-                     closed_positions: self.closed_positions.ok_or("closed_positions sink are required")?
+                     exited_positions: self.closed_positions.ok_or("closed_positions sink are required")?
         })
     }
 }
@@ -1152,7 +1152,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 // 更新该仓位的已实现盈亏
                                 long_position.meta.update_realised_pnl(trade.price);
                                 // 将平仓的仓位插入已平仓仓位列表
-                                self.closed_positions.insert_perpetual_pos_long(long_position.clone()).await;
+                                self.exited_positions.insert_perpetual_pos_long(long_position.clone()).await;
                                 // 从长仓位映射中移除该仓位
                                 long_positions_write.remove(&trade.instrument);
                             }
@@ -1165,7 +1165,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 // 更新该仓位的已实现盈亏
                                 long_position.meta.update_realised_pnl(trade.price);
                                 // 将平仓的仓位插入已平仓仓位列表
-                                self.closed_positions.insert_perpetual_pos_long(long_position.clone()).await;
+                                self.exited_positions.insert_perpetual_pos_long(long_position.clone()).await;
                                 // 从长仓位映射中移除该仓位
                                 long_positions_write.remove(&trade.instrument);
                                 // 显式释放对 long_positions_write 的写锁
