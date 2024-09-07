@@ -66,8 +66,9 @@ impl PositionMeta
                        realised_pnl: 0.0 }
     }
 
-    /// this function is for `PositionDirectionMode::Net` only
-    /// Handle new position creation in reverse with remaining quantity.
+    /// NOTE 这个先创建再更改的方式应该不是最佳实践
+    ///     此函数仅用于 `PositionDirectionMode::Net` 模式。
+    ///     使用剩余的数量反向创建新持仓。
     pub fn create_from_trade_with_remaining(trade: &ClientTrade, side: Side, remaining_quantity: f64) -> Self
     {
         let mut new_meta = PositionMeta::create_from_trade(trade);
@@ -76,29 +77,30 @@ impl PositionMeta
         new_meta
     }
 
-    /// This function can handle both `Net` and `LongShort` Modes.
-    /// Update or create a position based on a new trade.
-    /// This handles both regular updates and reverse position logic.
+
+    /// 此函数可以处理 `Net` 和 `LongShort` 两种模式。
+    /// 根据新的交易更新或创建持仓。
+    /// 该函数既可以处理常规的更新逻辑，也可以处理反向持仓的逻辑。
     pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) -> Self
     {
         if self.side == trade.side {
-            // Update position normally if the trade is in the same direction
+            // 如果交易方向与当前持仓方向相同，则正常更新持仓
             self.update_from_trade(trade, current_symbol_price);
-            self.clone() // Return the updated position
+            self.clone() // 返回更新后的持仓
         }
         else {
-            // If trade side is opposite, reduce or close the current position and possibly open a new one.
+            // 如果交易方向相反，减少或关闭当前持仓，并可能开立新持仓
             let remaining_quantity = trade.size - self.current_size;
             if remaining_quantity >= 0.0 {
-                // Fully close the current position and reverse the position with remaining quantity
+                // 完全平仓，并用剩余的数量反向开仓
                 self.update_realised_pnl(trade.price);
                 PositionMeta::create_from_trade_with_remaining(trade, trade.side, current_symbol_price)
             }
             else {
-                // Partial close, no reverse, just reduce the size
+                // 部分平仓，不反向，仅减少持仓量
                 self.current_size -= trade.size;
                 self.update_realised_pnl(trade.price);
-                self.clone() // Return the updated position
+                self.clone() // 返回更新后的持仓
             }
         }
     }
