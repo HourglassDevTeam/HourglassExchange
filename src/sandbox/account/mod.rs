@@ -454,6 +454,7 @@ impl Account
         // 验证订单的基本合法性
         Self::validate_order_instruction(order.instruction)?;
 
+        println!("[attempt_atomic_open] : successfully validated order instruction");
 
         let latest_ask = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_ask;
         let latest_bid = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_bid;
