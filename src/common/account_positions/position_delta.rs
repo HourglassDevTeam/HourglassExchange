@@ -25,9 +25,9 @@ pub struct PositionDelta {
     // pub side: Side,
     // 交易标的的详细信息，包括基础资产和报价资产
     // pub instrument: Instrument,
-    pub side: Side,
+    pub side: Side,                         // 静态数据
     pub update_time: i64,                   // 实时数据
-    pub size:f64,                   // 实时数据
+    pub size:f64,                           // 实时数据
     pub current_symbol_price: f64,          // 实时数据
 }
 
