@@ -79,6 +79,7 @@ impl PositionMeta {
     }
 
 
+    /// `[NET-MODE ONLY]`
     /// Handle new position creation in reverse with remaining quantity.
     pub fn create_from_trade_with_remaining(trade: &ClientTrade, side: Side, remaining_quantity: f64) -> Self {
         let mut new_meta = PositionMeta::create_from_trade(trade);
