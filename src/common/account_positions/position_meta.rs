@@ -32,30 +32,21 @@ pub struct PositionMeta
 ///         尤其是在处理复杂的反向开仓和部分平仓的情况下。
 impl PositionMeta {
     /// 根据 `ClientTrade` 和模式更新仓位
-    pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64, mode: PositionDirectionMode) {
+    /// 根据 `ClientTrade` 更新仓位
+    pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) {
         self.update_ts = trade.timestamp;
         self.current_symbol_price = current_symbol_price;
 
-        // 更新当前交易的总费用（独立于模式的部分）
+        // 更新当前交易的总费用
         self.current_fees_total += trade.fees;
 
-        match mode {
-            PositionDirectionMode::Net => {
-                // Net Mode 逻辑：直接更新均价和持仓大小
-                self.update_avg_price(trade.price, trade.quantity);
-                self.update_unrealised_pnl();
-            }
-            PositionDirectionMode::LongShort => {
-                // LongShort Mode 逻辑：根据方向更新多头或空头
-                if trade.side == Side::Buy {
-                    self.update_long_position(trade.price, trade.quantity);
-                } else {
-                    self.update_short_position(trade.price, trade.quantity);
-                }
-                self.update_unrealised_pnl();  // 同样可以在 LongShort 中调用以分别计算
-            }
-        }
+        // 更新均价和持仓大小
+        self.update_avg_price(trade.price, trade.quantity);
+
+        // 更新未实现盈亏
+        self.update_unrealised_pnl();
     }
+
     /// 创建新的 `PositionMeta` 基于 `ClientTrade`
 
     pub fn create_from_trade(trade: &ClientTrade) -> Self {
@@ -88,12 +79,13 @@ impl PositionMeta {
         new_meta
     }
 
+    /// This function can handle both `Net` and `LongShort` Modes.
     /// Update or create a position based on a new trade.
     /// This handles both regular updates and reverse position logic.
-    pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64, mode: PositionDirectionMode) -> Self {
+    pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) -> Self {
         if self.side == trade.side {
             // Update position normally if the trade is in the same direction
-            self.update_from_trade(trade, current_symbol_price, mode);
+            self.update_from_trade(trade, current_symbol_price);
             self.clone() // Return the updated position
         } else {
             // If trade side is opposite, reduce or close the current position and possibly open a new one.
@@ -417,7 +409,7 @@ mod tests {
             fees: 2.0,
         };
 
-        meta.update_from_trade(&new_trade, 62_000.0,PositionDirectionMode::Net);
+        meta.update_from_trade(&new_trade, 62_000.0);
 
         assert_eq!(meta.current_size, 2.0);  // Size should be updated
         assert_eq!(meta.current_avg_price, 55_000.0);  // The avg price should be exactly 55,000.0

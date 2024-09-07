@@ -1029,7 +1029,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 if let Some(position) = long_positions.get_mut(&trade.instrument) {
                     // 如果已经持有多头仓位，更新仓位
                     println!("[UniLinkEx] : Updating existing long position...");
-                    position.meta.update_from_trade(&trade, trade.price, PositionDirectionMode::LongShort);
+                    position.meta.update_from_trade(&trade, trade.price);
                 } else {
                     // 显式释放写锁
                     drop(long_positions);
@@ -1051,7 +1051,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 if let Some(position) = short_positions.get_mut(&trade.instrument) {
                     // 如果已经持有空头仓位，更新仓位
                     println!("[UniLinkEx] : Updating existing short position...");
-                    position.meta.update_from_trade(&trade, trade.price, PositionDirectionMode::LongShort);
+                    position.meta.update_from_trade(&trade, trade.price);
                 } else {
                     // 显式释放写锁
                     drop(short_positions);
@@ -1084,7 +1084,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                             let mut long_positions = self.positions.perpetual_pos_long.write().await;
                             if let Some(position) = long_positions.get_mut(&trade.instrument) {
                                 println!("[UniLinkEx] : Updating existing long position...");
-                                position.meta.update_from_trade(&trade, trade.price, PositionDirectionMode::Net);
+                                position.meta.update_from_trade(&trade, trade.price);
                                 return Ok(());
                             }
                         }
