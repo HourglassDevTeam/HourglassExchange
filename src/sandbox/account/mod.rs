@@ -70,7 +70,7 @@ pub struct Account
     pub account_event_tx: UnboundedSender<AccountEvent>, // 帐户事件发送器
     pub config: AccountConfig,                           // 帐户配置
     pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
-    pub balances: DashMap<Token, Balance>,               // 帐户余额
+    pub balances: DashMap<Token, Balance>,               // 每个币种的细分余额
     pub positions: AccountPositions,                     // 帐户持仓
     pub closed_positions:AccountClosedPositions
     // pub vault: Vault,

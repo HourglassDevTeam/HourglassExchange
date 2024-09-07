@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-
 use crate::common::token::Token;
 
 /// 与[`Token`]相关联的[`Balance`]。
