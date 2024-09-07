@@ -59,7 +59,7 @@ impl PositionMeta {
     /// 创建新的 `PositionMeta` 基于 `ClientTrade`
 
     pub fn create_from_trade(trade: &ClientTrade, current_symbol_price: f64) -> Self {
-        
+
         PositionMeta {
             position_id: PositionId::new(&trade.instrument, trade.timestamp),
             enter_ts: trade.timestamp,

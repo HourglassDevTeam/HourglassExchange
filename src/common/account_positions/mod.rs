@@ -54,7 +54,7 @@ impl Serialize for AccountPositions {
         // Helper function to convert Arc<RwLock<HashMap<K, V>>> to HashMap<K, V>
         fn to_map<K, V>(positions: &Arc<RwLock<HashMap<K, V>>>) -> HashMap<K, V>
         where
-            K: Clone + Eq + std::hash::Hash,
+            K: Clone + Eq + Hash,
             V: Clone,
         {
             let positions_read = positions.blocking_read();
