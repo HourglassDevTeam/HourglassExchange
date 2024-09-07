@@ -1425,8 +1425,10 @@ impl Account
     {
         // 更新时间戳
         self.update_exchange_ts(trade.timestamp);
-        self.match_orders(&trade).await?;
+        // 更新单层OrderBook，注意 这个做法仅仅适用于回测。
         self.create_or_single_level_orderbook_from_market_trade(trade).await;
+        // 用交易所记录的用户第开放订单去匹配 market_rade 以实现模拟的目的
+        self.match_orders(&trade).await?;
         Ok(())
     }
 
