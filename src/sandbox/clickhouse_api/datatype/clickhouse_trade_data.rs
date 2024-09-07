@@ -20,7 +20,7 @@ impl MarketTrade
 {
     pub fn parse_kind(&self) -> InstrumentKind
     {
-        let parts: Vec<&str> = self.symbol.split('_').collect();
+        let parts: Vec<&str> = self.exchange.split('-').collect();
 
         if parts.len() == 2 {
             // 假设以 `perpetual` 结尾的为永续合约 FIXME 这个是非常不正确的临时处理方式。以后还是要用MarketEvent来包裹MarketTrade

@@ -17,19 +17,46 @@ pub struct SingleLevelOrderBook
 
 #[allow(dead_code)]
 impl SingleLevelOrderBook {
-    pub fn update_from_trade(&mut self, client_trade: &MarketTrade) {
-        match Side::from_str(&client_trade.side) {
+    pub fn update_from_trade(&mut self, market_trade: &MarketTrade) {
+        match Side::from_str(&market_trade.side) {
             Ok(Side::Buy) => {
-                self.latest_bid = client_trade.price; // 更新买方价格
+                self.latest_bid = market_trade.price; // 更新买方价格
             }
             Ok(Side::Sell) => {
-                self.latest_ask = client_trade.price; // 更新卖方价格
+                self.latest_ask = market_trade.price; // 更新卖方价格
             }
             _ => {
                 // 处理无效的side值
-                eprintln!("Invalid trade side: {}", client_trade.side);
+                eprintln!("Invalid trade side: {}", market_trade.side);
             }
         }
-        self.latest_price = client_trade.price; // 更新最新的交易价格
+        self.latest_price = market_trade.price; // 更新最新的交易价格
+    }
+}
+
+
+
+impl From<&MarketTrade> for SingleLevelOrderBook {
+    fn from(market_trade: &MarketTrade) -> Self {
+        let mut single_level_order_book = SingleLevelOrderBook {
+            latest_bid: 0.0,
+            latest_ask: 0.0,
+            latest_price: market_trade.price,
+        };
+
+        match Side::from_str(&market_trade.side) {
+            Ok(Side::Buy) => {
+                single_level_order_book.latest_bid = market_trade.price; // 初始化买方价格
+            }
+            Ok(Side::Sell) => {
+                single_level_order_book.latest_ask = market_trade.price; // 初始化卖方价格
+            }
+            _ => {
+                // 处理无效的side值
+                eprintln!("Invalid trade side: {}", market_trade.side);
+            }
+        }
+
+        single_level_order_book
     }
 }

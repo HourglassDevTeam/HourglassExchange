@@ -1410,8 +1410,13 @@ impl Account
         self.exchange_timestamp.store(adjusted_timestamp, Ordering::SeqCst);
     }
 
-    async fn update_single_level_orderbook(&mut self, trade: &MarketTrade,instrument: &Instrument){
-        self.single_level_order_book.lock().await.get_mut(instrument).unwrap().update_from_trade(trade);
+    async fn create_or_single_level_orderbook_from_market_trade(&mut self, trade: MarketTrade) {
+        let instrument = trade.parse_instrument().unwrap();
+        let mut orderbook = self.single_level_order_book.lock().await;
+
+        orderbook.entry(instrument)
+            .or_insert_with(|| SingleLevelOrderBook::from(&trade)) // 传递引用 &trade
+            .update_from_trade(&trade);
     }
 
 
@@ -1421,7 +1426,7 @@ impl Account
         // 更新时间戳
         self.update_exchange_ts(trade.timestamp);
         self.match_orders(&trade).await?;
-        self.update_single_level_orderbook(&trade, ).await;
+        self.create_or_single_level_orderbook_from_market_trade(trade).await;
         Ok(())
     }
 
