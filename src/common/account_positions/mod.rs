@@ -175,8 +175,8 @@ impl AccountPositions
                                                       .exit_balance(TokenBalance { // 初始化为 exit_balance
                                                                                    token: trade.instrument.base.clone(),
                                                                                    balance: Balance { time: Utc::now(),
-                                                                                       current_price: None,
-                                                                                       total: trade.size,
+                                                                                                      current_price: None,
+                                                                                                      total: trade.size,
                                                                                                       available: trade.size } })
                                                       .exchange(Exchange::SandBox)
                                                       .instrument(trade.instrument.clone())

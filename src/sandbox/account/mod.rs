@@ -345,11 +345,8 @@ impl Account
     ///
     /// - 如果 `reduce only` 订单的方向与现有持仓方向相同，则拒绝该订单，并继续处理下一个订单。
     /// - 如果在 `NetMode` 下存在方向冲突，则跳过该订单并继续处理下一个订单。
-    pub async fn open_orders(
-        &mut self,
-        open_requests: Vec<Order<RequestOpen>>,
-        response_tx: Sender<Vec<Result<Order<Open>, ExchangeError>>>,
-    ) -> Result<(), ExchangeError> {
+    pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Open>, ExchangeError>>>) -> Result<(), ExchangeError>
+    {
         let mut open_results = Vec::new();
 
         // 获取当前的 position_direction_mode 并提前判断是否需要进行方向冲突检查
@@ -366,14 +363,8 @@ impl Account
 
             // 处理订单请求，根据模式（回测或实时）选择处理方式
             let processed_request = match self.config.execution_mode {
-                SandboxMode::Backtest => {
-                    self.orders
-                        .write()
-                        .await
-                        .process_backtest_requestopen_with_a_simulated_latency(request)
-                        .await
-                }
-                _ => request, // 实时模式下直接使用原始请求
+                | SandboxMode::Backtest => self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await,
+                | _ => request, // 实时模式下直接使用原始请求
             };
 
             // 尝试开仓，处理结果
@@ -383,38 +374,34 @@ impl Account
 
         // 发送处理结果
         if let Err(e) = response_tx.send(open_results) {
-            return Err(ExchangeError::SandBox(format!(
-                "Failed to send open order results: {:?}",
-                e
-            )));
+            return Err(ExchangeError::SandBox(format!("Failed to send open order results: {:?}", e)));
         }
 
         Ok(())
     }
 
     // 辅助函数，用于检查仓位方向冲突
-    async fn check_direction_conflict(
-        &self,
-        request: &Order<RequestOpen>,
-    ) -> Result<(), ExchangeError> {
+    async fn check_direction_conflict(&self, request: &Order<RequestOpen>) -> Result<(), ExchangeError>
+    {
         if request.state.reduce_only {
             // 获取当前仓位
             let (long_pos, short_pos) = self.get_position_both_ways(&request.instrument).await?;
 
             // 检查 reduce_only 订单是否有相同方向的仓位
             match request.side {
-                Side::Buy => {
+                | Side::Buy => {
                     if long_pos.is_some() {
                         return Err(ExchangeError::InvalidDirection);
                     }
                 }
-                Side::Sell => {
+                | Side::Sell => {
                     if short_pos.is_some() {
                         return Err(ExchangeError::InvalidDirection);
                     }
                 }
             }
-        } else {
+        }
+        else {
             // 检查非 reduce_only 订单的方向冲突
             self.check_position_direction_conflict(&request.instrument, request.side, request.state.reduce_only).await?;
         }
@@ -422,33 +409,32 @@ impl Account
         Ok(())
     }
 
-
-    #[allow (dead_code)]
+    #[allow(dead_code)]
     // 辅助函数，用于获取当前市场价格 // NOTE 要处理不同的InstrumentKind,现在是不对的
-    async fn get_current_price(&self, order: &Order<RequestOpen>) -> Result<f64, ExchangeError> {
+    async fn get_current_price(&self, order: &Order<RequestOpen>) -> Result<f64, ExchangeError>
+    {
         match order.instrument.kind {
-            InstrumentKind::Spot => {
-                match order.side {
-                    Side::Buy => {
-                        let token = &order.instrument.base;
-                        let balance = self.get_balance(token)?;
-                        Ok(balance.current_price.expect("Price for Spot Buy is missing"))
-                    }
-                    Side::Sell => {
-                        let token = &order.instrument.quote;
-                        let balance = self.get_balance(token)?;
-                        Ok(balance.current_price.expect("Price for Spot Sell is missing"))
-                    }
+            | InstrumentKind::Spot => match order.side {
+                | Side::Buy => {
+                    let token = &order.instrument.base;
+                    let balance = self.get_balance(token)?;
+                    Ok(balance.current_price.expect("Price for Spot Buy is missing"))
                 }
-            }
+                | Side::Sell => {
+                    let token = &order.instrument.quote;
+                    let balance = self.get_balance(token)?;
+                    Ok(balance.current_price.expect("Price for Spot Sell is missing"))
+                }
+            },
             // 对于其他种类的 instrument，暂时未处理
-            _ => {
+            | _ => {
                 todo!("Handling for other InstrumentKind is not yet implemented.");
             }
         }
     }
 
 
+    /// 目前只适合永续合约的交易
     pub async fn attempt_atomic_open(&mut self, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError>
     {
         // 验证订单的基本合法性
@@ -461,13 +447,9 @@ impl Account
         let side = order.side;
 
         let current_price = match side {
-            Side::Buy => {
-                latest_ask
-            }
+            | Side::Buy => latest_ask,
 
-            Side::Sell=>{
-             latest_bid
-            }
+            | Side::Sell => latest_bid,
         };
 
         // 继续执行订单的原子操作逻辑
@@ -476,7 +458,7 @@ impl Account
             orders_guard.determine_maker_taker(&order, current_price)?
         };
 
-        let (token, required_balance) = self.required_available_balance(&order, current_price).await;
+        let (token, required_balance) = self.required_available_balance(&order, Some(current_price)).await;
         self.has_sufficient_available_balance(token, required_balance)?;
 
         let open_order = {
@@ -1342,19 +1324,15 @@ impl Account
             }
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let quote_delta = match side {
-                    Side::Buy => {
+                    | Side::Buy => {
                         // 买入时减少的是 quote 资金
-                        BalanceDelta {
-                            total: -trade.size * trade.price - fee,  // 总量减少
-                            available:  - fee, // 可用余额减少
-                        }
+                        BalanceDelta { total: -trade.size * trade.price - fee, // 总量减少
+                                       available: -fee                         /* 可用余额减少 */ }
                     }
-                    Side::Sell => {
+                    | Side::Sell => {
                         // 卖出时增加的是 quote 资金
-                        BalanceDelta {
-                            total: (trade.size * trade.price) - fee, // 总量增加
-                            available: (trade.size * trade.price) - fee, // 可用余额增加
-                        }
+                        BalanceDelta { total: (trade.size * trade.price) - fee,     // 总量增加
+                                       available: (trade.size * trade.price) - fee  /* 可用余额增加 */ }
                     }
                 };
 
@@ -1362,13 +1340,9 @@ impl Account
                 let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
                 // 生成账户事件，只涉及 quote
-                Ok(AccountEvent {
-                    exchange_timestamp: self.get_exchange_ts().expect("[UniLinkEx] : Failed to get exchange timestamp"),
-                    exchange: Exchange::SandBox,
-                    kind: AccountEventKind::Balances(vec![
-                        TokenBalance::new(quote.clone(), quote_balance),
-                    ]),
-                })
+                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().expect("[UniLinkEx] : Failed to get exchange timestamp"),
+                                  exchange: Exchange::SandBox,
+                                  kind: AccountEventKind::Balances(vec![TokenBalance::new(quote.clone(), quote_balance),]) })
             }
         }
     }
@@ -1385,31 +1359,26 @@ impl Account
 
     /// FIXME 严重错误，current_price应该分`bid_price`和`ask_price`.
     /// 注意 这个返回的f64 value 还没有包括交易手续费。日后要加上去。
-    pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&'a Token, f64)
+    pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_token_price: Option<f64>) -> (&'a Token, f64)
     {
-
-        let latest_ask = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_ask;
-        let latest_bid = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_bid;
-
-
         match order.instrument.kind {
             | InstrumentKind::Spot => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size),
+                | Side::Buy => (&order.instrument.quote, current_token_price.unwrap() * order.state.size),
                 | Side::Sell => (&order.instrument.base, order.state.size),
             },
             // 永续合约作为衍生品要基于 quote 货币计算所需资金
-            | InstrumentKind::Perpetual => match order.side {
-                // 买单逻辑保持不变
-                | Side::Buy => (&order.instrument.quote, latest_ask * order.state.size * self.config.account_leverage_rate),
-                // 卖单逻辑也应考虑 current_price
-                | Side::Sell => (&order.instrument.quote, latest_bid * order.state.size * self.config.account_leverage_rate),
-            },
-            // 期货合约作为衍生品要基于 quote 货币计算所需资金
-            | InstrumentKind::Future => match order.side {
-                | Side::Buy => (&order.instrument.quote,latest_ask  * order.state.size * self.config.account_leverage_rate),
-                // 同样修正期货的卖单逻辑
-                | Side::Sell => (&order.instrument.quote, latest_bid * order.state.size * self.config.account_leverage_rate),
-            },
+            | InstrumentKind::Perpetual | InstrumentKind::Future => {
+                let latest_ask = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_ask;
+                let latest_bid = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_bid;
+
+                match order.side {
+                    // 买单逻辑保持不变
+                    | Side::Buy => (&order.instrument.quote, latest_ask * order.state.size * self.config.account_leverage_rate),
+                    // 卖单逻辑也应考虑 current_price
+                    | Side::Sell => (&order.instrument.quote, latest_bid * order.state.size * self.config.account_leverage_rate),
+                }
+            }
+
             | InstrumentKind::CryptoOption => {
                 todo!("CryptoOption is not supported yet")
             }
@@ -1449,15 +1418,15 @@ impl Account
         self.exchange_timestamp.store(adjusted_timestamp, Ordering::SeqCst);
     }
 
-    async fn create_or_single_level_orderbook_from_market_trade(&mut self, trade: &MarketTrade) {
+    async fn create_or_single_level_orderbook_from_market_trade(&mut self, trade: &MarketTrade)
+    {
         let instrument = trade.parse_instrument().unwrap();
         let mut orderbook = self.single_level_order_book.lock().await;
 
         orderbook.entry(instrument)
-            .or_insert_with(|| SingleLevelOrderBook::from(trade)) // 传递引用 &trade
-            .update_from_trade(&trade);
+                 .or_insert_with(|| SingleLevelOrderBook::from(trade)) // 传递引用 &trade
+                 .update_from_trade(&trade);
     }
-
 
     /// 处理交易数据的方法
     pub async fn handle_trade_data(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>
@@ -1504,16 +1473,15 @@ impl Account
         let base = Token::from(market_trade.parse_base().ok_or_else(|| ExchangeError::SandBox("Unknown base.".to_string()))?);
         let quote = Token::from(market_trade.parse_quote().ok_or_else(|| ExchangeError::SandBox("Unknown quote.".to_string()))?);
         let kind = market_trade.parse_kind();
-        println!("[match_orders]: kind is {}",kind);
+        println!("[match_orders]: kind is {}", kind);
         let instrument = Instrument { base, quote, kind };
-        println!("[match_orders]: instrument is {}",instrument);
-
+        println!("[match_orders]: instrument is {}", instrument);
 
         // 查找与指定金融工具相关的挂单
         if let Ok(mut instrument_orders) = self.orders.read().await.get_ins_orders_mut(&instrument) {
             // 确定市场事件匹配的挂单方向（买或卖）
             if let Some(matching_side) = instrument_orders.determine_matching_side(market_trade) {
-                println!("[match_orders]: matching side is {}",matching_side);
+                println!("[match_orders]: matching side is {}", matching_side);
                 match matching_side {
                     | Side::Buy => {
                         println!("[match_orders]: matching_side: {:?}", matching_side);
@@ -1739,7 +1707,7 @@ mod tests
                                    timestamp: 1625247600000,
                                    cid: Some(ClientOrderId("validCID123".into())),
                                    side: Side::Buy,
-                                   state: RequestCancel { id: Some(OrderId(12345)) } };
+                                   state: RequestCancel { id: Some(OrderId::new(17213412341233948, generate_machine_id().unwrap(), 23)) } };
 
         assert!(Account::validate_order_request_cancel(&cancel_order).is_ok());
 
@@ -1825,14 +1793,14 @@ mod tests
     async fn test_get_position_none()
     {
         let account = create_test_account().await;
-
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
         let position = account.get_position_long(&instrument).await.unwrap();
+        // 这是因为create_test_account()没有内建任何仓位
         assert!(position.is_none());
     }
 
     #[tokio::test]
-    async fn test_required_available_balance()
+    async fn test_required_available_balance_with_insufficient_bid()
     {
         let account = create_test_account().await;
 
@@ -1846,7 +1814,8 @@ mod tests
                                                  size: 2.0,
                                                  reduce_only: false } };
 
-        let (token, required_balance) = account.required_available_balance(&order, 100.0).await;
+        let (token, required_balance) = account.required_available_balance(&order,None).await;
+        println!("{} {}", token, required_balance);
         assert_eq!(token, &order.instrument.quote);
         assert_eq!(required_balance, 32812.0);
     }
@@ -2029,31 +1998,31 @@ mod tests
         assert_eq!(result.unwrap_err(), ExchangeError::OrderNotFound { client_order_id: invalid_cancel_request.cid.clone(),
                                                                        order_id: Some(OrderId(99999)) });
     }
-    // #[tokio::test]
-    // async fn test_deposit_u_base()
-    // {
-    //     let mut account = create_test_account().await;
-    //     let usdt_amount = 100.0;
-    //
-    //     {
-    //         // 充值前查询 USDT 余额
-    //         let initial_balance = account.get_balance(&Token::from("USDT")).unwrap();
-    //         println!("Initial USDT balance: {:?}", initial_balance);
-    //         assert_eq!(initial_balance.total, 10_000.0);
-    //     } // `initial_balance` 的作用域在此结束，释放了不可变借用
-    //
-    //     // 进行充值操作
-    //     let balance = account.deposit_usdt(usdt_amount).unwrap();
-    //
-    //     // 充值后再次查询 USDT 余额
-    //     let updated_balance = account.get_balance(&Token::from("USDT")).unwrap();
-    //     println!("Updated USDT balance: {:?}", updated_balance);
-    //
-    //     // 验证余额更新
-    //     assert_eq!(balance.token, Token("USDT".into()));
-    //     assert_eq!(updated_balance.total, 10_000.0 + usdt_amount);
-    //     assert_eq!(updated_balance.available, 10_000.0 + usdt_amount);
-    // }
+    #[tokio::test]
+    async fn test_deposit_u_base()
+    {
+        let mut account = create_test_account().await;
+        let usdt_amount = 100.0;
+
+        {
+            // 充值前查询 USDT 余额
+            let initial_balance = account.get_balance(&Token::from("USDT")).unwrap();
+            // println!("Initial USDT balance: {:?}", *initial_balance);
+            assert_eq!(initial_balance.total, 10_000.0);
+        } // `initial_balance` 的作用域在此结束，释放了不可变借用
+
+        // 进行充值操作
+        let balance = account.deposit_usdt(usdt_amount).unwrap();
+
+        // 充值后再次查询 USDT 余额
+        let updated_balance = account.get_balance(&Token::from("USDT")).unwrap();
+        // println!("Updated USDT balance: {:?}", *updated_balance);
+
+        // 验证余额更新
+        assert_eq!(balance.token, Token("USDT".into()));
+        assert_eq!(updated_balance.total, 10_000.0 + usdt_amount);
+        assert_eq!(updated_balance.available, 10_000.0 + usdt_amount);
+    }
 
     #[tokio::test]
     async fn test_buy_b_with_u()
@@ -2145,7 +2114,7 @@ mod tests
         let quote_balance = account.get_balance(&instrument.quote).unwrap();
         assert_eq!(base_balance.total, 10.0);
         assert_eq!(quote_balance.total, 10000.0); // 钱不够 ， 没买成功。
-        assert_eq!(quote_balance.available, 10000.0);// 钱不够 ， 没买成功。
+        assert_eq!(quote_balance.available, 10000.0); // 钱不够 ， 没买成功。
     }
     #[tokio::test]
     async fn test_match_market_event_with_open_order_sell()
@@ -2187,14 +2156,13 @@ mod tests
 
         // 匹配订单并生成交易事件
         let trades = account.match_orders(&market_event).await.unwrap();
-        println!("trades:{:#?}",trades);
+        println!("trades:{:#?}", trades);
 
         // 检查余额是否已更新
         let quote_balance = account.get_balance(&instrument.quote).unwrap();
 
         assert_eq!(quote_balance.total, 42779.188); // 卖出 2 ETH
         assert_eq!(quote_balance.available, 42779.188); // 卖单后，USDT 可用余额应增加
-
     }
 
     #[tokio::test]

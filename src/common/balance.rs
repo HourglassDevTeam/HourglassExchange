@@ -30,8 +30,8 @@ pub struct Balance
 {
     pub time: DateTime<Utc>,
     pub current_price: Option<f64>, // NOTE 当前价格 newly added on 1st Aug 2024
-    pub total: f64,         // 总额
-    pub available: f64,     // 可用余额
+    pub total: f64,                 // 总额
+    pub available: f64,             // 可用余额
 }
 
 impl Balance

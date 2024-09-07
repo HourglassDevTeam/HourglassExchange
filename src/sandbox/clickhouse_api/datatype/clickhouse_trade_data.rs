@@ -1,7 +1,9 @@
-use crate::Token;
-use crate::{common::instrument::kind::InstrumentKind, sandbox::clickhouse_api::queries_operations::Row};
+use crate::{
+    common::instrument::{kind::InstrumentKind, Instrument},
+    sandbox::clickhouse_api::queries_operations::Row,
+    Token,
+};
 use serde::{Deserialize, Serialize};
-use crate::common::instrument::Instrument;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
@@ -26,7 +28,8 @@ impl MarketTrade
             // 假设以 `perpetual` 结尾的为永续合约 FIXME 这个是非常不正确的临时处理方式。以后还是要用MarketEvent来包裹MarketTrade
             if parts[1].to_lowercase().ends_with("futures") {
                 InstrumentKind::Perpetual
-            } else {
+            }
+            else {
                 InstrumentKind::Spot
             }
         }
@@ -34,7 +37,8 @@ impl MarketTrade
             // 假设以 `future` 结尾的为期货
             if parts.last().unwrap().to_lowercase().ends_with("future") {
                 InstrumentKind::Future
-            } else {
+            }
+            else {
                 InstrumentKind::Spot // 默认处理为现货，如果结尾不是 `future`
             }
         }
@@ -43,7 +47,8 @@ impl MarketTrade
         }
     }
 
-    pub fn parse_instrument(&self) -> Option<Instrument> {
+    pub fn parse_instrument(&self) -> Option<Instrument>
+    {
         let parts: Vec<&str> = self.symbol.split('_').collect();
 
         if parts.len() >= 2 {
@@ -53,12 +58,9 @@ impl MarketTrade
             // 根据symbol的格式来解析InstrumentKind
             let kind = self.parse_kind();
 
-            Some(Instrument {
-                base,
-                quote,
-                kind,
-            })
-        } else {
+            Some(Instrument { base, quote, kind })
+        }
+        else {
             // 没有下划线，可能是现货或其他类型（需要进一步逻辑处理）
             None
         }
