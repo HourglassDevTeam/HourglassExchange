@@ -88,7 +88,10 @@ impl Clone for Account
                   config: self.config.clone(),
                   orders: Arc::clone(&self.orders),
                   balances: self.balances.clone(),
-                  positions: self.positions.clone() }
+                  positions: self.positions.clone(),
+                  closed_positions: self.closed_positions.clone()
+        }
+
     }
 }
 #[derive(Debug)]
@@ -99,6 +102,7 @@ pub struct AccountInitiator
     orders: Option<Arc<RwLock<AccountOrders>>>,
     balances: Option<DashMap<Token, Balance>>,
     positions: Option<AccountPositions>,
+    closed_positions: Option<AccountClosedPositions>,
 }
 
 impl Default for AccountInitiator
@@ -117,7 +121,9 @@ impl AccountInitiator
                            config: None,
                            orders: None,
                            balances: None,
-                           positions: None }
+                           positions: None,
+                            closed_positions:None,
+        }
     }
 
     pub fn account_event_tx(mut self, value: UnboundedSender<AccountEvent>) -> Self
@@ -159,7 +165,9 @@ impl AccountInitiator
                      config: self.config.ok_or("config is required")?,
                      orders: self.orders.ok_or("orders are required")?,
                      balances: self.balances.ok_or("balances are required")?,
-                     positions: self.positions.ok_or("positions are required")? })
+                     positions: self.positions.ok_or("positions are required")?,
+                     closed_positions: self.closed_positions.ok_or("closed_positions sink are required")?
+        })
     }
 }
 

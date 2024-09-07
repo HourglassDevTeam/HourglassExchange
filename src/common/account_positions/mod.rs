@@ -29,8 +29,8 @@ pub(crate) mod leveraged_token;
 pub(crate) mod option;
 pub(crate)  mod perpetual;
 pub(crate)  mod position_id;
-pub(crate)  mod position_meta;
-pub(crate)  mod closed_positions;
+pub  mod position_meta;
+pub mod closed_positions;
 
 #[derive(Clone, Debug)]
 pub struct AccountPositions
