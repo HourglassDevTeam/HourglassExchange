@@ -1312,7 +1312,6 @@ impl Account
         match kind {
             | InstrumentKind::Spot => {
                 let base=&trade.instrument.base;
-                let quote=&trade.instrument.quote;
                 let (base_delta, quote_delta) = match side {
                     | Side::Buy => {
                         let base_increase = trade.size;
@@ -1351,16 +1350,17 @@ impl Account
                 todo!("CommodityFuture handling is not implemented yet")
             }
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
+                let leverage_rate = self.config.account_leverage_rate;
                 let quote_delta = match side {
                     | Side::Buy => {
-                        // 买入时减少的是 quote 资金 // NOTE 要算上杠杆率吗？？？？？？
-                        BalanceDelta { total: -trade.size * trade.price - fee, // 总量减少
-                                       available: -fee                         /* 可用余额减少 */ }
+                        // 买入时减少的是 quote 资金
+                        BalanceDelta { total: (-trade.size * trade.price - fee) * leverage_rate,
+                                       available: -fee * leverage_rate}
                     }
                     | Side::Sell => {
-                        // 卖出时增加的是 quote 资金 // NOTE 要算上杠杆率吗？？？？？？
-                        BalanceDelta { total: (trade.size * trade.price) - fee,     // 总量增加
-                                       available: (trade.size * trade.price) - fee  /* 可用余额增加 */ }
+                        // 卖出时增加的是 quote 资金
+                        BalanceDelta { total: (trade.size * trade.price - fee) * leverage_rate,
+                                       available: -fee * leverage_rate  }
                     }
                 };
 
