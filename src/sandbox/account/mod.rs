@@ -433,7 +433,6 @@ impl Account
         }
     }
 
-
     /// NOTE 目前只适合永续合约的交易
     pub async fn attempt_atomic_open(&mut self, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError>
     {
@@ -458,7 +457,7 @@ impl Account
             orders_guard.determine_maker_taker(&order, current_price)?
         };
 
-        let (token, required_balance) = self.required_available_balance(&order, Some(current_price)).await;
+        let (token, required_balance) = self.required_available_balance(&order).await;
         self.has_sufficient_available_balance(token, required_balance)?;
 
         let open_order = {
@@ -1359,14 +1358,19 @@ impl Account
     }
 
     /// FIXME 严重错误，current_price应该分`bid_price`和`ask_price`.
+    ///     日后 current_token_price 可以直接从`SingleLevelOrderBook`中获取。
     /// 注意 这个返回的f64 value 还没有包括交易手续费。日后要加上去。
-    pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_token_price: Option<f64>) -> (&'a Token, f64)
+    pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>) -> (&'a Token, f64)
     {
         match order.instrument.kind {
-            | InstrumentKind::Spot => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_token_price.unwrap() * order.state.size),
-                | Side::Sell => (&order.instrument.base, order.state.size),
-            },
+            | InstrumentKind::Spot => {
+                let latest_ask = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_ask;
+                let latest_bid = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_bid;
+                match order.side {
+                    | Side::Buy => (&order.instrument.quote, latest_ask * order.state.size),
+                    | Side::Sell => (&order.instrument.base, latest_bid * order.state.size),
+                }
+            }
             // 永续合约作为衍生品要基于 quote 货币计算所需资金
             | InstrumentKind::Perpetual | InstrumentKind::Future => {
                 let latest_ask = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_ask;
@@ -1815,7 +1819,7 @@ mod tests
                                                  size: 2.0,
                                                  reduce_only: false } };
 
-        let (token, required_balance) = account.required_available_balance(&order,None).await;
+        let (token, required_balance) = account.required_available_balance(&order).await;
         println!("{} {}", token, required_balance);
         assert_eq!(token, &order.instrument.quote);
         assert_eq!(required_balance, 32812.0);
