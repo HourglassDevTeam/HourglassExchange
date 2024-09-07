@@ -38,6 +38,8 @@ use std::{
 };
 use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
+use crate::common::instrument::kind::InstrumentKind::Perpetual;
+use crate::sandbox::clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook;
 
 /// 创建一个测试用的 `Instrument` 实例。
 pub fn create_test_instrument(kind: InstrumentKind) -> Instrument
@@ -134,6 +136,18 @@ pub async fn create_test_account() -> Account
     let closed_positions = AccountExitedPositions::init();
 
     let machine_id = generate_machine_id().unwrap();
+
+
+    let mut single_level_order_books = HashMap::new();
+    single_level_order_books.insert(Instrument{
+        base:Token::new("ETH".to_string()),
+        quote:Token::new("USDT".to_string()),
+        kind:Perpetual,
+    },SingleLevelOrderBook{
+        latest_bid: 16305.0,
+        latest_ask: 16406.0,
+        latest_price: 0.0,
+    });
 
     // 创建 Account 实例，并将其包裹在 Arc<Account> 中
     Account { current_session: Uuid::new_v4(),
