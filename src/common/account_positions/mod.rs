@@ -27,10 +27,10 @@ use tokio::sync::RwLock;
 pub mod future;
 pub(crate) mod leveraged_token;
 pub(crate) mod option;
-pub mod perpetual;
-pub mod position_id;
-pub mod position_meta;
-mod closed_positions;
+pub(crate)  mod perpetual;
+pub(crate)  mod position_id;
+pub(crate)  mod position_meta;
+pub(crate)  mod closed_positions;
 
 #[derive(Clone, Debug)]
 pub struct AccountPositions
