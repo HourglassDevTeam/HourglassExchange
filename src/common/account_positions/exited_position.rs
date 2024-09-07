@@ -40,13 +40,12 @@ impl PositionExit {
         position_meta: &PositionMeta,
         exit_ts: i64,
         exit_price: f64,
-        exit_quantity: f64,
     ) -> Self {
         // 计算退出时的总价值（不考虑费用）
-        let exit_value_gross = exit_quantity.abs() * exit_price; // NOTE 不前不确定是否带符号。
-
+        let exit_quantity = position_meta.current_size;
+        let exit_value_gross = exit_quantity * exit_price;
         // 计算实现盈亏 (realised_pnl)
-        let realised_pnl = (exit_price - position_meta.current_avg_price) * exit_quantity; // NOTE 不前不确定。
+        let realised_pnl = (exit_price - position_meta.current_avg_price) * exit_quantity;
 
         // 创建 `PositionExit`
         PositionExit {
