@@ -1147,7 +1147,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                             // 根据交易情况检查是否需要移除或反向处理仓位
                             if should_remove_position {
                                 println!("[UniLinkEx] : 移除多头仓位...");
-                                // NOTE 这是记录平仓仓位的逻辑
+                                // NOTE 这是更新和记录平仓仓位的逻辑
                                 let long_position = long_positions_write.get_mut(&trade.instrument).unwrap();
                                 // 更新该仓位的已实现盈亏
                                 long_position.meta.update_realised_pnl(trade.price);
@@ -1159,6 +1159,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
 
                             else if should_remove_and_reverse {
                                 println!("[UniLinkEx] : 移除并反向开仓...");
+                                // NOTE 这是更新和记录平仓仓位的逻辑
                                 // 获取对多头仓位的可变引用
                                 let long_position = long_positions_write.get_mut(&trade.instrument).unwrap();
                                 // 更新该仓位的已实现盈亏
