@@ -58,7 +58,7 @@ impl PositionMeta {
     }
     /// 创建新的 `PositionMeta` 基于 `ClientTrade`
 
-    pub fn create_from_trade(trade: &ClientTrade, current_symbol_price: f64) -> Self {
+    pub fn create_from_trade(trade: &ClientTrade) -> Self {
 
         PositionMeta {
             position_id: PositionId::new(&trade.instrument, trade.timestamp),
@@ -71,7 +71,7 @@ impl PositionMeta {
             current_size: trade.quantity,
             current_fees_total: trade.fees,
             current_avg_price_gross: trade.price,
-            current_symbol_price,
+            current_symbol_price: trade.price,
             current_avg_price: trade.price,
             unrealised_pnl: 0.0,
             realised_pnl: 0.0,
@@ -80,8 +80,8 @@ impl PositionMeta {
 
 
     /// Handle new position creation in reverse with remaining quantity.
-    pub fn from_trade_with_remaining(trade: &ClientTrade, current_symbol_price: f64, side: Side, remaining_quantity: f64) -> Self {
-        let mut new_meta = PositionMeta::create_from_trade(trade, current_symbol_price);
+    pub fn create_from_trade_with_remaining(trade: &ClientTrade, side: Side, remaining_quantity: f64) -> Self {
+        let mut new_meta = PositionMeta::create_from_trade(trade);
         new_meta.current_size = remaining_quantity;
         new_meta.side = side;
         new_meta
@@ -100,7 +100,7 @@ impl PositionMeta {
             if remaining_quantity >= 0.0 {
                 // Fully close the current position and reverse the position with remaining quantity
                 self.update_realised_pnl(trade.price);
-                PositionMeta::from_trade_with_remaining(trade, current_symbol_price, trade.side, remaining_quantity)
+                PositionMeta::create_from_trade_with_remaining(trade, trade.side, current_symbol_price)
             } else {
                 // Partial close, no reverse, just reduce the size
                 self.current_size -= trade.quantity;
@@ -362,11 +362,11 @@ mod tests {
     #[test]
     fn test_create_position_meta_from_trade() {
         let trade = create_test_trade();
-        let position_meta = PositionMeta::create_from_trade(&trade, 61_000.0);
+        let position_meta = PositionMeta::create_from_trade(&trade);
 
         assert_eq!(position_meta.current_size, trade.quantity);
         assert_eq!(position_meta.current_avg_price, trade.price);
-        assert_eq!(position_meta.current_symbol_price, 61_000.0);
+        assert_eq!(position_meta.current_symbol_price, 50000.0);
         assert_eq!(position_meta.current_fees_total, trade.fees);
     }
 
@@ -374,7 +374,7 @@ mod tests {
 
     #[test]
     fn test_update_avg_price_with_fees() {
-        let mut meta = PositionMeta::create_from_trade(&create_test_trade(), 61_000.0);
+        let mut meta = PositionMeta::create_from_trade(&create_test_trade());
         meta.update_avg_price_and_fees(60_000.0, 1.0, 2.0);  // Include additional fees
 
         assert!(meta.current_avg_price > meta.current_avg_price_gross);  // Avg price includes fees
@@ -383,7 +383,7 @@ mod tests {
 
     #[test]
     fn test_update_unrealised_pnl() {
-        let mut meta = PositionMeta::create_from_trade(&create_test_trade(), 61_000.0);
+        let mut meta = PositionMeta::create_from_trade(&create_test_trade());
         meta.update_unrealised_pnl();
 
         assert_eq!(meta.unrealised_pnl, 11_000.0);  // Difference between current price and avg price
@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn test_update_realised_pnl_and_clear_position() {
-        let mut meta = PositionMeta::create_from_trade(&create_test_trade(), 61_000.0);
+        let mut meta = PositionMeta::create_from_trade(&create_test_trade());
         meta.update_realised_pnl(55_000.0);  // Closing at 55,000
 
         assert_eq!(meta.realised_pnl, 5_000.0);  // Realised PnL should be 5,000
@@ -403,7 +403,7 @@ mod tests {
 
     #[test]
     fn test_update_from_trade() {
-        let mut meta = PositionMeta::create_from_trade(&create_test_trade(), 61_000.0);
+        let mut meta = PositionMeta::create_from_trade(&create_test_trade());
         let new_trade = ClientTrade {
             timestamp: 1625248600,
             trade_id: ClientTradeId::from(1),  // This works fine

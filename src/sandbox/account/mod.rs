@@ -917,7 +917,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     /// 更新 PerpetualPosition 的方法
     async fn create_perpetual_position(&mut self, trade: ClientTrade) -> Result<PerpetualPosition, ExchangeError>
     {
-        let meta = PositionMeta::create_from_trade(&trade, trade.price);
+        let meta = PositionMeta::create_from_trade(&trade);
         let new_position = PerpetualPosition {
             meta,
             pos_config: PerpetualPositionConfig {
@@ -935,7 +935,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     /// 更新 FuturePosition 的方法（占位符）
     async fn create_future_position(&mut self, trade: ClientTrade) -> Result<FuturePosition, ExchangeError>
     {
-        let meta = PositionMeta::create_from_trade(&trade, trade.price);
+        let meta = PositionMeta::create_from_trade(&trade);
         let new_position = FuturePosition {
             meta,
             pos_config: FuturePositionConfig {
@@ -1116,7 +1116,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 // 没有多头仓位，无需进一步处理
                                 println!("[UniLinkEx] : No existing long position, creating a new short position...");
                                 let new_position = PerpetualPosition {
-                                    meta: PositionMeta::create_from_trade(&trade, trade.price),
+                                    meta: PositionMeta::create_from_trade(&trade),
                                     pos_config: PerpetualPositionConfig {
                                         pos_margin_mode: self.config.position_margin_mode.clone(),
                                         leverage: self.config.account_leverage_rate,
@@ -1146,7 +1146,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 drop(long_positions_write); // 显式释放写锁
 
                                 let new_position = PerpetualPosition {
-                                    meta: PositionMeta::from_trade_with_remaining(&trade, trade.price, Side::Sell, remaining_quantity),
+                                    meta: PositionMeta::create_from_trade_with_remaining(&trade, Side::Sell, remaining_quantity),
                                     pos_config: PerpetualPositionConfig {
                                         pos_margin_mode: self.config.position_margin_mode.clone(),
                                         leverage: self.config.account_leverage_rate,
