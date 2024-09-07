@@ -19,7 +19,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 #[derive(Clone, Debug)]
-pub struct ClosedPositions
+pub struct AccountClosedPositions
 
 {
     pub margin_pos_long: Arc<RwLock<HashMap<Instrument, LeveragedTokenPosition>>>,
@@ -36,7 +36,7 @@ pub struct ClosedPositions
 
 
 #[allow(dead_code)]
-impl ClosedPositions {
+impl AccountClosedPositions {
     /// 插入方法，推断 `Instrument` 并插入 `LeveragedTokenPosition` 到 `margin_pos_long`
     pub async fn insert_margin_pos_long(&self, position: LeveragedTokenPosition) {
         let instrument = position.meta.instrument.clone(); // 从 position 中推断出 instrument
@@ -131,7 +131,7 @@ impl ClosedPositions {
     }
 }
 
-impl Serialize for ClosedPositions
+impl Serialize for AccountClosedPositions
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -166,7 +166,7 @@ impl Serialize for ClosedPositions
 
 // Manually implement PartialEq for ClosedPositions
 
-impl PartialEq for ClosedPositions
+impl PartialEq for AccountClosedPositions
 {
     fn eq(&self, other: &Self) -> bool {
         fn hashmap_eq<K, V>(a: &Arc<RwLock<HashMap<K, V>>>, b: &Arc<RwLock<HashMap<K, V>>>) -> bool
@@ -196,7 +196,7 @@ impl PartialEq for ClosedPositions
     }
 }
 
-impl<'de> Deserialize<'de> for ClosedPositions {
+impl<'de> Deserialize<'de> for AccountClosedPositions {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -217,7 +217,7 @@ impl<'de> Deserialize<'de> for ClosedPositions {
 
         let data = ClosedPositionsData::deserialize(deserializer)?;
 
-        Ok(ClosedPositions {
+        Ok(AccountClosedPositions {
             margin_pos_long: Arc::new(RwLock::new(data.margin_pos_long)),
             margin_pos_short: Arc::new(RwLock::new(data.margin_pos_short)),
             perpetual_pos_long: Arc::new(RwLock::new(data.perpetual_pos_long)),
