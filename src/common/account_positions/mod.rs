@@ -32,6 +32,7 @@ pub(crate)  mod position_id;
 pub  mod position_meta;
 pub mod exited_positions;
 mod exited_position;
+mod position_delta;
 
 #[derive(Clone, Debug)]
 pub struct AccountPositions
