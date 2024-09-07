@@ -164,7 +164,7 @@ pub async fn create_test_account() -> Account
                                                                                maximum: 300,
                                                                                minimum: 0,
                                                                                current_value: 0 }).await)),
-              single_level_order_book: Arc::new(Mutex::new(HashMap::new())) }
+              single_level_order_book: Arc::new(Mutex::new(single_level_order_books)) }
 }
 
 /// 创建一个测试用的 `PerpetualPosition` 实例。

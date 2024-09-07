@@ -1351,6 +1351,7 @@ impl Account
     }
 
     /// FIXME 严重错误，current_price应该分`bid_price`和`ask_price`.
+    /// 注意 这个返回的f64 value 还没有包括交易手续费。日后要加上去。
     pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&'a Token, f64)
     {
 
@@ -1810,7 +1811,7 @@ mod tests
 
         let (token, required_balance) = account.required_available_balance(&order, 100.0).await;
         assert_eq!(token, &order.instrument.quote);
-        assert_eq!(required_balance, 200.0);
+        assert_eq!(required_balance, 32812.0);
     }
 
     #[tokio::test]
