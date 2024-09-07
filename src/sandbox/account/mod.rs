@@ -1358,7 +1358,7 @@ impl Account
                                        available: -fee * leverage_rate}
                     }
                     | Side::Sell => {
-                        // 卖出时增加的是 quote 资金
+                        // 卖出时增加的也是 quote 资金
                         BalanceDelta { total: (trade.size * trade.price - fee) * leverage_rate,
                                        available: -fee * leverage_rate  }
                     }
