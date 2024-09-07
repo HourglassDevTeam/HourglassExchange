@@ -10,7 +10,7 @@ use crate::Exchange;
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct ClientTrade
 {
-    // pub exchange: Exchange,
+    pub exchange: Exchange,
     pub timestamp: i64,
     pub trade_id: ClientTradeId,
     pub order_id: OrderId,
