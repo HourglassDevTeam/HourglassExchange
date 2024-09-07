@@ -2,13 +2,18 @@ use rayon::prelude::ParallelSliceMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-use crate::{common::{
-    friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees},
-    instrument::kind::InstrumentKind,
-    order::{states::open::Open, Order},
-    trade::{ClientTrade, ClientTradeId},
-    Side,
-}, error::ExchangeError, sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, Exchange};
+use crate::{
+    common::{
+        friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees},
+        instrument::kind::InstrumentKind,
+        order::{states::open::Open, Order},
+        trade::{ClientTrade, ClientTradeId},
+        Side,
+    },
+    error::ExchangeError,
+    sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
+    Exchange,
+};
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
@@ -201,9 +206,8 @@ impl InstrumentOrders
     {
         let fee = trade_quantity * order.state.price * fees_percent;
 
-        Ok(ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp,
+        Ok(ClientTrade { exchange: Exchange::SandBox,
+                         timestamp,
                          trade_id: self.batch_id.into(), // NOTE trade_id 现在本质上是InstrumentOrders的一个counter生成的
                          order_id: order.state.id.clone(),
                          cid: order.cid.clone(),

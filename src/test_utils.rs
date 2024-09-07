@@ -1,17 +1,16 @@
 // src/test_utils
 
-use tokio::sync::Mutex;
 use crate::{
     common::{
         account_positions::{
+            exited_positions::AccountExitedPositions,
             future::{FuturePosition, FuturePositionConfig},
             perpetual::{PerpetualPosition, PerpetualPositionConfig},
             position_id::PositionId,
             position_meta::PositionMeta,
             AccountPositions, PositionDirectionMode, PositionMarginMode,
         },
-        balance::{Balance, TokenBalance}
-        ,
+        balance::{Balance, TokenBalance},
         instrument::{kind::InstrumentKind, Instrument},
         order::{
             identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id, OrderId},
@@ -37,9 +36,8 @@ use std::{
     sync::{atomic::AtomicI64, Arc},
     time::{SystemTime, UNIX_EPOCH},
 };
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
-use crate::common::account_positions::exited_positions::AccountExitedPositions;
 
 /// 创建一个测试用的 `Instrument` 实例。
 pub fn create_test_instrument(kind: InstrumentKind) -> Instrument
@@ -145,15 +143,14 @@ pub async fn create_test_account() -> Account
               config: account_config,
               balances,
               positions,
-        exited_positions: closed_positions,
+              exited_positions: closed_positions,
               orders: Arc::new(RwLock::new(AccountOrders::new(machine_id,
                                                               vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))],
                                                               AccountLatency { fluctuation_mode: FluctuationMode::Sine,
                                                                                maximum: 300,
                                                                                minimum: 0,
                                                                                current_value: 0 }).await)),
-        single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
-    }
+              single_level_order_book: Arc::new(Mutex::new(HashMap::new())) }
 }
 
 /// 创建一个测试用的 `PerpetualPosition` 实例。
@@ -176,8 +173,7 @@ pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPositi
                                              realised_pnl: 0.0 },
                         pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                               leverage: 1.0,
-                                                              position_mode: PositionDirectionMode::LongShort
-                        },
+                                                              position_mode: PositionDirectionMode::LongShort },
                         liquidation_price: 0.0,
                         margin: 0.0 }
 }
@@ -194,7 +190,7 @@ pub fn create_test_future_position_with_side(instrument: Instrument, side: Side)
                                           instrument,
                                           side,
                                           current_size: 0.0,
-                                          current_fees_total:0.2,
+                                          current_fees_total: 0.2,
                                           current_avg_price_gross: 0.0,
                                           current_symbol_price: 0.0,
                                           current_avg_price: 0.0,
@@ -202,8 +198,7 @@ pub fn create_test_future_position_with_side(instrument: Instrument, side: Side)
                                           realised_pnl: 0.0 },
                      pos_config: FuturePositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                         leverage: 1.0,
-                                                        position_mode: PositionDirectionMode::LongShort
-                     },
+                                                        position_mode: PositionDirectionMode::LongShort },
                      liquidation_price: 0.0,
                      margin: 0.0,
                      funding_fee: 0.0 }

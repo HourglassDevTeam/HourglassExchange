@@ -59,8 +59,7 @@ async fn main()
 
                 match client.client.read().await.query(&alter_query).execute().await {
                     | Ok(_) => {
-                        println!("[UniLinkEx] : Successfully created new table with ReplacingMergeTree: {}.{}",
-                                 database, new_table_name);
+                        println!("[UniLinkEx] : Successfully created new table with ReplacingMergeTree: {}.{}", database, new_table_name);
 
                         // 删除旧表
                         match client.client.read().await.query(&drop_old_table_query).execute().await {
@@ -69,8 +68,7 @@ async fn main()
 
                                 // 重命名新表为原来的表名
                                 match client.client.read().await.query(&rename_query).execute().await {
-                                    | Ok(_) => println!("[UniLinkEx] : Successfully renamed table: {}.{} to {}.{}",
-                                                        database, new_table_name, database, table_name),
+                                    | Ok(_) => println!("[UniLinkEx] : Successfully renamed table: {}.{} to {}.{}", database, new_table_name, database, table_name),
                                     | Err(e) => eprintln!("[UniLinkEx] : Error renaming table: {}", e),
                                 }
                             }

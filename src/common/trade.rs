@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
 // 引入相关模块和结构体。
-use crate::common::{
-    instrument::Instrument,
-    order::identification::{client_order_id::ClientOrderId, OrderId},
-    Side,
+use crate::{
+    common::{
+        instrument::Instrument,
+        order::identification::{client_order_id::ClientOrderId, OrderId},
+        Side,
+    },
+    Exchange,
 };
-use crate::Exchange;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct ClientTrade

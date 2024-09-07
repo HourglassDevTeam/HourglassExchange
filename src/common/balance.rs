@@ -1,6 +1,6 @@
+use crate::common::token::Token;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::common::token::Token;
 
 /// 与[`Token`]相关联的[`Balance`]。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
@@ -54,7 +54,6 @@ impl Balance
     /// 对这个[`Balance`]应用一个[`BalanceDelta`]。
     pub fn apply(&mut self, delta: BalanceDelta) -> Result<(), &'static str>
     {
-
         // 确保应用 BalanceDelta 后不会使 total 或 available 余额为负数。
         if self.total + delta.total < 0.0 || self.available + delta.available < 0.0 {
             return Err("[UniLinkEx] : Insufficient balance to apply the delta.");

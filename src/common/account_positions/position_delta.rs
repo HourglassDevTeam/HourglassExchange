@@ -1,6 +1,5 @@
+use crate::common::{trade::ClientTrade, Side};
 use serde::{Deserialize, Serialize};
-use crate::common::Side;
-use crate::common::trade::ClientTrade;
 
 /// [`Position`] 更新事件。该事件发生在接收到新的 [`MarketEvent`] 数据时。
 ///
@@ -20,18 +19,20 @@ use crate::common::trade::ClientTrade;
 ///
 /// 在接收到市场事件（如价格变化、订单执行等）后，系统会生成对应的 `PositionDelta` 实例并传递给相关组件或服务，以更新仓位的状态。
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
-pub struct PositionDelta {
+pub struct PositionDelta
+{
     // 仓位的方向，例如买入（Side::Buy）或卖出（Side::Sell）
     // pub side: Side,
     // 交易标的的详细信息，包括基础资产和报价资产
     // pub instrument: Instrument,
-    pub side: Side,                         // 静态数据
-    pub update_time: i64,                   // 实时数据
-    pub size:f64,                           // 实时数据
-    pub current_symbol_price: f64,          // 实时数据
+    pub side: Side,                // 静态数据
+    pub update_time: i64,          // 实时数据
+    pub size: f64,                 // 实时数据
+    pub current_symbol_price: f64, // 实时数据
 }
 
-impl From<&ClientTrade> for PositionDelta {
+impl From<&ClientTrade> for PositionDelta
+{
     /// 从 `ClientTrade` 转换为 `PositionDelta`
     ///
     /// # 参数
@@ -39,12 +40,11 @@ impl From<&ClientTrade> for PositionDelta {
     ///
     /// # 返回值
     /// 返回一个新的 `PositionDelta`，其中包含交易时的相关数据，如更新的时间、交易数量、当前市场价格等。
-    fn from(client_trade: &ClientTrade) -> Self {
-        PositionDelta {
-            side: client_trade.side,
-            update_time: client_trade.timestamp,          // 使用交易的时间戳作为更新时间
-            size: client_trade.size,            // 使用交易的数量作为仓位的变化量
-            current_symbol_price: client_trade.price,     // 使用交易的价格作为当前市场价格
-        }
+    fn from(client_trade: &ClientTrade) -> Self
+    {
+        PositionDelta { side: client_trade.side,
+                        update_time: client_trade.timestamp,      // 使用交易的时间戳作为更新时间
+                        size: client_trade.size,                  // 使用交易的数量作为仓位的变化量
+                        current_symbol_price: client_trade.price  /* 使用交易的价格作为当前市场价格 */ }
     }
 }

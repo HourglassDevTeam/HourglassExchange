@@ -115,8 +115,7 @@ mod tests
     use crate::{
         common::{
             account_positions::{position_id::PositionId, PositionDirectionMode, PositionMarginMode},
-            balance::{Balance, TokenBalance}
-            ,
+            balance::{Balance, TokenBalance},
             instrument::{kind::InstrumentKind, Instrument},
             token::Token,
             Side,
@@ -143,8 +142,7 @@ mod tests
                                                                     realised_pnl: 0.0 },
                                                pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                                                      leverage: 1.0,
-                                                                                     position_mode: PositionDirectionMode::LongShort
-                                               },
+                                                                                     position_mode: PositionDirectionMode::LongShort },
                                                liquidation_price: 100.0,
                                                margin: 10.0 };
         position.update_liquidation_price(150.0);

@@ -1,25 +1,28 @@
-use crate::sandbox::clickhouse_api::queries_operations::Row;
+use crate::{
+    common::{trade::ClientTrade, Side},
+    sandbox::clickhouse_api::queries_operations::Row,
+};
 use serde::{Deserialize, Serialize};
-use crate::common::Side;
-use crate::common::trade::ClientTrade;
 
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Row)]
-pub struct SingleLevelOrderBook {
+pub struct SingleLevelOrderBook
+{
     latest_bid: f64,
     latest_ask: f64,
     latest_price: f64, // 记录最新的交易价格
 }
 
-
 #[allow(dead_code)]
-impl SingleLevelOrderBook {
-    pub fn update_from_trade(&mut self, client_trade: ClientTrade) {
+impl SingleLevelOrderBook
+{
+    pub fn update_from_trade(&mut self, client_trade: ClientTrade)
+    {
         match client_trade.side {
-            Side::Buy => {
+            | Side::Buy => {
                 self.latest_bid = client_trade.price; // 更新买方价格
             }
-            Side::Sell => {
+            | Side::Sell => {
                 self.latest_ask = client_trade.price; // 更新卖方价格
             }
         }

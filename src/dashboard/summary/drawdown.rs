@@ -75,8 +75,6 @@ impl PositionSummariser for DrawdownSummary
     }
 }
 
-
-
 /// `DrawdownSummary` 模块用于跟踪和汇总投资组合或交易策略中的回撤情况，包括最大回撤、平均回撤及其持续时间。
 ///
 /// # 模块功能
@@ -93,7 +91,8 @@ impl PositionSummariser for DrawdownSummary
 /// # 实现细节
 /// 实现了 `PositionSummariser` 和 `TableBuilder` 接口，分别用于更新回撤信息和生成表格输出。
 
-impl TableBuilder for DrawdownSummary {
+impl TableBuilder for DrawdownSummary
+{
     /// `titles` 方法用于定义表格的列标题
     ///
     /// # 返回值
@@ -104,7 +103,8 @@ impl TableBuilder for DrawdownSummary {
     /// - "Avg. Drawdown Days"：平均回撤的持续天数。
     ///
     /// 这些标题帮助清晰地展示每个回撤相关的关键指标。
-    fn titles(&self) -> Row {
+    fn titles(&self) -> Row
+    {
         row!["Max Drawdown", "Max Drawdown Days", "Avg. Drawdown", "Avg. Drawdown Days",]
     }
 
@@ -118,7 +118,8 @@ impl TableBuilder for DrawdownSummary {
     /// - 使用 `self.avg_drawdown.mean_duration.num_days()` 获取平均回撤的持续天数。
     ///
     /// 这些数据行使得策略的下行表现可以以表格形式直观展示。
-    fn row(&self) -> Row {
+    fn row(&self) -> Row
+    {
         row![format!("{:.3}", self.max_drawdown.drawdown.drawdown),
              self.max_drawdown.drawdown.duration.num_days().to_string(),
              format!("{:.3}", self.avg_drawdown.mean_drawdown),
@@ -126,7 +127,8 @@ impl TableBuilder for DrawdownSummary {
     }
 }
 
-impl DrawdownSummary {
+impl DrawdownSummary
+{
     /// `new` 方法用于创建一个新的 `DrawdownSummary` 实例。
     ///
     /// # 参数
@@ -137,10 +139,10 @@ impl DrawdownSummary {
     /// - `current_drawdown` 初始化为使用 `starting_equity` 的 `Drawdown` 对象，用于跟踪当前的回撤状态。
     /// - `avg_drawdown` 初始化为空的 `AvgDrawdown` 对象，用于跟踪所有回撤的平均情况。
     /// - `max_drawdown` 初始化为空的 `MaxDrawdown` 对象，用于记录历史上的最大回撤。
-    ///
-    pub fn new(starting_equity: f64) -> Self {
+    pub fn new(starting_equity: f64) -> Self
+    {
         Self { current_drawdown: Drawdown::init(starting_equity),
-            avg_drawdown: AvgDrawdown::init(),
-            max_drawdown: MaxDrawdown::init() }
+               avg_drawdown: AvgDrawdown::init(),
+               max_drawdown: MaxDrawdown::init() }
     }
 }

@@ -267,7 +267,8 @@ async fn test_5_cancel_buy_order(client: &SandBoxClient, test_3_ids: Ids, event_
 
     // 先接收订单取消事件
     match event_sandbox_rx.try_recv() {
-        | Ok(AccountEvent { kind: AccountEventKind::OrdersCancelled(cancelled), .. }) => {
+        | Ok(AccountEvent { kind: AccountEventKind::OrdersCancelled(cancelled),
+                            .. }) => {
             println!("[test_5] : Orders cancelled event received.");
             assert_eq!(cancelled.len(), 1);
             assert_eq!(cancelled[0].clone(), expected_cancelled);

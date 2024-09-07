@@ -1,4 +1,3 @@
-use std::hash::Hash;
 use crate::{
     common::{
         account_positions::{
@@ -20,19 +19,18 @@ use crate::{
 };
 use chrono::Utc;
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 use tokio::sync::RwLock;
 
+mod exited_position;
+pub mod exited_positions;
 pub mod future;
 pub(crate) mod leveraged_token;
 pub(crate) mod option;
-pub(crate)  mod perpetual;
-pub(crate)  mod position_id;
-pub  mod position_meta;
-pub mod exited_positions;
-mod exited_position;
+pub(crate) mod perpetual;
 mod position_delta;
+pub(crate) mod position_id;
+pub mod position_meta;
 
 #[derive(Clone, Debug)]
 pub struct AccountPositions
@@ -49,16 +47,15 @@ pub struct AccountPositions
     pub option_pos_short_put: Arc<RwLock<HashMap<Instrument, OptionPosition>>>,
 }
 
-impl Serialize for AccountPositions {
+impl Serialize for AccountPositions
+{
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+        where S: Serializer
     {
         // Helper function to convert Arc<RwLock<HashMap<K, V>>> to HashMap<K, V>
         fn to_map<K, V>(positions: &Arc<RwLock<HashMap<K, V>>>) -> HashMap<K, V>
-        where
-            K: Clone + Eq + Hash,
-            V: Clone,
+            where K: Clone + Eq + Hash,
+                  V: Clone
         {
             let positions_read = positions.blocking_read();
             positions_read.clone()
@@ -81,12 +78,13 @@ impl Serialize for AccountPositions {
 }
 
 // Manually implement PartialEq for AccountPositions
-impl PartialEq for AccountPositions {
-    fn eq(&self, other: &Self) -> bool {
+impl PartialEq for AccountPositions
+{
+    fn eq(&self, other: &Self) -> bool
+    {
         fn hashmap_eq<K, V>(a: &Arc<RwLock<HashMap<K, V>>>, b: &Arc<RwLock<HashMap<K, V>>>) -> bool
-        where
-            K: Eq + Hash + Clone,
-            V: PartialEq + Clone,
+            where K: Eq + Hash + Clone,
+                  V: PartialEq + Clone
         {
             let a_read = a.blocking_read();
             let b_read = b.blocking_read();
@@ -98,25 +96,26 @@ impl PartialEq for AccountPositions {
         }
 
         hashmap_eq(&self.margin_pos_long, &other.margin_pos_long)
-            && hashmap_eq(&self.margin_pos_short, &other.margin_pos_short)
-            && hashmap_eq(&self.perpetual_pos_long, &other.perpetual_pos_long)
-            && hashmap_eq(&self.perpetual_pos_short, &other.perpetual_pos_short)
-            && hashmap_eq(&self.futures_pos_long, &other.futures_pos_long)
-            && hashmap_eq(&self.futures_pos_short, &other.futures_pos_short)
-            && hashmap_eq(&self.option_pos_long_call, &other.option_pos_long_call)
-            && hashmap_eq(&self.option_pos_long_put, &other.option_pos_long_put)
-            && hashmap_eq(&self.option_pos_short_call, &other.option_pos_short_call)
-            && hashmap_eq(&self.option_pos_short_put, &other.option_pos_short_put)
+        && hashmap_eq(&self.margin_pos_short, &other.margin_pos_short)
+        && hashmap_eq(&self.perpetual_pos_long, &other.perpetual_pos_long)
+        && hashmap_eq(&self.perpetual_pos_short, &other.perpetual_pos_short)
+        && hashmap_eq(&self.futures_pos_long, &other.futures_pos_long)
+        && hashmap_eq(&self.futures_pos_short, &other.futures_pos_short)
+        && hashmap_eq(&self.option_pos_long_call, &other.option_pos_long_call)
+        && hashmap_eq(&self.option_pos_long_put, &other.option_pos_long_put)
+        && hashmap_eq(&self.option_pos_short_call, &other.option_pos_short_call)
+        && hashmap_eq(&self.option_pos_short_put, &other.option_pos_short_put)
     }
 }
 
-impl<'de> Deserialize<'de> for AccountPositions {
+impl<'de> Deserialize<'de> for AccountPositions
+{
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
+        where D: Deserializer<'de>
     {
         #[derive(Deserialize)]
-        struct AccountPositionsData {
+        struct AccountPositionsData
+        {
             margin_pos_long: HashMap<Instrument, LeveragedTokenPosition>,
             margin_pos_short: HashMap<Instrument, LeveragedTokenPosition>,
             perpetual_pos_long: HashMap<Instrument, PerpetualPosition>,
@@ -131,38 +130,35 @@ impl<'de> Deserialize<'de> for AccountPositions {
 
         let data = AccountPositionsData::deserialize(deserializer)?;
 
-        Ok(AccountPositions {
-            margin_pos_long: Arc::new(RwLock::new(data.margin_pos_long)),
-            margin_pos_short: Arc::new(RwLock::new(data.margin_pos_short)),
-            perpetual_pos_long: Arc::new(RwLock::new(data.perpetual_pos_long)),
-            perpetual_pos_short: Arc::new(RwLock::new(data.perpetual_pos_short)),
-            futures_pos_long: Arc::new(RwLock::new(data.futures_pos_long)),
-            futures_pos_short: Arc::new(RwLock::new(data.futures_pos_short)),
-            option_pos_long_call: Arc::new(RwLock::new(data.option_pos_long_call)),
-            option_pos_long_put: Arc::new(RwLock::new(data.option_pos_long_put)),
-            option_pos_short_call: Arc::new(RwLock::new(data.option_pos_short_call)),
-            option_pos_short_put: Arc::new(RwLock::new(data.option_pos_short_put)),
-        })
+        Ok(AccountPositions { margin_pos_long: Arc::new(RwLock::new(data.margin_pos_long)),
+                              margin_pos_short: Arc::new(RwLock::new(data.margin_pos_short)),
+                              perpetual_pos_long: Arc::new(RwLock::new(data.perpetual_pos_long)),
+                              perpetual_pos_short: Arc::new(RwLock::new(data.perpetual_pos_short)),
+                              futures_pos_long: Arc::new(RwLock::new(data.futures_pos_long)),
+                              futures_pos_short: Arc::new(RwLock::new(data.futures_pos_short)),
+                              option_pos_long_call: Arc::new(RwLock::new(data.option_pos_long_call)),
+                              option_pos_long_put: Arc::new(RwLock::new(data.option_pos_long_put)),
+                              option_pos_short_call: Arc::new(RwLock::new(data.option_pos_short_call)),
+                              option_pos_short_put: Arc::new(RwLock::new(data.option_pos_short_put)) })
     }
 }
 
-impl AccountPositions {
+impl AccountPositions
+{
     /// 创建一个新的 `AccountPositions` 实例
-    pub fn init() -> Self {
-        Self {
-            margin_pos_long: Arc::new(RwLock::new(HashMap::new())),
-            margin_pos_short: Arc::new(RwLock::new(HashMap::new())),
-            perpetual_pos_long: Arc::new(RwLock::new(HashMap::new())),
-            perpetual_pos_short: Arc::new(RwLock::new(HashMap::new())),
-            futures_pos_long: Arc::new(RwLock::new(HashMap::new())),
-            futures_pos_short: Arc::new(RwLock::new(HashMap::new())),
-            option_pos_long_call: Arc::new(RwLock::new(HashMap::new())),
-            option_pos_long_put: Arc::new(RwLock::new(HashMap::new())),
-            option_pos_short_call: Arc::new(RwLock::new(HashMap::new())),
-            option_pos_short_put: Arc::new(RwLock::new(HashMap::new())),
-        }
+    pub fn init() -> Self
+    {
+        Self { margin_pos_long: Arc::new(RwLock::new(HashMap::new())),
+               margin_pos_short: Arc::new(RwLock::new(HashMap::new())),
+               perpetual_pos_long: Arc::new(RwLock::new(HashMap::new())),
+               perpetual_pos_short: Arc::new(RwLock::new(HashMap::new())),
+               futures_pos_long: Arc::new(RwLock::new(HashMap::new())),
+               futures_pos_short: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_long_call: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_long_put: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_short_call: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_short_put: Arc::new(RwLock::new(HashMap::new())) }
     }
-
 
     /// TODO check init logic
     pub async fn build_new_perpetual_position(&self, config: &AccountConfig, trade: &ClientTrade, exchange_ts: i64) -> Result<PerpetualPosition, ExchangeError>
@@ -181,8 +177,7 @@ impl AccountPositions {
                                                                                    balance: Balance { time: Utc::now(),
                                                                                                       current_price: trade.price,
                                                                                                       total: trade.size,
-                                                                                                      available: trade.size
-                                                                                   } })
+                                                                                                      available: trade.size } })
                                                       .exchange(Exchange::SandBox)
                                                       .instrument(trade.instrument.clone())
                                                       .side(trade.side)
@@ -217,94 +212,101 @@ impl AccountPositions {
         Ok(new_position)
     }
 
-        pub async fn update_position(&self, new_position: Position) {
-            match new_position {
-                Position::Perpetual(p) => match p.meta.side {
-                    Side::Buy => {
-                        let positions = &self.perpetual_pos_long;
-                        let mut positions_lock = positions.write().await;
-                        if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
-                            *existing_position = p;
-                        } else {
-                            positions_lock.insert(p.meta.instrument.clone(), p);
-                        }
+    pub async fn update_position(&self, new_position: Position)
+    {
+        match new_position {
+            | Position::Perpetual(p) => match p.meta.side {
+                | Side::Buy => {
+                    let positions = &self.perpetual_pos_long;
+                    let mut positions_lock = positions.write().await;
+                    if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
+                        *existing_position = p;
                     }
-                    Side::Sell => {
-                        let positions = &self.perpetual_pos_short;
-                        let mut positions_lock = positions.write().await;
-                        if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
-                            *existing_position = p;
-                        } else {
-                            positions_lock.insert(p.meta.instrument.clone(), p);
-                        }
+                    else {
+                        positions_lock.insert(p.meta.instrument.clone(), p);
                     }
-                },
-                Position::LeveragedToken(p) => match p.meta.side {
-                    Side::Buy => {
-                        let positions = &self.margin_pos_long;
-                        let mut positions_lock = positions.write().await;
-                        if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
-                            *existing_position = p;
-                        } else {
-                            positions_lock.insert(p.meta.instrument.clone(), p);
-                        }
-                    }
-                    Side::Sell => {
-                        let positions = &self.margin_pos_short;
-                        let mut positions_lock = positions.write().await;
-                        if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
-                            *existing_position = p;
-                        } else {
-                            positions_lock.insert(p.meta.instrument.clone(), p);
-                        }
-                    }
-                },
-                Position::Future(p) => match p.meta.side {
-                    Side::Buy => {
-                        let positions = &self.futures_pos_long;
-                        let mut positions_lock = positions.write().await;
-                        if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
-                            *existing_position = p;
-                        } else {
-                            positions_lock.insert(p.meta.instrument.clone(), p);
-                        }
-                    }
-                    Side::Sell => {
-                        let positions = &self.futures_pos_short;
-                        let mut positions_lock = positions.write().await;
-                        if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
-                            *existing_position = p;
-                        } else {
-                            positions_lock.insert(p.meta.instrument.clone(), p);
-                        }
-                    }
-                },
-                Position::Option(_p) => {
-                    todo!()
                 }
+                | Side::Sell => {
+                    let positions = &self.perpetual_pos_short;
+                    let mut positions_lock = positions.write().await;
+                    if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
+                        *existing_position = p;
+                    }
+                    else {
+                        positions_lock.insert(p.meta.instrument.clone(), p);
+                    }
+                }
+            },
+            | Position::LeveragedToken(p) => match p.meta.side {
+                | Side::Buy => {
+                    let positions = &self.margin_pos_long;
+                    let mut positions_lock = positions.write().await;
+                    if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
+                        *existing_position = p;
+                    }
+                    else {
+                        positions_lock.insert(p.meta.instrument.clone(), p);
+                    }
+                }
+                | Side::Sell => {
+                    let positions = &self.margin_pos_short;
+                    let mut positions_lock = positions.write().await;
+                    if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
+                        *existing_position = p;
+                    }
+                    else {
+                        positions_lock.insert(p.meta.instrument.clone(), p);
+                    }
+                }
+            },
+            | Position::Future(p) => match p.meta.side {
+                | Side::Buy => {
+                    let positions = &self.futures_pos_long;
+                    let mut positions_lock = positions.write().await;
+                    if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
+                        *existing_position = p;
+                    }
+                    else {
+                        positions_lock.insert(p.meta.instrument.clone(), p);
+                    }
+                }
+                | Side::Sell => {
+                    let positions = &self.futures_pos_short;
+                    let mut positions_lock = positions.write().await;
+                    if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
+                        *existing_position = p;
+                    }
+                    else {
+                        positions_lock.insert(p.meta.instrument.clone(), p);
+                    }
+                }
+            },
+            | Position::Option(_p) => {
+                todo!()
             }
         }
-
+    }
 
     /// 检查账户中是否持有指定交易工具的多头仓位
-    pub(crate) async fn has_long_position(&self, instrument: &Instrument) -> bool {
+    pub(crate) async fn has_long_position(&self, instrument: &Instrument) -> bool
+    {
         match instrument.kind {
-            InstrumentKind::Spot => todo!("[UniLinkEx] : The system does not support creation or processing of positions of Spot as of yet."),
-            InstrumentKind::CommodityOption => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityOption as of yet."),
-            InstrumentKind::CommodityFuture => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
-            InstrumentKind::Perpetual => {
+            | InstrumentKind::Spot => todo!("[UniLinkEx] : The system does not support creation or processing of positions of Spot as of yet."),
+            | InstrumentKind::CommodityOption => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityOption as of yet."),
+            | InstrumentKind::CommodityFuture => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
+            | InstrumentKind::Perpetual => {
                 let positions = self.perpetual_pos_long.read().await;
                 positions.iter().any(|(key, _)| key == instrument)
             }
-            InstrumentKind::Future => {
+            | InstrumentKind::Future => {
                 let positions = self.futures_pos_long.read().await;
                 positions.iter().any(|(key, _)| key == instrument)
             }
-            InstrumentKind::CryptoOption => {
+            | InstrumentKind::CryptoOption => {
                 let positions = self.option_pos_long_call.read().await;
                 positions.iter().any(|(key, _)| key == instrument)
             }
-            InstrumentKind::CryptoLeveragedToken => {
+            | InstrumentKind::CryptoLeveragedToken => {
                 let positions = self.margin_pos_long.read().await;
                 positions.iter().any(|(key, _)| key == instrument)
             }
@@ -312,24 +314,25 @@ impl AccountPositions {
     }
 
     /// 检查账户中是否持有指定交易工具的空头仓位
-    pub(crate) async fn has_short_position(&self, instrument: &Instrument) -> bool {
+    pub(crate) async fn has_short_position(&self, instrument: &Instrument) -> bool
+    {
         match instrument.kind {
-            InstrumentKind::Spot => todo!("[UniLinkEx] : The system does not support creation or processing of positions of Spot as of yet."),
-            InstrumentKind::CommodityOption => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityOption as of yet."),
-            InstrumentKind::CommodityFuture => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
-            InstrumentKind::Perpetual => {
+            | InstrumentKind::Spot => todo!("[UniLinkEx] : The system does not support creation or processing of positions of Spot as of yet."),
+            | InstrumentKind::CommodityOption => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityOption as of yet."),
+            | InstrumentKind::CommodityFuture => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
+            | InstrumentKind::Perpetual => {
                 let positions = self.perpetual_pos_short.read().await;
                 positions.iter().any(|(key, _)| key == instrument)
             }
-            InstrumentKind::Future => {
+            | InstrumentKind::Future => {
                 let positions = self.futures_pos_short.read().await;
                 positions.iter().any(|(key, _)| key == instrument)
             }
-            InstrumentKind::CryptoOption => {
+            | InstrumentKind::CryptoOption => {
                 let positions = self.option_pos_short_put.read().await;
                 positions.iter().any(|(key, _)| key == instrument)
             }
-            InstrumentKind::CryptoLeveragedToken => {
+            | InstrumentKind::CryptoLeveragedToken => {
                 let positions = self.margin_pos_short.read().await;
                 positions.iter().any(|(key, _)| key == instrument)
             }
@@ -425,12 +428,12 @@ mod tests
                             margin: initial_margin,
                             pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                                   leverage,
-                                                                  position_mode: PositionDirectionMode::Net
-                            } }
+                                                                  position_mode: PositionDirectionMode::Net } }
     }
 
     #[tokio::test] // 使用 tokio 的异步测试宏
-    async fn test_has_position() {
+    async fn test_has_position()
+    {
         let account_positions = AccountPositions::init();
 
         let perpetual_instrument = create_instrument(InstrumentKind::Perpetual);
@@ -463,8 +466,9 @@ mod tests
     }
 
     #[tokio::test] // 使用 tokio 的异步测试宏
-    async fn test_update_existing_position() {
-        let  account_positions = AccountPositions::init();
+    async fn test_update_existing_position()
+    {
+        let account_positions = AccountPositions::init();
 
         let perpetual_instrument = create_instrument(InstrumentKind::Perpetual);
 
@@ -495,28 +499,26 @@ mod tests
                 assert_eq!(positions.len(), 1); // 确保仓位数量未增加
                 let pos = positions.get(&perpetual_instrument).unwrap();
                 assert_eq!(pos.margin, 2000.0); // 检查仓位是否已正确更新
-            } else {
+            }
+            else {
                 panic!("PerpetualPosition should exist but was not found.");
             }
         }
     }
 
     #[tokio::test] // 使用 tokio 的异步测试宏
-    async fn test_add_new_position() {
+    async fn test_add_new_position()
+    {
         let account_positions = AccountPositions::init();
 
         // 创建两个不同的 Instrument
-        let perpetual_instrument_1 = Instrument {
-            base: Token::from("BTC"),
-            quote: Token::from("USDT"),
-            kind: InstrumentKind::Perpetual,
-        };
+        let perpetual_instrument_1 = Instrument { base: Token::from("BTC"),
+                                                  quote: Token::from("USDT"),
+                                                  kind: InstrumentKind::Perpetual };
 
-        let perpetual_instrument_2 = Instrument {
-            base: Token::from("ETH"),
-            quote: Token::from("USDT"),
-            kind: InstrumentKind::Perpetual,
-        };
+        let perpetual_instrument_2 = Instrument { base: Token::from("ETH"),
+                                                  quote: Token::from("USDT"),
+                                                  kind: InstrumentKind::Perpetual };
 
         // 添加初始的 PerpetualPosition (多头仓位)
         let mut perpetual_position_1 = create_perpetual_position(&perpetual_instrument_1);
@@ -538,5 +540,4 @@ mod tests
             assert_eq!(positions.len(), 2);
         }
     }
-
 }

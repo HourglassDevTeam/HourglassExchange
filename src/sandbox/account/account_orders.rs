@@ -284,7 +284,6 @@ impl AccountOrders
         }
     }
 
-
     /// FIXME 这个逻辑提前到了 open_orders 中。所以可能产生重复。
     /// 判断 PostOnly 订单是否符合条件，并确定其是 Maker 还是被拒绝。
     ///
@@ -581,19 +580,15 @@ mod tests
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
-        let order = Order {
-            instruction: OrderInstruction::PostOnly,
-            exchange: Exchange::Binance,
-            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            cid: Some(ClientOrderId("unit_test".to_string())),
-            timestamp: 1625232523000,
-            side: Side::Buy,
-            state: RequestOpen {
-                reduce_only: false,
-                price: 35000.0, // 买单价格
-                size: 0.1
-            }
-        };
+        let order = Order { instruction: OrderInstruction::PostOnly,
+                            exchange: Exchange::Binance,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            cid: Some(ClientOrderId("unit_test".to_string())),
+                            timestamp: 1625232523000,
+                            side: Side::Buy,
+                            state: RequestOpen { reduce_only: false,
+                                                 price: 35000.0, // 买单价格
+                                                 size: 0.1 } };
 
         // 成功场景：Post-Only 买单，挂单价格低于市场价格，成为 Maker
         let result = account_orders.determine_post_only_order_role(&order, 35001.0);
@@ -603,7 +598,6 @@ mod tests
         let reject_result = account_orders.determine_post_only_order_role(&order, 34999.0);
         assert_eq!(reject_result.unwrap_err().to_string(), "[UniLinkEx] : PostOnlyViolation");
     }
-
 
     #[tokio::test]
     async fn test_build_order_open()

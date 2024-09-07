@@ -1,9 +1,8 @@
 use crate::common::balance::Balance;
 use serde::{Deserialize, Serialize};
 
-use crate::common::trade::ClientTrade;
 use crate::{
-    common::{account_positions::position_id::PositionId, balance::TokenBalance, instrument::Instrument, Side},
+    common::{account_positions::position_id::PositionId, balance::TokenBalance, instrument::Instrument, trade::ClientTrade, Side},
     Exchange,
 };
 
@@ -13,26 +12,28 @@ pub struct PositionMeta
     pub position_id: PositionId,      // 静态数据
     pub enter_ts: i64,                // 静态数据
     pub update_ts: i64,               // 实时更新
-    pub exit_balance: TokenBalance,   // 静态更新（退出时更新）当一个仓位被平仓（即完全退出）时，该仓位所涉及的资产或资金的最终状态。 CONSIDER  do we retrieve it from the TokenBalance or we calculate it?
-    pub exchange: Exchange,           // 静态数据
-    pub instrument: Instrument,       // 静态数据
-    pub side: Side,                   // 静态数据
-    pub current_size: f64,            // 实时更新
-    pub current_fees_total: f64,      // 实时更新
+    pub exit_balance: TokenBalance, /* 静态更新（退出时更新）当一个仓位被平仓（即完全退出）时，该仓位所涉及的资产或资金的最终状态。 CONSIDER  do we retrieve it from the TokenBalance or we calculate it? */
+    pub exchange: Exchange,         // 静态数据
+    pub instrument: Instrument,     // 静态数据
+    pub side: Side,                 // 静态数据
+    pub current_size: f64,          // 实时更新
+    pub current_fees_total: f64,    // 实时更新
     pub current_avg_price_gross: f64, // 实时更新，即没有考虑费用或其他扣减项的情况下计算的平均持仓价格。
-    pub current_symbol_price: f64,    // 实时更新，当前交易标的（symbol，如股票、期货合约、加密货币等）的最新市场价格。
-    pub current_avg_price: f64,       // 实时更新
-    pub unrealised_pnl: f64,          // 实时更新
-    pub realised_pnl: f64,            // 静态更新（平仓时更新）
+    pub current_symbol_price: f64,  // 实时更新，当前交易标的（symbol，如股票、期货合约、加密货币等）的最新市场价格。
+    pub current_avg_price: f64,     // 实时更新
+    pub unrealised_pnl: f64,        // 实时更新
+    pub realised_pnl: f64,          // 静态更新（平仓时更新）
 }
 
 /// FIXME 虽然 Net Mode 和 LongShort Mode 在很多地方可以复用相似的逻辑，
 ///         但为了减少未来可能的逻辑混淆和复杂性，建议进一步明确两种模式的职责，
 ///         尤其是在处理复杂的反向开仓和部分平仓的情况下。
-impl PositionMeta {
+impl PositionMeta
+{
     /// 根据 `ClientTrade` 和模式更新仓位
     /// 根据 `ClientTrade` 更新仓位
-    pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) {
+    pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64)
+    {
         self.update_ts = trade.timestamp;
         self.current_symbol_price = current_symbol_price;
 
@@ -48,30 +49,28 @@ impl PositionMeta {
 
     /// 创建新的 `PositionMeta` 基于 `ClientTrade`
 
-    pub fn create_from_trade(trade: &ClientTrade) -> Self {
-
-        PositionMeta {
-            position_id: PositionId::new(&trade.instrument, trade.timestamp),
-            enter_ts: trade.timestamp,
-            update_ts: trade.timestamp,
-            exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, 0.0)),
-            exchange: trade.exchange,
-            instrument: trade.instrument.clone(),
-            side: trade.side,
-            current_size: trade.size,
-            current_fees_total: trade.fees,
-            current_avg_price_gross: trade.price,
-            current_symbol_price: trade.price,
-            current_avg_price: trade.price,
-            unrealised_pnl: 0.0,
-            realised_pnl: 0.0,
-        }
+    pub fn create_from_trade(trade: &ClientTrade) -> Self
+    {
+        PositionMeta { position_id: PositionId::new(&trade.instrument, trade.timestamp),
+                       enter_ts: trade.timestamp,
+                       update_ts: trade.timestamp,
+                       exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, 0.0)),
+                       exchange: trade.exchange,
+                       instrument: trade.instrument.clone(),
+                       side: trade.side,
+                       current_size: trade.size,
+                       current_fees_total: trade.fees,
+                       current_avg_price_gross: trade.price,
+                       current_symbol_price: trade.price,
+                       current_avg_price: trade.price,
+                       unrealised_pnl: 0.0,
+                       realised_pnl: 0.0 }
     }
-
 
     /// `[NET-MODE ONLY]`
     /// Handle new position creation in reverse with remaining quantity.
-    pub fn create_from_trade_with_remaining(trade: &ClientTrade, side: Side, remaining_quantity: f64) -> Self {
+    pub fn create_from_trade_with_remaining(trade: &ClientTrade, side: Side, remaining_quantity: f64) -> Self
+    {
         let mut new_meta = PositionMeta::create_from_trade(trade);
         new_meta.current_size = remaining_quantity;
         new_meta.side = side;
@@ -81,19 +80,22 @@ impl PositionMeta {
     /// This function can handle both `Net` and `LongShort` Modes.
     /// Update or create a position based on a new trade.
     /// This handles both regular updates and reverse position logic.
-    pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) -> Self {
+    pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) -> Self
+    {
         if self.side == trade.side {
             // Update position normally if the trade is in the same direction
             self.update_from_trade(trade, current_symbol_price);
             self.clone() // Return the updated position
-        } else {
+        }
+        else {
             // If trade side is opposite, reduce or close the current position and possibly open a new one.
             let remaining_quantity = trade.size - self.current_size;
             if remaining_quantity >= 0.0 {
                 // Fully close the current position and reverse the position with remaining quantity
                 self.update_realised_pnl(trade.price);
                 PositionMeta::create_from_trade_with_remaining(trade, trade.side, current_symbol_price)
-            } else {
+            }
+            else {
                 // Partial close, no reverse, just reduce the size
                 self.current_size -= trade.size;
                 self.update_realised_pnl(trade.price);
@@ -103,12 +105,11 @@ impl PositionMeta {
     }
 }
 
-
 impl PositionMeta
 {
-
     /// Net Mode 下更新均价和持仓大小
-    fn update_avg_price(&mut self, trade_price: f64, trade_size: f64) {
+    fn update_avg_price(&mut self, trade_price: f64, trade_size: f64)
+    {
         let total_size = self.current_size + trade_size;
 
         if total_size > 0.0 {
@@ -120,7 +121,6 @@ impl PositionMeta
         // 更新平均价格（默认 gross 作为基础）
         self.current_avg_price = self.current_avg_price_gross;
     }
-
 
     /// 更新 current_avg_price，同时考虑费用
     /// 在 update_avg_price_and_fees 方法中，您试图在计算平均价格时加入费用，但当前的计算公式可能会导致均价计算不准确。
@@ -155,7 +155,7 @@ impl PositionMeta
         self.current_size = 0.0;
         self.current_avg_price = 0.0;
         self.current_avg_price_gross = 0.0;
-        self.current_fees_total = 0.0;  // 清空费用
+        self.current_fees_total = 0.0; // 清空费用
     }
 }
 
@@ -310,33 +310,34 @@ impl Default for PositionMetaBuilder
 }
 
 #[cfg(test)]
-mod tests {
+mod tests
+{
     use super::*;
-    use crate::common::order::identification::OrderId;
-    use crate::common::trade::{ClientTrade, ClientTradeId};
     use crate::common::{
         instrument::{kind::InstrumentKind, Instrument},
+        order::identification::OrderId,
+        trade::{ClientTrade, ClientTradeId},
         Side,
     };
 
     /// Helper function to create a ClientTrade for testing
-    fn create_test_trade() -> ClientTrade {
-        ClientTrade {
-            exchange: Exchange::SandBox,
-            timestamp: 1625247600,
-            trade_id: ClientTradeId::from(1),  // This works fine
-            order_id: OrderId::new(1625247600, 1, 1),  // Use the constructor for OrderId
-            cid: None,
-            instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
-            side: Side::Buy,
-            price: 50_000.0,
-            size: 1.0,
-            fees: 2.0,
-        }
+    fn create_test_trade() -> ClientTrade
+    {
+        ClientTrade { exchange: Exchange::SandBox,
+                      timestamp: 1625247600,
+                      trade_id: ClientTradeId::from(1),         // This works fine
+                      order_id: OrderId::new(1625247600, 1, 1), // Use the constructor for OrderId
+                      cid: None,
+                      instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
+                      side: Side::Buy,
+                      price: 50_000.0,
+                      size: 1.0,
+                      fees: 2.0 }
     }
 
     #[test]
-    fn test_create_position_meta_from_trade() {
+    fn test_create_position_meta_from_trade()
+    {
         let trade = create_test_trade();
         let position_meta = PositionMeta::create_from_trade(&trade);
 
@@ -346,58 +347,58 @@ mod tests {
         assert_eq!(position_meta.current_fees_total, trade.fees);
     }
 
-
-
     #[test]
-    fn test_update_avg_price_with_fees() {
+    fn test_update_avg_price_with_fees()
+    {
         let mut meta = PositionMeta::create_from_trade(&create_test_trade());
-        meta.update_avg_price_and_fees(60_000.0, 1.0, 2.0);  // Include additional fees
+        meta.update_avg_price_and_fees(60_000.0, 1.0, 2.0); // Include additional fees
 
-        assert!(meta.current_avg_price > meta.current_avg_price_gross);  // Avg price includes fees
-        assert_eq!(meta.current_size, 2.0);  // Size should be updated
+        assert!(meta.current_avg_price > meta.current_avg_price_gross); // Avg price includes fees
+        assert_eq!(meta.current_size, 2.0); // Size should be updated
     }
 
     #[test]
-    fn test_update_unrealised_pnl() {
+    fn test_update_unrealised_pnl()
+    {
         let mut meta = PositionMeta::create_from_trade(&create_test_trade());
         meta.update_unrealised_pnl();
 
-        assert_eq!(meta.unrealised_pnl, 0.0);  // Difference between current price and avg price
+        assert_eq!(meta.unrealised_pnl, 0.0); // Difference between current price and avg price
     }
 
     #[test]
-    fn test_update_realised_pnl_and_clear_position() {
+    fn test_update_realised_pnl_and_clear_position()
+    {
         let mut meta = PositionMeta::create_from_trade(&create_test_trade());
-        meta.update_realised_pnl(55_000.0);  // Closing at 55,000
+        meta.update_realised_pnl(55_000.0); // Closing at 55,000
 
-        assert_eq!(meta.realised_pnl, 5_000.0);  // Realised PnL should be 5,000
-        assert_eq!(meta.current_size, 0.0);  // Position should be closed
-        assert_eq!(meta.current_avg_price, 0.0);  // Avg price reset
-        assert_eq!(meta.current_avg_price_gross, 0.0);  // Avg price gross reset
-        assert_eq!(meta.current_fees_total, 0.0);  // Fees reset
+        assert_eq!(meta.realised_pnl, 5_000.0); // Realised PnL should be 5,000
+        assert_eq!(meta.current_size, 0.0); // Position should be closed
+        assert_eq!(meta.current_avg_price, 0.0); // Avg price reset
+        assert_eq!(meta.current_avg_price_gross, 0.0); // Avg price gross reset
+        assert_eq!(meta.current_fees_total, 0.0); // Fees reset
     }
 
     #[test]
-    fn test_update_from_trade() {
+    fn test_update_from_trade()
+    {
         let mut meta = PositionMeta::create_from_trade(&create_test_trade());
-        let new_trade = ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp: 1625248600,
-            trade_id: ClientTradeId::from(1),  // This works fine
-            order_id: OrderId::new(1625247600, 1, 1),  // Use the constructor for OrderId
-            cid: None,
-            instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
-            side: Side::Buy,
-            price: 60_000.0,
-            size: 1.0,
-            fees: 2.0,
-        };
+        let new_trade = ClientTrade { exchange: Exchange::SandBox,
+                                      timestamp: 1625248600,
+                                      trade_id: ClientTradeId::from(1),         // This works fine
+                                      order_id: OrderId::new(1625247600, 1, 1), // Use the constructor for OrderId
+                                      cid: None,
+                                      instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
+                                      side: Side::Buy,
+                                      price: 60_000.0,
+                                      size: 1.0,
+                                      fees: 2.0 };
 
         meta.update_from_trade(&new_trade, 62_000.0);
 
-        assert_eq!(meta.current_size, 2.0);  // Size should be updated
-        assert_eq!(meta.current_avg_price, 55_000.0);  // The avg price should be exactly 55,000.0
-        assert_eq!(meta.current_symbol_price, 62_000.0);  // Symbol price updated
-        assert_eq!(meta.current_fees_total, 4.0);  // Fees should accumulate
+        assert_eq!(meta.current_size, 2.0); // Size should be updated
+        assert_eq!(meta.current_avg_price, 55_000.0); // The avg price should be exactly 55,000.0
+        assert_eq!(meta.current_symbol_price, 62_000.0); // Symbol price updated
+        assert_eq!(meta.current_fees_total, 4.0); // Fees should accumulate
     }
 }

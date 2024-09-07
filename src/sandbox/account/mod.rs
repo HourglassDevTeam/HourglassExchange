@@ -1,13 +1,13 @@
-use crate::common::account_positions::future::{FuturePosition, FuturePositionConfig};
-use crate::common::account_positions::leveraged_token::LeveragedTokenPosition;
-use crate::common::account_positions::option::OptionPosition;
-use crate::common::account_positions::perpetual::PerpetualPositionConfig;
-use crate::common::account_positions::position_meta::PositionMeta;
 use crate::{
     common::{
         account_positions::{
-            perpetual::PerpetualPosition, AccountPositions, Position,
-            PositionDirectionMode, PositionMarginMode,
+            exited_positions::AccountExitedPositions,
+            future::{FuturePosition, FuturePositionConfig},
+            leveraged_token::LeveragedTokenPosition,
+            option::OptionPosition,
+            perpetual::{PerpetualPosition, PerpetualPositionConfig},
+            position_meta::PositionMeta,
+            AccountPositions, Position, PositionDirectionMode, PositionMarginMode,
         },
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
@@ -25,7 +25,7 @@ use crate::{
     error::ExchangeError,
     sandbox::{
         account::account_config::SandboxMode,
-        clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
+        clickhouse_api::datatype::{clickhouse_trade_data::MarketTrade, single_level_order_book::SingleLevelOrderBook},
     },
     Exchange,
 };
@@ -40,6 +40,7 @@ use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
+use std::collections::HashMap;
 /// FIXME respond function is not used in some of the functions.
 use std::{
     fmt::Debug,
@@ -49,12 +50,9 @@ use std::{
     },
     time::{SystemTime, UNIX_EPOCH},
 };
-use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 use uuid::Uuid;
-use crate::common::account_positions::exited_positions::AccountExitedPositions;
-use crate::sandbox::clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook;
 
 pub mod account_config;
 pub mod account_latency;
@@ -67,18 +65,16 @@ pub struct Account
 //       Statistic: Initialiser + PositionSummariser,
 {
     pub current_session: Uuid,
-    pub machine_id: u64,                                 // 机器ID
-    pub exchange_timestamp: AtomicI64,                   // 交易所时间戳
-    pub account_event_tx: UnboundedSender<AccountEvent>, // 帐户事件发送器
-    pub config: AccountConfig,                           // 帐户配置
-    pub orders: Arc<RwLock<AccountOrders>>,              // 帐户订单集合
-    pub single_level_order_book:Arc<Mutex<HashMap<Instrument, SingleLevelOrderBook>>>, // 将最新的价格存到订单簿里面去
-    pub balances: DashMap<Token, Balance>,               // 每个币种的细分余额
-    pub positions: AccountPositions,                     // 帐户持仓
-    pub exited_positions: AccountExitedPositions
-    // pub vault: Vault,
+    pub machine_id: u64,                                                                // 机器ID
+    pub exchange_timestamp: AtomicI64,                                                  // 交易所时间戳
+    pub account_event_tx: UnboundedSender<AccountEvent>,                                // 帐户事件发送器
+    pub config: AccountConfig,                                                          // 帐户配置
+    pub orders: Arc<RwLock<AccountOrders>>,                                             // 帐户订单集合
+    pub single_level_order_book: Arc<Mutex<HashMap<Instrument, SingleLevelOrderBook>>>, // 将最新的价格存到订单簿里面去
+    pub balances: DashMap<Token, Balance>,                                              // 每个币种的细分余额
+    pub positions: AccountPositions,                                                    // 帐户持仓
+    pub exited_positions: AccountExitedPositions,                                       // pub vault: Vault,
 }
-
 
 // 手动实现 Clone trait
 impl Clone for Account
@@ -91,12 +87,10 @@ impl Clone for Account
                   account_event_tx: self.account_event_tx.clone(),
                   config: self.config.clone(),
                   orders: Arc::clone(&self.orders),
-            single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
-            balances: self.balances.clone(),
+                  single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
+                  balances: self.balances.clone(),
                   positions: self.positions.clone(),
-                  exited_positions: self.exited_positions.clone()
-        }
-
+                  exited_positions: self.exited_positions.clone() }
     }
 }
 #[derive(Debug)]
@@ -127,8 +121,7 @@ impl AccountInitiator
                            orders: None,
                            balances: None,
                            positions: None,
-                            closed_positions:None,
-        }
+                           closed_positions: None }
     }
 
     pub fn account_event_tx(mut self, value: UnboundedSender<AccountEvent>) -> Self
@@ -171,16 +164,14 @@ impl AccountInitiator
                      orders: self.orders.ok_or("orders are required")?,
                      balances: self.balances.ok_or("balances are required")?,
                      positions: self.positions.ok_or("positions are required")?,
-            single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
-            exited_positions: self.closed_positions.ok_or("closed_positions sink are required")?
-        })
+                     single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
+                     exited_positions: self.closed_positions.ok_or("closed_positions sink are required")? })
     }
 }
 
 impl Account
 {
     /// [PART 1] - [账户初始化与配置]
-    ///
     pub fn initiate() -> AccountInitiator
     {
         AccountInitiator::new()
@@ -196,9 +187,9 @@ impl Account
         for token_str in tokens {
             let token = Token(token_str);
             self.balances.entry(token.clone()).or_insert_with(|| Balance { time: Utc::now(),
-                current_price: 1.0, // 假设初始价格为 1.0，具体根据实际情况调整
-                total: 0.0,
-                available: 0.0 });
+                                                                           current_price: 1.0, // 假设初始价格为 1.0，具体根据实际情况调整
+                                                                           total: 0.0,
+                                                                           available: 0.0 });
         }
         Ok(())
     }
@@ -218,11 +209,11 @@ impl Account
     fn deposit_coin(&mut self, token: Token, amount: f64) -> Result<TokenBalance, ExchangeError>
     {
         let mut balance = self.balances.entry(token.clone()).or_insert_with(|| {
-            Balance { time: Utc::now(),
-                current_price: 1.0, // 假设稳定币价格为1.0
-                total: 0.0,
-                available: 0.0 }
-        });
+                                                                Balance { time: Utc::now(),
+                                                                          current_price: 1.0, // 假设稳定币价格为1.0
+                                                                          total: 0.0,
+                                                                          available: 0.0 }
+                                                            });
 
         balance.total += amount;
         balance.available += amount;
@@ -314,17 +305,16 @@ impl Account
 
         // 更新 USDT 余额
         let usdt_delta = BalanceDelta { total: -usdt_amount,
-            available: -usdt_amount };
+                                        available: -usdt_amount };
         let updated_usdt_balance = self.apply_balance_delta(&usdt_token, usdt_delta);
 
         // 更新 BTC 余额
         let btc_delta = BalanceDelta { total: btc_amount,
-            available: btc_amount };
+                                       available: btc_amount };
         let updated_btc_balance = self.apply_balance_delta(&btc_token, btc_delta);
 
         Ok(vec![TokenBalance::new(usdt_token, updated_usdt_balance), TokenBalance::new(btc_token, updated_btc_balance),])
     }
-
 
     /// [PART 2] - [订单管理].
     pub async fn fetch_orders_open_and_respond(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExchangeError>>)
@@ -332,8 +322,6 @@ impl Account
         let orders = self.orders.read().await.fetch_all();
         respond(response_tx, Ok(orders));
     }
-
-
 
     /// 处理多个开仓订单请求，并执行相应操作。
     ///
@@ -357,9 +345,7 @@ impl Account
     ///
     /// - 如果 `reduce only` 订单的方向与现有持仓方向相同，则拒绝该订单，并继续处理下一个订单。
     /// - 如果在 `NetMode` 下存在方向冲突，则跳过该订单并继续处理下一个订单。
-    ///
-    pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Open>, ExchangeError>>>)
-                             -> Result<(), ExchangeError>
+    pub async fn open_orders(&mut self, open_requests: Vec<Order<RequestOpen>>, response_tx: Sender<Vec<Result<Order<Open>, ExchangeError>>>) -> Result<(), ExchangeError>
     {
         let mut open_results = Vec::new();
 
@@ -376,20 +362,21 @@ impl Account
 
                     // 如果已有相同方向的仓位，则拒绝 reduce only 订单
                     match request.side {
-                        Side::Buy => {
+                        | Side::Buy => {
                             if long_pos.is_some() {
                                 open_results.push(Err(ExchangeError::InvalidDirection));
                                 continue; // 跳过这个订单
                             }
                         }
-                        Side::Sell => {
+                        | Side::Sell => {
                             if short_pos.is_some() {
                                 open_results.push(Err(ExchangeError::InvalidDirection));
                                 continue; // 跳过这个订单
                             }
                         }
                     }
-                } else if let Err(err) = self.check_position_direction_conflict(&request.instrument, request.side, request.state.reduce_only).await {
+                }
+                else if let Err(err) = self.check_position_direction_conflict(&request.instrument, request.side, request.state.reduce_only).await {
                     open_results.push(Err(err));
                     continue; // 跳过这个订单，处理下一个
                 }
@@ -397,18 +384,18 @@ impl Account
 
             // 处理订单请求
             let processed_request = match self.config.execution_mode {
-                SandboxMode::Backtest => self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await,
-                _ => request, // 实时模式下直接使用原始请求
+                | SandboxMode::Backtest => self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await,
+                | _ => request, // 实时模式下直接使用原始请求
             };
 
             // 计算当前价格
             let current_price = match processed_request.side {
-                Side::Buy => {
+                | Side::Buy => {
                     let token = &processed_request.instrument.base;
                     let balance = self.get_balance(token)?;
                     balance.current_price
                 }
-                Side::Sell => {
+                | Side::Sell => {
                     let token = &processed_request.instrument.quote;
                     let balance = self.get_balance(token)?;
                     balance.current_price
@@ -427,7 +414,8 @@ impl Account
         Ok(())
     }
 
-    pub async fn attempt_atomic_open(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError> {
+    pub async fn attempt_atomic_open(&mut self, current_price: f64, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError>
+    {
         // 验证订单的基本合法性
         Self::validate_order_instruction(order.instruction)?;
 
@@ -435,20 +423,16 @@ impl Account
         if order.instruction == OrderInstruction::PostOnly {
             // 使用 current_price 进行检查，确保订单不会立即撮合
             match order.side {
-                Side::Buy => {
+                | Side::Buy => {
                     // 如果买单的价格大于等于当前价格，订单可能会立即撮合为 Taker
                     if order.state.price >= current_price {
-                        return Err(ExchangeError::PostOnlyViolation(
-                            "PostOnly Buy order would immediately match the market price".into(),
-                        ));
+                        return Err(ExchangeError::PostOnlyViolation("PostOnly Buy order would immediately match the market price".into()));
                     }
                 }
-                Side::Sell => {
+                | Side::Sell => {
                     // 如果卖单的价格小于等于当前价格，订单可能会立即撮合为 Taker
                     if order.state.price <= current_price {
-                        return Err(ExchangeError::PostOnlyViolation(
-                            "PostOnly Sell order would immediately match the market price".into(),
-                        ));
+                        return Err(ExchangeError::PostOnlyViolation("PostOnly Sell order would immediately match the market price".into()));
                     }
                 }
             }
@@ -475,11 +459,9 @@ impl Account
 
         // 使用 `send_account_event` 发送余额和订单事件
         self.send_account_event(balance_event)?;
-        let order_event = AccountEvent {
-            exchange_timestamp,
-            exchange: Exchange::SandBox,
-            kind: AccountEventKind::OrdersOpen(vec![open_order.clone()]),
-        };
+        let order_event = AccountEvent { exchange_timestamp,
+                                         exchange: Exchange::SandBox,
+                                         kind: AccountEventKind::OrdersOpen(vec![open_order.clone()]) };
 
         self.send_account_event(order_event)?;
         Ok(open_order)
@@ -532,20 +514,18 @@ impl Account
 
         Ok(())
     }
-    pub fn validate_order_request_cancel(order: &Order<RequestCancel>) -> Result<(), ExchangeError> {
+
+    pub fn validate_order_request_cancel(order: &Order<RequestCancel>) -> Result<(), ExchangeError>
+    {
         // 检查是否提供了有效的 OrderId 或 ClientOrderId
         if order.state.id.is_none() && order.cid.is_none() {
-            return Err(ExchangeError::InvalidRequestCancel(
-                "Both OrderId and ClientOrderId are missing".into(),
-            ));
+            return Err(ExchangeError::InvalidRequestCancel("Both OrderId and ClientOrderId are missing".into()));
         }
 
         // 如果提供了 OrderId，则检查其是否有效
         if let Some(id) = &order.state.id {
             if id.value() == 0 {
-                return Err(ExchangeError::InvalidRequestCancel(
-                    "OrderId is missing or invalid".into(),
-                ));
+                return Err(ExchangeError::InvalidRequestCancel("OrderId is missing or invalid".into()));
             }
         }
 
@@ -553,17 +533,13 @@ impl Account
         if let Some(cid) = &order.cid {
             // 使用 `validate_id_format` 方法验证 ClientOrderId 格式
             if !ClientOrderId::validate_id_format(&cid.0) {
-                return Err(ExchangeError::InvalidRequestCancel(
-                    format!("Invalid ClientOrderId format: {}", cid.0),
-                ));
+                return Err(ExchangeError::InvalidRequestCancel(format!("Invalid ClientOrderId format: {}", cid.0)));
             }
         }
 
         // 检查基础货币和报价货币是否相同
         if order.instrument.base == order.instrument.quote {
-            return Err(ExchangeError::InvalidRequestCancel(
-                "Base and Quote tokens must be different".into(),
-            ));
+            return Err(ExchangeError::InvalidRequestCancel("Base and Quote tokens must be different".into()));
         }
 
         Ok(())
@@ -572,15 +548,14 @@ impl Account
     pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExchangeError>>>)
     {
         let cancel_futures = cancel_requests.into_iter().map(|request| {
-            let mut this = self.clone();
-            async move { this.atomic_cancel(request).await }
-        });
+                                                            let mut this = self.clone();
+                                                            async move { this.atomic_cancel(request).await }
+                                                        });
 
         // 等待所有的取消操作完成
         let cancel_results = join_all(cancel_futures).await;
         response_tx.send(cancel_results).unwrap_or(());
     }
-
 
     /// 原子性取消订单并更新相关的账户状态。
     ///
@@ -624,11 +599,11 @@ impl Account
 
             // 根据订单方向（买/卖）处理相应的订单集
             match request.side {
-                Side::Buy => {
+                | Side::Buy => {
                     let index = Self::find_matching_order(&orders.bids, &request)?;
                     orders.bids.remove(index)
                 }
-                Side::Sell => {
+                | Side::Sell => {
                     let index = Self::find_matching_order(&orders.asks, &request)?;
                     orders.asks.remove(index)
                 }
@@ -637,8 +612,8 @@ impl Account
 
         // 处理取消订单后的余额更新
         let balance_event = match self.apply_cancel_order_changes(&removed_order) {
-            Ok(event) => event,
-            Err(e) => return Err(e), // 如果更新余额时发生错误，返回错误
+            | Ok(event) => event,
+            | Err(e) => return Err(e), // 如果更新余额时发生错误，返回错误
         };
 
         // 将订单从 `Order<Open>` 转换为 `Order<Cancelled>`
@@ -648,19 +623,17 @@ impl Account
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
         // 发送订单取消事件
-        let orders_cancelled_event = AccountEvent {
-            exchange_timestamp,
-            exchange: Exchange::SandBox,
-            kind: AccountEventKind::OrdersCancelled(vec![cancelled_order.clone()]),
-        };
+        let orders_cancelled_event = AccountEvent { exchange_timestamp,
+                                                    exchange: Exchange::SandBox,
+                                                    kind: AccountEventKind::OrdersCancelled(vec![cancelled_order.clone()]) };
 
         // 发送账户事件
         self.send_account_event(orders_cancelled_event)?;
         self.send_account_event(balance_event)?;
 
-
         Ok(cancelled_order)
     }
+
     pub async fn cancel_orders_all(&mut self, response_tx: Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>)
     {
         // 获取所有打开的订单
@@ -671,14 +644,14 @@ impl Account
 
         // 将所有打开的订单转换为取消请求
         let cancel_requests: Vec<Order<RequestCancel>> = orders_to_cancel.into_iter()
-            .map(|order| Order { state: RequestCancel { id: Some(order.state.id) },
-                instrument: order.instrument,
-                side: order.side,
-                instruction: order.instruction,
-                cid: order.cid,
-                exchange: Exchange::SandBox,
-                timestamp: self.exchange_timestamp.load(Ordering::SeqCst) })
-            .collect();
+                                                                         .map(|order| Order { state: RequestCancel { id: Some(order.state.id) },
+                                                                                              instrument: order.instrument,
+                                                                                              side: order.side,
+                                                                                              instruction: order.instruction,
+                                                                                              cid: order.cid,
+                                                                                              exchange: Exchange::SandBox,
+                                                                                              timestamp: self.exchange_timestamp.load(Ordering::SeqCst) })
+                                                                         .collect();
 
         // 调用现有的 cancel_orders 方法
         let (tx, rx) = oneshot::channel();
@@ -689,56 +662,56 @@ impl Account
             | Ok(results) => {
                 let cancelled_orders: Vec<_> = results.into_iter().collect::<Result<Vec<_>, _>>().expect("Failed to collect cancel results");
                 response_tx.send(Ok(cancelled_orders)).unwrap_or_else(|_| {
-                    eprintln!("[UniLinkEx] : Failed to send cancel_orders_all response");
-                });
+                                                          eprintln!("[UniLinkEx] : Failed to send cancel_orders_all response");
+                                                      });
             }
             | Err(_) => {
                 response_tx.send(Err(ExchangeError::InternalError("Failed to receive cancel results".to_string())))
-                    .unwrap_or_else(|_| {
-                        eprintln!("[UniLinkEx] : Failed to send cancel_orders_all error response");
-                    });
+                           .unwrap_or_else(|_| {
+                               eprintln!("[UniLinkEx] : Failed to send cancel_orders_all error response");
+                           });
             }
         }
     }
 
-/// [PART 3] - 仓位管理
+    /// [PART 3] - 仓位管理
 
-/// 获取指定 `Instrument` 的多头仓位
-pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>
-{
-    let positions = &self.positions;
+    /// 获取指定 `Instrument` 的多头仓位
+    pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>
+    {
+        let positions = &self.positions;
 
-    match instrument.kind {
-        | InstrumentKind::Spot => {
-            return Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)));
-        }
-        | InstrumentKind::Perpetual => {
-            let perpetual_positions = &positions.perpetual_pos_long;
+        match instrument.kind {
+            | InstrumentKind::Spot => {
+                return Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)));
+            }
+            | InstrumentKind::Perpetual => {
+                let perpetual_positions = &positions.perpetual_pos_long;
 
-            // 获取读锁
-            let read_lock = perpetual_positions.read().await;
+                // 获取读锁
+                let read_lock = perpetual_positions.read().await;
 
-            // 在读锁上调用 `iter()` 遍历 HashMap
-            if let Some(position) = read_lock.iter().find(|(_, pos)| pos.meta.instrument == *instrument) {
-                return Ok(Some(Position::Perpetual(position.1.clone())));
+                // 在读锁上调用 `iter()` 遍历 HashMap
+                if let Some(position) = read_lock.iter().find(|(_, pos)| pos.meta.instrument == *instrument) {
+                    return Ok(Some(Position::Perpetual(position.1.clone())));
+                }
+            }
+            | InstrumentKind::Future => {
+                todo!()
+            }
+            | InstrumentKind::CryptoOption => {
+                todo!()
+            }
+            | InstrumentKind::CryptoLeveragedToken => {
+                todo!()
+            }
+            | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
+                todo!("Commodity positions are not yet implemented");
             }
         }
-        | InstrumentKind::Future => {
-            todo!()
-        }
-        | InstrumentKind::CryptoOption => {
-            todo!()
-        }
-        | InstrumentKind::CryptoLeveragedToken => {
-            todo!()
-        }
-        | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
-            todo!("Commodity positions are not yet implemented");
-        }
-    }
 
-    Ok(None) // 没有找到对应的仓位
-}
+        Ok(None) // 没有找到对应的仓位
+    }
 
     /// 获取指定 `Instrument` 的空头仓位
     pub async fn get_position_short(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>
@@ -746,10 +719,10 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         let positions = &self.positions; // 获取锁
 
         match instrument.kind {
-            InstrumentKind::Spot => {
+            | InstrumentKind::Spot => {
                 return Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument)));
             }
-            InstrumentKind::Perpetual => {
+            | InstrumentKind::Perpetual => {
                 let perpetual_positions = &positions.perpetual_pos_short;
 
                 // 获取读锁
@@ -760,16 +733,16 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                     return Ok(Some(Position::Perpetual(position.clone())));
                 }
             }
-            InstrumentKind::Future => {
+            | InstrumentKind::Future => {
                 todo!()
             }
-            InstrumentKind::CryptoOption => {
+            | InstrumentKind::CryptoOption => {
                 todo!()
             }
-            InstrumentKind::CryptoLeveragedToken => {
+            | InstrumentKind::CryptoLeveragedToken => {
                 todo!()
             }
-            InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
+            | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
                 todo!("Commodity positions are not yet implemented");
             }
         }
@@ -777,15 +750,13 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         Ok(None) // 没有找到对应的仓位
     }
 
-
-
     pub async fn get_position_both_ways(&self, instrument: &Instrument) -> Result<(Option<Position>, Option<Position>), ExchangeError>
     {
         let positions = &self.positions; // 获取锁
 
         match instrument.kind {
-            InstrumentKind::Spot => Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument))),
-            InstrumentKind::Perpetual => {
+            | InstrumentKind::Spot => Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument))),
+            | InstrumentKind::Perpetual => {
                 // 获取读锁
                 let long_pos_lock = positions.perpetual_pos_long.read().await;
                 let short_pos_lock = positions.perpetual_pos_short.read().await;
@@ -796,16 +767,16 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
 
                 Ok((long_pos, short_pos))
             }
-            InstrumentKind::Future => {
+            | InstrumentKind::Future => {
                 todo!()
             }
-            InstrumentKind::CryptoOption => {
+            | InstrumentKind::CryptoOption => {
                 todo!()
             }
-            InstrumentKind::CryptoLeveragedToken => {
+            | InstrumentKind::CryptoLeveragedToken => {
                 todo!()
             }
-            InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
+            | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
                 todo!("Commodity positions are not yet implemented");
             }
         }
@@ -829,7 +800,6 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         respond(response_tx, Ok(position));
     }
 
-
     /// 检查给定的 `new_order_side` 是否与现有仓位方向冲突，并根据 `is_reduce_only` 标志做出相应处理。
     ///
     /// ### 参数:
@@ -849,24 +819,20 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     /// ### 错误:
     /// - `ExchangeError::InvalidDirection`: 当存在方向冲突时。
     /// - `ExchangeError::NotImplemented`: 当 `InstrumentKind` 不支持检查时。
-    pub async fn check_position_direction_conflict(
-        &self,
-        instrument: &Instrument,
-        new_order_side: Side,
-        is_reduce_only: bool // 添加reduce_only标志
-    ) -> Result<(), ExchangeError> {
+    pub async fn check_position_direction_conflict(&self,
+                                                   instrument: &Instrument,
+                                                   new_order_side: Side,
+                                                   is_reduce_only: bool /* 添加reduce_only标志 */)
+                                                   -> Result<(), ExchangeError>
+    {
         let positions_lock = &self.positions;
 
         match instrument.kind {
             | InstrumentKind::Spot => {
-                return Err(ExchangeError::NotImplemented(
-                    "Spot account_positions conflict check not implemented".into(),
-                ));
+                return Err(ExchangeError::NotImplemented("Spot account_positions conflict check not implemented".into()));
             }
             | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
-                return Err(ExchangeError::NotImplemented(
-                    "Commodity account_positions conflict check not implemented".into(),
-                ));
+                return Err(ExchangeError::NotImplemented("Commodity account_positions conflict check not implemented".into()));
             }
             | InstrumentKind::Perpetual => {
                 // 获取读锁
@@ -874,12 +840,8 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 let short_pos_read_lock = positions_lock.perpetual_pos_short.read().await;
 
                 // 在持有读锁的情况下调用 `iter()` 遍历 HashMap
-                let long_position_exists = long_pos_read_lock
-                    .iter()
-                    .any(|(_, pos)| pos.meta.instrument == *instrument);
-                let short_position_exists = short_pos_read_lock
-                    .iter()
-                    .any(|(_, pos)| pos.meta.instrument == *instrument);
+                let long_position_exists = long_pos_read_lock.iter().any(|(_, pos)| pos.meta.instrument == *instrument);
+                let short_position_exists = short_pos_read_lock.iter().any(|(_, pos)| pos.meta.instrument == *instrument);
 
                 // 如果订单是 reduce only，允许方向冲突
                 if is_reduce_only {
@@ -887,9 +849,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 }
 
                 // 如果存在与订单方向相反的仓位，返回错误
-                if (new_order_side == Side::Buy && short_position_exists)
-                    || (new_order_side == Side::Sell && long_position_exists)
-                {
+                if (new_order_side == Side::Buy && short_position_exists) || (new_order_side == Side::Sell && long_position_exists) {
                     return Err(ExchangeError::InvalidDirection);
                 }
             }
@@ -898,12 +858,8 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 let long_pos_read_lock = positions_lock.futures_pos_long.read().await;
                 let short_pos_read_lock = positions_lock.futures_pos_short.read().await;
 
-                let long_position_exists = long_pos_read_lock
-                    .iter()
-                    .any(|(_, pos)| pos.meta.instrument == *instrument);
-                let short_position_exists = short_pos_read_lock
-                    .iter()
-                    .any(|(_, pos)| pos.meta.instrument == *instrument);
+                let long_position_exists = long_pos_read_lock.iter().any(|(_, pos)| pos.meta.instrument == *instrument);
+                let short_position_exists = short_pos_read_lock.iter().any(|(_, pos)| pos.meta.instrument == *instrument);
 
                 // 如果订单是 reduce only，允许方向冲突
                 if is_reduce_only {
@@ -911,38 +867,28 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 }
 
                 // 如果存在与订单方向相反的仓位，返回错误
-                if (new_order_side == Side::Buy && short_position_exists)
-                    || (new_order_side == Side::Sell && long_position_exists)
-                {
+                if (new_order_side == Side::Buy && short_position_exists) || (new_order_side == Side::Sell && long_position_exists) {
                     return Err(ExchangeError::InvalidDirection);
                 }
             }
             | InstrumentKind::CryptoOption | InstrumentKind::CryptoLeveragedToken => {
-                return Err(ExchangeError::NotImplemented(
-                    "Position conflict check for this instrument kind not implemented".into(),
-                ));
+                return Err(ExchangeError::NotImplemented("Position conflict check for this instrument kind not implemented".into()));
             }
         }
 
         Ok(())
     }
 
-
-
     /// 更新 PerpetualPosition 的方法
     async fn create_perpetual_position(&mut self, trade: ClientTrade) -> Result<PerpetualPosition, ExchangeError>
     {
         let meta = PositionMeta::create_from_trade(&trade);
-        let new_position = PerpetualPosition {
-            meta,
-            pos_config: PerpetualPositionConfig {
-                pos_margin_mode: self.config.position_margin_mode.clone(),
-                leverage: self.config.account_leverage_rate,
-                position_mode: self.config.position_direction_mode.clone(),
-            },
-            liquidation_price: 0.0,
-            margin: 0.0,
-        };
+        let new_position = PerpetualPosition { meta,
+                                               pos_config: PerpetualPositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
+                                                                                     leverage: self.config.account_leverage_rate,
+                                                                                     position_mode: self.config.position_direction_mode.clone() },
+                                               liquidation_price: 0.0,
+                                               margin: 0.0 };
         Ok(new_position)
     }
 
@@ -951,19 +897,16 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     async fn create_future_position(&mut self, trade: ClientTrade) -> Result<FuturePosition, ExchangeError>
     {
         let meta = PositionMeta::create_from_trade(&trade);
-        let new_position = FuturePosition {
-            meta,
-            pos_config: FuturePositionConfig {
-                pos_margin_mode: self.config.position_margin_mode.clone(),
-                leverage: self.config.account_leverage_rate,
-                position_mode: self.config.position_direction_mode.clone(),
-            },
-            liquidation_price: 0.0,
-            margin: 0.0, // TODO : To Be Checked
-            funding_fee: 0.0, // TODO : To Be Checked
-        };
+        let new_position = FuturePosition { meta,
+                                            pos_config: FuturePositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
+                                                                               leverage: self.config.account_leverage_rate,
+                                                                               position_mode: self.config.position_direction_mode.clone() },
+                                            liquidation_price: 0.0,
+                                            margin: 0.0,      // TODO : To Be Checked
+                                            funding_fee: 0.0  /* TODO : To Be Checked */ };
         Ok(new_position)
     }
+
     #[allow(dead_code)]
 
     /// 更新 OptionPosition 的方法（占位符）
@@ -984,18 +927,18 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     ///
     /// 检查在`AccountPositions`中是否已经存在该`instrument`的某个仓位
     /// 需要首先从 open 订单中确定 InstrumentKind, 因为仓位类型各不相同
-    ///
-    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExchangeError> {
+    pub async fn any_position_open(&self, open: &Order<Open>) -> Result<bool, ExchangeError>
+    {
         let positions_lock = &self.positions; // 获取锁
 
         match open.side {
-            Side::Buy => {
+            | Side::Buy => {
                 // 检查是否持有多头仓位
                 if positions_lock.has_long_position(&open.instrument).await {
                     return Ok(true);
                 }
             }
-            Side::Sell => {
+            | Side::Sell => {
                 // 检查是否持有空头仓位
                 if positions_lock.has_short_position(&open.instrument).await {
                     return Ok(true);
@@ -1006,26 +949,25 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         Ok(false)
     }
 
-
     /// 根据[PositionDirectionMode]分流
-    ///
-    pub async fn update_position_from_client_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+    pub async fn update_position_from_client_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
+    {
         println!("[UniLinkEx] : Received a new trade: {:#?}", trade);
 
         match trade.instrument.kind {
-            InstrumentKind::Perpetual => {
+            | InstrumentKind::Perpetual => {
                 match self.config.position_direction_mode {
-                    PositionDirectionMode::Net => {
+                    | PositionDirectionMode::Net => {
                         // Net Mode 逻辑
                         self.update_position_net_mode(trade).await?;
                     }
-                    PositionDirectionMode::LongShort => {
+                    | PositionDirectionMode::LongShort => {
                         // LongShort Mode 逻辑
                         self.update_position_long_short_mode(trade).await?;
                     }
                 }
             }
-            _ => {
+            | _ => {
                 println!("[UniLinkEx] : Unsupported yet or illegal instrument kind.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
@@ -1034,9 +976,10 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         Ok(())
     }
 
-    pub async fn update_position_long_short_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+    pub async fn update_position_long_short_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
+    {
         match trade.side {
-            Side::Buy => {
+            | Side::Buy => {
                 println!("[UniLinkEx] : Processing Buy trade for Long/Short Mode...");
 
                 // 获取写锁更新或创建多头仓位
@@ -1045,7 +988,8 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                     // 如果已经持有多头仓位，更新仓位
                     println!("[UniLinkEx] : Updating existing long position...");
                     position.meta.update_from_trade(&trade, trade.price);
-                } else {
+                }
+                else {
                     // 显式释放写锁
                     drop(long_positions);
 
@@ -1058,7 +1002,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 }
             }
 
-            Side::Sell => {
+            | Side::Sell => {
                 println!("[UniLinkEx] : Processing Sell trade for Long/Short Mode...");
 
                 // 获取写锁更新或创建空头仓位
@@ -1067,7 +1011,8 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                     // 如果已经持有空头仓位，更新仓位
                     println!("[UniLinkEx] : Updating existing short position...");
                     position.meta.update_from_trade(&trade, trade.price);
-                } else {
+                }
+                else {
                     // 显式释放写锁
                     drop(short_positions);
 
@@ -1085,13 +1030,14 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     }
 
     /// 注意 这个函数是可以用来从客户端收到的交易中更新仓位，但是目前只适合 [PositionDirectionMode::Net Mode].
-    pub async fn update_position_net_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+    pub async fn update_position_net_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
+    {
         println!("[UniLinkEx] : Received a new trade: {:#?}", trade);
 
         match trade.instrument.kind {
-            InstrumentKind::Perpetual => {
+            | InstrumentKind::Perpetual => {
                 match trade.side {
-                    Side::Buy => {
+                    | Side::Buy => {
                         println!("[UniLinkEx] : Processing long trade for Perpetual...");
 
                         // 使用写锁更新或创建多头仓位
@@ -1113,7 +1059,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                         println!("[UniLinkEx] : New long position created: {:#?}", long_positions);
                     }
 
-                    Side::Sell => {
+                    | Side::Sell => {
                         println!("[UniLinkEx] : Processing short trade for Perpetual...");
 
                         let should_remove_position;
@@ -1127,19 +1073,16 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 should_remove_position = position.meta.current_size == trade.size;
                                 should_remove_and_reverse = position.meta.current_size < trade.size;
                                 remaining_quantity = trade.size - position.meta.current_size;
-                            } else {
+                            }
+                            else {
                                 // 没有多头仓位，无需进一步处理
                                 println!("[UniLinkEx] : No existing long position, creating a new short position...");
-                                let new_position = PerpetualPosition {
-                                    meta: PositionMeta::create_from_trade(&trade),
-                                    pos_config: PerpetualPositionConfig {
-                                        pos_margin_mode: self.config.position_margin_mode.clone(),
-                                        leverage: self.config.account_leverage_rate,
-                                        position_mode: self.config.position_direction_mode.clone(),
-                                    },
-                                    liquidation_price: 0.0,
-                                    margin: 0.0,
-                                };
+                                let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade(&trade),
+                                                                       pos_config: PerpetualPositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
+                                                                                                             leverage: self.config.account_leverage_rate,
+                                                                                                             position_mode: self.config.position_direction_mode.clone() },
+                                                                       liquidation_price: 0.0,
+                                                                       margin: 0.0 };
                                 self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
                                 println!("[UniLinkEx] : New short position created: {:#?}", self.positions.perpetual_pos_short);
                                 return Ok(());
@@ -1162,7 +1105,6 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 // 从长仓位映射中移除该仓位
                                 long_positions_write.remove(&trade.instrument);
                             }
-
                             else if should_remove_and_reverse {
                                 println!("[UniLinkEx] : 移除并反向开仓...");
                                 // NOTE 这是更新和记录平仓仓位的逻辑
@@ -1177,19 +1119,16 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                                 // 显式释放对 long_positions_write 的写锁
                                 drop(long_positions_write);
                                 // 基于交易创建新的空头仓位
-                                let new_position = PerpetualPosition {
-                                    meta: PositionMeta::create_from_trade_with_remaining(&trade, Side::Sell, remaining_quantity),
-                                    pos_config: PerpetualPositionConfig {
-                                        pos_margin_mode: self.config.position_margin_mode.clone(),
-                                        leverage: self.config.account_leverage_rate,
-                                        position_mode: self.config.position_direction_mode.clone(),
-                                    },
-                                    liquidation_price: 0.0,
-                                    margin: 0.0,
-                                };
+                                let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, Side::Sell, remaining_quantity),
+                                                                       pos_config: PerpetualPositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
+                                                                                                             leverage: self.config.account_leverage_rate,
+                                                                                                             position_mode: self.config.position_direction_mode.clone() },
+                                                                       liquidation_price: 0.0,
+                                                                       margin: 0.0 };
                                 // 将新的空头仓位插入空头仓位映射中
                                 self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
-                            } else {
+                            }
+                            else {
                                 // 处理部分平仓
                                 println!("[UniLinkEx] : 部分平仓多头仓位...");
 
@@ -1203,17 +1142,17 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 }
             }
 
-            InstrumentKind::Future => {
+            | InstrumentKind::Future => {
                 println!("[UniLinkEx] : Futures trading is not yet supported.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
 
-            InstrumentKind::Spot => {
+            | InstrumentKind::Spot => {
                 println!("[UniLinkEx] : Spot trading is not yet supported.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
 
-            _ => {
+            | _ => {
                 println!("[UniLinkEx] : Unsupported instrument kind.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
@@ -1222,16 +1161,16 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         Ok(())
     }
 
-
     /// 在 create_position 过程中确保仓位的杠杆率不超过账户的最大杠杆率。  [TODO] : TO BE CHECKED & APPLIED
-    pub fn enforce_leverage_limits(&self, new_position: &PerpetualPosition) -> Result<(), ExchangeError> {
+    pub fn enforce_leverage_limits(&self, new_position: &PerpetualPosition) -> Result<(), ExchangeError>
+    {
         if new_position.pos_config.leverage > self.config.account_leverage_rate {
             Err(ExchangeError::InvalidLeverage(format!("Leverage is beyond configured rate: {}", new_position.pos_config.leverage)))
-        } else {
+        }
+        else {
             Ok(())
         }
     }
-
 
     /// [PART 4] - 余额管理
 
@@ -1239,8 +1178,6 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     {
         self.balances.clone().into_iter().map(|(token, balance)| TokenBalance::new(token, balance)).collect()
     }
-
-
 
     /// 返回指定[`Token`]的[`Balance`]的引用。
     pub fn get_balance(&self, token: &Token) -> Result<Ref<Token, Balance>, ExchangeError>
@@ -1257,7 +1194,6 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
             .get_mut(token)
             .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for Token: {:?}", token)))
     }
-
 
     pub async fn fetch_token_balances_and_respond(&self, response_tx: Sender<Result<Vec<TokenBalance>, ExchangeError>>)
     {
@@ -1279,7 +1215,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         // println!("[UniLinkEx] : Starting apply_open_order_changes: {:?}, with balance: {:?}", open, required_balance);
 
         // 配置从直接访问 `self.config` 获取
-        let position_margin_mode= self.config.position_margin_mode.clone();
+        let position_margin_mode = self.config.position_margin_mode.clone();
 
         // println!("[UniLinkEx] : Retrieved position_mode: {:?}, position_margin_mode: {:?}",
         //          position_mode, position_margin_mode);
@@ -1292,12 +1228,12 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
             | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Isolated) => match open.side {
                 | Side::Buy => {
                     let delta = BalanceDelta { total: 0.0,
-                        available: -required_balance };
+                                               available: -required_balance };
                     self.apply_balance_delta(&open.instrument.quote, delta);
                 }
                 | Side::Sell => {
                     let delta = BalanceDelta { total: 0.0,
-                        available: -required_balance };
+                                               available: -required_balance };
                     self.apply_balance_delta(&open.instrument.base, delta);
                 }
             },
@@ -1316,8 +1252,8 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         };
 
         Ok(AccountEvent { exchange_timestamp: self.exchange_timestamp.load(Ordering::SeqCst),
-            exchange: Exchange::SandBox,
-            kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)) })
+                          exchange: Exchange::SandBox,
+                          kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)) })
     }
 
     /// 当client取消[`Order<Open>`]时，更新相关的[`Token`] [`Balance`]。
@@ -1325,15 +1261,15 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     pub fn apply_cancel_order_changes(&mut self, cancelled: &Order<Open>) -> Result<AccountEvent, ExchangeError>
     {
         let updated_balance = match cancelled.side {
-            Side::Buy => {
+            | Side::Buy => {
                 let mut balance = self.get_balance_mut(&cancelled.instrument.quote)
-                    .expect("[UniLinkEx] : Balance existence checked when opening Order");
+                                      .expect("[UniLinkEx] : Balance existence checked when opening Order");
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
                 *balance
             }
-            Side::Sell => {
+            | Side::Sell => {
                 let mut balance = self.get_balance_mut(&cancelled.instrument.base)
-                    .expect("[UniLinkEx] : Balance existence checked when opening Order");
+                                      .expect("[UniLinkEx] : Balance existence checked when opening Order");
                 balance.available += cancelled.state.remaining_quantity();
                 *balance
             }
@@ -1341,17 +1277,14 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
 
         // 根据 `Side` 确定使用 `base` 或 `quote` 作为 `Token`
         let token = match cancelled.side {
-            Side::Buy => cancelled.instrument.quote.clone(),
-            Side::Sell => cancelled.instrument.base.clone(),
+            | Side::Buy => cancelled.instrument.quote.clone(),
+            | Side::Sell => cancelled.instrument.base.clone(),
         };
 
-        Ok(AccountEvent {
-            exchange_timestamp: self.exchange_timestamp.load(Ordering::SeqCst),
-            exchange: Exchange::SandBox,
-            kind: AccountEventKind::Balance(TokenBalance::new(token, updated_balance)),
-        })
+        Ok(AccountEvent { exchange_timestamp: self.exchange_timestamp.load(Ordering::SeqCst),
+                          exchange: Exchange::SandBox,
+                          kind: AccountEventKind::Balance(TokenBalance::new(token, updated_balance)) })
     }
-
 
     /// 从交易中更新余额并返回 [`AccountEvent`]
     pub async fn apply_trade_changes(&mut self, trade: &ClientTrade) -> Result<AccountEvent, ExchangeError>
@@ -1359,8 +1292,8 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         let Instrument { base, quote, kind, .. } = &trade.instrument;
         let fee = trade.fees; // 直接从 TradeEvent 中获取费用
         let side = trade.side; // 直接使用 TradeEvent 中的 side
-        // let trade_price = trade.price;
-        // let trade_quantity = trade.quantity;
+                               // let trade_price = trade.price;
+                               // let trade_quantity = trade.quantity;
 
         match kind {
             | InstrumentKind::Spot => {
@@ -1381,18 +1314,18 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                         let base_increase = trade.size;
                         // Note: available was already decreased by the opening of the Side::Buy order
                         let base_delta = BalanceDelta { total: base_increase,
-                            available: base_increase };
+                                                        available: base_increase };
                         let quote_delta = BalanceDelta { total: -trade.size * trade.price - fee,
-                            available: -fee };
+                                                         available: -fee };
                         (base_delta, quote_delta)
                     }
                     | Side::Sell => {
                         // Note: available was already decreased by the opening of the Side::Sell order
                         let base_delta = BalanceDelta { total: -trade.size,
-                            available: 0.0 };
+                                                        available: 0.0 };
                         let quote_increase = (trade.size * trade.price) - fee;
                         let quote_delta = BalanceDelta { total: quote_increase,
-                            available: quote_increase };
+                                                         available: quote_increase };
                         (base_delta, quote_delta)
                     }
                 };
@@ -1401,8 +1334,8 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
                 Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().expect("[UniLinkEx] : Failed to get exchange timestamp"),
-                    exchange: Exchange::SandBox,
-                    kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) })
+                                  exchange: Exchange::SandBox,
+                                  kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) })
             }
         }
     }
@@ -1417,10 +1350,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         *base_balance
     }
 
-
-
     /// FIXME 严重错误，current_price应该分`bid_price`和`ask_price`.
-    ///
     pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&'a Token, f64)
     {
         match order.instrument.kind {
@@ -1468,7 +1398,6 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         }
     }
 
-
     /// [PART 5] - [交易处理]
     ///
     ///
@@ -1512,8 +1441,7 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
 
         // 从市场交易事件的符号中解析基础货币和报价货币，并确定金融工具种类
         let base = Token::from(market_trade.parse_base().ok_or_else(|| ExchangeError::SandBox("Unknown base.".to_string()))?);
-        let quote = Token::from(market_trade.parse_quote().ok_or_else(|| ExchangeError::SandBox("Unknown quote.".to_string())
-        )?);
+        let quote = Token::from(market_trade.parse_quote().ok_or_else(|| ExchangeError::SandBox("Unknown quote.".to_string()))?);
         let kind = market_trade.parse_kind();
         let instrument = Instrument { base, quote, kind };
 
@@ -1522,29 +1450,31 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
             // 确定市场事件匹配的挂单方向（买或卖）
             if let Some(matching_side) = instrument_orders.determine_matching_side(market_trade) {
                 match matching_side {
-                    Side::Buy => {
+                    | Side::Buy => {
                         println!("[match_orders]: matching_side: {:?}", matching_side);
 
                         // 从最佳买单中提取 `OrderRole` 以获取正确的手续费比例
                         if let Some(best_bid) = instrument_orders.bids.last() {
                             let order_role = best_bid.state.order_role;
                             println!("[match_orders]: order_role: {:?}", order_role);
-                            let fees_percent = self.fees_percent(&kind, order_role).await
-                                .map_err(|_| ExchangeError::SandBox("Missing fees.".to_string()))?;
+                            let fees_percent = self.fees_percent(&kind, order_role)
+                                                   .await
+                                                   .map_err(|_| ExchangeError::SandBox("Missing fees.".to_string()))?;
 
                             // 使用计算出的手续费比例匹配买单
                             trades.append(&mut instrument_orders.match_bids(market_trade, fees_percent));
                         }
                     }
-                    Side::Sell => {
+                    | Side::Sell => {
                         println!("[match_orders]: matching_side: {:?}", matching_side);
 
                         // 从最佳卖单中提取 `OrderRole` 以获取正确的手续费比例
                         if let Some(best_ask) = instrument_orders.asks.last() {
                             let order_role = best_ask.state.order_role;
                             println!("[match_orders]: order_role: {:?}", order_role);
-                            let fees_percent = self.fees_percent(&kind, order_role).await
-                                .map_err(|_| ExchangeError::SandBox("Missing fees.".to_string()))?;
+                            let fees_percent = self.fees_percent(&kind, order_role)
+                                                   .await
+                                                   .map_err(|_| ExchangeError::SandBox("Missing fees.".to_string()))?;
 
                             // 使用计算出的手续费比例匹配卖单
                             trades.append(&mut instrument_orders.match_asks(market_trade, fees_percent));
@@ -1552,7 +1482,8 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                     }
                 }
             }
-        } else {
+        }
+        else {
             // 记录日志并继续，不返回错误
             warn!("未找到与市场事件相关的挂单，跳过处理。");
         }
@@ -1562,7 +1493,6 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
 
         Ok(trades)
     }
-
 
     /// 根据金融工具类型和订单角色返回相应的手续费百分比。
     ///
@@ -1586,10 +1516,10 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     {
         // 直接访问 account 的 config 字段
         let commission_rates = self.config
-            .fees_book
-            .get(instrument_kind)
-            .cloned()
-            .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
+                                   .fees_book
+                                   .get(instrument_kind)
+                                   .cloned()
+                                   .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
 
         match role {
             | OrderRole::Maker => Ok(commission_rates.maker_fees),
@@ -1633,8 +1563,8 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
                 };
 
                 if let Err(err) = self.account_event_tx.send(AccountEvent { exchange_timestamp,
-                    exchange: Exchange::SandBox,
-                    kind: AccountEventKind::Trade(trade) })
+                                                                            exchange: Exchange::SandBox,
+                                                                            kind: AccountEventKind::Trade(trade) })
                 {
                     // 如果发送交易事件失败，记录警告日志
                     warn!("[UniLinkEx] : Client offline - Failed to send AccountEvent::Trade: {:?}", err);
@@ -1666,27 +1596,26 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
         self.exchange_timestamp.store(adjusted_timestamp, Ordering::SeqCst);
     }
 
-
     /// 查找匹配的订单，根据 `OrderId` 和 `ClientOrderId` 匹配。
-    fn find_matching_order(orders: &[Order<Open>], request: &Order<RequestCancel>) -> Result<usize, ExchangeError> {
+    fn find_matching_order(orders: &[Order<Open>], request: &Order<RequestCancel>) -> Result<usize, ExchangeError>
+    {
         orders.par_iter()
-            .position_any(|order| Self::order_ids_check(order, request))
-            .ok_or_else(|| ExchangeError::OrderNotFound {
-                client_order_id: request.cid.clone(),
-                order_id: request.state.id.clone(),
-            })
+              .position_any(|order| Self::order_ids_check(order, request))
+              .ok_or_else(|| ExchangeError::OrderNotFound { client_order_id: request.cid.clone(),
+                                                            order_id: request.state.id.clone() })
     }
 
     /// 判断订单是否匹配，根据 `OrderId` 或 `ClientOrderId` 进行匹配。
-    fn order_ids_check(order: &Order<Open>, request: &Order<RequestCancel>) -> bool {
+    fn order_ids_check(order: &Order<Open>, request: &Order<RequestCancel>) -> bool
+    {
         let id_match = match &request.state.id {
-            Some(req_id) => &order.state.id == req_id, // 直接比较 `OrderId`
-            None => false,
+            | Some(req_id) => &order.state.id == req_id, // 直接比较 `OrderId`
+            | None => false,
         };
 
         let cid_match = match (&order.cid, &request.cid) {
-            (Some(order_cid), Some(req_cid)) => order_cid == req_cid, // 比较 `ClientOrderId`
-            _ => false,
+            | (Some(order_cid), Some(req_cid)) => order_cid == req_cid, // 比较 `ClientOrderId`
+            | _ => false,
         };
 
         // 如果有 `OrderId` 或 `ClientOrderId` 匹配，说明订单匹配
@@ -1694,14 +1623,10 @@ pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<
     }
 
     /// 发送账户事件给客户端。
-    pub(crate) fn send_account_event(&self, account_event: AccountEvent) -> Result<(), ExchangeError> {
-        self.account_event_tx
-            .send(account_event)
-            .map_err(|_| ExchangeError::ReponseSenderError)
+    pub(crate) fn send_account_event(&self, account_event: AccountEvent) -> Result<(), ExchangeError>
+    {
+        self.account_event_tx.send(account_event).map_err(|_| ExchangeError::ReponseSenderError)
     }
-
-
-
 }
 
 pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
@@ -1717,9 +1642,11 @@ pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
 mod tests
 {
     use super::*;
-    use crate::common::trade::ClientTradeId;
     use crate::{
-        common::order::{identification::OrderId, states::request_open::RequestOpen},
+        common::{
+            order::{identification::OrderId, states::request_open::RequestOpen},
+            trade::ClientTradeId,
+        },
         test_utils::create_test_account,
     };
 
@@ -1795,27 +1722,22 @@ mod tests
         assert_eq!(fee, 0.001);
     }
 
-
-
     #[tokio::test]
-    async fn test_apply_cancel_order_changes() {
+    async fn test_apply_cancel_order_changes()
+    {
         let mut account = create_test_account().await;
 
-        let order = Order {
-            instruction: OrderInstruction::Limit,
-            exchange: Exchange::SandBox,
-            instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
-            timestamp: 1625247600000,
-            cid: Some(ClientOrderId("validCID123".into())),
-            side: Side::Buy,
-            state: Open {
-                id: OrderId::new(0, 0, 0),
-                price: 100.0,
-                size: 2.0,
-                filled_quantity: 0.0,
-                order_role: OrderRole::Maker,
-            },
-        };
+        let order = Order { instruction: OrderInstruction::Limit,
+                            exchange: Exchange::SandBox,
+                            instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
+                            timestamp: 1625247600000,
+                            cid: Some(ClientOrderId("validCID123".into())),
+                            side: Side::Buy,
+                            state: Open { id: OrderId::new(0, 0, 0),
+                                          price: 100.0,
+                                          size: 2.0,
+                                          filled_quantity: 0.0,
+                                          order_role: OrderRole::Maker } };
 
         let balance_before = account.get_balance(&Token::from("USDT")).unwrap().available;
         let account_event = account.apply_cancel_order_changes(&order).unwrap();
@@ -1824,7 +1746,8 @@ mod tests
         if let AccountEventKind::Balance(token_balance) = account_event.kind {
             // 验证余额是否已更新
             assert_eq!(token_balance.balance.available, balance_before + 200.0);
-        } else {
+        }
+        else {
             panic!("Expected AccountEventKind::Balance");
         }
     }
@@ -2047,7 +1970,8 @@ mod tests
         let result = account.atomic_cancel(invalid_cancel_request.clone()).await;
         // println!("Result: {:?}", result);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ExchangeError::OrderNotFound { client_order_id: invalid_cancel_request.cid.clone(), order_id: Some(OrderId(99999)) });
+        assert_eq!(result.unwrap_err(), ExchangeError::OrderNotFound { client_order_id: invalid_cancel_request.cid.clone(),
+                                                                       order_id: Some(OrderId(99999)) });
     }
     #[tokio::test]
     async fn test_deposit_u_base()
@@ -2306,27 +2230,23 @@ mod tests
         assert_eq!(result.unwrap_err(), ExchangeError::InsufficientBalance(instrument.quote));
     }
 
-
     #[tokio::test]
-    async fn test_create_new_long_position() {
+    async fn test_create_new_long_position()
+    {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp: 1690000000,
-            trade_id: ClientTradeId(1),
-            order_id: OrderId(1),
-            cid: None,
-            instrument: Instrument {
-                base: Token("BTC".to_string()),
-                quote: Token("USDT".to_string()),
-                kind: InstrumentKind::Perpetual,
-            },
-            side: Side::Buy,
-            price: 100.0,
-            size: 10.0,
-            fees: 0.1,
-        };
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+                                  timestamp: 1690000000,
+                                  trade_id: ClientTradeId(1),
+                                  order_id: OrderId(1),
+                                  cid: None,
+                                  instrument: Instrument { base: Token("BTC".to_string()),
+                                                           quote: Token("USDT".to_string()),
+                                                           kind: InstrumentKind::Perpetual },
+                                  side: Side::Buy,
+                                  price: 100.0,
+                                  size: 10.0,
+                                  fees: 0.1 };
 
         // 执行管理仓位逻辑
         let result = account.update_position_from_client_trade(trade.clone()).await;
@@ -2340,25 +2260,22 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_create_new_short_position() {
+    async fn test_create_new_short_position()
+    {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp: 1690000000,
-            trade_id: ClientTradeId(2),
-            order_id: OrderId(2),
-            cid: None,
-            instrument: Instrument {
-                base: Token("BTC".to_string()),
-                quote: Token("USDT".to_string()),
-                kind: InstrumentKind::Perpetual,
-            },
-            side: Side::Sell,
-            price: 100.0,
-            size: 5.0,
-            fees: 0.05,
-        };
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+                                  timestamp: 1690000000,
+                                  trade_id: ClientTradeId(2),
+                                  order_id: OrderId(2),
+                                  cid: None,
+                                  instrument: Instrument { base: Token("BTC".to_string()),
+                                                           quote: Token("USDT".to_string()),
+                                                           kind: InstrumentKind::Perpetual },
+                                  side: Side::Sell,
+                                  price: 100.0,
+                                  size: 5.0,
+                                  fees: 0.05 };
 
         // 执行管理仓位逻辑
         let result = account.update_position_from_client_trade(trade.clone()).await;
@@ -2372,46 +2289,39 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_update_existing_long_position() {
+    async fn test_update_existing_long_position()
+    {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp: 1690000000,
-            trade_id: ClientTradeId(3),
-            order_id: OrderId(3),
-            cid: None,
-            instrument: Instrument {
-                base: Token("BTC".to_string()),
-                quote: Token("USDT".to_string()),
-                kind: InstrumentKind::Perpetual,
-            },
-            side: Side::Buy,
-            price: 100.0,
-            size: 10.0,
-            fees: 0.1,
-        };
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+                                  timestamp: 1690000000,
+                                  trade_id: ClientTradeId(3),
+                                  order_id: OrderId(3),
+                                  cid: None,
+                                  instrument: Instrument { base: Token("BTC".to_string()),
+                                                           quote: Token("USDT".to_string()),
+                                                           kind: InstrumentKind::Perpetual },
+                                  side: Side::Buy,
+                                  price: 100.0,
+                                  size: 10.0,
+                                  fees: 0.1 };
 
         // 创建一个多头仓位
         account.update_position_from_client_trade(trade.clone()).await.unwrap();
 
         // 再次买入增加仓位
-        let additional_trade = ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp: 1690000100,
-            trade_id: ClientTradeId(4),
-            order_id: OrderId(4),
-            cid: None,
-            instrument: Instrument {
-                base: Token("BTC".to_string()),
-                quote: Token("USDT".to_string()),
-                kind: InstrumentKind::Perpetual,
-            },
-            side: Side::Buy,
-            price: 100.0,
-            size: 5.0,
-            fees: 0.05,
-        };
+        let additional_trade = ClientTrade { exchange: Exchange::SandBox,
+                                             timestamp: 1690000100,
+                                             trade_id: ClientTradeId(4),
+                                             order_id: OrderId(4),
+                                             cid: None,
+                                             instrument: Instrument { base: Token("BTC".to_string()),
+                                                                      quote: Token("USDT".to_string()),
+                                                                      kind: InstrumentKind::Perpetual },
+                                             side: Side::Buy,
+                                             price: 100.0,
+                                             size: 5.0,
+                                             fees: 0.05 };
 
         account.update_position_from_client_trade(additional_trade).await.unwrap();
 
@@ -2421,48 +2331,40 @@ mod tests
         assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
     }
 
-
     #[tokio::test]
-    async fn test_close_long_position_partially() {
+    async fn test_close_long_position_partially()
+    {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp: 1690000000,
-            trade_id: ClientTradeId(5),
-            order_id: OrderId(5),
-            cid: None,
-            instrument: Instrument {
-                base: Token("BTC".to_string()),
-                quote: Token("USDT".to_string()),
-                kind: InstrumentKind::Perpetual,
-            },
-            side: Side::Buy,
-            price: 100.0,
-            size: 10.0,
-            fees: 0.1,
-        };
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+                                  timestamp: 1690000000,
+                                  trade_id: ClientTradeId(5),
+                                  order_id: OrderId(5),
+                                  cid: None,
+                                  instrument: Instrument { base: Token("BTC".to_string()),
+                                                           quote: Token("USDT".to_string()),
+                                                           kind: InstrumentKind::Perpetual },
+                                  side: Side::Buy,
+                                  price: 100.0,
+                                  size: 10.0,
+                                  fees: 0.1 };
 
         // 创建一个多头仓位
         account.update_position_from_client_trade(trade.clone()).await.unwrap();
 
         // 部分平仓
-        let closing_trade = ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp: 1690000200,
-            trade_id: ClientTradeId(6),
-            order_id: OrderId(6),
-            cid: None,
-            instrument: Instrument {
-                base: Token("BTC".to_string()),
-                quote: Token("USDT".to_string()),
-                kind: InstrumentKind::Perpetual,
-            },
-            side: Side::Sell,
-            price: 100.0,
-            size: 5.0,
-            fees: 0.05,
-        };
+        let closing_trade = ClientTrade { exchange: Exchange::SandBox,
+                                          timestamp: 1690000200,
+                                          trade_id: ClientTradeId(6),
+                                          order_id: OrderId(6),
+                                          cid: None,
+                                          instrument: Instrument { base: Token("BTC".to_string()),
+                                                                   quote: Token("USDT".to_string()),
+                                                                   kind: InstrumentKind::Perpetual },
+                                          side: Side::Sell,
+                                          price: 100.0,
+                                          size: 5.0,
+                                          fees: 0.05 };
 
         account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
 
@@ -2472,48 +2374,40 @@ mod tests
         assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
     }
 
-
     #[tokio::test]
-    async fn test_close_long_position_completely() {
+    async fn test_close_long_position_completely()
+    {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp: 1690000000,
-            trade_id: ClientTradeId(5),
-            order_id: OrderId(5),
-            cid: None,
-            instrument: Instrument {
-                base: Token("BTC".to_string()),
-                quote: Token("USDT".to_string()),
-                kind: InstrumentKind::Perpetual,
-            },
-            side: Side::Buy,
-            price: 100.0,
-            size: 10.0,
-            fees: 0.1,
-        };
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+                                  timestamp: 1690000000,
+                                  trade_id: ClientTradeId(5),
+                                  order_id: OrderId(5),
+                                  cid: None,
+                                  instrument: Instrument { base: Token("BTC".to_string()),
+                                                           quote: Token("USDT".to_string()),
+                                                           kind: InstrumentKind::Perpetual },
+                                  side: Side::Buy,
+                                  price: 100.0,
+                                  size: 10.0,
+                                  fees: 0.1 };
 
         // 创建一个多头仓位
         account.update_position_from_client_trade(trade.clone()).await.unwrap();
 
         // 完全平仓
-        let closing_trade = ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp: 1690000000,
-            trade_id: ClientTradeId(5),
-            order_id: OrderId(5),
-            cid: None,
-            instrument: Instrument {
-                base: Token("BTC".to_string()),
-                quote: Token("USDT".to_string()),
-                kind: InstrumentKind::Perpetual,
-            },
-            side: Side::Sell,
-            price: 100.0,
-            size: 10.0,
-            fees: 0.1,
-        };
+        let closing_trade = ClientTrade { exchange: Exchange::SandBox,
+                                          timestamp: 1690000000,
+                                          trade_id: ClientTradeId(5),
+                                          order_id: OrderId(5),
+                                          cid: None,
+                                          instrument: Instrument { base: Token("BTC".to_string()),
+                                                                   quote: Token("USDT".to_string()),
+                                                                   kind: InstrumentKind::Perpetual },
+                                          side: Side::Sell,
+                                          price: 100.0,
+                                          size: 10.0,
+                                          fees: 0.1 };
 
         account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
 
@@ -2523,48 +2417,40 @@ mod tests
         assert!(!positions.contains_key(&trade.instrument));
     }
 
-
     #[tokio::test]
-    async fn test_reverse_position_after_closing_long() {
+    async fn test_reverse_position_after_closing_long()
+    {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp: 1690000000,
-            trade_id: ClientTradeId(5),
-            order_id: OrderId(5),
-            cid: None,
-            instrument: Instrument {
-                base: Token("BTC".to_string()),
-                quote: Token("USDT".to_string()),
-                kind: InstrumentKind::Perpetual,
-            },
-            side: Side::Buy,
-            price: 100.0,
-            size: 10.0,
-            fees: 0.1,
-        };
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+                                  timestamp: 1690000000,
+                                  trade_id: ClientTradeId(5),
+                                  order_id: OrderId(5),
+                                  cid: None,
+                                  instrument: Instrument { base: Token("BTC".to_string()),
+                                                           quote: Token("USDT".to_string()),
+                                                           kind: InstrumentKind::Perpetual },
+                                  side: Side::Buy,
+                                  price: 100.0,
+                                  size: 10.0,
+                                  fees: 0.1 };
 
         // 创建一个多头仓位
         account.update_position_from_client_trade(trade.clone()).await.unwrap();
 
         // 反向平仓并开立新的空头仓位
-        let reverse_trade = ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp: 1690000100,
-            trade_id: ClientTradeId(6),
-            order_id: OrderId(6),
-            cid: None,
-            instrument: Instrument {
-                base: Token("BTC".to_string()),
-                quote: Token("USDT".to_string()),
-                kind: InstrumentKind::Perpetual,
-            },
-            side: Side::Sell,
-            price: 100.0,
-            size: 15.0,  // 卖出 15.0 超过当前的多头仓位
-            fees: 0.15,
-        };
+        let reverse_trade = ClientTrade { exchange: Exchange::SandBox,
+                                          timestamp: 1690000100,
+                                          trade_id: ClientTradeId(6),
+                                          order_id: OrderId(6),
+                                          cid: None,
+                                          instrument: Instrument { base: Token("BTC".to_string()),
+                                                                   quote: Token("USDT".to_string()),
+                                                                   kind: InstrumentKind::Perpetual },
+                                          side: Side::Sell,
+                                          price: 100.0,
+                                          size: 15.0, // 卖出 15.0 超过当前的多头仓位
+                                          fees: 0.15 };
 
         account.update_position_from_client_trade(reverse_trade.clone()).await.unwrap();
 
@@ -2576,31 +2462,27 @@ mod tests
         let short_positions = account.positions.perpetual_pos_short.read().await;
         assert!(short_positions.contains_key(&trade.instrument));
         let short_position = short_positions.get(&trade.instrument).unwrap();
-        assert_eq!(short_position.meta.current_size, 5.0);  // 剩余仓位应该是 5.0
-        assert_eq!(short_position.meta.side, Side::Sell);  // 检查持仓方向是否为 Sell
+        assert_eq!(short_position.meta.current_size, 5.0); // 剩余仓位应该是 5.0
+        assert_eq!(short_position.meta.side, Side::Sell); // 检查持仓方向是否为 Sell
     }
 
-
     #[tokio::test]
-    async fn test_unsupported_instrument_kind() {
+    async fn test_unsupported_instrument_kind()
+    {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade {
-            exchange:Exchange::SandBox,
-            timestamp: 1690000000,
-            trade_id: ClientTradeId(5),
-            order_id: OrderId(5),
-            cid: None,
-            instrument: Instrument {
-                base: Token("RRR".to_string()),
-                quote: Token("USDT".to_string()),
-                kind: InstrumentKind::Spot, // Spot Position is either not developed or not supported.
-            },
-            side: Side::Sell,
-            price: 100.0,
-            size: 10.0,
-            fees: 0.1,
-        };
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+                                  timestamp: 1690000000,
+                                  trade_id: ClientTradeId(5),
+                                  order_id: OrderId(5),
+                                  cid: None,
+                                  instrument: Instrument { base: Token("RRR".to_string()),
+                                                           quote: Token("USDT".to_string()),
+                                                           kind: InstrumentKind::Spot /* Spot Position is either not developed or not supported. */ },
+                                  side: Side::Sell,
+                                  price: 100.0,
+                                  size: 10.0,
+                                  fees: 0.1 };
 
         // 执行管理仓位逻辑，应该返回错误
         let result = account.update_position_from_client_trade(trade.clone()).await;

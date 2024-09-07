@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use unilink_execution::{
     common::{
-        account_positions::AccountPositions,
+        account_positions::{exited_positions::AccountExitedPositions, AccountPositions},
         balance::Balance,
         event::AccountEvent,
         instrument::{kind::InstrumentKind, Instrument},
@@ -36,7 +36,6 @@ use unilink_execution::{
     test_utils::create_test_account_config,
     Exchange,
 };
-use unilink_execution::common::account_positions::exited_positions::AccountExitedPositions;
 
 /// Initializes and runs a sample exchange with predefined settings and a test order.
 pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<AccountEvent>, event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>)
@@ -87,12 +86,11 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
                                                     exchange_timestamp: AtomicI64::new(1234567),
                                                     config: create_test_account_config(),
                                                     orders: orders_arc,
+                                                    single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
                                                     balances,
                                                     positions,
-        exited_positions: closed_positions,
-                                                    account_event_tx: event_account_tx
-
-    }));
+                                                    exited_positions: closed_positions,
+                                                    account_event_tx: event_account_tx }));
 
     // Initialize and configure SandBoxExchange
     let sandbox_exchange = SandBoxExchange::initiator().event_sandbox_rx(event_sandbox_rx)
