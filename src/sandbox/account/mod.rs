@@ -434,7 +434,7 @@ impl Account
     }
 
 
-    /// 目前只适合永续合约的交易
+    /// NOTE 目前只适合永续合约的交易
     pub async fn attempt_atomic_open(&mut self, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError>
     {
         // 验证订单的基本合法性
@@ -481,6 +481,7 @@ impl Account
         Ok(open_order)
     }
 
+    /// NOTE 现货等一些金融工具是否不支持这些订单指令？？？？
     pub fn validate_order_instruction(kind: OrderInstruction) -> Result<(), ExchangeError>
     {
         match kind {
