@@ -10,9 +10,9 @@ use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade
 #[derive(Debug, Serialize, Deserialize, Row)]
 pub struct SingleLevelOrderBook
 {
-    latest_bid: f64,
-    latest_ask: f64,
-    latest_price: f64, // 记录最新的交易价格
+    pub(crate) latest_bid: f64,
+    pub(crate) latest_ask: f64,
+    pub(crate) latest_price: f64, // 记录最新的交易价格
 }
 
 #[allow(dead_code)]

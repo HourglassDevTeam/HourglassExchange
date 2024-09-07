@@ -1353,6 +1353,11 @@ impl Account
     /// FIXME 严重错误，current_price应该分`bid_price`和`ask_price`.
     pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>, current_price: f64) -> (&'a Token, f64)
     {
+
+        let latest_ask = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_ask;
+        let latest_bid = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_bid;
+
+
         match order.instrument.kind {
             | InstrumentKind::Spot => match order.side {
                 | Side::Buy => (&order.instrument.quote, current_price * order.state.size),
@@ -1361,15 +1366,15 @@ impl Account
             // 永续合约作为衍生品要基于 quote 货币计算所需资金
             | InstrumentKind::Perpetual => match order.side {
                 // 买单逻辑保持不变
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
+                | Side::Buy => (&order.instrument.quote, latest_ask * order.state.size * self.config.account_leverage_rate),
                 // 卖单逻辑也应考虑 current_price
-                | Side::Sell => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
+                | Side::Sell => (&order.instrument.quote, latest_bid * order.state.size * self.config.account_leverage_rate),
             },
             // 期货合约作为衍生品要基于 quote 货币计算所需资金
             | InstrumentKind::Future => match order.side {
-                | Side::Buy => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
+                | Side::Buy => (&order.instrument.quote,latest_ask  * order.state.size * self.config.account_leverage_rate),
                 // 同样修正期货的卖单逻辑
-                | Side::Sell => (&order.instrument.quote, current_price * order.state.size * self.config.account_leverage_rate),
+                | Side::Sell => (&order.instrument.quote, latest_bid * order.state.size * self.config.account_leverage_rate),
             },
             | InstrumentKind::CryptoOption => {
                 todo!("CryptoOption is not supported yet")
@@ -1410,18 +1415,18 @@ impl Account
         self.exchange_timestamp.store(adjusted_timestamp, Ordering::SeqCst);
     }
 
-    async fn create_or_single_level_orderbook_from_market_trade(&mut self, trade: MarketTrade) {
+    async fn create_or_single_level_orderbook_from_market_trade(&mut self, trade: &MarketTrade) {
         let instrument = trade.parse_instrument().unwrap();
         let mut orderbook = self.single_level_order_book.lock().await;
 
         orderbook.entry(instrument)
-            .or_insert_with(|| SingleLevelOrderBook::from(&trade)) // 传递引用 &trade
+            .or_insert_with(|| SingleLevelOrderBook::from(trade)) // 传递引用 &trade
             .update_from_trade(&trade);
     }
 
 
     /// 处理交易数据的方法
-    pub async fn handle_trade_data(&mut self, trade: MarketTrade) -> Result<(), ExchangeError>
+    pub async fn handle_trade_data(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>
     {
         // 更新时间戳
         self.update_exchange_ts(trade.timestamp);
@@ -1927,7 +1932,7 @@ mod tests
                                   amount: 0.0 };
 
         // 处理交易数据
-        let result = account.handle_trade_data(trade).await;
+        let result = account.handle_trade_data(&trade).await;
         assert!(result.is_ok());
 
         // 验证时间戳是否已更新
