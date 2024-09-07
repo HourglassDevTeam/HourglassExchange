@@ -30,6 +30,7 @@ pub(crate) mod option;
 pub mod perpetual;
 pub mod position_id;
 pub mod position_meta;
+mod closed_positions;
 
 #[derive(Clone, Debug)]
 pub struct AccountPositions
