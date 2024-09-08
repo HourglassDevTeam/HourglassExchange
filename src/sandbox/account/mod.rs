@@ -1862,7 +1862,7 @@ mod tests
         let (token, required_balance) = account.required_available_balance(&order).await;
         println!("{} {}", token, required_balance);
         assert_eq!(token, &order.instrument.quote);
-        assert_eq!(required_balance, 32812.0);
+        assert_eq!(required_balance, 32998.0);
     }
 
     #[tokio::test]
@@ -2209,7 +2209,7 @@ mod tests
 
         // assert_eq!(base_balance.total, 10.0);
         // assert_eq!(base_balance.available, 10.0);
-        // assert_eq!(quote_balance.available, 27155.188 ); // Maker 价格
+        assert_eq!(quote_balance.available, 27155.188 ); // Maker 价格
         // assert_eq!(quote_balance.total, 59967.188); // NOTE this is correct remaining total
     }
 

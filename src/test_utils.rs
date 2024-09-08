@@ -146,7 +146,7 @@ pub async fn create_test_account() -> Account
                                                  quote: Token::new("USDT".to_string()),
                                                  kind: Perpetual },
                                     SingleLevelOrderBook { latest_bid: 16305.0,
-                                                           latest_ask: 16406.0,
+                                                           latest_ask: 16499.0,
                                                            latest_price: 0.0 });
 
     // 创建 Account 实例，并将其包裹在 Arc<Account> 中
