@@ -1389,6 +1389,7 @@ impl Account
     /// 注意 这个返回的f64 value 还没有包括交易手续费。日后要加上去。
     pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>) -> (&'a Token, f64)
     {
+        /// FIXME not sure
         match order.instrument.kind {
             | InstrumentKind::Spot => {
                 let latest_ask = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_ask;
@@ -1405,9 +1406,9 @@ impl Account
 
                 match order.side {
                     // 买单逻辑保持不变
-                    | Side::Buy => (&order.instrument.quote, latest_ask * order.state.size * self.config.account_leverage_rate),
+                    | Side::Buy => (&order.instrument.quote, order.state.price * order.state.size * self.config.account_leverage_rate),
                     // 卖单逻辑也应考虑 current_price
-                    | Side::Sell => (&order.instrument.quote, latest_bid * order.state.size * self.config.account_leverage_rate),
+                    | Side::Sell => (&order.instrument.quote, order.state.price * order.state.size * self.config.account_leverage_rate),
                 }
             }
 
