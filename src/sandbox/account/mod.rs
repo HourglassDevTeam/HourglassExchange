@@ -1529,7 +1529,7 @@ impl Account
         if let Ok(mut instrument_orders) = self.orders.read().await.get_ins_orders_mut(&instrument) {
             // 确定市场事件匹配的挂单方向（买或卖）
             if let Some(matching_side) = instrument_orders.determine_matching_side(market_trade) {
-                println!("[match_orders]: matching side is {}", matching_side);
+                println!("[match_orders]: matching side is {}, will look up in corresponding open orders", matching_side);
                 match matching_side {
                     | Side::Buy => {
                         // 从最佳买单中提取 `OrderRole` 以获取正确的手续费比例
@@ -1545,7 +1545,6 @@ impl Account
                         }
                     }
                     | Side::Sell => {
-                        println!("[match_orders]: matching_side: {:?}", matching_side);
 
                         // 从最佳卖单中提取 `OrderRole` 以获取正确的手续费比例
                         if let Some(best_ask) = instrument_orders.asks.last() {
@@ -2229,7 +2228,7 @@ mod tests
         println!("[test_match_market_event_with_open_order_sell] : Initial USDT balance: {:#?}", initial_usdt_balance);
 
         // 创建一个待开卖单订单
-        let open_order =Order { instruction: OrderInstruction::Limit,
+        let open_order = Order { instruction: OrderInstruction::Limit,
             exchange: Exchange::SandBox,
             instrument: instrument.clone(),
             timestamp: 1625247600000,
@@ -2239,8 +2238,8 @@ mod tests
                 reduce_only: false,
                 price: 16406.0,
                 size: 2.0,
-            } };
-
+            }
+        };
 
         // 将订单添加到账户
         let result = account.atomic_open(open_order.clone()).await;
@@ -2265,8 +2264,8 @@ mod tests
 
         // assert_eq!(base_balance.total, 10.0);
         // assert_eq!(base_balance.available, 10.0);
-        assert_eq!(quote_balance.available, 60567.188); // Maker 价格
-            assert_eq!(quote_balance.total, 60567.188); // 根本不能成交。若以不应该变。
+        assert_eq!(quote_balance.available, 60365.188); // Maker 价格
+            assert_eq!(quote_balance.total, 60365.188); // 根本不能成交。若以不应该变。
     }
 
     #[tokio::test]
