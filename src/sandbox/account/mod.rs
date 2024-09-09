@@ -439,7 +439,7 @@ impl Account
 
         println!("[attempt_atomic_open] : successfully validated order instruction");
 
-        // 将锁的作用域限制在这个块内
+        // 将锁的作用域限制在这个块内， 通过和订单簿比较价格来判断是潜在的 Taker 还是 Maker。
         let order_role = {
             let mut order_books_lock = self.single_level_order_book.lock().await;
             let order_book = order_books_lock.get_mut(&order.instrument).unwrap(); // 引用的生命周期延长
