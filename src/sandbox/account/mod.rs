@@ -450,7 +450,7 @@ impl Account
         };
 
         // 锁已经在此处释放，后续操作可以安全地借用 `self`
-        let (token, required_balance) = self.required_available_balance(&order).await;
+        let (token, required_balance) = self.required_available_balance(&order).await.unwrap();
         println!("[attempt_atomic_open] required balance is quoted in {}: {}", token, required_balance);
         self.has_sufficient_available_balance(token, required_balance)?;
 
@@ -1382,42 +1382,89 @@ impl Account
         *base_balance
     }
 
-    /// 注意 这个返回的f64 value 还没有包括交易手续费。日后要加上去。
-    pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>) -> (&'a Token, f64)
-    {
-        // FIXME not sure
+    pub async fn required_available_balance<'a>(
+        &'a self,
+        order: &'a Order<RequestOpen>,
+    ) -> Result<(&'a Token, f64), ExchangeError> {
+        // 从 AccountConfig 读取 max_price_deviation
+        let max_price_deviation = self.config.max_price_deviation;
+
+        // 将锁定的 order_book 引用存储在一个变量中，确保其生命周期足够长
+        let mut order_books_lock = self.single_level_order_book.lock().await;
+        let order_book = order_books_lock.get_mut(&order.instrument).unwrap();
+
         match order.instrument.kind {
-            | InstrumentKind::Spot => {
-                let latest_ask = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_ask;
-                let latest_bid = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_bid;
-                match order.side {
-                    | Side::Buy => (&order.instrument.quote, latest_ask * order.state.size),
-                    | Side::Sell => (&order.instrument.base, latest_bid * order.state.size),
-                }
-            }
-            // 永续合约作为衍生品要基于 quote 货币计算所需资金
-            | InstrumentKind::Perpetual | InstrumentKind::Future => {
-                let latest_ask = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_ask;
-                let latest_bid = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_bid;
+            // Spot 交易
+            InstrumentKind::Spot => {
+                let latest_ask = order_book.latest_ask;
+                let latest_bid = order_book.latest_bid;
 
                 match order.side {
-                    // 买单逻辑保持不变
-                    | Side::Buy => (&order.instrument.quote, order.state.price * order.state.size * self.config.account_leverage_rate),
-                    // 卖单逻辑也应考虑 current_price
-                    | Side::Sell => (&order.instrument.quote, order.state.price * order.state.size * self.config.account_leverage_rate),
+                    Side::Buy => {
+                        // 确保买单价格不比最新卖价低
+                        if order.state.price < latest_ask * (1.0 - max_price_deviation) {
+                            return Err(ExchangeError::OrderRejected("Buy order price is too low compared to the market".into()));
+                        }
+                        // 确保买单价格不比最新买价高
+                        if order.state.price > latest_bid * (1.0 + max_price_deviation) {
+                            return Err(ExchangeError::OrderRejected("Buy order price is too high compared to the market".into()));
+                        }
+                        let required_balance = latest_ask * order.state.size;
+                        Ok((&order.instrument.quote, required_balance))
+                    }
+                    Side::Sell => {
+                        // 确保卖单价格不比最新买价高
+                        if order.state.price > latest_bid * (1.0 + max_price_deviation) {
+                            return Err(ExchangeError::OrderRejected("Sell order price is too high compared to the market".into()));
+                        }
+                        // 确保卖单价格不比最新卖价低
+                        if order.state.price < latest_ask * (1.0 - max_price_deviation) {
+                            return Err(ExchangeError::OrderRejected("Sell order price is too low compared to the market".into()));
+                        }
+                        let required_balance = latest_bid * order.state.size;
+                        Ok((&order.instrument.base, required_balance))
+                    }
                 }
             }
+            // Perpetual 和 Future 合约类型
+            InstrumentKind::Perpetual | InstrumentKind::Future => {
+                let latest_ask = order_book.latest_ask;
+                let latest_bid = order_book.latest_bid;
 
-            | InstrumentKind::CryptoOption => {
+                match order.side {
+                    Side::Buy => {
+                        if order.state.price < latest_ask * (1.0 - max_price_deviation) {
+                            return Err(ExchangeError::OrderRejected("Buy order price is too low compared to the market".into()));
+                        }
+                        if order.state.price > latest_bid * (1.0 + max_price_deviation) {
+                            return Err(ExchangeError::OrderRejected("Buy order price is too high compared to the market".into()));
+                        }
+                        let required_balance = order.state.price * order.state.size * self.config.account_leverage_rate;
+                        Ok((&order.instrument.quote, required_balance))
+                    }
+                    Side::Sell => {
+                        if order.state.price > latest_bid * (1.0 + max_price_deviation) {
+                            return Err(ExchangeError::OrderRejected("Sell order price is too high compared to the market".into()));
+                        }
+                        if order.state.price < latest_ask * (1.0 - max_price_deviation) {
+                            return Err(ExchangeError::OrderRejected("Sell order price is too low compared to the market".into()));
+                        }
+                        let required_balance = order.state.price * order.state.size * self.config.account_leverage_rate;
+                        Ok((&order.instrument.quote, required_balance))
+                    }
+                }
+            }
+            // 其他类型待实现
+            InstrumentKind::CryptoOption => {
                 todo!("CryptoOption is not supported yet")
             }
-            | InstrumentKind::CryptoLeveragedToken => {
+            InstrumentKind::CryptoLeveragedToken => {
                 todo!("CryptoLeveragedToken is not supported yet")
             }
-            | InstrumentKind::CommodityOption => {
+            InstrumentKind::CommodityOption => {
                 todo!("CommodityOption is not supported yet")
             }
-            | InstrumentKind::CommodityFuture => {
+            InstrumentKind::CommodityFuture => {
                 todo!("CommodityFuture is not supported yet")
             }
         }
@@ -1840,26 +1887,65 @@ mod tests
         // 这是因为create_test_account()没有内建任何仓位
         assert!(position.is_none());
     }
-
     #[tokio::test]
-    async fn test_required_available_balance_with_insufficient_bid()
-    {
+    async fn test_required_available_balance_with_insufficient_bid() {
         let account = create_test_account().await;
 
-        let order = Order { instruction: OrderInstruction::Limit,
-                            exchange: Exchange::SandBox,
-                            instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
-                            timestamp: 1625247600000,
-                            cid: Some(ClientOrderId("validCID123".into())),
-                            side: Side::Buy,
-                            state: RequestOpen { price: 100.0,
-                                                 size: 2.0,
-                                                 reduce_only: false } };
+        let order = Order {
+            instruction: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
+            timestamp: 1625247600000,
+            cid: Some(ClientOrderId("validCID123".into())),
+            side: Side::Buy,
+            state: RequestOpen {
+                price: 100.0, // 设置一个低于市场价格的买单
+                size: 2.0,
+                reduce_only: false,
+            },
+        };
 
-        let (token, required_balance) = account.required_available_balance(&order).await;
-        println!("{} {}", token, required_balance);
-        assert_eq!(token, &order.instrument.quote);
-        assert_eq!(required_balance, 16499.0);
+        match account.required_available_balance(&order).await {
+            Ok((_token, _required_balance)) => {
+                // 这里不应该触发，因为订单价格太低应被拒绝
+                panic!("Test should have failed due to insufficient bid price but has not");
+            }
+            Err(e) => {
+                // 订单应该因价格过低而被拒绝
+                assert_eq!(e.to_string(), "[UniLinkEx] : Order rejected: Buy order price is too low compared to the market");
+                println!("Test passed: Order was correctly rejected due to insufficient bid price.");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_required_available_balance_with_sufficient_bid() {
+        let account = create_test_account().await;
+
+        let order = Order {
+            instruction: OrderInstruction::Limit,
+            exchange: Exchange::SandBox,
+            instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
+            timestamp: 1625247600000,
+            cid: Some(ClientOrderId("validCID123".into())),
+            side: Side::Buy,
+            state: RequestOpen {
+                price: 16499.0,
+                size: 2.0,
+                reduce_only: false,
+            },
+        };
+
+        match account.required_available_balance(&order).await {
+            Ok((token, required_balance)) => {
+                println!("{} {}", token, required_balance);
+                assert_eq!(token, &order.instrument.quote);
+                assert_eq!(required_balance, 32998.0);
+            }
+            Err(e) => {
+                panic!("Test failed with error: {:?}", e);
+            }
+        }
     }
 
     #[tokio::test]
@@ -2266,11 +2352,10 @@ mod tests
                                          timestamp: 1625247600000,
                                          cid: Some(ClientOrderId("validCID123".into())),
                                          side: Side::Buy,
-                                         state: RequestOpen { price: 100.0,
-                                                              size: 2.0,
+                                         state: RequestOpen { price: 16499.0,
+                                                              size: 5.0,
                                                               reduce_only: false } };
 
-        // 尝试开单，所需资金为 200 USDT，但当前账户只有 1 USDT
         let result = account.atomic_open(open_order_request).await;
 
         // 断言开单失败，且返回的错误是余额不足
