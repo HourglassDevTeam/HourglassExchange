@@ -1904,7 +1904,6 @@ mod tests
             | Err(e) => {
                 // 订单应该因价格过低而被拒绝
                 assert_eq!(e.to_string(), "[UniLinkEx] : Order rejected: Buy order price is too low compared to the market");
-                println!("Test passed: Order was correctly rejected due to insufficient bid price.");
             }
         }
     }

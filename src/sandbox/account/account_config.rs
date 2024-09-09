@@ -12,15 +12,15 @@ use std::collections::HashMap;
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountConfig
 {
-    pub margin_mode: MarginMode,
-    pub position_direction_mode: PositionDirectionMode,
-    pub position_margin_mode: PositionMarginMode,
-    pub commission_level: CommissionLevel,
-    pub funding_rate: f64,
-    pub account_leverage_rate: f64,
-    pub fees_book: HashMap<InstrumentKind, CommissionRates>,
-    pub execution_mode: SandboxMode,
-    pub max_price_deviation: f64,
+    pub margin_mode: MarginMode, // 保证金模式，用于定义账户的保证金类型（例如逐仓、全仓）
+    pub position_direction_mode: PositionDirectionMode, // 持仓方向模式，定义账户是否允许同时持有多头和空头（双向持仓）或仅允许单一方向的仓位
+    pub position_margin_mode: PositionMarginMode, // 持仓保证金模式，定义每个仓位的保证金计算方式
+    pub commission_level: CommissionLevel, // 手续费等级，决定账户的交易手续费率
+    pub funding_rate: f64, // 资金费率，用于合约交易中计算资金费用
+    pub account_leverage_rate: f64, // 账户杠杆率，决定账户在杠杆交易中的放大倍数
+    pub fees_book: HashMap<InstrumentKind, CommissionRates>, // 手续费表，存储每种合约类型的手续费率
+    pub execution_mode: SandboxMode, // 执行模式，定义账户是在沙盒模式（模拟交易）还是在真实环境中运行
+    pub max_price_deviation: f64, // 最大价格偏差，用于限制订单价格与市场价格的偏离范围
     // pub stop_loss_threshold: Option<f64>,    // 止损阈值，用于设置当资产价格向不利方向移动并达到该阈值时，自动平仓以避免进一步损失。
     // pub take_profit_threshold: Option<f64>,  // 止盈阈值，用于在市场价格达到一定盈利目标时自动平仓以锁定利润。
     // pub trailing_stop_loss: Option<f64>,   // 跟踪止损，用于动态调整止损价格，跟随市场价格的波动来保护盈利。当价格向有利方向移动时，止损价格也相应调整；当价格逆向移动时，止损触发。
