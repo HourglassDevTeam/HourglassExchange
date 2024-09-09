@@ -12,6 +12,7 @@ use crate::{
     error::ExchangeError,
     sandbox::{
         account::account_latency::{fluctuate_latency, AccountLatency},
+        clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook,
         instrument_orders::InstrumentOrders,
     },
 };
@@ -21,7 +22,6 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
-use crate::sandbox::clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook;
 
 #[derive(Debug)]
 pub struct AccountOrders
@@ -224,40 +224,38 @@ impl AccountOrders
     /// - 对于 `PostOnly` 类型的订单，调用 `determine_post_only_order_role` 来判断订单是否能作为 Maker，否则拒绝该订单。
     /// - 对于 `ImmediateOrCancel` 和 `FillOrKill` 类型的订单，总是返回 `OrderRole::Taker`，因为这些订单需要立即成交。
     /// - 对于 `GoodTilCancelled` 类型的订单，按照限价订单的逻辑来判断角色。
-    pub fn determine_maker_taker(
-        &self,
-        order: &Order<RequestOpen>,
-        order_book: &SingleLevelOrderBook
-    ) -> Result<OrderRole, ExchangeError> {
+    pub fn determine_maker_taker(&self, order: &Order<RequestOpen>, order_book: &SingleLevelOrderBook) -> Result<OrderRole, ExchangeError>
+    {
         // 根据订单方向设置 current_price
         let current_price = match order.side {
-            Side::Buy => order_book.latest_ask,   // 买单参考最新卖价
-            Side::Sell => order_book.latest_bid,  // 卖单参考最新买价
+            | Side::Buy => order_book.latest_ask,  // 买单参考最新卖价
+            | Side::Sell => order_book.latest_bid, // 卖单参考最新买价
         };
 
         match order.instruction {
-            OrderInstruction::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
+            | OrderInstruction::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
 
-            OrderInstruction::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
+            | OrderInstruction::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
 
-            OrderInstruction::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
+            | OrderInstruction::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
 
-            OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => {
+            | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => {
                 let is_immediate = match order.side {
-                    Side::Buy => order.state.price >= current_price,  // 买单判断是否立刻成交
-                    Side::Sell => order.state.price <= current_price, // 卖单判断是否立刻成交
+                    | Side::Buy => order.state.price >= current_price,  // 买单判断是否立刻成交
+                    | Side::Sell => order.state.price <= current_price, // 卖单判断是否立刻成交
                 };
 
                 if is_immediate {
                     Ok(OrderRole::Taker) // 可以立即成交
-                } else {
+                }
+                else {
                     Ok(OrderRole::Maker) // 不能立即成交
                 }
             }
 
-            OrderInstruction::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
+            | OrderInstruction::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
 
-            OrderInstruction::Cancel => {
+            | OrderInstruction::Cancel => {
                 todo!() // 取消订单逻辑
             }
         }
@@ -574,31 +572,26 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_determine_maker_taker() {
+    async fn test_determine_maker_taker()
+    {
         let instruments = vec![Instrument::new("BTC", "USD", InstrumentKind::Spot)];
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
-        let order = Order {
-            instruction: OrderInstruction::Limit,
-            exchange: Exchange::Binance,
-            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
-            cid: Some(ClientOrderId("unit_test".to_string())),
-            timestamp: 1625232523000,
-            side: Side::Buy,
-            state: RequestOpen {
-                reduce_only: false,
-                price: 35000.0,
-                size: 0.1,
-            },
-        };
+        let order = Order { instruction: OrderInstruction::Limit,
+                            exchange: Exchange::Binance,
+                            instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
+                            cid: Some(ClientOrderId("unit_test".to_string())),
+                            timestamp: 1625232523000,
+                            side: Side::Buy,
+                            state: RequestOpen { reduce_only: false,
+                                                 price: 35000.0,
+                                                 size: 0.1 } };
 
         // 构建模拟的订单簿
-        let order_book = SingleLevelOrderBook {
-            latest_bid: 34900.0,
-            latest_ask: 35100.0,
-            latest_price: 0.0,
-        };
+        let order_book = SingleLevelOrderBook { latest_bid: 34900.0,
+                                                latest_ask: 35100.0,
+                                                latest_price: 0.0 };
 
         // 将订单簿传递给 determine_maker_taker
         let result = account_orders.determine_maker_taker(&order, &order_book);
