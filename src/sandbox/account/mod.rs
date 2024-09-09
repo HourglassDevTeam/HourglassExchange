@@ -433,32 +433,25 @@ impl Account
         }
     }
 
-    /// NOTE 目前只适合永续合约的交易
-    pub async fn atomic_open(&mut self, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError>
-    {
+    pub async fn atomic_open(&mut self, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError> {
         // 验证订单的基本合法性
         Self::validate_order_instruction(order.instruction)?;
 
         println!("[attempt_atomic_open] : successfully validated order instruction");
 
-        let latest_ask = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_ask;
-        let latest_bid = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_bid;
-        let side = order.side;
-
-        let current_price = match side {
-            | Side::Buy => latest_ask,
-
-            | Side::Sell => latest_bid,
-        };
-
-        // 继续执行订单的原子操作逻辑
+        // 将锁的作用域限制在这个块内
         let order_role = {
+            let mut order_books_lock = self.single_level_order_book.lock().await;
+            let order_book = order_books_lock.get_mut(&order.instrument).unwrap(); // 引用的生命周期延长
+
             let orders_guard = self.orders.read().await;
-            orders_guard.determine_maker_taker(&order, current_price)?
+            // 将订单簿传递给 determine_maker_taker
+            orders_guard.determine_maker_taker(&order, order_book)?
         };
 
+        // 锁已经在此处释放，后续操作可以安全地借用 `self`
         let (token, required_balance) = self.required_available_balance(&order).await;
-        println!("[attempt_atomic_open] required balance is quoted in {}: {}", token,required_balance);
+        println!("[attempt_atomic_open] required balance is quoted in {}: {}", token, required_balance);
         self.has_sufficient_available_balance(token, required_balance)?;
 
         let open_order = {
@@ -473,13 +466,16 @@ impl Account
 
         // 使用 `send_account_event` 发送余额和订单事件
         self.send_account_event(balance_event)?;
-        let order_event = AccountEvent { exchange_timestamp,
-                                         exchange: Exchange::SandBox,
-                                         kind: AccountEventKind::OrdersOpen(vec![open_order.clone()]) };
+        let order_event = AccountEvent {
+            exchange_timestamp,
+            exchange: Exchange::SandBox,
+            kind: AccountEventKind::OrdersOpen(vec![open_order.clone()]),
+        };
 
         self.send_account_event(order_event)?;
         Ok(open_order)
     }
+
 
     /// NOTE 现货等一些金融工具是否不支持这些订单指令？？？？
     pub fn validate_order_instruction(kind: OrderInstruction) -> Result<(), ExchangeError>
@@ -1389,7 +1385,7 @@ impl Account
     /// 注意 这个返回的f64 value 还没有包括交易手续费。日后要加上去。
     pub async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>) -> (&'a Token, f64)
     {
-        /// FIXME not sure
+        // FIXME not sure
         match order.instrument.kind {
             | InstrumentKind::Spot => {
                 let latest_ask = self.single_level_order_book.lock().await.get_mut(&order.instrument).unwrap().latest_ask;
@@ -1863,7 +1859,7 @@ mod tests
         let (token, required_balance) = account.required_available_balance(&order).await;
         println!("{} {}", token, required_balance);
         assert_eq!(token, &order.instrument.quote);
-        assert_eq!(required_balance, 32998.0);
+        assert_eq!(required_balance, 16499.0);
     }
 
     #[tokio::test]

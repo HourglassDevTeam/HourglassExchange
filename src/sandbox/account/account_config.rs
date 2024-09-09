@@ -20,6 +20,7 @@ pub struct AccountConfig
     pub account_leverage_rate: f64,
     pub fees_book: HashMap<InstrumentKind, CommissionRates>,
     pub execution_mode: SandboxMode,
+    pub max_price_deviation:f64,
     // pub stop_loss_threshold: Option<f64>,    // 止损阈值，用于设置当资产价格向不利方向移动并达到该阈值时，自动平仓以避免进一步损失。
     // pub take_profit_threshold: Option<f64>,  // 止盈阈值，用于在市场价格达到一定盈利目标时自动平仓以锁定利润。
     // pub trailing_stop_loss: Option<f64>,   // 跟踪止损，用于动态调整止损价格，跟随市场价格的波动来保护盈利。当价格向有利方向移动时，止损价格也相应调整；当价格逆向移动时，止损触发。
@@ -139,6 +140,7 @@ pub struct AccountConfigInitiator
     position_margin_mode: Option<PositionMarginMode>,
     commission_level: Option<CommissionLevel>,
     fund_fee_rate: Option<f64>,
+    max_price_deviation:  Option<f64>,
 }
 impl Default for AccountConfigInitiator
 {
@@ -156,7 +158,9 @@ impl AccountConfigInitiator
                position_mode: None,
                position_margin_mode: None,
                commission_level: None,
-               fund_fee_rate: None }
+               fund_fee_rate: None,
+            max_price_deviation: None,
+        }
     }
 
     pub fn margin_mode(mut self, margin_mode: MarginMode) -> Self
@@ -181,11 +185,13 @@ impl AccountConfigInitiator
     {
         Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
                            position_direction_mode: self.position_mode.ok_or("position_mode is required")?,
-                           position_margin_mode: self.position_margin_mode.ok_or("position_mode is required")?,
-                           commission_level: self.commission_level.ok_or("commission_level is required")?,
-                           funding_rate: self.fund_fee_rate.ok_or("commission_level is required")?,
+                           position_margin_mode: self.position_margin_mode.ok_or("position margin mode is required")?,
+                           commission_level: self.commission_level.ok_or("commission level is required")?,
+                           funding_rate: self.fund_fee_rate.ok_or("fund_fee_rate is required")?,
                            account_leverage_rate: Default::default(),
                            fees_book: Default::default(),
-                           execution_mode: SandboxMode::Backtest })
+                           execution_mode: SandboxMode::Backtest,
+                           max_price_deviation: self.max_price_deviation.ok_or("max price deviation is required")?,
+        })
     }
 }
