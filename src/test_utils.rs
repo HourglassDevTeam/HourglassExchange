@@ -136,7 +136,7 @@ pub async fn create_test_account() -> Account
                                              fees_book: HashMap::new(),
                                              execution_mode: SandboxMode::Backtest };
 
-    account_config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
+    account_config.fees_book.insert(Perpetual, commission_rates);
 
     let positions = AccountPositions::init();
     let closed_positions = AccountExitedPositions::init();

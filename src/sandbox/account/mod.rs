@@ -451,7 +451,7 @@ impl Account
         };
 
         // 锁已经在此处释放，后续操作可以安全地借用 `self`
-        let (token, required_balance) = self.required_available_balance(&order).await.unwrap();
+        let (token, required_balance) = self.required_available_balance(&order).await?;
         println!("[attempt_atomic_open] required balance is quoted in {}: {}", token, required_balance);
         self.has_sufficient_available_balance(token, required_balance)?;
 
@@ -1384,6 +1384,7 @@ impl Account
     {
         // 从 AccountConfig 读取 max_price_deviation
         let max_price_deviation = self.config.max_price_deviation;
+        println!("[required_available_balance] : max_price_deviation is {:#?}", max_price_deviation);
 
         // 将锁定的 order_book 引用存储在一个变量中，确保其生命周期足够长
         let mut order_books_lock = self.single_level_order_book.lock().await;
