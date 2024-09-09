@@ -1282,10 +1282,10 @@ impl Account
 
         // 根据 PositionMarginMode 处理余额更新
         match (open.instrument.kind, position_margin_mode) {
-            | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Cross) => {
+            | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Isolated) => {
                 todo!("Handle Cross Margin");
             }
-            | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Isolated) => match open.side {
+            | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Cross) => match open.side {
                 | Side::Buy => {
                     let delta = BalanceDelta { total: 0.0,
                                                available: -required_balance };
