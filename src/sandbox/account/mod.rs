@@ -2266,14 +2266,13 @@ mod tests
         let trades = account.match_orders(&market_event).await.unwrap();
         println!("trades:{:#?}", trades);
 
-        // 检查余额是否已更新
-        // let base_balance = account.get_balance(&instrument.base).unwrap();
+        // 检查余额是否已更新 注意合约交易中base_balance不应该被改变
+        let base_balance = account.get_balance(&instrument.base).unwrap();
+        assert_eq!(base_balance.total, 10.0);
+        assert_eq!(base_balance.available, 10.0);
         let quote_balance = account.get_balance(&instrument.quote).unwrap();
-
-        // assert_eq!(base_balance.total, 10.0);
-        // assert_eq!(base_balance.available, 10.0);
         assert_eq!(quote_balance.available, 27155.188); // Maker 价格
-                                                        // assert_eq!(quote_balance.total, 59967.188); // NOTE this is correct remaining total
+        assert_eq!(quote_balance.total, 59967.188); // NOTE this is correct remaining total
     }
 
     #[tokio::test]
