@@ -896,8 +896,7 @@ impl Account
                                                pos_config: PerpetualPositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
                                                                                      leverage: self.config.account_leverage_rate,
                                                                                      position_mode: self.config.position_direction_mode.clone() },
-                                               liquidation_price: 0.0,
-                                                };
+                                               liquidation_price: 0.0 };
         Ok(new_position)
     }
 
@@ -911,7 +910,7 @@ impl Account
                                                                                leverage: self.config.account_leverage_rate,
                                                                                position_mode: self.config.position_direction_mode.clone() },
                                             liquidation_price: 0.0,
-                                            funding_fee: 0.0  /* TODO : To Be Checked */ };
+                                            funding_fee: 0.0 /* TODO : To Be Checked */ };
         Ok(new_position)
     }
 
@@ -1060,7 +1059,8 @@ impl Account
                                 should_remove_position = position.meta.current_size == trade.size;
                                 should_remove_and_reverse = position.meta.current_size < trade.size;
                                 remaining_quantity = trade.size - position.meta.current_size;
-                            } else {
+                            }
+                            else {
                                 // 没有空头仓位，检查是否已有多头仓位
                                 let mut long_positions_write = self.positions.perpetual_pos_long.write().await;
                                 if let Some(long_position) = long_positions_write.get_mut(&trade.instrument) {
@@ -1068,18 +1068,15 @@ impl Account
                                     println!("[UniLinkEx] : No existing short position, updating existing long position...");
                                     long_position.meta.update_from_trade(&trade, trade.price);
                                     return Ok(());
-                                } else {
+                                }
+                                else {
                                     // 没有多头仓位，创建新的多头仓位
                                     println!("[UniLinkEx] : No existing short or long position, creating a new long position...");
-                                    let new_position = PerpetualPosition {
-                                        meta: PositionMeta::create_from_trade(&trade),
-                                        pos_config: PerpetualPositionConfig {
-                                            pos_margin_mode: self.config.position_margin_mode.clone(),
-                                            leverage: self.config.account_leverage_rate,
-                                            position_mode: self.config.position_direction_mode.clone(),
-                                        },
-                                        liquidation_price: 0.0,
-                                    };
+                                    let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade(&trade),
+                                                                           pos_config: PerpetualPositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
+                                                                                                                 leverage: self.config.account_leverage_rate,
+                                                                                                                 position_mode: self.config.position_direction_mode.clone() },
+                                                                           liquidation_price: 0.0 };
                                     long_positions_write.insert(trade.instrument.clone(), new_position);
                                     return Ok(());
                                 }
@@ -1105,11 +1102,10 @@ impl Account
                                 short_positions_write.remove(&trade.instrument);
                                 drop(short_positions_write);
                                 let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
-                                    pos_config: PerpetualPositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
-                                        leverage: self.config.account_leverage_rate,
-                                        position_mode: self.config.position_direction_mode.clone() },
-                                    liquidation_price: 0.0,
-                                     };
+                                                                       pos_config: PerpetualPositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
+                                                                                                             leverage: self.config.account_leverage_rate,
+                                                                                                             position_mode: self.config.position_direction_mode.clone() },
+                                                                       liquidation_price: 0.0 };
                                 self.positions.perpetual_pos_long.write().await.insert(trade.instrument.clone(), new_position);
                             }
                             else {
@@ -1143,8 +1139,7 @@ impl Account
                                                                        pos_config: PerpetualPositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
                                                                                                              leverage: self.config.account_leverage_rate,
                                                                                                              position_mode: self.config.position_direction_mode.clone() },
-                                                                       liquidation_price: 0.0,
-                                                                        };
+                                                                       liquidation_price: 0.0 };
                                 self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
                                 // println!("[UniLinkEx] : New short position created: {:#?}", self.positions.perpetual_pos_short);
                                 return Ok(());
@@ -1185,8 +1180,7 @@ impl Account
                                                                        pos_config: PerpetualPositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
                                                                                                              leverage: self.config.account_leverage_rate,
                                                                                                              position_mode: self.config.position_direction_mode.clone() },
-                                                                       liquidation_price: 0.0,
-                                                                        };
+                                                                       liquidation_price: 0.0 };
                                 // 将新的空头仓位插入空头仓位映射中
                                 self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
                             }
@@ -1280,13 +1274,11 @@ impl Account
         // 根据 PositionMarginMode 处理余额更新 注意 : 暂时不支持spot的仓位逻辑
         match open.instrument.kind {
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
-                let delta = BalanceDelta {
-                    total: 0.0,
-                    available: -required_balance,
-                };
+                let delta = BalanceDelta { total: 0.0,
+                                           available: -required_balance };
                 self.apply_balance_delta(&open.instrument.quote, delta)
             }
-            | _=> {
+            | _ => {
                 return Err(ExchangeError::SandBox(format!(
                     "[UniLinkEx] : Unsupported InstrumentKind or PositionMarginMode for open order: {:?}",
                     open.instrument.kind

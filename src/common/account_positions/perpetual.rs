@@ -63,8 +63,7 @@ impl PerpetualPositionBuilder
     {
         Self { meta: None,
                pos_config: None,
-               liquidation_price: None,
-               }
+               liquidation_price: None }
     }
 
     pub fn meta(mut self, meta: PositionMeta) -> Self
@@ -89,8 +88,7 @@ impl PerpetualPositionBuilder
     {
         Some(PerpetualPosition { meta: self.meta?,
                                  pos_config: self.pos_config?,
-                                 liquidation_price: self.liquidation_price?,
-                                  })
+                                 liquidation_price: self.liquidation_price? })
     }
 }
 
@@ -129,8 +127,7 @@ mod tests
                                                pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                                                      leverage: 1.0,
                                                                                      position_mode: PositionDirectionMode::LongShort },
-                                               liquidation_price: 100.0,
-                                                };
+                                               liquidation_price: 100.0 };
         position.update_liquidation_price(150.0);
         assert_eq!(position.liquidation_price, 150.0);
     }

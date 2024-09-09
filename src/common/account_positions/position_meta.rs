@@ -12,7 +12,7 @@ pub struct PositionMeta
     pub position_id: PositionId,      // 静态数据
     pub enter_ts: i64,                // 静态数据
     pub update_ts: i64,               // 实时更新
-    pub exit_balance: TokenBalance, /* 静态更新（退出时更新）当一个仓位被平仓（即完全退出）时，该仓位所涉及的资产或资金的最终状态。 CONSIDER  do we retrieve it from the TokenBalance or we calculate it? */
+    pub exit_balance: TokenBalance, /* 静态更新（退出时更新）当一个仓位被平仓（即完全退出）时，该仓位所涉及的资产或资金的最终状态。 CONSIDER  do we retrieve it from the TokenBalance or we calculate it? // */
     pub exchange: Exchange,         // 静态数据
     pub instrument: Instrument,     // 静态数据
     pub side: Side,                 // 静态数据
@@ -24,7 +24,6 @@ pub struct PositionMeta
     pub unrealised_pnl: f64,        // 实时更新
     pub realised_pnl: f64,          // 静态更新（平仓时更新）
 }
-
 
 impl PositionMeta
 {
@@ -66,22 +65,20 @@ impl PositionMeta
 
     pub fn create_from_trade_with_remaining(trade: &ClientTrade, remaining_quantity: f64) -> Self
     {
-        PositionMeta {
-            position_id: PositionId::new(&trade.instrument, trade.timestamp),
-            enter_ts: trade.timestamp,
-            update_ts: trade.timestamp,
-            exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, Some(0.0))),
-            exchange: trade.exchange.clone(),
-            instrument: trade.instrument.clone(),
-            side: trade.side, // 直接使用传入的side
-            current_size: remaining_quantity, // 直接使用传入的remaining_quantity
-            current_fees_total: trade.fees,
-            current_avg_price_gross: trade.price,
-            current_symbol_price: trade.price,
-            current_avg_price: trade.price,
-            unrealised_pnl: 0.0,
-            realised_pnl: 0.0,
-        }
+        PositionMeta { position_id: PositionId::new(&trade.instrument, trade.timestamp),
+                       enter_ts: trade.timestamp,
+                       update_ts: trade.timestamp,
+                       exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, Some(0.0))),
+                       exchange: trade.exchange.clone(),
+                       instrument: trade.instrument.clone(),
+                       side: trade.side,                 // 直接使用传入的side
+                       current_size: remaining_quantity, // 直接使用传入的remaining_quantity
+                       current_fees_total: trade.fees,
+                       current_avg_price_gross: trade.price,
+                       current_symbol_price: trade.price,
+                       current_avg_price: trade.price,
+                       unrealised_pnl: 0.0,
+                       realised_pnl: 0.0 }
     }
 
     /// 此函数可以处理 `Net` 和 `LongShort` 两种模式。
