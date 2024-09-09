@@ -7,7 +7,7 @@ use crate::{
             option::OptionPosition,
             perpetual::{PerpetualPosition, PerpetualPositionConfig},
             position_meta::PositionMeta,
-            AccountPositions, Position, PositionDirectionMode, PositionMarginMode,
+            AccountPositions, Position, PositionDirectionMode,
         },
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
@@ -1277,27 +1277,16 @@ impl Account
         println!("[apply_open_order_changes] : applying open order: {:#?}, subtracting required_balance: {:?}",
                  open, required_balance);
 
-        // 配置从直接访问 `self.config` 获取
-        let position_margin_mode = self.config.position_margin_mode.clone();
-
-        // 根据 PositionMarginMode 处理余额更新
-        match (open.instrument.kind, position_margin_mode) {
-            | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Isolated) => {
-                todo!("Handle Cross Margin");
+        // 根据 PositionMarginMode 处理余额更新 注意 暂时不支持spot的仓位逻辑
+        match open.instrument.kind {
+            | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
+                let delta = BalanceDelta {
+                    total: 0.0,
+                    available: -required_balance,
+                };
+                self.apply_balance_delta(&open.instrument.quote, delta)
             }
-            | (InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken, PositionMarginMode::Cross) => match open.side {
-                | Side::Buy => {
-                    let delta = BalanceDelta { total: 0.0,
-                                               available: -required_balance };
-                    self.apply_balance_delta(&open.instrument.quote, delta);
-                }
-                | Side::Sell => {
-                    let delta = BalanceDelta { total: 0.0,
-                                               available: -required_balance };
-                    self.apply_balance_delta(&open.instrument.quote, delta);
-                }
-            },
-            | (_, _) => {
+            | _=> {
                 return Err(ExchangeError::SandBox(format!(
                     "[UniLinkEx] : Unsupported InstrumentKind or PositionMarginMode for open order: {:?}",
                     open.instrument.kind

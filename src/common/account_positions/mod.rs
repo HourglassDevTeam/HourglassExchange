@@ -355,8 +355,8 @@ pub enum PositionDirectionMode
 pub enum PositionMarginMode
 {
     Cross,
-    Isolated,
-    // Isolated{isolated_margin: f64},
+    // Isolated,
+    Isolated{isolated_margin: f64},
 }
 
 /// NOTE: 可能需要多种头寸类型共存

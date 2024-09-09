@@ -69,7 +69,7 @@ mod tests
         let toml_content = r#"
     margin_mode = "SimpleMode"
     position_direction_mode = "Net"
-    position_margin_mode = "Isolated"
+    position_margin_mode = "Cross"
     commission_level = "Lv2"
     funding_rate = 0.0001
     account_leverage_rate = 100.0
@@ -112,7 +112,7 @@ mod tests
 
         assert_eq!(config.margin_mode, MarginMode::SimpleMode);
         assert_eq!(config.position_direction_mode, PositionDirectionMode::Net);
-        assert_eq!(config.position_margin_mode, PositionMarginMode::Isolated);
+        assert_eq!(config.position_margin_mode, PositionMarginMode::Cross);
         assert_eq!(config.commission_level, CommissionLevel::Lv2);
         assert_eq!(config.account_leverage_rate, 1.0);
         assert_eq!(config.fees_book.get(&InstrumentKind::Spot).cloned(),
