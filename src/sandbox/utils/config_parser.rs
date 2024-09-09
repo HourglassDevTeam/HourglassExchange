@@ -74,6 +74,7 @@ mod tests
     funding_rate = 0.0001
     account_leverage_rate = 100.0
     execution_mode = "Backtest"
+    max_price_deviation = 0.05
 
 
     [current_commission_rate]
@@ -113,7 +114,7 @@ mod tests
         assert_eq!(config.position_direction_mode, PositionDirectionMode::Net);
         assert_eq!(config.position_margin_mode, PositionMarginMode::Isolated);
         assert_eq!(config.commission_level, CommissionLevel::Lv2);
-        assert_eq!(config.account_leverage_rate, 100.0);
+        assert_eq!(config.account_leverage_rate, 1.0);
         assert_eq!(config.fees_book.get(&InstrumentKind::Spot).cloned(),
                    Some(CommissionRates { maker_fees: 0.001,
                                           taker_fees: 0.002 }));
