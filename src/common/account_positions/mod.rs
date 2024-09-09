@@ -344,12 +344,40 @@ impl AccountPositions
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionDirectionMode
 {
-    LongShort, // Note long/short, only applicable to Futures/Swap
-    Net,       // Note one side per token per account_positions
+    LongShort,
+    Net,
 }
 
-///  [Cross]: 交叉保证金模式。在这种模式下，所有仓位共享一个保证金池，盈亏共用。如果仓位的保证金不足，将从账户余额中提取以补充不足。
-///  [Isolated]: 逐仓保证金模式。在这种模式下，每个仓位都有独立的保证金，盈亏互不影响。如果某个仓位的保证金不足，该仓位将被强制平仓，而不会影响到其他仓位。
+impl PositionMarginMode {
+    /// 重置隔离保证金为 0
+    pub fn reset_isolated_margin(&mut self) -> Result<(), &'static str> {
+        match self {
+            PositionMarginMode::Isolated { isolated_margin } => {
+                *isolated_margin = 0.0;
+                Ok(())
+            }
+            PositionMarginMode::Cross => Err("Cannot reset margin in Cross mode"),
+        }
+    }
+
+    /// 更新隔离保证金为新值
+    pub fn update_isolated_margin(&mut self, new_margin: f64) -> Result<(), &'static str> {
+        match self {
+            PositionMarginMode::Isolated { isolated_margin } => {
+                *isolated_margin = new_margin;
+                Ok(())
+            }
+            PositionMarginMode::Cross => Err("Cannot update margin in Cross mode"),
+        }
+    }
+
+    /// 创建一个新的带有初始隔离保证金的 Isolated 模式
+    pub fn new_isolated(initial_margin: f64) -> Self {
+        PositionMarginMode::Isolated {
+            isolated_margin: initial_margin,
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionMarginMode
@@ -536,4 +564,50 @@ mod tests
             assert_eq!(positions.len(), 2);
         }
     }
+    #[test]
+    fn test_reset_isolated_margin() {
+        let mut position_margin = PositionMarginMode::Isolated { isolated_margin: 500.0 };
+
+        // 重置隔离保证金
+        let result = position_margin.reset_isolated_margin();
+        assert!(result.is_ok());
+        if let PositionMarginMode::Isolated { isolated_margin } = position_margin {
+            assert_eq!(isolated_margin, 0.0, "Isolated margin should be reset to 0");
+        } else {
+            panic!("Expected Isolated margin mode");
+        }
+    }
+
+    #[test]
+    fn test_update_isolated_margin() {
+        let mut position_margin = PositionMarginMode::Isolated { isolated_margin: 500.0 };
+
+        // 更新隔离保证金
+        let result = position_margin.update_isolated_margin(600.0);
+        assert!(result.is_ok());
+        if let PositionMarginMode::Isolated { isolated_margin } = position_margin {
+            assert_eq!(isolated_margin, 600.0, "Isolated margin should be updated to 600");
+        } else {
+            panic!("Expected Isolated margin mode");
+        }
+
+        // 测试 Cross 模式下更新隔离保证金失败
+        let mut cross_margin = PositionMarginMode::Cross;
+        let result = cross_margin.update_isolated_margin(700.0);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Cannot update margin in Cross mode");
+    }
+
+    #[test]
+    fn test_new_isolated_margin() {
+        // 创建一个新的隔离保证金模式
+        let position_margin = PositionMarginMode::new_isolated(1000.0);
+
+        if let PositionMarginMode::Isolated { isolated_margin } = position_margin {
+            assert_eq!(isolated_margin, 1000.0, "Initial isolated margin should be 1000");
+        } else {
+            panic!("Expected Isolated margin mode");
+        }
+    }
+
 }
