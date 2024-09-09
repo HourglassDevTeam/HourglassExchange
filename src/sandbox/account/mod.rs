@@ -1277,7 +1277,7 @@ impl Account
         println!("[apply_open_order_changes] : applying open order: {:#?}, subtracting required_balance: {:?}",
                  open, required_balance);
 
-        // 根据 PositionMarginMode 处理余额更新 注意 暂时不支持spot的仓位逻辑
+        // 根据 PositionMarginMode 处理余额更新 注意 : 暂时不支持spot的仓位逻辑
         match open.instrument.kind {
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
                 let delta = BalanceDelta {

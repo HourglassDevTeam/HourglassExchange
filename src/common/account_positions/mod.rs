@@ -355,7 +355,6 @@ pub enum PositionDirectionMode
 pub enum PositionMarginMode
 {
     Cross,
-    // Isolated,
     Isolated{isolated_margin: f64},
 }
 
