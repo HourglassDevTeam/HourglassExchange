@@ -25,9 +25,7 @@ pub struct PositionMeta
     pub realised_pnl: f64,          // 静态更新（平仓时更新）
 }
 
-/// FIXME 虽然 Net Mode 和 LongShort Mode 在很多地方可以复用相似的逻辑，
-///         但为了减少未来可能的逻辑混淆和复杂性，建议进一步明确两种模式的职责，
-///         尤其是在处理复杂的反向开仓和部分平仓的情况下。
+
 impl PositionMeta
 {
     /// 根据 `ClientTrade` 更新仓位
