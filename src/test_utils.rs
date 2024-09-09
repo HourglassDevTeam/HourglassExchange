@@ -191,7 +191,7 @@ pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPositi
                                                               leverage: 1.0,
                                                               position_mode: PositionDirectionMode::LongShort },
                         liquidation_price: 0.0,
-                        margin: 0.0 }
+                        }
 }
 
 /// 创建一个测试用的 `FuturePosition` 实例，指定 `Side`。
@@ -216,6 +216,6 @@ pub fn create_test_future_position_with_side(instrument: Instrument, side: Side)
                                                         leverage: 1.0,
                                                         position_mode: PositionDirectionMode::LongShort },
                      liquidation_price: 0.0,
-                     margin: 0.0,
+
                      funding_fee: 0.0 }
 }

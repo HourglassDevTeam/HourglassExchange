@@ -8,7 +8,6 @@ pub struct FuturePosition
     pub meta: PositionMeta,
     pub pos_config: FuturePositionConfig, // 静态数据
     pub liquidation_price: f64,           // 实时更新 NOTE : To Be Checked
-    pub margin: f64,                      // 实时更新 NOTE : To Be Checked
     pub funding_fee: f64,                 // 实时更新 NOTE : To Be Checked
 }
 

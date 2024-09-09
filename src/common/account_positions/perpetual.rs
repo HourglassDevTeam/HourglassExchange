@@ -9,7 +9,6 @@ pub struct PerpetualPosition
     pub meta: PositionMeta,                  // 复合类型，包含静态数据、实时更新数据和静态更新数据
     pub pos_config: PerpetualPositionConfig, // 静态数据
     pub liquidation_price: f64,              // 实时更新 NOTE : 需要持续更新吗
-    pub margin: f64,                         // 实时更新 NOTE : 需要持续更新吗
 }
 
 impl PerpetualPosition
@@ -18,12 +17,6 @@ impl PerpetualPosition
     pub fn update_liquidation_price(&mut self, new_price: f64)
     {
         self.liquidation_price = new_price;
-    }
-
-    /// 更新保证金
-    pub fn update_margin(&mut self, new_margin: f64)
-    {
-        self.margin = new_margin;
     }
 
     /// 更新静态数据部分
@@ -53,7 +46,6 @@ pub struct PerpetualPositionBuilder
     meta: Option<PositionMeta>,
     pos_config: Option<PerpetualPositionConfig>,
     liquidation_price: Option<f64>,
-    margin: Option<f64>,
 }
 
 impl Default for PerpetualPositionBuilder
@@ -72,7 +64,7 @@ impl PerpetualPositionBuilder
         Self { meta: None,
                pos_config: None,
                liquidation_price: None,
-               margin: None }
+               }
     }
 
     pub fn meta(mut self, meta: PositionMeta) -> Self
@@ -93,18 +85,12 @@ impl PerpetualPositionBuilder
         self
     }
 
-    pub fn margin(mut self, margin: f64) -> Self
-    {
-        self.margin = Some(margin);
-        self
-    }
-
     pub fn build(self) -> Option<PerpetualPosition>
     {
         Some(PerpetualPosition { meta: self.meta?,
                                  pos_config: self.pos_config?,
                                  liquidation_price: self.liquidation_price?,
-                                 margin: self.margin? })
+                                  })
     }
 }
 
@@ -144,7 +130,7 @@ mod tests
                                                                                      leverage: 1.0,
                                                                                      position_mode: PositionDirectionMode::LongShort },
                                                liquidation_price: 100.0,
-                                               margin: 10.0 };
+                                                };
         position.update_liquidation_price(150.0);
         assert_eq!(position.liquidation_price, 150.0);
     }

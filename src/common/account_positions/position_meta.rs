@@ -66,15 +66,24 @@ impl PositionMeta
                        realised_pnl: 0.0 }
     }
 
-    /// NOTE 这个先创建再更改的方式应该不是最佳实践
-    ///     此函数仅用于 `PositionDirectionMode::Net` 模式。
-    ///     使用剩余的数量反向创建新持仓。
-    pub fn create_from_trade_with_remaining(trade: &ClientTrade, side: Side, remaining_quantity: f64) -> Self
+    pub fn create_from_trade_with_remaining(trade: &ClientTrade, remaining_quantity: f64) -> Self
     {
-        let mut new_meta = PositionMeta::create_from_trade(trade);
-        new_meta.current_size = remaining_quantity;
-        new_meta.side = side;
-        new_meta
+        PositionMeta {
+            position_id: PositionId::new(&trade.instrument, trade.timestamp),
+            enter_ts: trade.timestamp,
+            update_ts: trade.timestamp,
+            exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, Some(0.0))),
+            exchange: trade.exchange.clone(),
+            instrument: trade.instrument.clone(),
+            side: trade.side, // 直接使用传入的side
+            current_size: remaining_quantity, // 直接使用传入的remaining_quantity
+            current_fees_total: trade.fees,
+            current_avg_price_gross: trade.price,
+            current_symbol_price: trade.price,
+            current_avg_price: trade.price,
+            unrealised_pnl: 0.0,
+            realised_pnl: 0.0,
+        }
     }
 
     /// 此函数可以处理 `Net` 和 `LongShort` 两种模式。
@@ -93,7 +102,7 @@ impl PositionMeta
             if remaining_quantity >= 0.0 {
                 // 完全平仓，并用剩余的数量反向开仓
                 self.update_realised_pnl(trade.price);
-                PositionMeta::create_from_trade_with_remaining(trade, trade.side, current_symbol_price)
+                PositionMeta::create_from_trade_with_remaining(trade, current_symbol_price)
             }
             else {
                 // 部分平仓，不反向，仅减少持仓量

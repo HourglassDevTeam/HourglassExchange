@@ -897,7 +897,7 @@ impl Account
                                                                                      leverage: self.config.account_leverage_rate,
                                                                                      position_mode: self.config.position_direction_mode.clone() },
                                                liquidation_price: 0.0,
-                                               margin: 0.0 };
+                                                };
         Ok(new_position)
     }
 
@@ -911,7 +911,6 @@ impl Account
                                                                                leverage: self.config.account_leverage_rate,
                                                                                position_mode: self.config.position_direction_mode.clone() },
                                             liquidation_price: 0.0,
-                                            margin: 0.0,      // TODO : To Be Checked
                                             funding_fee: 0.0  /* TODO : To Be Checked */ };
         Ok(new_position)
     }
@@ -1049,23 +1048,77 @@ impl Account
                     | Side::Buy => {
                         println!("[UniLinkEx] : Processing long trade for Perpetual...");
 
-                        // 使用写锁更新或创建多头仓位
+                        let should_remove_position;
+                        let should_remove_and_reverse;
+                        let remaining_quantity;
+
                         {
-                            let mut long_positions = self.positions.perpetual_pos_long.write().await;
-                            if let Some(position) = long_positions.get_mut(&trade.instrument) {
-                                // println!("[UniLinkEx] : Updating existing long position...");
-                                position.meta.update_from_trade(&trade, trade.price);
-                                return Ok(());
+                            // 先获取读锁以检查空头仓位
+                            let short_positions_read = self.positions.perpetual_pos_short.read().await;
+                            if let Some(position) = short_positions_read.get(&trade.instrument) {
+                                // 如果存在空头仓位，判断是否需要移除或反向开仓
+                                should_remove_position = position.meta.current_size == trade.size;
+                                should_remove_and_reverse = position.meta.current_size < trade.size;
+                                remaining_quantity = trade.size - position.meta.current_size;
+                            } else {
+                                // 没有空头仓位，检查是否已有多头仓位
+                                let mut long_positions_write = self.positions.perpetual_pos_long.write().await;
+                                if let Some(long_position) = long_positions_write.get_mut(&trade.instrument) {
+                                    // 存在多头仓位，更新已有的多头仓位
+                                    println!("[UniLinkEx] : No existing short position, updating existing long position...");
+                                    long_position.meta.update_from_trade(&trade, trade.price);
+                                    return Ok(());
+                                } else {
+                                    // 没有多头仓位，创建新的多头仓位
+                                    println!("[UniLinkEx] : No existing short or long position, creating a new long position...");
+                                    let new_position = PerpetualPosition {
+                                        meta: PositionMeta::create_from_trade(&trade),
+                                        pos_config: PerpetualPositionConfig {
+                                            pos_margin_mode: self.config.position_margin_mode.clone(),
+                                            leverage: self.config.account_leverage_rate,
+                                            position_mode: self.config.position_direction_mode.clone(),
+                                        },
+                                        liquidation_price: 0.0,
+                                    };
+                                    long_positions_write.insert(trade.instrument.clone(), new_position);
+                                    return Ok(());
+                                }
                             }
                         }
 
-                        // 在锁释放后调用 self.create_perpetual_position
-                        let new_position = self.create_perpetual_position(trade.clone()).await?;
+                        {
+                            // 释放读锁后获取写锁进行更新
+                            let mut short_positions_write = self.positions.perpetual_pos_short.write().await;
 
-                        // 再次获取写锁插入新的仓位
-                        let mut long_positions = self.positions.perpetual_pos_long.write().await;
-                        long_positions.insert(trade.instrument.clone(), new_position);
-                        // println!("[UniLinkEx] : New long position created: {:#?}", long_positions);
+                            if should_remove_position {
+                                println!("[UniLinkEx] : 移除空头仓位...");
+                                let short_position = short_positions_write.get_mut(&trade.instrument).unwrap();
+                                short_position.meta.update_realised_pnl(trade.price);
+                                self.exited_positions.insert_perpetual_pos_short(short_position.clone()).await;
+                                short_positions_write.remove(&trade.instrument);
+                            }
+                            else if should_remove_and_reverse {
+                                println!("[UniLinkEx] : 移除并反向开多头仓...");
+                                let short_position = short_positions_write.get_mut(&trade.instrument).unwrap();
+                                short_position.meta.update_realised_pnl(trade.price);
+                                self.exited_positions.insert_perpetual_pos_short(short_position.clone()).await;
+                                short_positions_write.remove(&trade.instrument);
+                                drop(short_positions_write);
+                                let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
+                                    pos_config: PerpetualPositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
+                                        leverage: self.config.account_leverage_rate,
+                                        position_mode: self.config.position_direction_mode.clone() },
+                                    liquidation_price: 0.0,
+                                     };
+                                self.positions.perpetual_pos_long.write().await.insert(trade.instrument.clone(), new_position);
+                            }
+                            else {
+                                println!("[UniLinkEx] : 部分平仓空头仓位...");
+                                if let Some(position) = short_positions_write.get_mut(&trade.instrument) {
+                                    position.meta.current_size -= trade.size;
+                                }
+                            }
+                        }
                     }
 
                     | Side::Sell => {
@@ -1091,7 +1144,7 @@ impl Account
                                                                                                              leverage: self.config.account_leverage_rate,
                                                                                                              position_mode: self.config.position_direction_mode.clone() },
                                                                        liquidation_price: 0.0,
-                                                                       margin: 0.0 };
+                                                                        };
                                 self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
                                 // println!("[UniLinkEx] : New short position created: {:#?}", self.positions.perpetual_pos_short);
                                 return Ok(());
@@ -1128,12 +1181,12 @@ impl Account
                                 // 显式释放对 long_positions_write 的写锁
                                 drop(long_positions_write);
                                 // 基于交易创建新的空头仓位
-                                let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, Side::Sell, remaining_quantity),
+                                let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
                                                                        pos_config: PerpetualPositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
                                                                                                              leverage: self.config.account_leverage_rate,
                                                                                                              position_mode: self.config.position_direction_mode.clone() },
                                                                        liquidation_price: 0.0,
-                                                                       margin: 0.0 };
+                                                                        };
                                 // 将新的空头仓位插入空头仓位映射中
                                 self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
                             }

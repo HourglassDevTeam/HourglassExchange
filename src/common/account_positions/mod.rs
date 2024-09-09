@@ -205,7 +205,6 @@ impl AccountPositions
         let new_position = PerpetualPositionBuilder::new().meta(position_meta)
                                                           .pos_config(pos_config)
                                                           .liquidation_price(liquidation_price)
-                                                          .margin(initial_margin) // NOTE DOUBLE CHECK
                                                           .build()
                                                           .ok_or_else(|| ExchangeError::SandBox("Failed to build new account_positions".to_string()))?;
 
@@ -425,7 +424,7 @@ mod tests
                                                             .build()
                                                             .unwrap(),
                             liquidation_price,
-                            margin: initial_margin,
+
                             pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                                   leverage,
                                                                   position_mode: PositionDirectionMode::Net } }
@@ -487,8 +486,7 @@ mod tests
         }
 
         // 更新相同的 PerpetualPosition，修改 `margin`
-        let mut updated_position = perpetual_position.clone();
-        updated_position.margin = 2000.0; // 修改仓位的保证金
+        let updated_position = perpetual_position.clone();
 
         account_positions.update_position(Position::Perpetual(updated_position.clone())).await;
 
@@ -497,8 +495,6 @@ mod tests
             let positions = account_positions.perpetual_pos_long.read().await;
             if !positions.is_empty() {
                 assert_eq!(positions.len(), 1); // 确保仓位数量未增加
-                let pos = positions.get(&perpetual_instrument).unwrap();
-                assert_eq!(pos.margin, 2000.0); // 检查仓位是否已正确更新
             }
             else {
                 panic!("PerpetualPosition should exist but was not found.");
