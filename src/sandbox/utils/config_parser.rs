@@ -112,7 +112,6 @@ mod tests
 
         assert_eq!(config.margin_mode, MarginMode::SimpleMode);
         assert_eq!(config.position_direction_mode, PositionDirectionMode::Net);
-        assert_eq!(config.position_margin_mode, PositionMarginMode::Cross);
         assert_eq!(config.commission_level, CommissionLevel::Lv2);
         assert_eq!(config.account_leverage_rate, 1.0);
         assert_eq!(config.fees_book.get(&InstrumentKind::Spot).cloned(),

@@ -14,7 +14,7 @@ pub struct AccountConfig
 {
     pub margin_mode: MarginMode,                             // 保证金模式，用于定义账户的保证金类型（例如逐仓、全仓）
     pub position_direction_mode: PositionDirectionMode,      // 持仓方向模式，定义账户是否允许同时持有多头和空头（双向持仓）或仅允许单一方向的仓位
-    pub position_margin_mode: PositionMarginMode,            // 持仓保证金模式，定义每个仓位的保证金计算方式
+    // pub position_margin_mode: PositionMarginMode,            // 持仓保证金模式，定义每个仓位的保证金计算方式
     pub commission_level: CommissionLevel,                   // 手续费等级，决定账户的交易手续费率
     pub funding_rate: f64,                                   // 资金费率，用于合约交易中计算资金费用
     pub account_leverage_rate: f64,                          // 账户杠杆率，决定账户在杠杆交易中的放大倍数
@@ -184,7 +184,6 @@ impl AccountConfigInitiator
     {
         Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
                            position_direction_mode: self.position_mode.ok_or("position_mode is required")?,
-                           position_margin_mode: self.position_margin_mode.ok_or("position margin mode is required")?,
                            commission_level: self.commission_level.ok_or("commission level is required")?,
                            funding_rate: self.fund_fee_rate.ok_or("fund_fee_rate is required")?,
                            account_leverage_rate: Default::default(),

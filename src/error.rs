@@ -148,4 +148,6 @@ pub enum ExchangeError
 
     #[error("[UniLinkEx] : UnsupportedInstrumentKind")]
     UnsupportedInstrumentKind,
+    #[error("[UniLinkEx] : Trying to update a non-existingPosition")]
+    AttemptToUpdateNonExistingPosition,
 }

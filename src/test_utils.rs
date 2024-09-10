@@ -60,7 +60,6 @@ pub fn create_test_account_config() -> AccountConfig
 
     AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
                     position_direction_mode: PositionDirectionMode::Net,
-                    position_margin_mode: PositionMarginMode::Cross,
                     commission_level: CommissionLevel::Lv1,
                     funding_rate: 0.0,
                     account_leverage_rate: leverage_rate,
@@ -128,7 +127,6 @@ pub async fn create_test_account() -> Account
 
     let mut account_config = AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
                                              position_direction_mode: PositionDirectionMode::Net,
-                                             position_margin_mode: PositionMarginMode::Cross,
                                              commission_level: CommissionLevel::Lv1,
                                              funding_rate: 0.0,
                                              max_price_deviation: 0.05,
