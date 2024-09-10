@@ -1913,6 +1913,46 @@ mod tests
         test_utils::create_test_account,
     };
 
+    #[allow(dead_code)]
+    fn preconfig_perpetual_cross_longshort() -> PositionConfig{
+
+       PositionConfig::Perpetual(PerpetualPositionConfig{
+            pos_margin_mode: PositionMarginMode::Cross,
+            leverage: 1.0,
+            position_mode: PositionDirectionMode::LongShort,
+        })
+    }
+
+    #[allow(dead_code)]
+    fn preconfig_perpetual_isolated_longshort() -> PositionConfig{
+
+       PositionConfig::Perpetual(PerpetualPositionConfig{
+            pos_margin_mode: PositionMarginMode::Isolated{isolated_margin: None},
+            leverage: 1.0,
+            position_mode: PositionDirectionMode::LongShort,
+        })
+    }
+
+    #[allow(dead_code)]
+    fn preconfig_perpetual_cross_net() ->PositionConfig{
+
+        PositionConfig::Perpetual(PerpetualPositionConfig{
+            pos_margin_mode: PositionMarginMode::Cross,
+            leverage: 1.0,
+            position_mode: PositionDirectionMode::Net,
+        })
+    }
+
+
+    #[allow(dead_code)]
+    fn preconfig_perpetual_isolated_net() -> PositionConfig
+    { PositionConfig::Perpetual(PerpetualPositionConfig{
+            pos_margin_mode: PositionMarginMode::Isolated{isolated_margin: None},
+            leverage: 1.0,
+            position_mode: PositionDirectionMode::Net,
+        })
+    }
+
     #[tokio::test]
     async fn test_validate_order_request_open()
     {

@@ -420,7 +420,7 @@ impl PositionMarginMode
     {
         match self {
             | PositionMarginMode::Isolated { isolated_margin } => {
-                *isolated_margin = 0.0;
+                *isolated_margin = Some(0.0);
                 Ok(())
             }
             | PositionMarginMode::Cross => Err("Cannot reset margin in Cross mode"),
@@ -432,7 +432,7 @@ impl PositionMarginMode
     {
         match self {
             | PositionMarginMode::Isolated { isolated_margin } => {
-                *isolated_margin = new_margin;
+                *isolated_margin = Some(new_margin);
                 Ok(())
             }
             | PositionMarginMode::Cross => Err("Cannot update margin in Cross mode"),
@@ -442,7 +442,7 @@ impl PositionMarginMode
     /// 创建一个新的带有初始隔离保证金的 Isolated 模式
     pub fn new_isolated(initial_margin: f64) -> Self
     {
-        PositionMarginMode::Isolated { isolated_margin: initial_margin }
+        PositionMarginMode::Isolated { isolated_margin: Some(initial_margin) }
     }
 }
 
@@ -452,7 +452,7 @@ pub enum PositionMarginMode
     Cross,
     Isolated
     {
-        isolated_margin: f64,
+        isolated_margin: Option<f64>, // 计算保证金并初始化之前是空的
     },
 }
 
@@ -637,13 +637,13 @@ mod tests
     #[test]
     fn test_reset_isolated_margin()
     {
-        let mut position_margin = PositionMarginMode::Isolated { isolated_margin: 500.0 };
+        let mut position_margin = PositionMarginMode::Isolated { isolated_margin: Some(500.0) };
 
         // 重置隔离保证金
         let result = position_margin.reset_isolated_margin();
         assert!(result.is_ok());
         if let PositionMarginMode::Isolated { isolated_margin } = position_margin {
-            assert_eq!(isolated_margin, 0.0, "Isolated margin should be reset to 0");
+            assert_eq!(isolated_margin, Some(0.0), "Isolated margin should be reset to 0");
         }
         else {
             panic!("Expected Isolated margin mode");
@@ -653,13 +653,13 @@ mod tests
     #[test]
     fn test_update_isolated_margin()
     {
-        let mut position_margin = PositionMarginMode::Isolated { isolated_margin: 500.0 };
+        let mut position_margin = PositionMarginMode::Isolated { isolated_margin: Some(500.0) };
 
         // 更新隔离保证金
         let result = position_margin.update_isolated_margin(600.0);
         assert!(result.is_ok());
         if let PositionMarginMode::Isolated { isolated_margin } = position_margin {
-            assert_eq!(isolated_margin, 600.0, "Isolated margin should be updated to 600");
+            assert_eq!(isolated_margin, Some(600.0), "Isolated margin should be updated to 600");
         }
         else {
             panic!("Expected Isolated margin mode");
@@ -679,7 +679,7 @@ mod tests
         let position_margin = PositionMarginMode::new_isolated(1000.0);
 
         if let PositionMarginMode::Isolated { isolated_margin } = position_margin {
-            assert_eq!(isolated_margin, 1000.0, "Initial isolated margin should be 1000");
+            assert_eq!(isolated_margin, Some(1000.0), "Initial isolated margin should be 1000");
         }
         else {
             panic!("Expected Isolated margin mode");
