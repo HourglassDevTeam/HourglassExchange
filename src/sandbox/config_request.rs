@@ -12,7 +12,7 @@ pub struct ConfigurationRequest
     pub instrument: Instrument,
     pub timestamp: i64,
     pub cid: Option<ClientOrderId>,
-    pub leverage_rate : Option<f64>,
-    pub position_margin_mode: Option<PositionMarginMode>,
-    pub position_direction_mode: Option<PositionDirectionMode>,
+    pub leverage_rate : f64,
+    pub position_margin_mode: PositionMarginMode,
+    pub position_direction_mode: PositionDirectionMode,
 }

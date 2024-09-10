@@ -21,6 +21,9 @@ use chrono::Utc;
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 use tokio::sync::RwLock;
+use crate::common::account_positions::future::FuturePositionConfig;
+use crate::common::account_positions::leveraged_token::LeveragedTokenPositionConfig;
+use crate::common::account_positions::option::OptionPositionConfig;
 
 mod exited_position;
 pub mod exited_positions;
@@ -45,6 +48,16 @@ pub struct AccountPositions
     pub option_pos_long_put: Arc<RwLock<HashMap<Instrument, OptionPosition>>>,
     pub option_pos_short_call: Arc<RwLock<HashMap<Instrument, OptionPosition>>>,
     pub option_pos_short_put: Arc<RwLock<HashMap<Instrument, OptionPosition>>>,
+    pub margin_pos_long_config: Arc<RwLock<HashMap<Instrument, LeveragedTokenPositionConfig>>>,
+    pub margin_pos_short_config: Arc<RwLock<HashMap<Instrument, LeveragedTokenPositionConfig>>>,
+    pub perpetual_pos_long_config: Arc<RwLock<HashMap<Instrument, PerpetualPositionConfig>>>,
+    pub perpetual_pos_short_config: Arc<RwLock<HashMap<Instrument, PerpetualPositionConfig>>>,
+    pub futures_pos_long_config: Arc<RwLock<HashMap<Instrument, FuturePositionConfig>>>,
+    pub futures_pos_short_config: Arc<RwLock<HashMap<Instrument, FuturePositionConfig>>>,
+    pub option_pos_long_call_config: Arc<RwLock<HashMap<Instrument, OptionPositionConfig>>>,
+    pub option_pos_long_put_config: Arc<RwLock<HashMap<Instrument, OptionPositionConfig>>>,
+    pub option_pos_short_call_config: Arc<RwLock<HashMap<Instrument, OptionPositionConfig>>>,
+    pub option_pos_short_put_config: Arc<RwLock<HashMap<Instrument, OptionPositionConfig>>>,
 }
 
 impl Serialize for AccountPositions
@@ -126,6 +139,16 @@ impl<'de> Deserialize<'de> for AccountPositions
             option_pos_long_put: HashMap<Instrument, OptionPosition>,
             option_pos_short_call: HashMap<Instrument, OptionPosition>,
             option_pos_short_put: HashMap<Instrument, OptionPosition>,
+            margin_pos_long_config: HashMap<Instrument, LeveragedTokenPositionConfig>,
+            margin_pos_short_config: HashMap<Instrument, LeveragedTokenPositionConfig>,
+            perpetual_pos_long_config: HashMap<Instrument, PerpetualPositionConfig>,
+            perpetual_pos_short_config: HashMap<Instrument, PerpetualPositionConfig>,
+            futures_pos_long_config: HashMap<Instrument, FuturePositionConfig>,
+            futures_pos_short_config: HashMap<Instrument, FuturePositionConfig>,
+            option_pos_long_call_config: HashMap<Instrument,OptionPositionConfig>,
+            option_pos_long_put_config: HashMap<Instrument, OptionPositionConfig>,
+            option_pos_short_call_config: HashMap<Instrument, OptionPositionConfig>,
+            option_pos_short_put_config: HashMap<Instrument, OptionPositionConfig>,
         }
 
         let data = AccountPositionsData::deserialize(deserializer)?;
@@ -139,7 +162,24 @@ impl<'de> Deserialize<'de> for AccountPositions
                               option_pos_long_call: Arc::new(RwLock::new(data.option_pos_long_call)),
                               option_pos_long_put: Arc::new(RwLock::new(data.option_pos_long_put)),
                               option_pos_short_call: Arc::new(RwLock::new(data.option_pos_short_call)),
-                              option_pos_short_put: Arc::new(RwLock::new(data.option_pos_short_put)) })
+                              option_pos_short_put: Arc::new(RwLock::new(data.option_pos_short_put)),
+                              margin_pos_long_config:Arc::new(RwLock::new(data.margin_pos_long_config)),
+                              margin_pos_short_config: Arc::new(RwLock::new(data.margin_pos_short_config)),
+                              perpetual_pos_long_config:Arc::new(RwLock::new(data.perpetual_pos_long_config)),
+                              perpetual_pos_short_config: Arc::new(RwLock::new(data.perpetual_pos_short_config)),
+                              futures_pos_long_config: Arc::new(RwLock::new(data.futures_pos_long_config)),
+                              futures_pos_short_config: Arc::new(RwLock::new(data.futures_pos_short_config)),
+                              option_pos_long_call_config:Arc::new(RwLock::new(data.option_pos_long_call_config)),
+                              option_pos_long_put_config: Arc::new(RwLock::new(data.option_pos_long_put_config)),
+                                option_pos_short_put_config:Arc::new(RwLock::new(data.option_pos_short_put_config)),
+                                option_pos_short_call_config:Arc::new(RwLock::new(data.option_pos_short_call_config)),
+
+
+        }
+
+
+
+        )
     }
 }
 
@@ -157,7 +197,18 @@ impl AccountPositions
                option_pos_long_call: Arc::new(RwLock::new(HashMap::new())),
                option_pos_long_put: Arc::new(RwLock::new(HashMap::new())),
                option_pos_short_call: Arc::new(RwLock::new(HashMap::new())),
-               option_pos_short_put: Arc::new(RwLock::new(HashMap::new())) }
+               option_pos_short_put: Arc::new(RwLock::new(HashMap::new())),
+            margin_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
+            margin_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
+            perpetual_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
+            perpetual_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
+            futures_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
+            futures_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
+            option_pos_long_call_config: Arc::new(RwLock::new(HashMap::new())),
+            option_pos_long_put_config: Arc::new(RwLock::new(HashMap::new())),
+            option_pos_short_call_config: Arc::new(RwLock::new(HashMap::new())),
+            option_pos_short_put_config: Arc::new(RwLock::new(HashMap::new())),
+        }
     }
 
     /// TODO check init logic
