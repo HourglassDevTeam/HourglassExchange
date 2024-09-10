@@ -898,6 +898,15 @@ impl Account
                                                                                      leverage: self.config.account_leverage_rate,
                                                                                      position_mode: self.config.position_direction_mode.clone() },
                                                liquidation_price: 0.0 };
+        match trade.side {
+            Side::Buy => {
+            self.positions.perpetual_pos_long.write().await.insert(trade.instrument,new_position.clone());
+            }
+            Side::Sell => {
+            self.positions.perpetual_pos_short.write().await.insert(trade.instrument,new_position.clone());
+            }
+        }
+
         Ok(new_position)
     }
 
@@ -1058,7 +1067,6 @@ impl Account
                         let should_remove_position;
                         let should_remove_and_reverse;
                         let remaining_quantity;
-                        let position_margin_mode;
 
                         {
                             // 先获取读锁以检查空头仓位
@@ -1068,14 +1076,12 @@ impl Account
                                 should_remove_position = short_position.meta.current_size == trade.size;
                                 should_remove_and_reverse = short_position.meta.current_size < trade.size;
                                 remaining_quantity = trade.size - short_position.meta.current_size;
-                                position_margin_mode = short_position.pos_config.pos_margin_mode.clone();
                             }
                             else {
                                 // 没有空头仓位，检查是否已有多头仓位
                                 let mut long_positions_write = self.positions.perpetual_pos_long.write().await;
 
                                 if let Some(long_position) = long_positions_write.get_mut(&trade.instrument) {
-                                    let position_margin_mode = long_position.pos_config.pos_margin_mode.clone();
                                     // 存在多头仓位，更新已有的多头仓位
                                     println!("[UniLinkEx] : No existing short position, updating existing long position...");
                                     long_position.meta.update_from_trade(&trade, trade.price);
@@ -1142,7 +1148,6 @@ impl Account
                                 let mut long_positions_write = self.positions.perpetual_pos_long.write().await;
 
                                 if let Some(short_position) = long_positions_write.get_mut(&trade.instrument) {
-                                    let position_margin_mode = short_position.pos_config.pos_margin_mode.clone();
                                     // 存在空头仓位，更新已有的空头仓位
                                     println!("[UniLinkEx] : No existing short position, updating existing short position...");
                                     short_position.meta.update_from_trade(&trade, trade.price);
@@ -2396,8 +2401,8 @@ mod tests
                                                            quote: Token("USDT".to_string()),
                                                            kind: InstrumentKind::Perpetual },
                                   side: Side::Buy,
-                                  price: 100.0,
-                                  size: 10.0,
+                                  price: 16999.0,
+                                  size: 1.0,
                                   fees: 0.1 };
 
         // 执行管理仓位逻辑
@@ -2406,9 +2411,10 @@ mod tests
 
         // 检查多头仓位是否成功创建
         let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
+        println!("positions:{:#?}", positions); // 打印多头仓位
         assert!(positions.contains_key(&trade.instrument)); // 检查 HashMap 中是否有该键
         let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
-        assert_eq!(pos.meta.current_size, 10.0); // 检查仓位大小
+        assert_eq!(pos.meta.current_size, 1.0); // 检查仓位大小
     }
 
     #[tokio::test]
@@ -2430,7 +2436,7 @@ mod tests
                                   fees: 0.05 };
 
         // 执行管理仓位逻辑
-        let result = account.update_position_from_client_trade(trade.clone()).await;
+        let result = account.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await;
         assert!(result.is_ok());
 
         // 检查空头仓位是否成功创建
@@ -2459,7 +2465,7 @@ mod tests
                                   fees: 0.1 };
 
         // 创建一个多头仓位
-        let result = account.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await;
+        let _ = account.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await;
 
         // 再次买入增加仓位
         let additional_trade = ClientTrade { exchange: Exchange::SandBox,
@@ -2502,7 +2508,7 @@ mod tests
                                   fees: 0.1 };
 
         // 创建一个多头仓位
-        let result = account.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await;
+        let _ = account.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await;
 
         // 部分平仓
         let closing_trade = ClientTrade { exchange: Exchange::SandBox,

@@ -1,6 +1,6 @@
 use crate::{
     common::{
-        account_positions::{PositionDirectionMode, PositionMarginMode},
+        account_positions::{PositionDirectionMode},
         instrument::kind::InstrumentKind,
     },
     error::ExchangeError,
@@ -137,7 +137,6 @@ pub struct AccountConfigInitiator
 {
     margin_mode: Option<MarginMode>,
     position_mode: Option<PositionDirectionMode>,
-    position_margin_mode: Option<PositionMarginMode>,
     commission_level: Option<CommissionLevel>,
     fund_fee_rate: Option<f64>,
     max_price_deviation: Option<f64>,
@@ -156,7 +155,6 @@ impl AccountConfigInitiator
     {
         Self { margin_mode: None,
                position_mode: None,
-               position_margin_mode: None,
                commission_level: None,
                fund_fee_rate: None,
                max_price_deviation: None }

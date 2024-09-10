@@ -53,7 +53,7 @@ mod tests
     use super::*;
     use crate::{
         common::{
-            account_positions::{PositionDirectionMode, PositionMarginMode},
+            account_positions::{PositionDirectionMode},
             instrument::kind::InstrumentKind,
         },
         sandbox::account::account_config::{CommissionLevel, CommissionRates, MarginMode},
@@ -69,7 +69,6 @@ mod tests
         let toml_content = r#"
     margin_mode = "SimpleMode"
     position_direction_mode = "Net"
-    position_margin_mode = "Cross"
     commission_level = "Lv2"
     funding_rate = 0.0001
     account_leverage_rate = 100.0
