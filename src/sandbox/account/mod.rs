@@ -1,34 +1,29 @@
-use crate::{
-    common::{
-        account_positions::{
-            exited_positions::AccountExitedPositions,
-            future::{FuturePosition, FuturePositionConfig},
-            leveraged_token::LeveragedTokenPosition,
-            option::OptionPosition,
-            perpetual::{PerpetualPosition, PerpetualPositionConfig},
-            position_meta::PositionMeta,
-            AccountPositions, Position, PositionDirectionMode, PositionMarginMode,
-        },
-        balance::{Balance, BalanceDelta, TokenBalance},
-        event::{AccountEvent, AccountEventKind},
-        instrument::{kind::InstrumentKind, Instrument},
-        order::{
-            identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id},
-            order_instructions::OrderInstruction,
-            states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
-            Order, OrderRole,
-        },
-        token::Token,
-        trade::ClientTrade,
-        Side,
+use crate::{common::{
+    account_positions::{
+        exited_positions::AccountExitedPositions,
+        future::{FuturePosition, FuturePositionConfig},
+        leveraged_token::LeveragedTokenPosition,
+        option::OptionPosition,
+        perpetual::{PerpetualPosition, PerpetualPositionConfig},
+        position_meta::PositionMeta,
+        AccountPositions, Position, PositionDirectionMode, PositionMarginMode,
     },
-    error::ExchangeError,
-    sandbox::{
-        account::account_config::SandboxMode,
-        clickhouse_api::datatype::{clickhouse_trade_data::MarketTrade, single_level_order_book::SingleLevelOrderBook},
+    balance::{Balance, BalanceDelta, TokenBalance},
+    event::{AccountEvent, AccountEventKind},
+    instrument::{kind::InstrumentKind, Instrument},
+    order::{
+        identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id},
+        order_instructions::OrderInstruction,
+        states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
+        Order, OrderRole,
     },
-    Exchange,
-};
+    token::Token,
+    trade::ClientTrade,
+    Side,
+}, error::ExchangeError, sandbox::{
+    account::account_config::SandboxMode,
+    clickhouse_api::datatype::{clickhouse_trade_data::MarketTrade, single_level_order_book::SingleLevelOrderBook},
+}, Exchange};
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
 use chrono::Utc;
@@ -53,6 +48,10 @@ use std::{
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 use uuid::Uuid;
+use crate::common::account_positions::leveraged_token::LeveragedTokenPositionConfig;
+use crate::common::account_positions::PositionConfig;
+use crate::sandbox::config_request::ConfigurationRequest;
+use crate::sandbox::sandbox_client::ConfigureInstrumentsResults;
 
 pub mod account_config;
 pub mod account_latency;
@@ -684,6 +683,92 @@ impl Account
     }
 
     /// [PART 3] - 仓位管理
+
+    /// 预先设置控制仓位的字段。
+    async fn preconfigure_position(
+        &mut self,
+        config_request: ConfigurationRequest
+    ) -> Result<PositionConfig, ExchangeError> {
+        let side = config_request.side;
+        match config_request.instrument.kind {
+            InstrumentKind::Spot => {
+                Err(ExchangeError::UnsupportedInstrumentKind)
+            },
+            InstrumentKind::Perpetual => {
+                let perpetual_config = PerpetualPositionConfig::from(config_request.clone()); // 假设 From<ConfigurationRequest> for PerpetualPositionConfig 已实现
+                match side {
+                    | Side::Buy => {
+                        let _ = self.positions.perpetual_pos_long_config.write().await.insert(config_request.instrument,perpetual_config.clone()).clone();
+                    }
+                    | Side::Sell => {
+                        let _ = self.positions.perpetual_pos_short_config.write().await.insert(config_request.instrument,perpetual_config.clone());
+                    }
+
+                }
+
+                Ok(PositionConfig::Perpetual(perpetual_config))
+            },
+            InstrumentKind::Future => {
+                let future_config = FuturePositionConfig::from(config_request.clone()); // 假设 From<ConfigurationRequest> for FuturePositionConfig 已实现
+                match side {
+                    | Side::Buy => {
+                        let _ = self.positions.futures_pos_long_config.write().await.insert(config_request.instrument.clone(), future_config.clone()).clone();
+                    }
+                    | Side::Sell => {
+                        let _ = self.positions.futures_pos_short_config.write().await.insert(config_request.instrument.clone(), future_config.clone());
+                    }
+                }
+                Ok(PositionConfig::Future(future_config))
+            },
+            InstrumentKind::CryptoLeveragedToken => {
+                let leveraged_token_config = LeveragedTokenPositionConfig::from(config_request.clone()); // 假设 From<ConfigurationRequest> for LeveragedTokenPositionConfig 已实现
+                match side {
+                    | Side::Buy => {
+                        let _ = self.positions.margin_pos_long_config.write().await.insert(config_request.instrument.clone(), leveraged_token_config.clone()).clone();
+                    }
+                    | Side::Sell => {
+                        let _ = self.positions.margin_pos_short_config.write().await.insert(config_request.instrument.clone(), leveraged_token_config.clone());
+                    }
+                }
+                Ok(PositionConfig::LeveragedToken(leveraged_token_config))
+            },
+            InstrumentKind::CryptoOption => {
+                Err(ExchangeError::UnsupportedInstrumentKind)
+            },
+            _ => {
+                Err(ExchangeError::UnsupportedInstrumentKind)
+            }
+        }
+    }
+
+
+    pub async fn preconfigure_positions(
+        &mut self,
+        config_requests: Vec<ConfigurationRequest>,
+        response_tx: Sender<ConfigureInstrumentsResults>
+    ) -> Result<Vec<PositionConfig>, ExchangeError> {
+        let mut position_configs = Vec::new();
+        let mut results = Vec::new();
+
+        for config_request in config_requests {
+            match self.preconfigure_position(config_request).await {
+                Ok(config) => {
+                    results.push(Ok(config.clone()));
+                    position_configs.push(config);
+                }
+                Err(e) => {
+                    results.push(Err(e));
+                }
+            }
+        }
+
+        response_tx.send(results).unwrap_or_else(|_| {
+            eprintln!("[UniLinkEx] : Failed to send preconfigure_positions response");
+        });
+
+        Ok(position_configs)
+    }
+
 
     /// 获取指定 `Instrument` 的多头仓位
     pub async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>

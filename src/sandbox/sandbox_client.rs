@@ -18,6 +18,8 @@ use crate::{
     },
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
+use crate::common::account_positions::PositionConfig;
+use crate::sandbox::config_request::ConfigurationRequest;
 
 #[derive(Debug)]
 pub struct SandBoxClient
@@ -34,6 +36,7 @@ pub type RequestOpenOrders = (Vec<Order<RequestOpen>>, Sender<OpenOrderResults>)
 pub type RequestCancelOrders = (Vec<Order<RequestCancel>>, Sender<CancelOrderResults>);
 pub type DepositResults = Result<Vec<TokenBalance>, ExchangeError>;
 pub type DepositRequest = (Vec<(Token, f64)>, Sender<DepositResults>);
+pub type ConfigureInstrumentsResults = Vec<Result<PositionConfig, ExchangeError>>;
 
 // 模拟交易所客户端可向模拟交易所发送的命令
 #[derive(Debug)]
@@ -49,14 +52,15 @@ pub enum SandBoxClientEvent
     OpenOrders(RequestOpenOrders),
     CancelOrders(RequestCancelOrders),
     CancelOrdersAll(Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>),
+    ConfigureInstruments(Vec<ConfigurationRequest>,Sender<ConfigureInstrumentsResults>),
 }
 
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    type Config = UnboundedSender<SandBoxClientEvent>;
-
     const CLIENT_KIND: Exchange = Exchange::SandBox;
+
+    type Config = UnboundedSender<SandBoxClientEvent>;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {

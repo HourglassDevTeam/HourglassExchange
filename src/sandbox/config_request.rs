@@ -7,6 +7,7 @@ use crate::{
     Deserialize, Exchange,
 };
 use serde::Serialize;
+use crate::common::Side;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct ConfigurationRequest
@@ -16,6 +17,7 @@ pub struct ConfigurationRequest
     pub timestamp: i64,
     pub cid: Option<ClientOrderId>,
     pub leverage_rate: f64,
+    pub side: Side,
     pub position_margin_mode: PositionMarginMode,
     pub position_direction_mode: PositionDirectionMode,
 }

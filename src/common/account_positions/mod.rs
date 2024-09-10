@@ -21,6 +21,7 @@ use chrono::Utc;
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 use tokio::sync::RwLock;
+use crate::sandbox::config_request::ConfigurationRequest;
 
 mod exited_position;
 pub mod exited_positions;
@@ -55,6 +56,26 @@ pub struct AccountPositions
     pub option_pos_long_put_config: Arc<RwLock<HashMap<Instrument, OptionPositionConfig>>>,
     pub option_pos_short_call_config: Arc<RwLock<HashMap<Instrument, OptionPositionConfig>>>,
     pub option_pos_short_put_config: Arc<RwLock<HashMap<Instrument, OptionPositionConfig>>>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub enum PositionConfig{
+    Perpetual(PerpetualPositionConfig),
+    Future(FuturePositionConfig),
+    LeveragedToken(LeveragedTokenPositionConfig),
+    Option(OptionPositionConfig),
+}
+
+impl From<ConfigurationRequest> for PositionConfig {
+    fn from(config_request: ConfigurationRequest) -> Self {
+        match config_request.instrument.kind {
+            InstrumentKind::Perpetual => PositionConfig::Perpetual(PerpetualPositionConfig::from(config_request)),
+            InstrumentKind::Future => PositionConfig::Future(FuturePositionConfig::from(config_request)),
+            InstrumentKind::CryptoLeveragedToken => PositionConfig::LeveragedToken(LeveragedTokenPositionConfig::from(config_request)),
+            InstrumentKind::CryptoOption => PositionConfig::Option(OptionPositionConfig::from(config_request)),
+            _ => panic!("Unsupported instrument kind"),  // 根据需求处理其他类型
+        }
+    }
 }
 
 impl Serialize for AccountPositions

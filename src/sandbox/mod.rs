@@ -102,8 +102,10 @@ impl SandBoxExchange
                 | SandBoxClientEvent::FetchAllPositions(response_tx) => self.account.lock().await.fetch_positions_and_respond(response_tx).await,
                 | SandBoxClientEvent::FetchLongPosition(instrument, response_tx) => self.account.lock().await.fetch_long_position_and_respond(&instrument, response_tx).await,
                 | SandBoxClientEvent::FetchShortPosition(instrument, response_tx) => self.account.lock().await.fetch_short_position_and_respond(&instrument, response_tx).await,
-                | SandBoxClientEvent::DepositTokens(deposit_request) => {
-                    self.account.lock().await.deposit_multiple_coins_and_respond(deposit_request.0, deposit_request.1).await;
+                | SandBoxClientEvent::DepositTokens(deposit_request) =>
+                    { self.account.lock().await.deposit_multiple_coins_and_respond(deposit_request.0, deposit_request.1).await; }
+                | SandBoxClientEvent::ConfigureInstruments(position_configs, response_tx) => {
+                    let _ =self.account.lock().await.preconfigure_positions(position_configs,response_tx).await;
                 }
             }
         }
