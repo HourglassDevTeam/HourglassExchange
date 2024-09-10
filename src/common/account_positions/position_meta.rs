@@ -12,17 +12,17 @@ pub struct PositionMeta
     pub position_id: PositionId,      // 静态数据
     pub enter_ts: i64,                // 静态数据
     pub update_ts: i64,               // 实时更新
-    pub exit_balance: TokenBalance,   // 静态更新（退出时更新）当一个仓位被平仓（即完全退出）时，该仓位所涉及的资产或资金的最终状态。 CONSIDER  do we retrieve it from the TokenBalance or we calculate it? // */
-    pub exchange: Exchange,           // 静态数据
-    pub instrument: Instrument,       // 静态数据
-    pub side: Side,                   // 静态数据
-    pub current_size: f64,            // 实时更新
-    pub current_fees_total: f64,      // 实时更新
+    pub exit_balance: TokenBalance, /* 静态更新（退出时更新）当一个仓位被平仓（即完全退出）时，该仓位所涉及的资产或资金的最终状态。 CONSIDER  do we retrieve it from the TokenBalance or we calculate it? */
+    pub exchange: Exchange,         // 静态数据
+    pub instrument: Instrument,     // 静态数据
+    pub side: Side,                 // 静态数据
+    pub current_size: f64,          // 实时更新
+    pub current_fees_total: f64,    // 实时更新
     pub current_avg_price_gross: f64, // 实时更新，即没有考虑费用或其他扣减项的情况下计算的平均持仓价格。
-    pub current_symbol_price: f64,    // 实时更新，当前交易标的（symbol，如股票、期货合约、加密货币等）的最新市场价格。
-    pub current_avg_price: f64,       // 实时更新
-    pub unrealised_pnl: f64,          // 实时更新
-    pub realised_pnl: f64,            // 静态更新（平仓时更新）
+    pub current_symbol_price: f64,  // 实时更新，当前交易标的（symbol，如股票、期货合约、加密货币等）的最新市场价格。
+    pub current_avg_price: f64,     // 实时更新
+    pub unrealised_pnl: f64,        // 实时更新
+    pub realised_pnl: f64,          // 静态更新（平仓时更新）
 }
 
 impl PositionMeta

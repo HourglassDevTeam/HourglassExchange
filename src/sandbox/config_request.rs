@@ -1,9 +1,12 @@
+use crate::{
+    common::{
+        account_positions::{PositionDirectionMode, PositionMarginMode},
+        instrument::Instrument,
+        order::identification::client_order_id::ClientOrderId,
+    },
+    Deserialize, Exchange,
+};
 use serde::Serialize;
-use crate::common::account_positions::{PositionDirectionMode, PositionMarginMode};
-use crate::Deserialize;
-use crate::common::instrument::Instrument;
-use crate::common::order::identification::client_order_id::ClientOrderId;
-use crate::Exchange;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct ConfigurationRequest
@@ -12,7 +15,7 @@ pub struct ConfigurationRequest
     pub instrument: Instrument,
     pub timestamp: i64,
     pub cid: Option<ClientOrderId>,
-    pub leverage_rate : f64,
+    pub leverage_rate: f64,
     pub position_margin_mode: PositionMarginMode,
     pub position_direction_mode: PositionDirectionMode,
 }

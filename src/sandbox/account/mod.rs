@@ -7,7 +7,7 @@ use crate::{
             option::OptionPosition,
             perpetual::{PerpetualPosition, PerpetualPositionConfig},
             position_meta::PositionMeta,
-            AccountPositions, Position, PositionDirectionMode,
+            AccountPositions, Position, PositionDirectionMode, PositionMarginMode,
         },
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
@@ -53,7 +53,6 @@ use std::{
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 use uuid::Uuid;
-use crate::common::account_positions::PositionMarginMode;
 
 pub mod account_config;
 pub mod account_latency;
@@ -891,7 +890,7 @@ impl Account
 
     /// 更新 PerpetualPosition 的方法
     /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的
-    async fn create_perpetual_position(&mut self, trade: ClientTrade,position_margin_mode: PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
+    async fn create_perpetual_position(&mut self, trade: ClientTrade, position_margin_mode: PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
     {
         let meta = PositionMeta::create_from_trade(&trade);
 
@@ -902,11 +901,11 @@ impl Account
                                                liquidation_price: 0.0 };
 
         match trade.side {
-            Side::Buy => {
-            self.positions.perpetual_pos_long.write().await.insert(trade.instrument,new_position.clone());
+            | Side::Buy => {
+                self.positions.perpetual_pos_long.write().await.insert(trade.instrument, new_position.clone());
             }
-            Side::Sell => {
-            self.positions.perpetual_pos_short.write().await.insert(trade.instrument,new_position.clone());
+            | Side::Sell => {
+                self.positions.perpetual_pos_short.write().await.insert(trade.instrument, new_position.clone());
             }
         }
 
@@ -918,30 +917,25 @@ impl Account
     async fn create_future_position(&mut self, trade: ClientTrade, position_margin_mode: PositionMarginMode) -> Result<FuturePosition, ExchangeError>
     {
         let meta = PositionMeta::create_from_trade(&trade);
-        let new_position = FuturePosition {
-            meta,
-            pos_config: FuturePositionConfig {
-                pos_margin_mode: position_margin_mode,
-                leverage: self.config.global_leverage_rate,
-                position_mode: self.config.global_position_direction_mode.clone(),
-            },
-            liquidation_price: 0.0,
-            funding_fee: 0.0, // TODO: To Be Checked
-        };
+        let new_position = FuturePosition { meta,
+                                            pos_config: FuturePositionConfig { pos_margin_mode: position_margin_mode,
+                                                                               leverage: self.config.global_leverage_rate,
+                                                                               position_mode: self.config.global_position_direction_mode.clone() },
+                                            liquidation_price: 0.0,
+                                            funding_fee: 0.0 /* TODO: To Be Checked */ };
 
         // 插入仓位到正确的仓位映射中
         match trade.side {
-            Side::Buy => {
+            | Side::Buy => {
                 self.positions.futures_pos_long.write().await.insert(trade.instrument.clone(), new_position.clone());
             }
-            Side::Sell => {
+            | Side::Sell => {
                 self.positions.futures_pos_short.write().await.insert(trade.instrument.clone(), new_position.clone());
             }
         }
 
         Ok(new_position)
     }
-
 
     #[allow(dead_code)]
 
@@ -1014,13 +1008,18 @@ impl Account
 
     pub async fn update_position_long_short_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
     {
-
-
-
         match trade.side {
             | Side::Buy => {
                 // 查询position_margin_mode
-                let position_margin_mode = self.positions.perpetual_pos_long.read().await.get(&trade.instrument).unwrap().pos_config.pos_margin_mode.clone();
+                let position_margin_mode = self.positions
+                                               .perpetual_pos_long
+                                               .read()
+                                               .await
+                                               .get(&trade.instrument)
+                                               .unwrap()
+                                               .pos_config
+                                               .pos_margin_mode
+                                               .clone();
                 print!("[update_position_from_client_trade] : position_margin_mode is {:?}", &position_margin_mode);
 
                 // 获取写锁更新或创建多头仓位
@@ -1035,7 +1034,7 @@ impl Account
                     drop(long_positions);
 
                     // 释放锁后创建新的仓位
-                    let new_position = self.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await?;
+                    let new_position = self.create_perpetual_position(trade.clone(), PositionMarginMode::Cross).await?;
 
                     // 再次获取写锁插入新的仓位
                     let mut long_positions = self.positions.perpetual_pos_long.write().await;
@@ -1045,7 +1044,15 @@ impl Account
 
             | Side::Sell => {
                 // 查询position_margin_mode
-                let position_margin_mode = self.positions.perpetual_pos_short.read().await.get(&trade.instrument).unwrap().pos_config.pos_margin_mode.clone();
+                let position_margin_mode = self.positions
+                                               .perpetual_pos_short
+                                               .read()
+                                               .await
+                                               .get(&trade.instrument)
+                                               .unwrap()
+                                               .pos_config
+                                               .pos_margin_mode
+                                               .clone();
                 print!("[update_position_from_client_trade] : position_margin_mode is {:?}", &position_margin_mode);
 
                 // 获取写锁更新或创建空头仓位
@@ -1060,7 +1067,7 @@ impl Account
                     drop(short_positions);
 
                     // 释放锁后创建新的空头仓位
-                    let new_position = self.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await?;
+                    let new_position = self.create_perpetual_position(trade.clone(), PositionMarginMode::Cross).await?;
 
                     // 再次获取写锁插入新的仓位
                     let mut short_positions = self.positions.perpetual_pos_short.write().await;
@@ -1080,9 +1087,7 @@ impl Account
         match trade.instrument.kind {
             | InstrumentKind::Perpetual => {
                 match trade.side {
-
                     | Side::Buy => {
-
                         let should_remove_position;
                         let should_remove_and_reverse;
                         let remaining_quantity;
@@ -1131,11 +1136,12 @@ impl Account
                                 self.exited_positions.insert_perpetual_pos_short(short_position).await;
                                 short_positions_write.remove(&trade.instrument);
                                 drop(short_positions_write);
-                                let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
-                                                                       pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode.clone(),
-                                                                                                             leverage: self.config.global_leverage_rate,
-                                                                                                             position_mode: self.config.global_position_direction_mode.clone() },
-                                                                       liquidation_price: 0.0 };
+                                let new_position =
+                                    PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
+                                                        pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode.clone(),
+                                                                                              leverage: self.config.global_leverage_rate,
+                                                                                              position_mode: self.config.global_position_direction_mode.clone() },
+                                                        liquidation_price: 0.0 };
                                 self.positions.perpetual_pos_long.write().await.insert(trade.instrument.clone(), new_position);
                             }
                             else {
@@ -1206,11 +1212,12 @@ impl Account
                                 // 显式释放对 long_positions_write 的写锁
                                 drop(long_positions_write);
                                 // 基于交易创建新的空头仓位
-                                let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
-                                                                       pos_config: PerpetualPositionConfig { pos_margin_mode: long_position.pos_config.pos_margin_mode,
-                                                                                                             leverage: self.config.global_leverage_rate,
-                                                                                                             position_mode: self.config.global_position_direction_mode.clone() },
-                                                                       liquidation_price: 0.0 };
+                                let new_position =
+                                    PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
+                                                        pos_config: PerpetualPositionConfig { pos_margin_mode: long_position.pos_config.pos_margin_mode,
+                                                                                              leverage: self.config.global_leverage_rate,
+                                                                                              position_mode: self.config.global_position_direction_mode.clone() },
+                                                        liquidation_price: 0.0 };
                                 // 将新的空头仓位插入空头仓位映射中
                                 self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
                             }
@@ -2425,7 +2432,7 @@ mod tests
                                   fees: 0.1 };
 
         // 执行管理仓位逻辑
-        let result = account.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await;
+        let result = account.create_perpetual_position(trade.clone(), PositionMarginMode::Cross).await;
         assert!(result.is_ok());
 
         // 检查多头仓位是否成功创建
@@ -2455,7 +2462,7 @@ mod tests
                                   fees: 0.05 };
 
         // 执行管理仓位逻辑
-        let result = account.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await;
+        let result = account.create_perpetual_position(trade.clone(), PositionMarginMode::Cross).await;
         assert!(result.is_ok());
 
         // 检查空头仓位是否成功创建
@@ -2484,7 +2491,7 @@ mod tests
                                   fees: 0.1 };
 
         // 创建一个多头仓位
-        let _ = account.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await;
+        let _ = account.create_perpetual_position(trade.clone(), PositionMarginMode::Cross).await;
 
         // 再次买入增加仓位
         let additional_trade = ClientTrade { exchange: Exchange::SandBox,
@@ -2527,7 +2534,7 @@ mod tests
                                   fees: 0.1 };
 
         // 创建一个多头仓位
-        let _ = account.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await;
+        let _ = account.create_perpetual_position(trade.clone(), PositionMarginMode::Cross).await;
 
         // 部分平仓
         let closing_trade = ClientTrade { exchange: Exchange::SandBox,
@@ -2570,7 +2577,7 @@ mod tests
                                   fees: 0.1 };
 
         // 创建一个多头仓位
-        account.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await.unwrap();
+        account.create_perpetual_position(trade.clone(), PositionMarginMode::Cross).await.unwrap();
 
         // 完全平仓
         let closing_trade = ClientTrade { exchange: Exchange::SandBox,
@@ -2613,7 +2620,7 @@ mod tests
                                   fees: 0.1 };
 
         // 创建一个多头仓位
-        account.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await.unwrap();
+        account.create_perpetual_position(trade.clone(), PositionMarginMode::Cross).await.unwrap();
 
         // 反向平仓并开立新的空头仓位
         let reverse_trade = ClientTrade { exchange: Exchange::SandBox,

@@ -11,12 +11,12 @@ use warp::Filter;
 
 pub mod account;
 pub mod clickhouse_api;
+pub mod config_request;
 pub mod instrument_orders;
 pub mod sandbox_client;
 pub mod sandbox_orderbook;
 pub mod utils;
 pub mod ws_trade;
-pub mod config_request;
 // pub enum TradeEventSource {
 //     RealTime(UnboundedReceiver<MarketEvent<MarketTrade>>),
 //     Backtest(RowCursor<MarketTrade>),

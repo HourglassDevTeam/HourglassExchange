@@ -1,9 +1,9 @@
 use crate::{
     common::{
         account_positions::{
-            future::FuturePosition,
-            leveraged_token::LeveragedTokenPosition,
-            option::OptionPosition,
+            future::{FuturePosition, FuturePositionConfig},
+            leveraged_token::{LeveragedTokenPosition, LeveragedTokenPositionConfig},
+            option::{OptionPosition, OptionPositionConfig},
             perpetual::{PerpetualPosition, PerpetualPositionBuilder, PerpetualPositionConfig},
             position_id::PositionId,
             position_meta::PositionMetaBuilder,
@@ -21,9 +21,6 @@ use chrono::Utc;
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 use tokio::sync::RwLock;
-use crate::common::account_positions::future::FuturePositionConfig;
-use crate::common::account_positions::leveraged_token::LeveragedTokenPositionConfig;
-use crate::common::account_positions::option::OptionPositionConfig;
 
 mod exited_position;
 pub mod exited_positions;
@@ -145,7 +142,7 @@ impl<'de> Deserialize<'de> for AccountPositions
             perpetual_pos_short_config: HashMap<Instrument, PerpetualPositionConfig>,
             futures_pos_long_config: HashMap<Instrument, FuturePositionConfig>,
             futures_pos_short_config: HashMap<Instrument, FuturePositionConfig>,
-            option_pos_long_call_config: HashMap<Instrument,OptionPositionConfig>,
+            option_pos_long_call_config: HashMap<Instrument, OptionPositionConfig>,
             option_pos_long_put_config: HashMap<Instrument, OptionPositionConfig>,
             option_pos_short_call_config: HashMap<Instrument, OptionPositionConfig>,
             option_pos_short_put_config: HashMap<Instrument, OptionPositionConfig>,
@@ -163,23 +160,16 @@ impl<'de> Deserialize<'de> for AccountPositions
                               option_pos_long_put: Arc::new(RwLock::new(data.option_pos_long_put)),
                               option_pos_short_call: Arc::new(RwLock::new(data.option_pos_short_call)),
                               option_pos_short_put: Arc::new(RwLock::new(data.option_pos_short_put)),
-                              margin_pos_long_config:Arc::new(RwLock::new(data.margin_pos_long_config)),
+                              margin_pos_long_config: Arc::new(RwLock::new(data.margin_pos_long_config)),
                               margin_pos_short_config: Arc::new(RwLock::new(data.margin_pos_short_config)),
-                              perpetual_pos_long_config:Arc::new(RwLock::new(data.perpetual_pos_long_config)),
+                              perpetual_pos_long_config: Arc::new(RwLock::new(data.perpetual_pos_long_config)),
                               perpetual_pos_short_config: Arc::new(RwLock::new(data.perpetual_pos_short_config)),
                               futures_pos_long_config: Arc::new(RwLock::new(data.futures_pos_long_config)),
                               futures_pos_short_config: Arc::new(RwLock::new(data.futures_pos_short_config)),
-                              option_pos_long_call_config:Arc::new(RwLock::new(data.option_pos_long_call_config)),
+                              option_pos_long_call_config: Arc::new(RwLock::new(data.option_pos_long_call_config)),
                               option_pos_long_put_config: Arc::new(RwLock::new(data.option_pos_long_put_config)),
-                                option_pos_short_put_config:Arc::new(RwLock::new(data.option_pos_short_put_config)),
-                                option_pos_short_call_config:Arc::new(RwLock::new(data.option_pos_short_call_config)),
-
-
-        }
-
-
-
-        )
+                              option_pos_short_put_config: Arc::new(RwLock::new(data.option_pos_short_put_config)),
+                              option_pos_short_call_config: Arc::new(RwLock::new(data.option_pos_short_call_config)) })
     }
 }
 
@@ -198,21 +188,25 @@ impl AccountPositions
                option_pos_long_put: Arc::new(RwLock::new(HashMap::new())),
                option_pos_short_call: Arc::new(RwLock::new(HashMap::new())),
                option_pos_short_put: Arc::new(RwLock::new(HashMap::new())),
-            margin_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
-            margin_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
-            perpetual_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
-            perpetual_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
-            futures_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
-            futures_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
-            option_pos_long_call_config: Arc::new(RwLock::new(HashMap::new())),
-            option_pos_long_put_config: Arc::new(RwLock::new(HashMap::new())),
-            option_pos_short_call_config: Arc::new(RwLock::new(HashMap::new())),
-            option_pos_short_put_config: Arc::new(RwLock::new(HashMap::new())),
-        }
+               margin_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
+               margin_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
+               perpetual_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
+               perpetual_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
+               futures_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
+               futures_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_long_call_config: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_long_put_config: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_short_call_config: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_short_put_config: Arc::new(RwLock::new(HashMap::new())) }
     }
 
     /// TODO check init logic
-    pub async fn build_new_perpetual_position(&self, config: &AccountConfig, trade: &ClientTrade, exchange_ts: i64,mode:PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
+    pub async fn build_new_perpetual_position(&self,
+                                              config: &AccountConfig,
+                                              trade: &ClientTrade,
+                                              exchange_ts: i64,
+                                              mode: PositionMarginMode)
+                                              -> Result<PerpetualPosition, ExchangeError>
     {
         let position_mode = config.global_position_direction_mode.clone();
         // 计算初始保证金
@@ -248,9 +242,8 @@ impl AccountPositions
         else {
             trade.price * (1.0 + initial_margin / (trade.size * trade.price))
         };
-        let pos_config = PerpetualPositionConfig {
-            pos_margin_mode: mode,
-            leverage: config.global_leverage_rate,
+        let pos_config = PerpetualPositionConfig { pos_margin_mode: mode,
+                                                   leverage: config.global_leverage_rate,
                                                    position_mode };
 
         let new_position = PerpetualPositionBuilder::new().meta(position_meta)
@@ -392,7 +385,7 @@ impl AccountPositions
 
 ///  [NetMode] : 单向模式。在这种模式下，用户只能持有一个方向的仓位（多头或空头），而不能同时持有两个方向的仓位。
 ///  [LongShortMode] : 双向模式。在这种模式下，用户可以同时持有多头和空头仓位。这在一些复杂的交易策略中可能会有用，例如对冲策略。
-#[derive(Clone,PartialOrd, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, PartialOrd, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionDirectionMode
 {
     LongShort,
@@ -432,7 +425,7 @@ impl PositionMarginMode
     }
 }
 
-#[derive(Clone,PartialOrd, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, PartialOrd, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionMarginMode
 {
     Cross,

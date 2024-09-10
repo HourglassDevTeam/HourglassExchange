@@ -52,10 +52,7 @@ mod tests
 {
     use super::*;
     use crate::{
-        common::{
-            account_positions::{PositionDirectionMode},
-            instrument::kind::InstrumentKind,
-        },
+        common::{account_positions::PositionDirectionMode, instrument::kind::InstrumentKind},
         sandbox::account::account_config::{CommissionLevel, CommissionRates, MarginMode},
     };
     use std::{fs, io::Write};

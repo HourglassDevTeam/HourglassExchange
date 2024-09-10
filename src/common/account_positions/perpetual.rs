@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common::account_positions::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode};
-use crate::sandbox::config_request::ConfigurationRequest;
+use crate::{
+    common::account_positions::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode},
+    sandbox::config_request::ConfigurationRequest,
+};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -42,13 +44,13 @@ pub struct PerpetualPositionConfig
     pub(crate) position_mode: PositionDirectionMode,
 }
 
-impl From<ConfigurationRequest> for PerpetualPositionConfig {
-    fn from(config_request: ConfigurationRequest) -> Self {
-        PerpetualPositionConfig {
-            pos_margin_mode: config_request.position_margin_mode, // 提供默认值或根据需求处理 None
-            leverage: config_request.leverage_rate, // 提供默认杠杆值，或根据需求处理 None
-            position_mode: config_request.position_direction_mode, // 提供默认值或根据需求处理 None
-        }
+impl From<ConfigurationRequest> for PerpetualPositionConfig
+{
+    fn from(config_request: ConfigurationRequest) -> Self
+    {
+        PerpetualPositionConfig { pos_margin_mode: config_request.position_margin_mode,  // 提供默认值或根据需求处理 None
+                                  leverage: config_request.leverage_rate,                // 提供默认杠杆值，或根据需求处理 None
+                                  position_mode: config_request.position_direction_mode  /* 提供默认值或根据需求处理 None */ }
     }
 }
 

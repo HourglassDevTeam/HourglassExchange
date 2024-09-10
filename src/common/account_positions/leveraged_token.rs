@@ -1,14 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common::account_positions::position_meta::PositionMeta;
-use crate::common::account_positions::{PositionDirectionMode, PositionMarginMode};
+use crate::common::account_positions::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct LeveragedTokenPosition
 {
     pub meta: PositionMeta,
 }
-
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
