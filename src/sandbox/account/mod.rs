@@ -53,6 +53,7 @@ use std::{
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 use uuid::Uuid;
+use crate::common::account_positions::PositionMarginMode;
 
 pub mod account_config;
 pub mod account_latency;
@@ -889,11 +890,11 @@ impl Account
     }
 
     /// 更新 PerpetualPosition 的方法
-    async fn create_perpetual_position(&mut self, trade: ClientTrade) -> Result<PerpetualPosition, ExchangeError>
+    async fn create_perpetual_position(&mut self, trade: ClientTrade,position_margin_mode: PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
     {
         let meta = PositionMeta::create_from_trade(&trade);
         let new_position = PerpetualPosition { meta,
-                                               pos_config: PerpetualPositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
+                                               pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode,
                                                                                      leverage: self.config.account_leverage_rate,
                                                                                      position_mode: self.config.position_direction_mode.clone() },
                                                liquidation_price: 0.0 };
@@ -1001,7 +1002,7 @@ impl Account
                     drop(long_positions);
 
                     // 释放锁后创建新的仓位
-                    let new_position = self.create_perpetual_position(trade.clone()).await?;
+                    let new_position = self.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await?;
 
                     // 再次获取写锁插入新的仓位
                     let mut long_positions = self.positions.perpetual_pos_long.write().await;
@@ -1024,7 +1025,7 @@ impl Account
                     drop(short_positions);
 
                     // 释放锁后创建新的空头仓位
-                    let new_position = self.create_perpetual_position(trade.clone()).await?;
+                    let new_position = self.create_perpetual_position(trade.clone(),PositionMarginMode::Cross).await?;
 
                     // 再次获取写锁插入新的仓位
                     let mut short_positions = self.positions.perpetual_pos_short.write().await;
