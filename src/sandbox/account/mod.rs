@@ -975,7 +975,7 @@ impl Account
 
     /// 更新 PerpetualPosition 的方法
     /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的
-    /// 注意 此处 `PositionMarginMode` 中的 `isolated_margin` 是被直接传输进来的. 而isolated_margin其实是应该在此处被计算出来的.
+    /// 注意 此处 `PositionMarginMode` 中初始化为`none`的 `isolated_margin` 被直接传输进来. 接下来isolated_margin应该在此处被计算出来的.
     async fn create_perpetual_position(&mut self, trade: ClientTrade, mut position_margin_mode: PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
     {
         // 注意 Isolated margin must be None when initializing.
