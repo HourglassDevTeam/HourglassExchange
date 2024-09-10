@@ -975,9 +975,19 @@ impl Account
 
     /// 更新 PerpetualPosition 的方法
     /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的
-    /// 注意 此处 `PositionMarginMode` 中的 `isolated_margin` 是被直接传输进来的.
-    async fn create_perpetual_position(&mut self, trade: ClientTrade, position_margin_mode: PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
+    /// 注意 此处 `PositionMarginMode` 中的 `isolated_margin` 是被直接传输进来的. 而isolated_margin其实是应该在此处被计算出来的.
+    async fn create_perpetual_position(&mut self, trade: ClientTrade, mut position_margin_mode: PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
     {
+        // 注意 Isolated margin must be None when initializing.
+        if let PositionMarginMode::Isolated {  ref mut isolated_margin } = position_margin_mode {
+            if isolated_margin.is_some() {
+                return Err(ExchangeError::SandBox("Isolated margin must be None when initializing.".to_string()));
+            } else {
+                // 创建仓位之前要计算 isolated_margin 的值
+                *isolated_margin = Some(trade.price * self.config.global_leverage_rate * trade.size);
+            }
+        }
+
         let meta = PositionMeta::create_from_trade(&trade);
 
         let new_position = PerpetualPosition { meta,
