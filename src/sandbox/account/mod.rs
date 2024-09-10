@@ -50,6 +50,7 @@ use std::{
     },
     time::{SystemTime, UNIX_EPOCH},
 };
+use clickhouse::sql::Bind;
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 use uuid::Uuid;
@@ -890,14 +891,17 @@ impl Account
     }
 
     /// 更新 PerpetualPosition 的方法
+    /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的隔离保证金要在外部计算好。
     async fn create_perpetual_position(&mut self, trade: ClientTrade,position_margin_mode: PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
     {
         let meta = PositionMeta::create_from_trade(&trade);
+
         let new_position = PerpetualPosition { meta,
                                                pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode,
                                                                                      leverage: self.config.account_leverage_rate,
                                                                                      position_mode: self.config.position_direction_mode.clone() },
                                                liquidation_price: 0.0 };
+
         match trade.side {
             Side::Buy => {
             self.positions.perpetual_pos_long.write().await.insert(trade.instrument,new_position.clone());
@@ -1123,9 +1127,9 @@ impl Account
                             }
                             else if should_remove_and_reverse {
                                 println!("[UniLinkEx] : 移除并反向开多头仓...");
-                                let position_margin_mode = &short_position.pos_config.pos_margin_mode;
+                                let position_margin_mode = &short_position.pos_config.pos_margin_mode.clone();
                                 short_position.meta.update_realised_pnl(trade.price);
-                                self.exited_positions.insert_perpetual_pos_short(short_position.clone()).await;
+                                self.exited_positions.insert_perpetual_pos_short(short_position).await;
                                 short_positions_write.remove(&trade.instrument);
                                 drop(short_positions_write);
                                 let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),

@@ -166,9 +166,9 @@ impl AccountConfigInitiator
         self
     }
 
-    pub fn position_mode(mut self, position_mode: PositionDirectionMode) -> Self
+    pub fn position_direction_mode(mut self, position_direction_mode: PositionDirectionMode) -> Self
     {
-        self.position_mode = Some(position_mode);
+        self.position_mode = Some(position_direction_mode);
         self
     }
 
