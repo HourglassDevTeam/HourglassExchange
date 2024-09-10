@@ -975,23 +975,30 @@ impl Account
 
     /// 更新 PerpetualPosition 的方法
     /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的
-    /// 注意 此处 `PositionMarginMode` 中初始化为`none`的 `isolated_margin` 被直接传输进来. 接下来isolated_margin应该在此处被计算出来的.
-    async fn create_perpetual_position(&mut self, trade: ClientTrade, mut position_margin_mode: PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
+    /// 注意 此处 `PositionMarginMode` 中初始化为`none`的 `isolated_margin` 被直接传输进来. 接下来`isolated_margin应该在此处被计算出来的.
+    async fn create_perpetual_position(&mut self, trade: ClientTrade, mut config:PositionConfig) -> Result<PerpetualPosition, ExchangeError>
     {
+        // 提取 perpetual_config 并确保它是 Perpetual 类型
+        let mut perpetual_config = match config {
+            PositionConfig::Perpetual(perpetual_config) => perpetual_config,
+            _ => {
+                return Err(ExchangeError::SandBox("Wrong Position Configuration has been passed in.".to_string()));
+            }
+        };
         // 注意 Isolated margin must be None when initializing.
-        if let PositionMarginMode::Isolated {  ref mut isolated_margin } = position_margin_mode {
+        if let PositionMarginMode::Isolated {  ref mut isolated_margin } = perpetual_config.pos_margin_mode {
             if isolated_margin.is_some() {
                 return Err(ExchangeError::SandBox("Isolated margin must be None when initializing.".to_string()));
             } else {
-                // 创建仓位之前要计算 isolated_margin 的值
-                *isolated_margin = Some(trade.price * self.config.global_leverage_rate * trade.size);
+                // 创建仓位之前要计算 isolated_margin 的值 // FIXME 这里直接用全局的默认leverage rate是不对的.
+                *isolated_margin = Some(trade.price *  perpetual_config.leverage * trade.size);
             }
         }
 
         let meta = PositionMeta::create_from_trade(&trade);
 
         let new_position = PerpetualPosition { meta,
-                                               pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode,
+                                               pos_config: PerpetualPositionConfig { pos_margin_mode: perpetual_config.pos_margin_mode,
                                                                                      leverage: self.config.global_leverage_rate,
                                                                                      position_mode: self.config.global_position_direction_mode.clone() },
                                                liquidation_price: 0.0
@@ -1077,7 +1084,7 @@ impl Account
     }
 
     /// 根据[PositionDirectionMode]分流
-    pub async fn update_position_from_client_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
+    pub async fn update_position_from_client_trade(&mut self, trade: ClientTrade,config:PositionConfig) -> Result<(), ExchangeError>
     {
         // println!("[UniLinkEx] : Received a new trade: {:#?}", trade);
 
@@ -1103,8 +1110,10 @@ impl Account
         Ok(())
     }
 
-    pub async fn update_position_long_short_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
+
+    pub async fn update_position_long_short_mode(&mut self, trade: ClientTrade, config:PerpetualPositionConfig) -> Result<(), ExchangeError>
     {
+
         match trade.side {
             | Side::Buy => {
                 // 查询position_margin_mode
