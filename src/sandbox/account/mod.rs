@@ -903,11 +903,11 @@ impl Account
 
     #[allow(dead_code)]
     /// 更新 FuturePosition 的方法（占位符）
-    async fn create_future_position(&mut self, trade: ClientTrade) -> Result<FuturePosition, ExchangeError>
+    async fn create_future_position(&mut self, trade: ClientTrade,position_margin_mode: PositionMarginMode) -> Result<FuturePosition, ExchangeError>
     {
         let meta = PositionMeta::create_from_trade(&trade);
         let new_position = FuturePosition { meta,
-                                            pos_config: FuturePositionConfig { pos_margin_mode: self.config.position_margin_mode.clone(),
+                                            pos_config: FuturePositionConfig { pos_margin_mode: position_margin_mode,
                                                                                leverage: self.config.account_leverage_rate,
                                                                                position_mode: self.config.position_direction_mode.clone() },
                                             liquidation_price: 0.0,
@@ -986,9 +986,14 @@ impl Account
 
     pub async fn update_position_long_short_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
     {
+
+
+
         match trade.side {
             | Side::Buy => {
-                println!("[UniLinkEx] : Processing Buy trade for Long/Short Mode...");
+                // 查询position_margin_mode
+                let position_margin_mode = self.positions.perpetual_pos_long.read().await.get(&trade.instrument).unwrap().pos_config.pos_margin_mode.clone();
+                print!("[update_position_from_client_trade] : position_margin_mode is {:?}", &position_margin_mode);
 
                 // 获取写锁更新或创建多头仓位
                 let mut long_positions = self.positions.perpetual_pos_long.write().await;
@@ -1011,7 +1016,9 @@ impl Account
             }
 
             | Side::Sell => {
-                println!("[UniLinkEx] : Processing Sell trade for Long/Short Mode...");
+                // 查询position_margin_mode
+                let position_margin_mode = self.positions.perpetual_pos_short.read().await.get(&trade.instrument).unwrap().pos_config.pos_margin_mode.clone();
+                print!("[update_position_from_client_trade] : position_margin_mode is {:?}", &position_margin_mode);
 
                 // 获取写锁更新或创建空头仓位
                 let mut short_positions = self.positions.perpetual_pos_short.write().await;
@@ -1045,8 +1052,8 @@ impl Account
         match trade.instrument.kind {
             | InstrumentKind::Perpetual => {
                 match trade.side {
+
                     | Side::Buy => {
-                        println!("[UniLinkEx] : Processing long trade for Perpetual...");
 
                         let should_remove_position;
                         let should_remove_and_reverse;
