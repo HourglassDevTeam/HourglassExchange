@@ -912,17 +912,33 @@ impl Account
 
     #[allow(dead_code)]
     /// 更新 FuturePosition 的方法（占位符）
-    async fn create_future_position(&mut self, trade: ClientTrade,position_margin_mode: PositionMarginMode) -> Result<FuturePosition, ExchangeError>
+    async fn create_future_position(&mut self, trade: ClientTrade, position_margin_mode: PositionMarginMode) -> Result<FuturePosition, ExchangeError>
     {
         let meta = PositionMeta::create_from_trade(&trade);
-        let new_position = FuturePosition { meta,
-                                            pos_config: FuturePositionConfig { pos_margin_mode: position_margin_mode,
-                                                                               leverage: self.config.account_leverage_rate,
-                                                                               position_mode: self.config.position_direction_mode.clone() },
-                                            liquidation_price: 0.0,
-                                            funding_fee: 0.0 /* TODO : To Be Checked */ };
+        let new_position = FuturePosition {
+            meta,
+            pos_config: FuturePositionConfig {
+                pos_margin_mode: position_margin_mode,
+                leverage: self.config.account_leverage_rate,
+                position_mode: self.config.position_direction_mode.clone(),
+            },
+            liquidation_price: 0.0,
+            funding_fee: 0.0, // TODO: To Be Checked
+        };
+
+        // 插入仓位到正确的仓位映射中
+        match trade.side {
+            Side::Buy => {
+                self.positions.futures_pos_long.write().await.insert(trade.instrument.clone(), new_position.clone());
+            }
+            Side::Sell => {
+                self.positions.futures_pos_short.write().await.insert(trade.instrument.clone(), new_position.clone());
+            }
+        }
+
         Ok(new_position)
     }
+
 
     #[allow(dead_code)]
 
