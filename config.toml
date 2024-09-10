@@ -1,8 +1,9 @@
 margin_mode = "SimpleMode"  # 保证金模式设置为简单模式
-position_direction_mode = "Net"  # 持仓方向模式设置为净持仓模式
+global_position_direction_mode = "Net"  # 持仓方向模式设置为净持仓模式
+global_position_margin_mode = "Cross"
 commission_level = "Lv2"  # 手续费等级设置为第二级
 funding_rate = 0.0001  # 资金费率设置为0.0001
-account_leverage_rate = 1.0  # 账户杠杆率设置为1.0倍，示例杠杆率
+global_leverage_rate = 1.0  # 账户杠杆率设置为1.0倍，示例杠杆率
 execution_mode = "Backtest"  # 执行模式设置为回测模式
 max_price_deviation = 0.05  # 最大价格偏差设置为0.05
 

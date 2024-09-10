@@ -8,16 +8,17 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::common::account_positions::PositionMarginMode;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct AccountConfig
 {
     pub margin_mode: MarginMode,                             // 保证金模式，用于定义账户的保证金类型（例如逐仓、全仓）
-    pub position_direction_mode: PositionDirectionMode,      // 持仓方向模式，定义账户是否允许同时持有多头和空头（双向持仓）或仅允许单一方向的仓位
-    // pub position_margin_mode: PositionMarginMode,            // 持仓保证金模式，定义每个仓位的保证金计算方式
+    pub global_position_direction_mode: PositionDirectionMode,      // 持仓方向模式，定义账户是否允许同时持有多头和空头（双向持仓）或仅允许单一方向的仓位
+    pub global_position_margin_mode: PositionMarginMode,            // 持仓保证金模式，定义每个仓位的保证金计算方式
     pub commission_level: CommissionLevel,                   // 手续费等级，决定账户的交易手续费率
     pub funding_rate: f64,                                   // 资金费率，用于合约交易中计算资金费用
-    pub account_leverage_rate: f64,                          // 账户杠杆率，决定账户在杠杆交易中的放大倍数
+    pub global_leverage_rate: f64,                          // 账户杠杆率，决定账户在杠杆交易中的放大倍数
     pub fees_book: HashMap<InstrumentKind, CommissionRates>, // 手续费表，存储每种合约类型的手续费率
     pub execution_mode: SandboxMode,                         // 执行模式，定义账户是在沙盒模式（模拟交易）还是在真实环境中运行
     pub max_price_deviation: f64,                            /* 最大价格偏差，用于限制订单价格与市场价格的偏离范围
@@ -181,10 +182,11 @@ impl AccountConfigInitiator
     pub fn initiate(self) -> Result<AccountConfig, &'static str>
     {
         Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
-                           position_direction_mode: self.position_mode.ok_or("position_mode is required")?,
-                           commission_level: self.commission_level.ok_or("commission level is required")?,
+                           global_position_direction_mode: self.position_mode.ok_or("position_mode is required")?,
+            global_position_margin_mode: PositionMarginMode::Cross,
+            commission_level: self.commission_level.ok_or("commission level is required")?,
                            funding_rate: self.fund_fee_rate.ok_or("fund_fee_rate is required")?,
-                           account_leverage_rate: Default::default(),
+                           global_leverage_rate: Default::default(),
                            fees_book: Default::default(),
                            execution_mode: SandboxMode::Backtest,
                            max_price_deviation: self.max_price_deviation.ok_or("max price deviation is required")? })

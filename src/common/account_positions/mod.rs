@@ -163,9 +163,9 @@ impl AccountPositions
     /// TODO check init logic
     pub async fn build_new_perpetual_position(&self, config: &AccountConfig, trade: &ClientTrade, exchange_ts: i64,mode:PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
     {
-        let position_mode = config.position_direction_mode.clone();
+        let position_mode = config.global_position_direction_mode.clone();
         // 计算初始保证金
-        let initial_margin = trade.price * trade.size / config.account_leverage_rate;
+        let initial_margin = trade.price * trade.size / config.global_leverage_rate;
 
         // 根据 Instrument 和 Side 动态生成 position_id
         let position_meta = PositionMetaBuilder::new().position_id(PositionId::new(&trade.instrument.clone(), trade.timestamp))
@@ -199,7 +199,7 @@ impl AccountPositions
         };
         let pos_config = PerpetualPositionConfig {
             pos_margin_mode: mode,
-            leverage: config.account_leverage_rate,
+            leverage: config.global_leverage_rate,
                                                    position_mode };
 
         let new_position = PerpetualPositionBuilder::new().meta(position_meta)
@@ -341,7 +341,7 @@ impl AccountPositions
 
 ///  [NetMode] : 单向模式。在这种模式下，用户只能持有一个方向的仓位（多头或空头），而不能同时持有两个方向的仓位。
 ///  [LongShortMode] : 双向模式。在这种模式下，用户可以同时持有多头和空头仓位。这在一些复杂的交易策略中可能会有用，例如对冲策略。
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone,PartialOrd, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionDirectionMode
 {
     LongShort,
@@ -381,7 +381,7 @@ impl PositionMarginMode
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone,PartialOrd, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionMarginMode
 {
     Cross,

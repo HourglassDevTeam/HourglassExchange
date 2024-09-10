@@ -50,7 +50,6 @@ use std::{
     },
     time::{SystemTime, UNIX_EPOCH},
 };
-use clickhouse::sql::Bind;
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 use uuid::Uuid;
@@ -352,7 +351,7 @@ impl Account
         let mut open_results = Vec::new();
 
         // 获取当前的 position_direction_mode 并提前判断是否需要进行方向冲突检查
-        let is_netmode = self.config.position_direction_mode == PositionDirectionMode::Net;
+        let is_netmode = self.config.global_position_direction_mode == PositionDirectionMode::Net;
 
         for request in open_requests {
             // 如果是 NetMode，检查方向冲突
@@ -891,15 +890,15 @@ impl Account
     }
 
     /// 更新 PerpetualPosition 的方法
-    /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的隔离保证金要在外部计算好。
+    /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的
     async fn create_perpetual_position(&mut self, trade: ClientTrade,position_margin_mode: PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
     {
         let meta = PositionMeta::create_from_trade(&trade);
 
         let new_position = PerpetualPosition { meta,
                                                pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode,
-                                                                                     leverage: self.config.account_leverage_rate,
-                                                                                     position_mode: self.config.position_direction_mode.clone() },
+                                                                                     leverage: self.config.global_leverage_rate,
+                                                                                     position_mode: self.config.global_position_direction_mode.clone() },
                                                liquidation_price: 0.0 };
 
         match trade.side {
@@ -923,8 +922,8 @@ impl Account
             meta,
             pos_config: FuturePositionConfig {
                 pos_margin_mode: position_margin_mode,
-                leverage: self.config.account_leverage_rate,
-                position_mode: self.config.position_direction_mode.clone(),
+                leverage: self.config.global_leverage_rate,
+                position_mode: self.config.global_position_direction_mode.clone(),
             },
             liquidation_price: 0.0,
             funding_fee: 0.0, // TODO: To Be Checked
@@ -993,7 +992,7 @@ impl Account
 
         match trade.instrument.kind {
             | InstrumentKind::Perpetual => {
-                match self.config.position_direction_mode {
+                match self.config.global_position_direction_mode {
                     | PositionDirectionMode::Net => {
                         // Net Mode 逻辑
                         self.update_position_net_mode(trade).await?;
@@ -1134,8 +1133,8 @@ impl Account
                                 drop(short_positions_write);
                                 let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
                                                                        pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode.clone(),
-                                                                                                             leverage: self.config.account_leverage_rate,
-                                                                                                             position_mode: self.config.position_direction_mode.clone() },
+                                                                                                             leverage: self.config.global_leverage_rate,
+                                                                                                             position_mode: self.config.global_position_direction_mode.clone() },
                                                                        liquidation_price: 0.0 };
                                 self.positions.perpetual_pos_long.write().await.insert(trade.instrument.clone(), new_position);
                             }
@@ -1209,8 +1208,8 @@ impl Account
                                 // 基于交易创建新的空头仓位
                                 let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
                                                                        pos_config: PerpetualPositionConfig { pos_margin_mode: long_position.pos_config.pos_margin_mode,
-                                                                                                             leverage: self.config.account_leverage_rate,
-                                                                                                             position_mode: self.config.position_direction_mode.clone() },
+                                                                                                             leverage: self.config.global_leverage_rate,
+                                                                                                             position_mode: self.config.global_position_direction_mode.clone() },
                                                                        liquidation_price: 0.0 };
                                 // 将新的空头仓位插入空头仓位映射中
                                 self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
@@ -1251,7 +1250,7 @@ impl Account
     /// 在 create_position 过程中确保仓位的杠杆率不超过账户的最大杠杆率。  [TODO] : TO BE CHECKED & APPLIED
     pub fn enforce_leverage_limits(&self, new_position: &PerpetualPosition) -> Result<(), ExchangeError>
     {
-        if new_position.pos_config.leverage > self.config.account_leverage_rate {
+        if new_position.pos_config.leverage > self.config.global_leverage_rate {
             Err(ExchangeError::InvalidLeverage(format!("Leverage is beyond configured rate: {}", new_position.pos_config.leverage)))
         }
         else {
@@ -1409,7 +1408,7 @@ impl Account
                 todo!("CommodityFuture handling is not implemented yet")
             }
             | InstrumentKind::Perpetual | InstrumentKind::Future | InstrumentKind::CryptoLeveragedToken => {
-                let leverage_rate = self.config.account_leverage_rate;
+                let leverage_rate = self.config.global_leverage_rate;
                 let quote_delta = match side {
                     | Side::Buy => {
                         // 买入时减少的也是 quote 资金
@@ -1501,7 +1500,7 @@ impl Account
                         if order.state.price > latest_bid * (1.0 + max_price_deviation) {
                             return Err(ExchangeError::OrderRejected("Buy order price is too high compared to the market".into()));
                         }
-                        let required_balance = order.state.price * order.state.size * self.config.account_leverage_rate;
+                        let required_balance = order.state.price * order.state.size * self.config.global_leverage_rate;
                         Ok((&order.instrument.quote, required_balance))
                     }
                     | Side::Sell => {
@@ -1511,7 +1510,7 @@ impl Account
                         if order.state.price < latest_ask * (1.0 - max_price_deviation) {
                             return Err(ExchangeError::OrderRejected("Sell order price is too low compared to the market".into()));
                         }
-                        let required_balance = order.state.price * order.state.size * self.config.account_leverage_rate;
+                        let required_balance = order.state.price * order.state.size * self.config.global_leverage_rate;
                         Ok((&order.instrument.quote, required_balance))
                     }
                 }
