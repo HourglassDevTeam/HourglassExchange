@@ -975,6 +975,7 @@ impl Account
 
     /// 更新 PerpetualPosition 的方法
     /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的
+    /// 注意 此处 `PositionMarginMode` 中的 `isolated_margin` 是被直接传输进来的.
     async fn create_perpetual_position(&mut self, trade: ClientTrade, position_margin_mode: PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
     {
         let meta = PositionMeta::create_from_trade(&trade);
@@ -983,7 +984,8 @@ impl Account
                                                pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode,
                                                                                      leverage: self.config.global_leverage_rate,
                                                                                      position_mode: self.config.global_position_direction_mode.clone() },
-                                               liquidation_price: 0.0 };
+                                               liquidation_price: 0.0
+        };
 
         match trade.side {
             | Side::Buy => {
