@@ -161,10 +161,9 @@ impl AccountPositions
     }
 
     /// TODO check init logic
-    pub async fn build_new_perpetual_position(&self, config: &AccountConfig, trade: &ClientTrade, exchange_ts: i64) -> Result<PerpetualPosition, ExchangeError>
+    pub async fn build_new_perpetual_position(&self, config: &AccountConfig, trade: &ClientTrade, exchange_ts: i64,mode:PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
     {
         let position_mode = config.position_direction_mode.clone();
-        let position_margin_mode = config.position_margin_mode.clone();
         // 计算初始保证金
         let initial_margin = trade.price * trade.size / config.account_leverage_rate;
 
@@ -198,8 +197,9 @@ impl AccountPositions
         else {
             trade.price * (1.0 + initial_margin / (trade.size * trade.price))
         };
-        let pos_config = PerpetualPositionConfig { pos_margin_mode: position_margin_mode,
-                                                   leverage: config.account_leverage_rate,
+        let pos_config = PerpetualPositionConfig {
+            pos_margin_mode: mode,
+            leverage: config.account_leverage_rate,
                                                    position_mode };
 
         let new_position = PerpetualPositionBuilder::new().meta(position_meta)
