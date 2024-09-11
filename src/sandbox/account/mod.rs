@@ -1106,7 +1106,7 @@ impl Account
     /// 根据[PositionDirectionMode]分流
     pub async fn update_position_from_client_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
     {
-        // println!("[UniLinkEx] : Received a new trade: {:#?}", trade);
+        // println!("[UniLinkEx] : Received a new trade: {:?}", trade);
 
         match trade.instrument.kind {
             | InstrumentKind::Perpetual => {
@@ -1179,11 +1179,9 @@ impl Account
         Ok(())
     }
 
-    /// 注意 这个函数是可以用来从客户端收到的交易中更新仓位，但是目前只适合 [PositionDirectionMode::Net Mode].
     /// 注意 liquidation price 更新逻辑未实现.
     pub async fn update_position_net_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
     {
-        // println!("[UniLinkEx] : Received a new trade: {:#?}", trade);
 
         match trade.instrument.kind {
             | InstrumentKind::Perpetual => {
@@ -1206,9 +1204,7 @@ impl Account
                                 let mut short_positions_write = self.positions.perpetual_pos_short.write().await;
                                 let mut short_position = short_positions_write.get_mut(&trade.instrument).unwrap().clone();
                                 let short_leverage = &short_position.pos_config.leverage.clone();
-
                                 if perfect_exit {
-                                    println!("[UniLinkEx] : 移除空头仓位...");
                                     short_position.isolated_margin = Some(0.0); // NOTE 暂时先清零.实际操作中穿仓会很复杂.
                                     short_position.meta.update_realised_pnl(trade.price);
                                     let exited = PositionExit::from_position_meta(&short_position.meta);
@@ -1216,7 +1212,6 @@ impl Account
                                     short_positions_write.remove(&trade.instrument);
                                 }
                                 else if exit_and_reverse {
-                                    println!("[UniLinkEx] : 移除并反向开多头仓...");
                                     let position_margin_mode = &short_position.pos_config.pos_margin_mode.clone();
                                     short_position.meta.update_realised_pnl(trade.price);
                                     short_position.isolated_margin = Some(0.0); // NOTE 暂时先清零.实际操作中穿仓会很复杂.
@@ -1226,7 +1221,7 @@ impl Account
                                     let new_position =
                                         PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
                                                             pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode.clone(),
-                                                                                                  leverage: self.config.global_leverage_rate,
+                                                                                                  leverage: short_position.pos_config.leverage,
                                                                                                   position_mode: self.config.global_position_direction_mode.clone() },
                                                             isolated_margin: Some(trade.price * remaining_quantity * short_leverage),
                                                             liquidation_price: Some(0.0) };
@@ -1296,7 +1291,6 @@ impl Account
                                 let mut long_position = long_positions_write.get_mut(&trade.instrument).unwrap().clone();
                                 let long_leverage = &long_position.pos_config.leverage.clone();
                                 if perfect_exit {
-                                    println!("[UniLinkEx] : 移除空头仓位...");
                                     long_position.isolated_margin = Some(0.0); // NOTE 暂时先清零.实际操作中穿仓会很复杂.
                                     long_position.meta.update_realised_pnl(trade.price);
                                     let exited = PositionExit::from_position_meta(&long_position.meta);
@@ -1304,7 +1298,6 @@ impl Account
                                     long_positions_write.remove(&trade.instrument);
                                 }
                                 else if exit_and_reverse {
-                                    println!("[UniLinkEx] : 移除并反向开空头仓...");
                                     let position_margin_mode = &long_position.pos_config.pos_margin_mode.clone();
                                     long_position.meta.update_realised_pnl(trade.price);
                                     long_position.isolated_margin = Some(0.0); // NOTE 暂时先清零.实际操作中穿仓会很复杂.
@@ -1314,14 +1307,13 @@ impl Account
                                     let new_position =
                                         PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
                                                             pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode.clone(),
-                                                                                                  leverage: self.config.global_leverage_rate,
+                                                                                                  leverage: long_position.pos_config.leverage,
                                                                                                   position_mode: self.config.global_position_direction_mode.clone() },
                                                             isolated_margin: Some(trade.price * remaining_quantity * long_leverage),
                                                             liquidation_price: Some(0.0) };
                                     self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
                                 }
                                 else {
-                                    println!("[UniLinkEx] : 部分平仓多头仓位...");
                                     if let PositionMarginMode::Isolated = long_position.pos_config.pos_margin_mode {
                                         // 如果隔离保证金为 None，则进行初始化计算
                                         if long_position.isolated_margin.is_none() {
@@ -1437,7 +1429,7 @@ impl Account
     /// [`Balance`]的变化取决于[`Order<Open>`]是[`Side::Buy`]还是[`Side::Sell`]。
     pub async fn apply_open_order_changes(&mut self, open: &Order<Open>, required_balance: f64) -> Result<AccountEvent, ExchangeError>
     {
-        println!("[apply_open_order_changes] : applying open order: {:#?}, subtracting required_balance: {:?}",
+        println!("[apply_open_order_changes] : applying open order: {:?}, subtracting required_balance: {:?}",
                  open, required_balance);
 
         // 根据 PositionMarginMode 处理余额更新 注意 : 暂时不支持spot的仓位逻辑
@@ -1499,7 +1491,7 @@ impl Account
     /// 从交易中更新余额并返回 [`AccountEvent`]
     pub async fn apply_trade_changes(&mut self, trade: &ClientTrade) -> Result<AccountEvent, ExchangeError>
     {
-        println!("[apply_trade_changes] : applying trade: {:#?}", trade);
+        println!("[apply_trade_changes] : applying trade: {:?}", trade);
         let Instrument { quote, kind, .. } = &trade.instrument;
         let fee = trade.fees; // 直接从 TradeEvent 中获取费用
         let side = trade.side; // 直接使用 TradeEvent 中的 side
@@ -1561,7 +1553,7 @@ impl Account
                     }
                 };
 
-                println!("[apply_trade_changes] : quote_delta: {:#?}", quote_delta);
+                println!("[apply_trade_changes] : quote_delta: {:?}", quote_delta);
                 // 应用 quote 的余额变动
                 let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
@@ -1587,7 +1579,7 @@ impl Account
     {
         // 从 AccountConfig 读取 max_price_deviation
         let max_price_deviation = self.config.max_price_deviation;
-        println!("[required_available_balance] : max_price_deviation is {:#?}", max_price_deviation);
+        println!("[required_available_balance] : max_price_deviation is {:?}", max_price_deviation);
 
         // 将锁定的 order_book 引用存储在一个变量中，确保其生命周期足够长
         let mut order_books_lock = self.single_level_order_book.lock().await;
@@ -1757,28 +1749,28 @@ impl Account
     /// 如果找不到与市场事件相关的挂单，函数会记录警告并返回一个空的交易向量。
     pub async fn match_orders(&mut self, market_trade: &MarketTrade) -> Result<Vec<ClientTrade>, ExchangeError>
     {
-        println!("[match_orders]: market_trade: {:?}", market_trade);
+        // println!("[match_orders]: market_trade: {:?}", market_trade);
         let mut trades = Vec::new();
 
         // 从市场交易事件的符号中解析基础货币和报价货币，并确定金融工具种类
         let base = Token::from(market_trade.parse_base().ok_or_else(|| ExchangeError::SandBox("Unknown base.".to_string()))?);
         let quote = Token::from(market_trade.parse_quote().ok_or_else(|| ExchangeError::SandBox("Unknown quote.".to_string()))?);
         let kind = market_trade.parse_kind();
-        println!("[match_orders]: kind is {}", kind);
+        // println!("[match_orders]: kind is {}", kind);
         let instrument = Instrument { base, quote, kind };
-        println!("[match_orders]: instrument is {}", instrument);
+        // println!("[match_orders]: instrument is {}", instrument);
 
         // 查找与指定金融工具相关的挂单
         if let Ok(mut instrument_orders) = self.orders.read().await.get_ins_orders_mut(&instrument) {
             // 确定市场事件匹配的挂单方向（买或卖）
             if let Some(matching_side) = instrument_orders.determine_matching_side(market_trade) {
-                println!("[match_orders]: matching side is {}, will look up in corresponding open orders", matching_side);
+                // println!("[match_orders]: matching side is {}, will look up in corresponding open orders", matching_side);
                 match matching_side {
                     | Side::Buy => {
                         // 从最佳买单中提取 `OrderRole` 以获取正确的手续费比例
                         if let Some(best_bid) = instrument_orders.bids.last() {
                             let order_role = best_bid.state.order_role;
-                            println!("[match_orders]: order_role: {:?}", order_role);
+                            // println!("[match_orders]: order_role: {:?}", order_role);
                             let fees_percent = self.fees_percent(&kind, order_role)
                                                    .await
                                                    .map_err(|_| ExchangeError::SandBox("Missing fees.".to_string()))?;
@@ -1791,7 +1783,7 @@ impl Account
                         // 从最佳卖单中提取 `OrderRole` 以获取正确的手续费比例
                         if let Some(best_ask) = instrument_orders.asks.last() {
                             let order_role = best_ask.state.order_role;
-                            println!("[match_orders]: order_role: {:?}", order_role);
+                            // println!("[match_orders]: order_role: {:?}", order_role);
                             let fees_percent = self.fees_percent(&kind, order_role)
                                                    .await
                                                    .map_err(|_| ExchangeError::SandBox("Missing fees.".to_string()))?;
@@ -1808,7 +1800,7 @@ impl Account
             warn!("未找到与市场事件相关的挂单，跳过处理。");
         }
 
-        println!("[match_orders]: generated client trades are: {:?}", trades);
+        // println!("[match_orders]: generated client trades are: {:?}", trades);
         self.process_trades(trades.clone()).await;
 
         Ok(trades)
@@ -2422,8 +2414,8 @@ mod tests
         let initial_usdt_balance = account.get_balance(&Token::from("USDT")).unwrap().clone();
         let initial_eth_balance = account.get_balance(&Token::from("ETH")).unwrap().clone();
 
-        println!("[test_match_market_event_with_open_order_sell] : Initial ETH balance: {:#?}", initial_eth_balance);
-        println!("[test_match_market_event_with_open_order_sell] : Initial USDT balance: {:#?}", initial_usdt_balance);
+        println!("[test_match_market_event_with_open_order_sell] : Initial ETH balance: {:?}", initial_eth_balance);
+        println!("[test_match_market_event_with_open_order_sell] : Initial USDT balance: {:?}", initial_usdt_balance);
 
         // 创建一个待开卖单订单
         let open_order = Order { instruction: OrderInstruction::Limit,
@@ -2470,8 +2462,8 @@ mod tests
         let initial_usdt_balance = account.get_balance(&Token::from("USDT")).unwrap().clone();
         let initial_eth_balance = account.get_balance(&Token::from("ETH")).unwrap().clone();
 
-        println!("[test_match_market_event_with_open_order_sell] : Initial ETH balance: {:#?}", initial_eth_balance);
-        println!("[test_match_market_event_with_open_order_sell] : Initial USDT balance: {:#?}", initial_usdt_balance);
+        println!("[test_match_market_event_with_open_order_sell] : Initial ETH balance: {:?}", initial_eth_balance);
+        println!("[test_match_market_event_with_open_order_sell] : Initial USDT balance: {:?}", initial_usdt_balance);
 
         // 创建一个待开卖单订单
         let open_order = Order { instruction: OrderInstruction::Limit,
@@ -2499,7 +2491,7 @@ mod tests
 
         // 匹配订单并生成交易事件
         let trades = account.match_orders(&market_event).await.unwrap();
-        println!("trades:{:#?}", trades);
+        println!("trades:{:?}", trades);
 
         // 检查余额是否已更新 注意合约交易中base_balance不应该被改变
         let base_balance = account.get_balance(&instrument.base).unwrap();
@@ -2610,7 +2602,7 @@ mod tests
 
         // 检查多头仓位是否成功创建
         let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
-        println!("positions:{:#?}", positions); // 打印多头仓位
+        println!("positions:{:?}", positions); // 打印多头仓位
         assert!(positions.contains_key(&trade.instrument)); // 检查 HashMap 中是否有该键
         let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
         assert_eq!(pos.meta.current_size, 1.0); // 检查仓位大小
@@ -2648,7 +2640,7 @@ mod tests
 
         // 执行创建新空头仓位的逻辑
         let result = account.create_perpetual_position(trade.clone()).await;
-        println!("result: {:#?}", result); // 打印结果
+        println!("result: {:?}", result); // 打印结果
         assert!(result.is_ok());
 
         // 检查空头仓位是否成功创建
@@ -2878,7 +2870,7 @@ mod tests
 
         // 执行管理仓位逻辑，应该返回错误
         let result = account.update_position_from_client_trade(trade.clone()).await;
-        println!("result: {:#?}", result);
+        println!("result: {:?}", result);
         assert!(result.is_err());
     }
 }
