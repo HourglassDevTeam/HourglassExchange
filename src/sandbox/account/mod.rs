@@ -1130,46 +1130,68 @@ impl Account
         Ok(())
     }
 
-    pub async fn update_position_long_short_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
-    {
+    /// NOTE isolated margin mode not supported yet, but handling logic for isolated margin added.
+    pub async fn update_position_long_short_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
         match trade.side {
-            | Side::Buy => {
+            // 买入处理逻辑
+            Side::Buy => {
                 // 获取写锁更新或创建多头仓位
                 let mut long_positions = self.positions.perpetual_pos_long.lock().await;
-                if let Some(position) = long_positions.get_mut(&trade.instrument) {
-                    // 如果已经持有多头仓位，更新仓位
+
+                if let Some( position) = long_positions.get_mut(&trade.instrument) {
+                    // 更新已有多头仓位
                     println!("[UniLinkEx] : Updating existing long position...");
                     position.meta.update_from_trade(&trade);
-                }
-                else {
-                    // 显式释放写锁
+
+                    // 处理隔离保证金模式
+                    if let PositionMarginMode::Isolated = position.pos_config.pos_margin_mode {
+                        // 初始化或更新隔离保证金
+                        if position.isolated_margin.is_none() {
+                            position.isolated_margin = Some(trade.price * trade.size * position.pos_config.leverage);
+                        } else if let Some(ref mut margin) = position.isolated_margin {
+                            *margin += trade.price * trade.size * position.pos_config.leverage;
+                        }
+                    }
+                } else {
+                    // 释放写锁后创建新的多头仓位
                     drop(long_positions);
 
-                    // 释放锁后创建新的仓位
+                    // 创建新的多头仓位
                     let new_position = self.create_perpetual_position(trade.clone()).await?;
 
-                    // 再次获取写锁插入新的仓位
+                    // 获取写锁插入新的仓位
                     let mut long_positions = self.positions.perpetual_pos_long.lock().await;
                     long_positions.insert(trade.instrument.clone(), new_position);
                 }
             }
 
-            | Side::Sell => {
+            // 卖出处理逻辑
+            Side::Sell => {
                 // 获取写锁更新或创建空头仓位
                 let mut short_positions = self.positions.perpetual_pos_short.lock().await;
-                if let Some(position) = short_positions.get_mut(&trade.instrument) {
-                    // 如果已经持有空头仓位，更新仓位
+
+                if let Some( position) = short_positions.get_mut(&trade.instrument) {
+                    // 更新已有空头仓位
                     println!("[UniLinkEx] : Updating existing short position...");
                     position.meta.update_from_trade(&trade);
-                }
-                else {
-                    // 显式释放写锁
+
+                    // 处理隔离保证金模式
+                    if let PositionMarginMode::Isolated = position.pos_config.pos_margin_mode {
+                        // 初始化或更新隔离保证金
+                        if position.isolated_margin.is_none() {
+                            position.isolated_margin = Some(trade.price * trade.size * position.pos_config.leverage);
+                        } else if let Some(ref mut margin) = position.isolated_margin {
+                            *margin += trade.price * trade.size * position.pos_config.leverage;
+                        }
+                    }
+                } else {
+                    // 释放写锁后创建新的空头仓位
                     drop(short_positions);
 
-                    // 释放锁后创建新的空头仓位
+                    // 创建新的空头仓位
                     let new_position = self.create_perpetual_position(trade.clone()).await?;
 
-                    // 再次获取写锁插入新的仓位
+                    // 获取写锁插入新的仓位
                     let mut short_positions = self.positions.perpetual_pos_short.lock().await;
                     short_positions.insert(trade.instrument.clone(), new_position);
                 }
