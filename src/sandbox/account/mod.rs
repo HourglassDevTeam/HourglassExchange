@@ -1240,10 +1240,10 @@ impl Account
                                 }
                             }
                             else {
+                                // 没有空头仓位，
                                 drop(short_positions_read);
-                                // 没有空头仓位，检查是否已有多头仓位
                                 let mut long_positions_write = self.positions.perpetual_pos_long.write().await;
-
+                                // 检查是否已有多头仓位
                                 if let Some(long_position) = long_positions_write.get_mut(&trade.instrument) {
                                     remaining_quantity = trade.size - long_position.meta.current_size;
                                     // 检查该多头仓位的隔离保证金模式
@@ -1257,7 +1257,6 @@ impl Account
                                             *margin += trade.price * remaining_quantity * long_position.pos_config.leverage;
                                         }
                                     }
-
                                     // 更新仓位的其他信息
                                     long_position.meta.update_from_trade(&trade);
                                 }
@@ -1343,13 +1342,12 @@ impl Account
                                             *margin += trade.price * remaining_quantity * short_position.pos_config.leverage;
                                         }
                                     }
-
                                     // 更新仓位的其他信息
                                     short_position.meta.update_from_trade(&trade);
                                 }
                                 else {
                                     drop(short_positions_write);
-                                    // 如果没有多头仓位，创建新的空头仓位
+                                    // 如果没有空头仓位，创建新的空头仓位
                                     self.create_perpetual_position(trade.clone()).await?;
                                 }
                             }
