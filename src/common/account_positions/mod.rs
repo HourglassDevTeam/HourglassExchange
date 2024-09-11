@@ -22,7 +22,7 @@ use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializ
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 use tokio::sync::RwLock;
 
-mod exited_position;
+pub(crate) mod exited_position;
 pub mod exited_positions;
 pub mod future;
 pub(crate) mod leveraged_token;

@@ -55,6 +55,7 @@ use std::{
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tracing::warn;
 use uuid::Uuid;
+use crate::common::account_positions::exited_position::PositionExit;
 
 pub mod account_config;
 pub mod account_latency;
@@ -1210,7 +1211,8 @@ impl Account
                                     println!("[UniLinkEx] : 移除空头仓位...");
                                     short_position.isolated_margin = Some(0.0); // NOTE 暂时先清零.实际操作中穿仓会很复杂.
                                     short_position.meta.update_realised_pnl(trade.price);
-                                    self.exited_positions.insert_perpetual_pos_short(short_position.clone()).await;
+                                    let exited = PositionExit::from_position_meta(&short_position.meta);
+                                    self.exited_positions.insert_perpetual_pos_short(exited).await;
                                     short_positions_write.remove(&trade.instrument);
                                 }
                                 else if exit_and_reverse {
@@ -1218,7 +1220,8 @@ impl Account
                                     let position_margin_mode = &short_position.pos_config.pos_margin_mode.clone();
                                     short_position.meta.update_realised_pnl(trade.price);
                                     short_position.isolated_margin = Some(0.0); // NOTE 暂时先清零.实际操作中穿仓会很复杂.
-                                    self.exited_positions.insert_perpetual_pos_short(short_position).await;
+                                    let exited = PositionExit::from_position_meta(&short_position.meta);
+                                    self.exited_positions.insert_perpetual_pos_short(exited).await;
                                     short_positions_write.remove(&trade.instrument);
                                     let new_position =
                                         PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
@@ -1296,7 +1299,8 @@ impl Account
                                     println!("[UniLinkEx] : 移除空头仓位...");
                                     long_position.isolated_margin = Some(0.0); // NOTE 暂时先清零.实际操作中穿仓会很复杂.
                                     long_position.meta.update_realised_pnl(trade.price);
-                                    self.exited_positions.insert_perpetual_pos_long(long_position.clone()).await;
+                                    let exited = PositionExit::from_position_meta(&long_position.meta);
+                                    self.exited_positions.insert_perpetual_pos_long(exited).await;
                                     long_positions_write.remove(&trade.instrument);
                                 }
                                 else if exit_and_reverse {
@@ -1304,7 +1308,8 @@ impl Account
                                     let position_margin_mode = &long_position.pos_config.pos_margin_mode.clone();
                                     long_position.meta.update_realised_pnl(trade.price);
                                     long_position.isolated_margin = Some(0.0); // NOTE 暂时先清零.实际操作中穿仓会很复杂.
-                                    self.exited_positions.insert_perpetual_pos_long(long_position).await;
+                                    let exited = PositionExit::from_position_meta(&long_position.meta);
+                                    self.exited_positions.insert_perpetual_pos_long(exited).await;
                                     long_positions_write.remove(&trade.instrument);
                                     let new_position =
                                         PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),

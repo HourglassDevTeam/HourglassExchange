@@ -1,6 +1,5 @@
-use crate::common::account_positions::{
-    future::FuturePosition, leveraged_token::LeveragedTokenPosition, option::OptionPosition, perpetual::PerpetualPosition, position_id::PositionId,
-};
+use crate::common::account_positions::exited_position::PositionExit;
+use crate::common::account_positions::position_id::PositionId;
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 use tokio::sync::RwLock;
@@ -10,16 +9,16 @@ use tokio::sync::RwLock;
 #[derive(Clone, Debug)]
 pub struct AccountExitedPositions
 {
-    pub margin_pos_long: Arc<RwLock<HashMap<PositionId, LeveragedTokenPosition>>>,
-    pub margin_pos_short: Arc<RwLock<HashMap<PositionId, LeveragedTokenPosition>>>,
-    pub perpetual_pos_long: Arc<RwLock<HashMap<PositionId, PerpetualPosition>>>,
-    pub perpetual_pos_short: Arc<RwLock<HashMap<PositionId, PerpetualPosition>>>,
-    pub futures_pos_long: Arc<RwLock<HashMap<PositionId, FuturePosition>>>,
-    pub futures_pos_short: Arc<RwLock<HashMap<PositionId, FuturePosition>>>,
-    pub option_pos_long_call: Arc<RwLock<HashMap<PositionId, OptionPosition>>>,
-    pub option_pos_long_put: Arc<RwLock<HashMap<PositionId, OptionPosition>>>,
-    pub option_pos_short_call: Arc<RwLock<HashMap<PositionId, OptionPosition>>>,
-    pub option_pos_short_put: Arc<RwLock<HashMap<PositionId, OptionPosition>>>,
+    pub margin_pos_long: Arc<RwLock<HashMap<PositionId, PositionExit>>>,
+    pub margin_pos_short: Arc<RwLock<HashMap<PositionId, PositionExit>>>,
+    pub perpetual_pos_long: Arc<RwLock<HashMap<PositionId, PositionExit>>>,
+    pub perpetual_pos_short: Arc<RwLock<HashMap<PositionId, PositionExit>>>,
+    pub futures_pos_long: Arc<RwLock<HashMap<PositionId, PositionExit>>>,
+    pub futures_pos_short: Arc<RwLock<HashMap<PositionId, PositionExit>>>,
+    pub option_pos_long_call: Arc<RwLock<HashMap<PositionId, PositionExit>>>,
+    pub option_pos_long_put: Arc<RwLock<HashMap<PositionId, PositionExit>>>,
+    pub option_pos_short_call: Arc<RwLock<HashMap<PositionId, PositionExit>>>,
+    pub option_pos_short_put: Arc<RwLock<HashMap<PositionId, PositionExit>>>,
 }
 
 #[allow(dead_code)]
@@ -40,81 +39,81 @@ impl AccountExitedPositions
     }
 
     /// 插入方法，推断 `PositionId` 并插入 `LeveragedTokenPosition` 到 `margin_pos_long`
-    pub async fn insert_margin_pos_long(&self, position: LeveragedTokenPosition)
+    pub async fn insert_margin_pos_long(&self, position: PositionExit)
     {
-        let position_id = position.meta.position_id.clone(); // 从 position 中推断出 position_id
+        let position_id = position.position_id.clone(); // 从 position 中推断出 position_id
         let mut pos_long = self.margin_pos_long.write().await;
         pos_long.insert(position_id, position);
     }
 
     /// 插入方法，推断 `PositionId` 并插入 `LeveragedTokenPosition` 到 `margin_pos_short`
-    pub async fn insert_margin_pos_short(&self, position: LeveragedTokenPosition)
+    pub async fn insert_margin_pos_short(&self, position: PositionExit)
     {
-        let position_id = position.meta.position_id.clone(); // 推断 position_id
+        let position_id = position.position_id.clone(); // 推断 position_id
         let mut pos_short = self.margin_pos_short.write().await;
         pos_short.insert(position_id, position);
     }
 
     /// 插入方法，推断 `PositionId` 并插入 `PerpetualPosition` 到 `perpetual_pos_long`
-    pub async fn insert_perpetual_pos_long(&self, position: PerpetualPosition)
+    pub async fn insert_perpetual_pos_long(&self, position: PositionExit)
     {
-        let position_id = position.meta.position_id.clone(); // 推断 position_id
+        let position_id = position.position_id.clone(); // 推断 position_id
         let mut pos_long = self.perpetual_pos_long.write().await;
         pos_long.insert(position_id, position);
     }
 
     /// 插入方法，推断 `PositionId` 并插入 `PerpetualPosition` 到 `perpetual_pos_short`
-    pub async fn insert_perpetual_pos_short(&self, position: PerpetualPosition)
+    pub async fn insert_perpetual_pos_short(&self, position: PositionExit)
     {
-        let position_id = position.meta.position_id.clone(); // 推断 position_id
+        let position_id = position.position_id.clone(); // 推断 position_id
         let mut pos_short = self.perpetual_pos_short.write().await;
         pos_short.insert(position_id, position);
     }
 
     /// 插入方法，推断 `PositionId` 并插入 `FuturePosition` 到 `futures_pos_long`
-    pub async fn insert_futures_pos_long(&self, position: FuturePosition)
+    pub async fn insert_futures_pos_long(&self, position: PositionExit)
     {
-        let position_id = position.meta.position_id.clone(); // 推断 position_id
+        let position_id = position.position_id.clone(); // 推断 position_id
         let mut pos_long = self.futures_pos_long.write().await;
         pos_long.insert(position_id, position);
     }
 
     /// 插入方法，推断 `PositionId` 并插入 `FuturePosition` 到 `futures_pos_short`
-    pub async fn insert_futures_pos_short(&self, position: FuturePosition)
+    pub async fn insert_futures_pos_short(&self, position: PositionExit)
     {
-        let position_id = position.meta.position_id.clone(); // 推断 position_id
+        let position_id = position.position_id.clone(); // 推断 position_id
         let mut pos_short = self.futures_pos_short.write().await;
         pos_short.insert(position_id, position);
     }
 
     /// 插入方法，推断 `PositionId` 并插入 `OptionPosition` 到 `option_pos_long_call`
-    pub async fn insert_option_pos_long_call(&self, position: OptionPosition)
+    pub async fn insert_option_pos_long_call(&self, position: PositionExit)
     {
-        let position_id = position.meta.position_id.clone(); // 推断 position_id
+        let position_id = position.position_id.clone(); // 推断 position_id
         let mut pos_call = self.option_pos_long_call.write().await;
         pos_call.insert(position_id, position);
     }
 
     /// 插入方法，推断 `PositionId` 并插入 `OptionPosition` 到 `option_pos_long_put`
-    pub async fn insert_option_pos_long_put(&self, position: OptionPosition)
+    pub async fn insert_option_pos_long_put(&self, position: PositionExit)
     {
-        let position_id = position.meta.position_id.clone(); // 推断 position_id
+        let position_id = position.position_id.clone(); // 推断 position_id
         let mut pos_put = self.option_pos_long_put.write().await;
         pos_put.insert(position_id, position);
     }
 
     /// 插入方法，推断 `PositionId` 并插入 `OptionPosition` 到 `option_pos_short_call`
-    pub async fn insert_option_pos_short_call(&self, position: OptionPosition)
+    pub async fn insert_option_pos_short_call(&self, position: PositionExit)
     {
-        let position_id = position.meta.position_id.clone(); // 推断 position_id
+        let position_id = position.position_id.clone(); // 推断 position_id
         let mut pos_call = self.option_pos_short_call.write().await;
         pos_call.insert(position_id, position);
     }
 
     /// 插入方法，推断 `PositionId` 并插入 `OptionPosition` 到 `option_pos_short_put`
-    pub async fn insert_option_pos_short_put(&self, position: OptionPosition)
+    pub async fn insert_option_pos_short_put(&self, position: PositionExit)
     {
-        let position_id = position.meta.position_id.clone(); // 推断 position_id
+        let position_id = position.position_id.clone(); // 推断 position_id
         let mut pos_put = self.option_pos_short_put.write().await;
         pos_put.insert(position_id, position);
     }
@@ -209,16 +208,16 @@ impl<'de> Deserialize<'de> for AccountExitedPositions
         #[derive(Deserialize)]
         struct ClosedPositionsData
         {
-            margin_pos_long: HashMap<PositionId, LeveragedTokenPosition>,
-            margin_pos_short: HashMap<PositionId, LeveragedTokenPosition>,
-            perpetual_pos_long: HashMap<PositionId, PerpetualPosition>,
-            perpetual_pos_short: HashMap<PositionId, PerpetualPosition>,
-            futures_pos_long: HashMap<PositionId, FuturePosition>,
-            futures_pos_short: HashMap<PositionId, FuturePosition>,
-            option_pos_long_call: HashMap<PositionId, OptionPosition>,
-            option_pos_long_put: HashMap<PositionId, OptionPosition>,
-            option_pos_short_call: HashMap<PositionId, OptionPosition>,
-            option_pos_short_put: HashMap<PositionId, OptionPosition>,
+            margin_pos_long: HashMap<PositionId, PositionExit>,
+            margin_pos_short: HashMap<PositionId, PositionExit>,
+            perpetual_pos_long: HashMap<PositionId, PositionExit>,
+            perpetual_pos_short: HashMap<PositionId, PositionExit>,
+            futures_pos_long: HashMap<PositionId, PositionExit>,
+            futures_pos_short: HashMap<PositionId, PositionExit>,
+            option_pos_long_call: HashMap<PositionId, PositionExit>,
+            option_pos_long_put: HashMap<PositionId, PositionExit>,
+            option_pos_short_call: HashMap<PositionId, PositionExit>,
+            option_pos_short_put: HashMap<PositionId, PositionExit>,
         }
 
         let data = ClosedPositionsData::deserialize(deserializer)?;
