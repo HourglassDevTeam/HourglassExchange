@@ -1244,16 +1244,16 @@ impl Account
                             // 如果没有空头仓位，检查多头仓位
                             let mut long_positions = self.positions.perpetual_pos_long.lock().await;
                             if let Some(long_position) = long_positions.get_mut(&trade.instrument) {
-                                remaining_quantity = trade.size - long_position.meta.current_size;
                                 if let PositionMarginMode::Isolated = long_position.pos_config.pos_margin_mode {
                                     if long_position.isolated_margin.is_none() {
                                         long_position.isolated_margin = Some(trade.price * trade.size * long_position.pos_config.leverage);
                                     } else if let Some(ref mut margin) = long_position.isolated_margin {
-                                        *margin += trade.price * remaining_quantity * long_position.pos_config.leverage;
+                                        *margin += trade.price * trade.size * long_position.pos_config.leverage;
                                     }
                                 }
                                 long_position.meta.update_from_trade(&trade);
-                            } else {
+                            }
+                            else {
                                 // 释放 `long_positions` 锁
                                 drop(short_positions);
                                 drop(long_positions);
@@ -1323,12 +1323,11 @@ impl Account
                             // 如果没有多头仓位，检查空头仓位
                             let mut short_positions = self.positions.perpetual_pos_short.lock().await;
                             if let Some(short_position) = short_positions.get_mut(&trade.instrument) {
-                                remaining_quantity = trade.size - short_position.meta.current_size;
                                 if let PositionMarginMode::Isolated = short_position.pos_config.pos_margin_mode {
                                     if short_position.isolated_margin.is_none() {
                                         short_position.isolated_margin = Some(trade.price * trade.size * short_position.pos_config.leverage);
                                     } else if let Some(ref mut margin) = short_position.isolated_margin {
-                                        *margin += trade.price * remaining_quantity * short_position.pos_config.leverage;
+                                        *margin += trade.price * trade.size * short_position.pos_config.leverage;
                                     }
                                 }
                                 short_position.meta.update_from_trade(&trade);
