@@ -1241,7 +1241,7 @@ impl Account
                                 short_positions.insert(trade.instrument.clone(), short_position);
                             }
                         } else {
-                            // 如果没有空头仓位，检查多头仓位
+                            // 如果没有空头仓位，检查多头仓位，如果有，把增量保证金加入多头仓位。
                             let mut long_positions = self.positions.perpetual_pos_long.lock().await;
                             if let Some(long_position) = long_positions.get_mut(&trade.instrument) {
                                 if let PositionMarginMode::Isolated = long_position.pos_config.pos_margin_mode {
@@ -1320,7 +1320,7 @@ impl Account
                                 long_positions.insert(trade.instrument.clone(), long_position);
                             }
                         } else {
-                            // 如果没有多头仓位，检查空头仓位
+                            // 如果没有多头仓位，检查空头仓位，如果有，把增量保证金加入空头仓位
                             let mut short_positions = self.positions.perpetual_pos_short.lock().await;
                             if let Some(short_position) = short_positions.get_mut(&trade.instrument) {
                                 if let PositionMarginMode::Isolated = short_position.pos_config.pos_margin_mode {
