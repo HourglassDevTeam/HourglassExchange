@@ -1147,7 +1147,6 @@ impl Account
 
                     // 释放锁后创建新的仓位
                     let new_position = self.create_perpetual_position(trade.clone()).await?;
-
                     // 再次获取写锁插入新的仓位
                     let mut long_positions = self.positions.perpetual_pos_long.write().await;
                     long_positions.insert(trade.instrument.clone(), new_position);
@@ -1168,7 +1167,6 @@ impl Account
 
                     // 释放锁后创建新的空头仓位
                     let new_position = self.create_perpetual_position(trade.clone()).await?;
-
                     // 再次获取写锁插入新的仓位
                     let mut short_positions = self.positions.perpetual_pos_short.write().await;
                     short_positions.insert(trade.instrument.clone(), new_position);
@@ -1222,7 +1220,8 @@ impl Account
                                         PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
                                                             pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode.clone(),
                                                                                                   leverage: short_position.pos_config.leverage,
-                                                                                                  position_mode: self.config.global_position_direction_mode.clone() },
+                                                                                                  position_direction_mode: short_position.pos_config.position_direction_mode
+                                                            },
                                                             isolated_margin: Some(trade.price * remaining_quantity * short_leverage),
                                                             liquidation_price: Some(0.0) };
                                     self.positions.perpetual_pos_long.write().await.insert(trade.instrument.clone(), new_position);
@@ -1308,7 +1307,7 @@ impl Account
                                         PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
                                                             pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode.clone(),
                                                                                                   leverage: long_position.pos_config.leverage,
-                                                                                                  position_mode: self.config.global_position_direction_mode.clone() },
+                                                                                                  position_direction_mode: long_position.pos_config.position_direction_mode },
                                                             isolated_margin: Some(trade.price * remaining_quantity * long_leverage),
                                                             liquidation_price: Some(0.0) };
                                     self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
@@ -1957,7 +1956,7 @@ mod tests
     {
         PositionConfig::Perpetual(PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                             leverage: 1.0,
-                                                            position_mode: PositionDirectionMode::LongShort })
+                                                            position_direction_mode: PositionDirectionMode::LongShort })
     }
 
     #[allow(dead_code)]
@@ -1965,7 +1964,7 @@ mod tests
     {
         PositionConfig::Perpetual(PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                             leverage: 1.0,
-                                                            position_mode: PositionDirectionMode::LongShort })
+                                                            position_direction_mode: PositionDirectionMode::LongShort })
     }
 
     #[allow(dead_code)]
@@ -1973,7 +1972,7 @@ mod tests
     {
         PositionConfig::Perpetual(PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                             leverage: 1.0,
-                                                            position_mode: PositionDirectionMode::Net })
+                                                            position_direction_mode: PositionDirectionMode::Net })
     }
 
     #[allow(dead_code)]
@@ -1981,7 +1980,7 @@ mod tests
     {
         PositionConfig::Perpetual(PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                             leverage: 1.0,
-                                                            position_mode: PositionDirectionMode::Net })
+                                                            position_direction_mode: PositionDirectionMode::Net })
     }
 
     #[tokio::test]
@@ -2591,7 +2590,7 @@ mod tests
         let instrument = trade.instrument.clone();
         let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                   leverage: 1.0, // 设置合理的杠杆
-                                                  position_mode: PositionDirectionMode::LongShort };
+                                                  position_direction_mode: PositionDirectionMode::LongShort };
 
         // 将 PerpetualPositionConfig 插入到多头配置中
         account.positions.perpetual_pos_long_config.write().await.insert(instrument.clone(), preconfig);
@@ -2633,7 +2632,7 @@ mod tests
         // 预先配置 PerpetualPositionConfig
         let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                   leverage: 1.0, // 确保 leverage 设置正确
-                                                  position_mode: PositionDirectionMode::LongShort };
+                                                  position_direction_mode: PositionDirectionMode::LongShort };
 
         // 将配置插入 `perpetual_pos_short_config`
         account.positions.perpetual_pos_short_config.write().await.insert(instrument.clone(), preconfig);
@@ -2672,7 +2671,7 @@ mod tests
         let instrument = trade.instrument.clone();
         let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                   leverage: 1.0, // 设置合理的杠杆
-                                                  position_mode: PositionDirectionMode::LongShort };
+                                                  position_direction_mode: PositionDirectionMode::LongShort };
         account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
 
         // 创建一个初始的多头仓位
@@ -2723,7 +2722,7 @@ mod tests
         let instrument = trade.instrument.clone();
         let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                   leverage: 1.0, // 设置合理的杠杆
-                                                  position_mode: PositionDirectionMode::Net };
+                                                  position_direction_mode: PositionDirectionMode::Net };
         account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
 
         // 创建一个多头仓位
@@ -2771,7 +2770,7 @@ mod tests
         let instrument = trade.instrument.clone();
         let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                   leverage: 1.0, // 设置合理的杠杆
-                                                  position_mode: PositionDirectionMode::Net };
+                                                  position_direction_mode: PositionDirectionMode::Net };
         account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
         let _ = account.create_perpetual_position(trade.clone()).await;
 
@@ -2818,7 +2817,7 @@ mod tests
         let instrument = trade.instrument.clone();
         let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                   leverage: 1.0, // 设置合理的杠杆
-                                                  position_mode: PositionDirectionMode::Net };
+                                                  position_direction_mode: PositionDirectionMode::Net };
         account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
         let _ = account.create_perpetual_position(trade.clone()).await;
 

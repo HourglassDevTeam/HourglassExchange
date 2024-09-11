@@ -42,7 +42,7 @@ pub struct PerpetualPositionConfig
 {
     pub(crate) pos_margin_mode: PositionMarginMode,
     pub(crate) leverage: f64,
-    pub(crate) position_mode: PositionDirectionMode,
+    pub(crate) position_direction_mode: PositionDirectionMode,
 }
 
 impl From<ConfigurationRequest> for PerpetualPositionConfig
@@ -51,7 +51,7 @@ impl From<ConfigurationRequest> for PerpetualPositionConfig
     {
         PerpetualPositionConfig { pos_margin_mode: config_request.position_margin_mode,  // 提供默认值或根据需求处理 None
                                   leverage: config_request.leverage_rate,                // 提供默认杠杆值，或根据需求处理 None
-                                  position_mode: config_request.position_direction_mode  /* 提供默认值或根据需求处理 None */ }
+                                  position_direction_mode: config_request.position_direction_mode  /* 提供默认值或根据需求处理 None */ }
     }
 }
 
@@ -142,7 +142,7 @@ mod tests
                                                                     realised_pnl: 0.0 },
                                                pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                                                      leverage: 1.0,
-                                                                                     position_mode: PositionDirectionMode::LongShort },
+                                                                                     position_direction_mode: PositionDirectionMode::LongShort },
                                                isolated_margin: None,
                                                liquidation_price: Some(100.0) };
         position.update_liquidation_price(150.0);

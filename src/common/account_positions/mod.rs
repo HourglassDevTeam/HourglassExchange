@@ -267,7 +267,8 @@ impl AccountPositions
         };
         let pos_config = PerpetualPositionConfig { pos_margin_mode: mode,
                                                    leverage: config.global_leverage_rate,
-                                                   position_mode };
+            position_direction_mode: position_mode
+        };
 
         let new_position = PerpetualPositionBuilder::new().meta(position_meta)
                                                           .pos_config(pos_config)

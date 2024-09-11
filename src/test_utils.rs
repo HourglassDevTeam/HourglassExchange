@@ -189,7 +189,7 @@ pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPositi
                                              realised_pnl: 0.0 },
                         pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                               leverage: 1.0,
-                                                              position_mode: PositionDirectionMode::LongShort },
+                                                              position_direction_mode: PositionDirectionMode::LongShort },
                         isolated_margin: None,
                         liquidation_price: Some(0.0) }
 }
