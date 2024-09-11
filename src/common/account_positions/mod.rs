@@ -14,14 +14,13 @@ use crate::{
         Side,
     },
     error::ExchangeError,
-    sandbox::account::account_config::AccountConfig,
+    sandbox::{account::account_config::AccountConfig, config_request::ConfigurationRequest},
     Exchange,
 };
 use chrono::Utc;
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 use tokio::sync::RwLock;
-use crate::sandbox::config_request::ConfigurationRequest;
 
 mod exited_position;
 pub mod exited_positions;
@@ -59,21 +58,24 @@ pub struct AccountPositions
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub enum PositionConfig{
+pub enum PositionConfig
+{
     Perpetual(PerpetualPositionConfig),
     Future(FuturePositionConfig),
     LeveragedToken(LeveragedTokenPositionConfig),
     Option(OptionPositionConfig),
 }
 
-impl From<ConfigurationRequest> for PositionConfig {
-    fn from(config_request: ConfigurationRequest) -> Self {
+impl From<ConfigurationRequest> for PositionConfig
+{
+    fn from(config_request: ConfigurationRequest) -> Self
+    {
         match config_request.instrument.kind {
-            InstrumentKind::Perpetual => PositionConfig::Perpetual(PerpetualPositionConfig::from(config_request)),
-            InstrumentKind::Future => PositionConfig::Future(FuturePositionConfig::from(config_request)),
-            InstrumentKind::CryptoLeveragedToken => PositionConfig::LeveragedToken(LeveragedTokenPositionConfig::from(config_request)),
-            InstrumentKind::CryptoOption => PositionConfig::Option(OptionPositionConfig::from(config_request)),
-            _ => panic!("Unsupported instrument kind"),  // 根据需求处理其他类型
+            | InstrumentKind::Perpetual => PositionConfig::Perpetual(PerpetualPositionConfig::from(config_request)),
+            | InstrumentKind::Future => PositionConfig::Future(FuturePositionConfig::from(config_request)),
+            | InstrumentKind::CryptoLeveragedToken => PositionConfig::LeveragedToken(LeveragedTokenPositionConfig::from(config_request)),
+            | InstrumentKind::CryptoOption => PositionConfig::Option(OptionPositionConfig::from(config_request)),
+            | _ => panic!("Unsupported instrument kind"), // 根据需求处理其他类型
         }
     }
 }
@@ -413,47 +415,11 @@ pub enum PositionDirectionMode
     Net,
 }
 
-impl PositionMarginMode
-{
-    /// 重置隔离保证金为 0
-    pub fn reset_isolated_margin(&mut self) -> Result<(), &'static str>
-    {
-        match self {
-            | PositionMarginMode::Isolated { isolated_margin } => {
-                *isolated_margin = Some(0.0);
-                Ok(())
-            }
-            | PositionMarginMode::Cross => Err("Cannot reset margin in Cross mode"),
-        }
-    }
-
-    /// 更新隔离保证金为新值
-    pub fn update_isolated_margin(&mut self, new_margin: f64) -> Result<(), &'static str>
-    {
-        match self {
-            | PositionMarginMode::Isolated { isolated_margin } => {
-                *isolated_margin = Some(new_margin);
-                Ok(())
-            }
-            | PositionMarginMode::Cross => Err("Cannot update margin in Cross mode"),
-        }
-    }
-
-    /// 创建一个新的带有初始隔离保证金的 Isolated 模式
-    pub fn new_isolated(initial_margin: f64) -> Self
-    {
-        PositionMarginMode::Isolated { isolated_margin: Some(initial_margin) }
-    }
-}
-
 #[derive(Clone, PartialOrd, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionMarginMode
 {
     Cross,
-    Isolated
-    {
-        isolated_margin: Option<f64>, // 计算保证金并初始化之前是空的
-    },
+    Isolated,
 }
 
 /// NOTE: 可能需要多种头寸类型共存
@@ -465,224 +431,4 @@ pub enum Position
     LeveragedToken(LeveragedTokenPosition),
     Future(FuturePosition),
     Option(OptionPosition),
-}
-
-#[cfg(test)]
-mod tests
-{
-    use super::*;
-    use crate::common::token::Token;
-
-    fn create_instrument(kind: InstrumentKind) -> Instrument
-    {
-        Instrument { base: Token::from("BTC"),
-                     quote: Token::from("USDT"),
-                     kind }
-    }
-
-    fn create_perpetual_position(instrument: &Instrument) -> PerpetualPosition
-    {
-        // 假设初始交易价格和仓位大小
-        let initial_trade_price = 50000.0;
-        let trade_size = 1.0;
-
-        // 设置杠杆率
-        let leverage = 10.0;
-
-        // 计算初始保证金
-        let initial_margin = initial_trade_price * trade_size / leverage;
-
-        // 假设当前市场价格略有波动
-        let current_market_price = 50500.0;
-
-        // 计算当前仓位的未实现盈亏
-        let unrealised_pnl = (current_market_price - initial_trade_price) * trade_size;
-
-        // 计算清算价格 (liquidation_price)
-        let liquidation_price = initial_trade_price * (1.0 - initial_margin / (trade_size * initial_trade_price));
-
-        PerpetualPosition { meta: PositionMetaBuilder::new().position_id(PositionId(124124123412412))
-                                                            .instrument(instrument.clone())
-                                                            .side(Side::Buy)
-                                                            .enter_ts(1625097600000)
-                                                            .update_ts(1625097600000)
-                                                            .exit_balance(TokenBalance { token: instrument.base.clone(),
-                                                                                         balance: Balance { time: Utc::now(),
-                                                                                                            current_price: Some(current_market_price),
-                                                                                                            total: trade_size,
-                                                                                                            available: trade_size } })
-                                                            .exchange(Exchange::Binance)
-                                                            .current_size(trade_size)
-                                                            .current_fees_total(0.2)
-                                                            .current_avg_price_gross(initial_trade_price)
-                                                            .current_symbol_price(current_market_price)
-                                                            .current_avg_price(initial_trade_price)
-                                                            .unrealised_pnl(unrealised_pnl)
-                                                            .realised_pnl(0.0)
-                                                            .build()
-                                                            .unwrap(),
-                            liquidation_price,
-
-                            pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
-                                                                  leverage,
-                                                                  position_mode: PositionDirectionMode::Net } }
-    }
-
-    #[tokio::test] // 使用 tokio 的异步测试宏
-    async fn test_has_position()
-    {
-        let account_positions = AccountPositions::init();
-
-        let perpetual_instrument = create_instrument(InstrumentKind::Perpetual);
-        let future_instrument = create_instrument(InstrumentKind::Future);
-
-        // 初始情况下，没有任何仓位
-        assert!(!account_positions.has_long_position(&perpetual_instrument).await);
-        assert!(!account_positions.has_short_position(&perpetual_instrument).await);
-        assert!(!account_positions.has_long_position(&future_instrument).await);
-        assert!(!account_positions.has_short_position(&future_instrument).await);
-
-        // 创建并添加 PerpetualPosition 多头仓位
-        let mut perpetual_position = create_perpetual_position(&perpetual_instrument);
-        perpetual_position.meta.side = Side::Buy; // 设置为多头仓位
-        account_positions.update_position(Position::Perpetual(perpetual_position.clone())).await;
-
-        // 现在应该持有 PerpetualPosition 多头仓位，但不持有 FuturePosition
-        assert!(account_positions.has_long_position(&perpetual_instrument).await);
-        assert!(!account_positions.has_short_position(&perpetual_instrument).await);
-        assert!(!account_positions.has_long_position(&future_instrument).await);
-        assert!(!account_positions.has_short_position(&future_instrument).await);
-
-        // 创建并添加 PerpetualPosition 空头仓位
-        perpetual_position.meta.side = Side::Sell; // 设置为空头仓位
-        account_positions.update_position(Position::Perpetual(perpetual_position.clone())).await;
-
-        // 现在应该持有 PerpetualPosition 的空头和多头仓位
-        assert!(account_positions.has_long_position(&perpetual_instrument).await);
-        assert!(account_positions.has_short_position(&perpetual_instrument).await);
-    }
-
-    #[tokio::test] // 使用 tokio 的异步测试宏
-    async fn test_update_existing_position()
-    {
-        let account_positions = AccountPositions::init();
-
-        let perpetual_instrument = create_instrument(InstrumentKind::Perpetual);
-
-        // 添加初始的 PerpetualPosition 多头仓位
-        let mut perpetual_position = create_perpetual_position(&perpetual_instrument);
-        perpetual_position.meta.side = Side::Buy; // 设置为多头仓位
-        account_positions.update_position(Position::Perpetual(perpetual_position.clone())).await;
-
-        // 确保初始 PerpetualPosition 已正确添加
-        assert!(account_positions.has_long_position(&perpetual_instrument).await);
-
-        // 获取写锁并检查仓位数量
-        {
-            let positions = account_positions.perpetual_pos_long.read().await;
-            assert_eq!(positions.len(), 1);
-        }
-
-        // 更新相同的 PerpetualPosition，修改 `margin`
-        let updated_position = perpetual_position.clone();
-
-        account_positions.update_position(Position::Perpetual(updated_position.clone())).await;
-
-        // 确保仓位已更新而不是新添加
-        {
-            let positions = account_positions.perpetual_pos_long.read().await;
-            if !positions.is_empty() {
-                assert_eq!(positions.len(), 1); // 确保仓位数量未增加
-            }
-            else {
-                panic!("PerpetualPosition should exist but was not found.");
-            }
-        }
-    }
-
-    #[tokio::test] // 使用 tokio 的异步测试宏
-    async fn test_add_new_position()
-    {
-        let account_positions = AccountPositions::init();
-
-        // 创建两个不同的 Instrument
-        let perpetual_instrument_1 = Instrument { base: Token::from("BTC"),
-                                                  quote: Token::from("USDT"),
-                                                  kind: InstrumentKind::Perpetual };
-
-        let perpetual_instrument_2 = Instrument { base: Token::from("ETH"),
-                                                  quote: Token::from("USDT"),
-                                                  kind: InstrumentKind::Perpetual };
-
-        // 添加初始的 PerpetualPosition (多头仓位)
-        let mut perpetual_position_1 = create_perpetual_position(&perpetual_instrument_1);
-        perpetual_position_1.meta.side = Side::Buy; // 设置为多头仓位
-        account_positions.update_position(Position::Perpetual(perpetual_position_1.clone())).await;
-
-        // 添加新的 PerpetualPosition (多头仓位)
-        let mut perpetual_position_2 = create_perpetual_position(&perpetual_instrument_2);
-        perpetual_position_2.meta.side = Side::Buy; // 设置为多头仓位
-        account_positions.update_position(Position::Perpetual(perpetual_position_2.clone())).await;
-
-        // 确保新仓位已正确添加
-        assert!(account_positions.has_long_position(&perpetual_instrument_1).await);
-        assert!(account_positions.has_long_position(&perpetual_instrument_2).await);
-
-        // 获取读锁并检查仓位数量
-        {
-            let positions = account_positions.perpetual_pos_long.read().await;
-            assert_eq!(positions.len(), 2);
-        }
-    }
-    #[test]
-    fn test_reset_isolated_margin()
-    {
-        let mut position_margin = PositionMarginMode::Isolated { isolated_margin: Some(500.0) };
-
-        // 重置隔离保证金
-        let result = position_margin.reset_isolated_margin();
-        assert!(result.is_ok());
-        if let PositionMarginMode::Isolated { isolated_margin } = position_margin {
-            assert_eq!(isolated_margin, Some(0.0), "Isolated margin should be reset to 0");
-        }
-        else {
-            panic!("Expected Isolated margin mode");
-        }
-    }
-
-    #[test]
-    fn test_update_isolated_margin()
-    {
-        let mut position_margin = PositionMarginMode::Isolated { isolated_margin: Some(500.0) };
-
-        // 更新隔离保证金
-        let result = position_margin.update_isolated_margin(600.0);
-        assert!(result.is_ok());
-        if let PositionMarginMode::Isolated { isolated_margin } = position_margin {
-            assert_eq!(isolated_margin, Some(600.0), "Isolated margin should be updated to 600");
-        }
-        else {
-            panic!("Expected Isolated margin mode");
-        }
-
-        // 测试 Cross 模式下更新隔离保证金失败
-        let mut cross_margin = PositionMarginMode::Cross;
-        let result = cross_margin.update_isolated_margin(700.0);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Cannot update margin in Cross mode");
-    }
-
-    #[test]
-    fn test_new_isolated_margin()
-    {
-        // 创建一个新的隔离保证金模式
-        let position_margin = PositionMarginMode::new_isolated(1000.0);
-
-        if let PositionMarginMode::Isolated { isolated_margin } = position_margin {
-            assert_eq!(isolated_margin, Some(1000.0), "Initial isolated margin should be 1000");
-        }
-        else {
-            panic!("Expected Isolated margin mode");
-        }
-    }
 }

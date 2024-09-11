@@ -190,7 +190,8 @@ pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPositi
                         pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                               leverage: 1.0,
                                                               position_mode: PositionDirectionMode::LongShort },
-                        liquidation_price: 0.0 }
+                        isolated_margin: None,
+                        liquidation_price: Some(0.0) }
 }
 
 /// 创建一个测试用的 `FuturePosition` 实例，指定 `Side`。

@@ -7,7 +7,7 @@ use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchOrdersOpen, FetchTo
 
 use crate::{
     common::{
-        account_positions::{AccountPositions, Position},
+        account_positions::{AccountPositions, Position, PositionConfig},
         balance::TokenBalance,
         instrument::Instrument,
         order::{
@@ -16,10 +16,9 @@ use crate::{
         },
         token::Token,
     },
+    sandbox::config_request::ConfigurationRequest,
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
-use crate::common::account_positions::PositionConfig;
-use crate::sandbox::config_request::ConfigurationRequest;
 
 #[derive(Debug)]
 pub struct SandBoxClient
@@ -52,15 +51,15 @@ pub enum SandBoxClientEvent
     OpenOrders(RequestOpenOrders),
     CancelOrders(RequestCancelOrders),
     CancelOrdersAll(Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>),
-    ConfigureInstruments(Vec<ConfigurationRequest>,Sender<ConfigureInstrumentsResults>),
+    ConfigureInstruments(Vec<ConfigurationRequest>, Sender<ConfigureInstrumentsResults>),
 }
 
 #[async_trait]
 impl ClientExecution for SandBoxClient
 {
-    const CLIENT_KIND: Exchange = Exchange::SandBox;
-
     type Config = UnboundedSender<SandBoxClientEvent>;
+
+    const CLIENT_KIND: Exchange = Exchange::SandBox;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {

@@ -3,11 +3,11 @@ use crate::{
         account_positions::{PositionDirectionMode, PositionMarginMode},
         instrument::Instrument,
         order::identification::client_order_id::ClientOrderId,
+        Side,
     },
     Deserialize, Exchange,
 };
 use serde::Serialize;
-use crate::common::Side;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct ConfigurationRequest
