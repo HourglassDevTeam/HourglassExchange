@@ -457,6 +457,7 @@ impl Account
             orders_guard.determine_maker_taker(&order, current_price)?
         };
 
+        /// NOTE the way the required balance is calculated may well be problematic
         let (token, required_balance) = self.required_available_balance(&order).await;
         println!("[attempt_atomic_open] required balance is quoted in {}: {}", token,required_balance);
         self.has_sufficient_available_balance(token, required_balance)?;
