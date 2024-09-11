@@ -28,10 +28,10 @@ pub struct PositionMeta
 impl PositionMeta
 {
     /// 根据 `ClientTrade` 更新仓位
-    pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64)
+    pub fn update_from_trade(&mut self, trade: &ClientTrade)
     {
         self.update_ts = trade.timestamp;
-        self.current_symbol_price = current_symbol_price;
+        self.current_symbol_price = trade.price;
 
         // 更新当前交易的总费用
         self.current_fees_total += trade.fees;
@@ -84,11 +84,11 @@ impl PositionMeta
     /// 此函数可以处理 `Net` 和 `LongShort` 两种模式。
     /// 根据新的交易更新或创建持仓。
     /// 该函数既可以处理常规的更新逻辑，也可以处理反向持仓的逻辑。
-    pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) -> Self
+    pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade) -> Self
     {
         if self.side == trade.side {
             // 如果交易方向与当前持仓方向相同，则正常更新持仓
-            self.update_from_trade(trade, current_symbol_price);
+            self.update_from_trade(trade);
             self.clone() // 返回更新后的持仓
         }
         else {
@@ -97,7 +97,7 @@ impl PositionMeta
             if remaining_quantity >= 0.0 {
                 // 完全平仓，并用剩余的数量反向开仓
                 self.update_realised_pnl(trade.price);
-                PositionMeta::create_from_trade_with_remaining(trade, current_symbol_price)
+                PositionMeta::create_from_trade_with_remaining(trade, remaining_quantity)
             }
             else {
                 // 部分平仓，不反向，仅减少持仓量
@@ -398,11 +398,11 @@ mod tests
                                       size: 1.0,
                                       fees: 2.0 };
 
-        meta.update_from_trade(&new_trade, 62_000.0);
+        meta.update_from_trade(&new_trade);
 
         assert_eq!(meta.current_size, 2.0); // Size should be updated
         assert_eq!(meta.current_avg_price, 55_000.0); // The avg price should be exactly 55,000.0
-        assert_eq!(meta.current_symbol_price, 62_000.0); // Symbol price updated
+        assert_eq!(meta.current_symbol_price, 60_000.0); // Symbol price updated
         assert_eq!(meta.current_fees_total, 4.0); // Fees should accumulate
     }
 }

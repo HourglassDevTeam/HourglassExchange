@@ -25,6 +25,7 @@ pub struct PositionExit
     pub exit_avg_price_gross: f64, // 不包含 exit_fees_total 的退出平均价格。
     pub exit_value_gross: f64, // abs(数量) * exit_avg_price_gross。
     pub realised_pnl: f64,     // 退出后实现的盈亏。
+    pub liquidation_price: f64, // 退出平仓时的价格
 }
 
 #[allow(dead_code)]
@@ -59,6 +60,8 @@ impl PositionExit
                        exit_fees_total: position_meta.current_fees_total,                               // 平仓时的总费用
                        exit_avg_price_gross: exit_price,                                                // 平仓时的价格
                        exit_value_gross,                                                                // 平仓时的总价值
-                       realised_pnl                                                                     /* 实现的盈亏 */ }
+                       realised_pnl, /* 实现的盈亏 */
+                       liquidation_price: position_meta.current_symbol_price,
+        }
     }
 }

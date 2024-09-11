@@ -1138,7 +1138,7 @@ impl Account
                 if let Some(position) = long_positions.get_mut(&trade.instrument) {
                     // 如果已经持有多头仓位，更新仓位
                     println!("[UniLinkEx] : Updating existing long position...");
-                    position.meta.update_from_trade(&trade, trade.price);
+                    position.meta.update_from_trade(&trade);
                 }
                 else {
                     // 显式释放写锁
@@ -1159,7 +1159,7 @@ impl Account
                 if let Some(position) = short_positions.get_mut(&trade.instrument) {
                     // 如果已经持有空头仓位，更新仓位
                     println!("[UniLinkEx] : Updating existing short position...");
-                    position.meta.update_from_trade(&trade, trade.price);
+                    position.meta.update_from_trade(&trade);
                 }
                 else {
                     // 显式释放写锁
@@ -1262,7 +1262,7 @@ impl Account
                                     }
 
                                     // 更新仓位的其他信息
-                                    long_position.meta.update_from_trade(&trade, trade.price);
+                                    long_position.meta.update_from_trade(&trade);
                                 }
                                 else {
                                     drop(long_positions_write);
@@ -1349,7 +1349,7 @@ impl Account
                                     }
 
                                     // 更新仓位的其他信息
-                                    short_position.meta.update_from_trade(&trade, trade.price);
+                                    short_position.meta.update_from_trade(&trade);
                                 }
                                 else {
                                     drop(short_positions_write);
