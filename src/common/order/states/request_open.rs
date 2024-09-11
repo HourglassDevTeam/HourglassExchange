@@ -2,6 +2,7 @@ use crate::common::order::Order;
 use fmt::Display;
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt};
+// use crate::common::account_positions::{PositionDirectionMode, PositionMarginMode};
 
 /// 订单初始状态。发送到client进行操作
 ///
@@ -10,9 +11,11 @@ use std::{cmp::Ordering, fmt};
 pub struct RequestOpen
 {
     pub reduce_only: bool,
-    /// NOTE to be checked
     pub price: f64,
     pub size: f64,
+    // pub leverage: Option<f64>,
+    // pub margin_mode: Option<PositionMarginMode>,
+    // pub position_direction_mode: Option<PositionDirectionMode>
 }
 
 /// 通过实现 `PartialOrd`，我们可以基于 `RequestOpen` 的 `price`、`size` 和 `reduce_only` 字段进行排序和比较。

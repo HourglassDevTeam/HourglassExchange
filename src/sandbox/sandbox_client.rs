@@ -7,7 +7,7 @@ use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchOrdersOpen, FetchTo
 
 use crate::{
     common::{
-        account_positions::{AccountPositions, Position},
+        account_positions::{AccountPositions, Position, PositionConfig},
         balance::TokenBalance,
         instrument::Instrument,
         order::{
@@ -16,6 +16,7 @@ use crate::{
         },
         token::Token,
     },
+    sandbox::config_request::ConfigurationRequest,
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
 
@@ -34,6 +35,7 @@ pub type RequestOpenOrders = (Vec<Order<RequestOpen>>, Sender<OpenOrderResults>)
 pub type RequestCancelOrders = (Vec<Order<RequestCancel>>, Sender<CancelOrderResults>);
 pub type DepositResults = Result<Vec<TokenBalance>, ExchangeError>;
 pub type DepositRequest = (Vec<(Token, f64)>, Sender<DepositResults>);
+pub type ConfigureInstrumentsResults = Vec<Result<PositionConfig, ExchangeError>>;
 
 // 模拟交易所客户端可向模拟交易所发送的命令
 #[derive(Debug)]
@@ -49,6 +51,7 @@ pub enum SandBoxClientEvent
     OpenOrders(RequestOpenOrders),
     CancelOrders(RequestCancelOrders),
     CancelOrdersAll(Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>),
+    ConfigureInstruments(Vec<ConfigurationRequest>, Sender<ConfigureInstrumentsResults>),
 }
 
 #[async_trait]

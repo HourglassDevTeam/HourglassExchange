@@ -11,12 +11,12 @@ use warp::Filter;
 
 pub mod account;
 pub mod clickhouse_api;
+pub mod config_request;
 pub mod instrument_orders;
 pub mod sandbox_client;
 pub mod sandbox_orderbook;
 pub mod utils;
 pub mod ws_trade;
-
 // pub enum TradeEventSource {
 //     RealTime(UnboundedReceiver<MarketEvent<MarketTrade>>),
 //     Backtest(RowCursor<MarketTrade>),
@@ -104,6 +104,9 @@ impl SandBoxExchange
                 | SandBoxClientEvent::FetchShortPosition(instrument, response_tx) => self.account.lock().await.fetch_short_position_and_respond(&instrument, response_tx).await,
                 | SandBoxClientEvent::DepositTokens(deposit_request) => {
                     self.account.lock().await.deposit_multiple_coins_and_respond(deposit_request.0, deposit_request.1).await;
+                }
+                | SandBoxClientEvent::ConfigureInstruments(position_configs, response_tx) => {
+                    let _ = self.account.lock().await.preconfigure_positions(position_configs, response_tx).await;
                 }
             }
         }

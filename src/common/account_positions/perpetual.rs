@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common::account_positions::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode};
+use crate::{
+    common::account_positions::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode},
+    sandbox::config_request::ConfigurationRequest,
+};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -8,8 +11,8 @@ pub struct PerpetualPosition
 {
     pub meta: PositionMeta,                  // 复合类型，包含静态数据、实时更新数据和静态更新数据
     pub pos_config: PerpetualPositionConfig, // 静态数据
-    pub liquidation_price: f64,              // 实时更新 NOTE : 需要持续更新吗
-    pub margin: f64,                         // 实时更新 NOTE : 需要持续更新吗
+    pub isolated_margin: Option<f64>,
+    pub liquidation_price: Option<f64>, // 实时更新 NOTE : 需要持续更新吗
 }
 
 impl PerpetualPosition
@@ -17,13 +20,7 @@ impl PerpetualPosition
     /// 更新平仓价格
     pub fn update_liquidation_price(&mut self, new_price: f64)
     {
-        self.liquidation_price = new_price;
-    }
-
-    /// 更新保证金
-    pub fn update_margin(&mut self, new_margin: f64)
-    {
-        self.margin = new_margin;
+        self.liquidation_price = Some(new_price);
     }
 
     /// 更新静态数据部分
@@ -47,13 +44,23 @@ pub struct PerpetualPositionConfig
     pub(crate) leverage: f64,
     pub(crate) position_mode: PositionDirectionMode,
 }
+
+impl From<ConfigurationRequest> for PerpetualPositionConfig
+{
+    fn from(config_request: ConfigurationRequest) -> Self
+    {
+        PerpetualPositionConfig { pos_margin_mode: config_request.position_margin_mode,  // 提供默认值或根据需求处理 None
+                                  leverage: config_request.leverage_rate,                // 提供默认杠杆值，或根据需求处理 None
+                                  position_mode: config_request.position_direction_mode  /* 提供默认值或根据需求处理 None */ }
+    }
+}
+
 #[allow(dead_code)]
 pub struct PerpetualPositionBuilder
 {
     meta: Option<PositionMeta>,
     pos_config: Option<PerpetualPositionConfig>,
     liquidation_price: Option<f64>,
-    margin: Option<f64>,
 }
 
 impl Default for PerpetualPositionBuilder
@@ -71,8 +78,7 @@ impl PerpetualPositionBuilder
     {
         Self { meta: None,
                pos_config: None,
-               liquidation_price: None,
-               margin: None }
+               liquidation_price: None }
     }
 
     pub fn meta(mut self, meta: PositionMeta) -> Self
@@ -93,18 +99,12 @@ impl PerpetualPositionBuilder
         self
     }
 
-    pub fn margin(mut self, margin: f64) -> Self
-    {
-        self.margin = Some(margin);
-        self
-    }
-
     pub fn build(self) -> Option<PerpetualPosition>
     {
         Some(PerpetualPosition { meta: self.meta?,
                                  pos_config: self.pos_config?,
-                                 liquidation_price: self.liquidation_price?,
-                                 margin: self.margin? })
+                                 isolated_margin: None,
+                                 liquidation_price: Some(self.liquidation_price?) })
     }
 }
 
@@ -143,9 +143,9 @@ mod tests
                                                pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                                                      leverage: 1.0,
                                                                                      position_mode: PositionDirectionMode::LongShort },
-                                               liquidation_price: 100.0,
-                                               margin: 10.0 };
+                                               isolated_margin: None,
+                                               liquidation_price: Some(100.0) };
         position.update_liquidation_price(150.0);
-        assert_eq!(position.liquidation_price, 150.0);
+        assert_eq!(position.liquidation_price, Some(150.0));
     }
 }

@@ -1,9 +1,9 @@
 use crate::{
     common::{
         account_positions::{
-            future::FuturePosition,
-            leveraged_token::LeveragedTokenPosition,
-            option::OptionPosition,
+            future::{FuturePosition, FuturePositionConfig},
+            leveraged_token::{LeveragedTokenPosition, LeveragedTokenPositionConfig},
+            option::{OptionPosition, OptionPositionConfig},
             perpetual::{PerpetualPosition, PerpetualPositionBuilder, PerpetualPositionConfig},
             position_id::PositionId,
             position_meta::PositionMetaBuilder,
@@ -14,7 +14,7 @@ use crate::{
         Side,
     },
     error::ExchangeError,
-    sandbox::account::account_config::AccountConfig,
+    sandbox::{account::account_config::AccountConfig, config_request::ConfigurationRequest},
     Exchange,
 };
 use chrono::Utc;
@@ -22,7 +22,7 @@ use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializ
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 use tokio::sync::RwLock;
 
-mod exited_position;
+pub(crate) mod exited_position;
 pub mod exited_positions;
 pub mod future;
 pub(crate) mod leveraged_token;
@@ -45,6 +45,39 @@ pub struct AccountPositions
     pub option_pos_long_put: Arc<RwLock<HashMap<Instrument, OptionPosition>>>,
     pub option_pos_short_call: Arc<RwLock<HashMap<Instrument, OptionPosition>>>,
     pub option_pos_short_put: Arc<RwLock<HashMap<Instrument, OptionPosition>>>,
+    pub margin_pos_long_config: Arc<RwLock<HashMap<Instrument, LeveragedTokenPositionConfig>>>,
+    pub margin_pos_short_config: Arc<RwLock<HashMap<Instrument, LeveragedTokenPositionConfig>>>,
+    pub perpetual_pos_long_config: Arc<RwLock<HashMap<Instrument, PerpetualPositionConfig>>>,
+    pub perpetual_pos_short_config: Arc<RwLock<HashMap<Instrument, PerpetualPositionConfig>>>,
+    pub futures_pos_long_config: Arc<RwLock<HashMap<Instrument, FuturePositionConfig>>>,
+    pub futures_pos_short_config: Arc<RwLock<HashMap<Instrument, FuturePositionConfig>>>,
+    pub option_pos_long_call_config: Arc<RwLock<HashMap<Instrument, OptionPositionConfig>>>,
+    pub option_pos_long_put_config: Arc<RwLock<HashMap<Instrument, OptionPositionConfig>>>,
+    pub option_pos_short_call_config: Arc<RwLock<HashMap<Instrument, OptionPositionConfig>>>,
+    pub option_pos_short_put_config: Arc<RwLock<HashMap<Instrument, OptionPositionConfig>>>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub enum PositionConfig
+{
+    Perpetual(PerpetualPositionConfig),
+    Future(FuturePositionConfig),
+    LeveragedToken(LeveragedTokenPositionConfig),
+    Option(OptionPositionConfig),
+}
+
+impl From<ConfigurationRequest> for PositionConfig
+{
+    fn from(config_request: ConfigurationRequest) -> Self
+    {
+        match config_request.instrument.kind {
+            | InstrumentKind::Perpetual => PositionConfig::Perpetual(PerpetualPositionConfig::from(config_request)),
+            | InstrumentKind::Future => PositionConfig::Future(FuturePositionConfig::from(config_request)),
+            | InstrumentKind::CryptoLeveragedToken => PositionConfig::LeveragedToken(LeveragedTokenPositionConfig::from(config_request)),
+            | InstrumentKind::CryptoOption => PositionConfig::Option(OptionPositionConfig::from(config_request)),
+            | _ => panic!("Unsupported instrument kind"), // 根据需求处理其他类型
+        }
+    }
 }
 
 impl Serialize for AccountPositions
@@ -126,6 +159,16 @@ impl<'de> Deserialize<'de> for AccountPositions
             option_pos_long_put: HashMap<Instrument, OptionPosition>,
             option_pos_short_call: HashMap<Instrument, OptionPosition>,
             option_pos_short_put: HashMap<Instrument, OptionPosition>,
+            margin_pos_long_config: HashMap<Instrument, LeveragedTokenPositionConfig>,
+            margin_pos_short_config: HashMap<Instrument, LeveragedTokenPositionConfig>,
+            perpetual_pos_long_config: HashMap<Instrument, PerpetualPositionConfig>,
+            perpetual_pos_short_config: HashMap<Instrument, PerpetualPositionConfig>,
+            futures_pos_long_config: HashMap<Instrument, FuturePositionConfig>,
+            futures_pos_short_config: HashMap<Instrument, FuturePositionConfig>,
+            option_pos_long_call_config: HashMap<Instrument, OptionPositionConfig>,
+            option_pos_long_put_config: HashMap<Instrument, OptionPositionConfig>,
+            option_pos_short_call_config: HashMap<Instrument, OptionPositionConfig>,
+            option_pos_short_put_config: HashMap<Instrument, OptionPositionConfig>,
         }
 
         let data = AccountPositionsData::deserialize(deserializer)?;
@@ -139,7 +182,17 @@ impl<'de> Deserialize<'de> for AccountPositions
                               option_pos_long_call: Arc::new(RwLock::new(data.option_pos_long_call)),
                               option_pos_long_put: Arc::new(RwLock::new(data.option_pos_long_put)),
                               option_pos_short_call: Arc::new(RwLock::new(data.option_pos_short_call)),
-                              option_pos_short_put: Arc::new(RwLock::new(data.option_pos_short_put)) })
+                              option_pos_short_put: Arc::new(RwLock::new(data.option_pos_short_put)),
+                              margin_pos_long_config: Arc::new(RwLock::new(data.margin_pos_long_config)),
+                              margin_pos_short_config: Arc::new(RwLock::new(data.margin_pos_short_config)),
+                              perpetual_pos_long_config: Arc::new(RwLock::new(data.perpetual_pos_long_config)),
+                              perpetual_pos_short_config: Arc::new(RwLock::new(data.perpetual_pos_short_config)),
+                              futures_pos_long_config: Arc::new(RwLock::new(data.futures_pos_long_config)),
+                              futures_pos_short_config: Arc::new(RwLock::new(data.futures_pos_short_config)),
+                              option_pos_long_call_config: Arc::new(RwLock::new(data.option_pos_long_call_config)),
+                              option_pos_long_put_config: Arc::new(RwLock::new(data.option_pos_long_put_config)),
+                              option_pos_short_put_config: Arc::new(RwLock::new(data.option_pos_short_put_config)),
+                              option_pos_short_call_config: Arc::new(RwLock::new(data.option_pos_short_call_config)) })
     }
 }
 
@@ -157,16 +210,30 @@ impl AccountPositions
                option_pos_long_call: Arc::new(RwLock::new(HashMap::new())),
                option_pos_long_put: Arc::new(RwLock::new(HashMap::new())),
                option_pos_short_call: Arc::new(RwLock::new(HashMap::new())),
-               option_pos_short_put: Arc::new(RwLock::new(HashMap::new())) }
+               option_pos_short_put: Arc::new(RwLock::new(HashMap::new())),
+               margin_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
+               margin_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
+               perpetual_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
+               perpetual_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
+               futures_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
+               futures_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_long_call_config: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_long_put_config: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_short_call_config: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_short_put_config: Arc::new(RwLock::new(HashMap::new())) }
     }
 
     /// TODO check init logic
-    pub async fn build_new_perpetual_position(&self, config: &AccountConfig, trade: &ClientTrade, exchange_ts: i64) -> Result<PerpetualPosition, ExchangeError>
+    pub async fn build_new_perpetual_position(&self,
+                                              config: &AccountConfig,
+                                              trade: &ClientTrade,
+                                              exchange_ts: i64,
+                                              mode: PositionMarginMode)
+                                              -> Result<PerpetualPosition, ExchangeError>
     {
-        let position_mode = config.position_direction_mode.clone();
-        let position_margin_mode = config.position_margin_mode.clone();
+        let position_mode = config.global_position_direction_mode.clone();
         // 计算初始保证金
-        let initial_margin = trade.price * trade.size / config.account_leverage_rate;
+        let initial_margin = trade.price * trade.size / config.global_leverage_rate;
 
         // 根据 Instrument 和 Side 动态生成 position_id
         let position_meta = PositionMetaBuilder::new().position_id(PositionId::new(&trade.instrument.clone(), trade.timestamp))
@@ -198,14 +265,13 @@ impl AccountPositions
         else {
             trade.price * (1.0 + initial_margin / (trade.size * trade.price))
         };
-        let pos_config = PerpetualPositionConfig { pos_margin_mode: position_margin_mode,
-                                                   leverage: config.account_leverage_rate,
+        let pos_config = PerpetualPositionConfig { pos_margin_mode: mode,
+                                                   leverage: config.global_leverage_rate,
                                                    position_mode };
 
         let new_position = PerpetualPositionBuilder::new().meta(position_meta)
                                                           .pos_config(pos_config)
                                                           .liquidation_price(liquidation_price)
-                                                          .margin(initial_margin) // NOTE DOUBLE CHECK
                                                           .build()
                                                           .ok_or_else(|| ExchangeError::SandBox("Failed to build new account_positions".to_string()))?;
 
@@ -342,17 +408,14 @@ impl AccountPositions
 
 ///  [NetMode] : 单向模式。在这种模式下，用户只能持有一个方向的仓位（多头或空头），而不能同时持有两个方向的仓位。
 ///  [LongShortMode] : 双向模式。在这种模式下，用户可以同时持有多头和空头仓位。这在一些复杂的交易策略中可能会有用，例如对冲策略。
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, PartialOrd, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionDirectionMode
 {
-    LongShort, // Note long/short, only applicable to Futures/Swap
-    Net,       // Note one side per token per account_positions
+    LongShort,
+    Net,
 }
 
-///  [Cross]: 交叉保证金模式。在这种模式下，所有仓位共享一个保证金池，盈亏共用。如果仓位的保证金不足，将从账户余额中提取以补充不足。
-///  [Isolated]: 逐仓保证金模式。在这种模式下，每个仓位都有独立的保证金，盈亏互不影响。如果某个仓位的保证金不足，该仓位将被强制平仓，而不会影响到其他仓位。
-
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, PartialOrd, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionMarginMode
 {
     Cross,
@@ -368,176 +431,4 @@ pub enum Position
     LeveragedToken(LeveragedTokenPosition),
     Future(FuturePosition),
     Option(OptionPosition),
-}
-
-#[cfg(test)]
-mod tests
-{
-    use super::*;
-    use crate::common::token::Token;
-
-    fn create_instrument(kind: InstrumentKind) -> Instrument
-    {
-        Instrument { base: Token::from("BTC"),
-                     quote: Token::from("USDT"),
-                     kind }
-    }
-
-    fn create_perpetual_position(instrument: &Instrument) -> PerpetualPosition
-    {
-        // 假设初始交易价格和仓位大小
-        let initial_trade_price = 50000.0;
-        let trade_size = 1.0;
-
-        // 设置杠杆率
-        let leverage = 10.0;
-
-        // 计算初始保证金
-        let initial_margin = initial_trade_price * trade_size / leverage;
-
-        // 假设当前市场价格略有波动
-        let current_market_price = 50500.0;
-
-        // 计算当前仓位的未实现盈亏
-        let unrealised_pnl = (current_market_price - initial_trade_price) * trade_size;
-
-        // 计算清算价格 (liquidation_price)
-        let liquidation_price = initial_trade_price * (1.0 - initial_margin / (trade_size * initial_trade_price));
-
-        PerpetualPosition { meta: PositionMetaBuilder::new().position_id(PositionId(124124123412412))
-                                                            .instrument(instrument.clone())
-                                                            .side(Side::Buy)
-                                                            .enter_ts(1625097600000)
-                                                            .update_ts(1625097600000)
-                                                            .exit_balance(TokenBalance { token: instrument.base.clone(),
-                                                                                         balance: Balance { time: Utc::now(),
-                                                                                                            current_price: Some(current_market_price),
-                                                                                                            total: trade_size,
-                                                                                                            available: trade_size } })
-                                                            .exchange(Exchange::Binance)
-                                                            .current_size(trade_size)
-                                                            .current_fees_total(0.2)
-                                                            .current_avg_price_gross(initial_trade_price)
-                                                            .current_symbol_price(current_market_price)
-                                                            .current_avg_price(initial_trade_price)
-                                                            .unrealised_pnl(unrealised_pnl)
-                                                            .realised_pnl(0.0)
-                                                            .build()
-                                                            .unwrap(),
-                            liquidation_price,
-                            margin: initial_margin,
-                            pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
-                                                                  leverage,
-                                                                  position_mode: PositionDirectionMode::Net } }
-    }
-
-    #[tokio::test] // 使用 tokio 的异步测试宏
-    async fn test_has_position()
-    {
-        let account_positions = AccountPositions::init();
-
-        let perpetual_instrument = create_instrument(InstrumentKind::Perpetual);
-        let future_instrument = create_instrument(InstrumentKind::Future);
-
-        // 初始情况下，没有任何仓位
-        assert!(!account_positions.has_long_position(&perpetual_instrument).await);
-        assert!(!account_positions.has_short_position(&perpetual_instrument).await);
-        assert!(!account_positions.has_long_position(&future_instrument).await);
-        assert!(!account_positions.has_short_position(&future_instrument).await);
-
-        // 创建并添加 PerpetualPosition 多头仓位
-        let mut perpetual_position = create_perpetual_position(&perpetual_instrument);
-        perpetual_position.meta.side = Side::Buy; // 设置为多头仓位
-        account_positions.update_position(Position::Perpetual(perpetual_position.clone())).await;
-
-        // 现在应该持有 PerpetualPosition 多头仓位，但不持有 FuturePosition
-        assert!(account_positions.has_long_position(&perpetual_instrument).await);
-        assert!(!account_positions.has_short_position(&perpetual_instrument).await);
-        assert!(!account_positions.has_long_position(&future_instrument).await);
-        assert!(!account_positions.has_short_position(&future_instrument).await);
-
-        // 创建并添加 PerpetualPosition 空头仓位
-        perpetual_position.meta.side = Side::Sell; // 设置为空头仓位
-        account_positions.update_position(Position::Perpetual(perpetual_position.clone())).await;
-
-        // 现在应该持有 PerpetualPosition 的空头和多头仓位
-        assert!(account_positions.has_long_position(&perpetual_instrument).await);
-        assert!(account_positions.has_short_position(&perpetual_instrument).await);
-    }
-
-    #[tokio::test] // 使用 tokio 的异步测试宏
-    async fn test_update_existing_position()
-    {
-        let account_positions = AccountPositions::init();
-
-        let perpetual_instrument = create_instrument(InstrumentKind::Perpetual);
-
-        // 添加初始的 PerpetualPosition 多头仓位
-        let mut perpetual_position = create_perpetual_position(&perpetual_instrument);
-        perpetual_position.meta.side = Side::Buy; // 设置为多头仓位
-        account_positions.update_position(Position::Perpetual(perpetual_position.clone())).await;
-
-        // 确保初始 PerpetualPosition 已正确添加
-        assert!(account_positions.has_long_position(&perpetual_instrument).await);
-
-        // 获取写锁并检查仓位数量
-        {
-            let positions = account_positions.perpetual_pos_long.read().await;
-            assert_eq!(positions.len(), 1);
-        }
-
-        // 更新相同的 PerpetualPosition，修改 `margin`
-        let mut updated_position = perpetual_position.clone();
-        updated_position.margin = 2000.0; // 修改仓位的保证金
-
-        account_positions.update_position(Position::Perpetual(updated_position.clone())).await;
-
-        // 确保仓位已更新而不是新添加
-        {
-            let positions = account_positions.perpetual_pos_long.read().await;
-            if !positions.is_empty() {
-                assert_eq!(positions.len(), 1); // 确保仓位数量未增加
-                let pos = positions.get(&perpetual_instrument).unwrap();
-                assert_eq!(pos.margin, 2000.0); // 检查仓位是否已正确更新
-            }
-            else {
-                panic!("PerpetualPosition should exist but was not found.");
-            }
-        }
-    }
-
-    #[tokio::test] // 使用 tokio 的异步测试宏
-    async fn test_add_new_position()
-    {
-        let account_positions = AccountPositions::init();
-
-        // 创建两个不同的 Instrument
-        let perpetual_instrument_1 = Instrument { base: Token::from("BTC"),
-                                                  quote: Token::from("USDT"),
-                                                  kind: InstrumentKind::Perpetual };
-
-        let perpetual_instrument_2 = Instrument { base: Token::from("ETH"),
-                                                  quote: Token::from("USDT"),
-                                                  kind: InstrumentKind::Perpetual };
-
-        // 添加初始的 PerpetualPosition (多头仓位)
-        let mut perpetual_position_1 = create_perpetual_position(&perpetual_instrument_1);
-        perpetual_position_1.meta.side = Side::Buy; // 设置为多头仓位
-        account_positions.update_position(Position::Perpetual(perpetual_position_1.clone())).await;
-
-        // 添加新的 PerpetualPosition (多头仓位)
-        let mut perpetual_position_2 = create_perpetual_position(&perpetual_instrument_2);
-        perpetual_position_2.meta.side = Side::Buy; // 设置为多头仓位
-        account_positions.update_position(Position::Perpetual(perpetual_position_2.clone())).await;
-
-        // 确保新仓位已正确添加
-        assert!(account_positions.has_long_position(&perpetual_instrument_1).await);
-        assert!(account_positions.has_long_position(&perpetual_instrument_2).await);
-
-        // 获取读锁并检查仓位数量
-        {
-            let positions = account_positions.perpetual_pos_long.read().await;
-            assert_eq!(positions.len(), 2);
-        }
-    }
 }

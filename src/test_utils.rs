@@ -59,13 +59,14 @@ pub fn create_test_account_config() -> AccountConfig
     let leverage_rate = 1.0;
 
     AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
-                    position_direction_mode: PositionDirectionMode::Net,
-                    position_margin_mode: PositionMarginMode::Isolated,
+                    global_position_direction_mode: PositionDirectionMode::Net,
+                    global_position_margin_mode: PositionMarginMode::Cross,
                     commission_level: CommissionLevel::Lv1,
                     funding_rate: 0.0,
-                    account_leverage_rate: leverage_rate,
+                    global_leverage_rate: leverage_rate,
                     fees_book: HashMap::new(),
-                    execution_mode: SandboxMode::Backtest }
+                    execution_mode: SandboxMode::Backtest,
+                    max_price_deviation: 0.05 }
 }
 // 帮助函数，用于创建测试用的 AccountOrders 实例
 pub async fn create_test_account_orders() -> AccountOrders
@@ -126,15 +127,16 @@ pub async fn create_test_account() -> Account
                                              taker_fees: 0.002 };
 
     let mut account_config = AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
-                                             position_direction_mode: PositionDirectionMode::Net,
-                                             position_margin_mode: PositionMarginMode::Isolated,
+                                             global_position_direction_mode: PositionDirectionMode::Net,
+                                             global_position_margin_mode: PositionMarginMode::Cross,
                                              commission_level: CommissionLevel::Lv1,
                                              funding_rate: 0.0,
-                                             account_leverage_rate: leverage_rate,
+                                             max_price_deviation: 0.05,
+                                             global_leverage_rate: leverage_rate,
                                              fees_book: HashMap::new(),
                                              execution_mode: SandboxMode::Backtest };
 
-    account_config.fees_book.insert(InstrumentKind::Perpetual, commission_rates);
+    account_config.fees_book.insert(Perpetual, commission_rates);
 
     let positions = AccountPositions::init();
     let closed_positions = AccountExitedPositions::init();
@@ -185,11 +187,11 @@ pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPositi
                                              current_avg_price: 0.0,
                                              unrealised_pnl: 0.0,
                                              realised_pnl: 0.0 },
-                        pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
+                        pos_config: PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                               leverage: 1.0,
                                                               position_mode: PositionDirectionMode::LongShort },
-                        liquidation_price: 0.0,
-                        margin: 0.0 }
+                        isolated_margin: None,
+                        liquidation_price: Some(0.0) }
 }
 
 /// 创建一个测试用的 `FuturePosition` 实例，指定 `Side`。
@@ -210,10 +212,10 @@ pub fn create_test_future_position_with_side(instrument: Instrument, side: Side)
                                           current_avg_price: 0.0,
                                           unrealised_pnl: 0.0,
                                           realised_pnl: 0.0 },
-                     pos_config: FuturePositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
+                     pos_config: FuturePositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                         leverage: 1.0,
                                                         position_mode: PositionDirectionMode::LongShort },
                      liquidation_price: 0.0,
-                     margin: 0.0,
+
                      funding_fee: 0.0 }
 }

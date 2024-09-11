@@ -25,16 +25,13 @@ pub struct PositionMeta
     pub realised_pnl: f64,          // 静态更新（平仓时更新）
 }
 
-/// FIXME 虽然 Net Mode 和 LongShort Mode 在很多地方可以复用相似的逻辑，
-///         但为了减少未来可能的逻辑混淆和复杂性，建议进一步明确两种模式的职责，
-///         尤其是在处理复杂的反向开仓和部分平仓的情况下。
 impl PositionMeta
 {
     /// 根据 `ClientTrade` 更新仓位
-    pub fn update_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64)
+    pub fn update_from_trade(&mut self, trade: &ClientTrade)
     {
         self.update_ts = trade.timestamp;
-        self.current_symbol_price = current_symbol_price;
+        self.current_symbol_price = trade.price;
 
         // 更新当前交易的总费用
         self.current_fees_total += trade.fees;
@@ -66,25 +63,32 @@ impl PositionMeta
                        realised_pnl: 0.0 }
     }
 
-    /// NOTE 这个先创建再更改的方式应该不是最佳实践
-    ///     此函数仅用于 `PositionDirectionMode::Net` 模式。
-    ///     使用剩余的数量反向创建新持仓。
-    pub fn create_from_trade_with_remaining(trade: &ClientTrade, side: Side, remaining_quantity: f64) -> Self
+    pub fn create_from_trade_with_remaining(trade: &ClientTrade, remaining_quantity: f64) -> Self
     {
-        let mut new_meta = PositionMeta::create_from_trade(trade);
-        new_meta.current_size = remaining_quantity;
-        new_meta.side = side;
-        new_meta
+        PositionMeta { position_id: PositionId::new(&trade.instrument, trade.timestamp),
+                       enter_ts: trade.timestamp,
+                       update_ts: trade.timestamp,
+                       exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, Some(0.0))),
+                       exchange: trade.exchange.clone(),
+                       instrument: trade.instrument.clone(),
+                       side: trade.side,                 // 直接使用传入的side
+                       current_size: remaining_quantity, // 直接使用传入的remaining_quantity
+                       current_fees_total: trade.fees,
+                       current_avg_price_gross: trade.price,
+                       current_symbol_price: trade.price,
+                       current_avg_price: trade.price,
+                       unrealised_pnl: 0.0,
+                       realised_pnl: 0.0 }
     }
 
     /// 此函数可以处理 `Net` 和 `LongShort` 两种模式。
     /// 根据新的交易更新或创建持仓。
     /// 该函数既可以处理常规的更新逻辑，也可以处理反向持仓的逻辑。
-    pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade, current_symbol_price: f64) -> Self
+    pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade) -> Self
     {
         if self.side == trade.side {
             // 如果交易方向与当前持仓方向相同，则正常更新持仓
-            self.update_from_trade(trade, current_symbol_price);
+            self.update_from_trade(trade);
             self.clone() // 返回更新后的持仓
         }
         else {
@@ -93,7 +97,7 @@ impl PositionMeta
             if remaining_quantity >= 0.0 {
                 // 完全平仓，并用剩余的数量反向开仓
                 self.update_realised_pnl(trade.price);
-                PositionMeta::create_from_trade_with_remaining(trade, trade.side, current_symbol_price)
+                PositionMeta::create_from_trade_with_remaining(trade, remaining_quantity)
             }
             else {
                 // 部分平仓，不反向，仅减少持仓量
@@ -394,11 +398,11 @@ mod tests
                                       size: 1.0,
                                       fees: 2.0 };
 
-        meta.update_from_trade(&new_trade, 62_000.0);
+        meta.update_from_trade(&new_trade);
 
         assert_eq!(meta.current_size, 2.0); // Size should be updated
         assert_eq!(meta.current_avg_price, 55_000.0); // The avg price should be exactly 55,000.0
-        assert_eq!(meta.current_symbol_price, 62_000.0); // Symbol price updated
+        assert_eq!(meta.current_symbol_price, 60_000.0); // Symbol price updated
         assert_eq!(meta.current_fees_total, 4.0); // Fees should accumulate
     }
 }

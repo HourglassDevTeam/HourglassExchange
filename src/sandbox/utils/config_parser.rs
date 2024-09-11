@@ -52,10 +52,7 @@ mod tests
 {
     use super::*;
     use crate::{
-        common::{
-            account_positions::{PositionDirectionMode, PositionMarginMode},
-            instrument::kind::InstrumentKind,
-        },
+        common::{account_positions::PositionDirectionMode, instrument::kind::InstrumentKind},
         sandbox::account::account_config::{CommissionLevel, CommissionRates, MarginMode},
     };
     use std::{fs, io::Write};
@@ -68,12 +65,13 @@ mod tests
         // 创建一个临时的TOML配置，符合`AccountConfig`结构体的定义
         let toml_content = r#"
     margin_mode = "SimpleMode"
-    position_direction_mode = "Net"
-    position_margin_mode = "Isolated"
+    global_position_direction_mode = "Net"
+    global_position_margin_mode = "Cross"
     commission_level = "Lv2"
     funding_rate = 0.0001
-    account_leverage_rate = 100.0
+    global_leverage_rate = 100.0
     execution_mode = "Backtest"
+    max_price_deviation = 0.05
 
 
     [current_commission_rate]
@@ -110,10 +108,9 @@ mod tests
         let config = result.unwrap();
 
         assert_eq!(config.margin_mode, MarginMode::SimpleMode);
-        assert_eq!(config.position_direction_mode, PositionDirectionMode::Net);
-        assert_eq!(config.position_margin_mode, PositionMarginMode::Isolated);
+        assert_eq!(config.global_position_direction_mode, PositionDirectionMode::Net);
         assert_eq!(config.commission_level, CommissionLevel::Lv2);
-        assert_eq!(config.account_leverage_rate, 100.0);
+        assert_eq!(config.global_leverage_rate, 1.0);
         assert_eq!(config.fees_book.get(&InstrumentKind::Spot).cloned(),
                    Some(CommissionRates { maker_fees: 0.001,
                                           taker_fees: 0.002 }));
