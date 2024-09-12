@@ -15,7 +15,7 @@ pub mod redis;
 mod summariser;
 
 /// 处理 [`Position`] 在持久层的读写操作。
-pub trait PositionHandler
+pub trait PositionProcessor
 {
     /// 使用 [`PositionId`] 更新或插入一个打开的 [`Position`]。
     fn add_open_position(&mut self, position: Position) -> Result<(), VaultError>;
@@ -53,7 +53,7 @@ pub trait StatisticHandler<Statistic>
 }
 
 /// 用于表示投资组合中所有已退出 [`Position`] 的唯一标识符的字符串类型。
-/// 用于将新的已退出 [`Position`] 附加到 [`PositionHandler`] 的条目中。
+/// 用于将新的已退出 [`Position`] 附加到 [`PositionProcessor`] 的条目中。
 pub type ExitedPositionsId = String;
 
 /// 返回给定 session_id 的投资组合的已退出 [`Position`] 的唯一标识符。

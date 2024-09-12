@@ -4,13 +4,13 @@ use crate::{
         balance::Balance,
         instrument::Instrument,
     },
-    vault::{determine_exited_positions_id, error::VaultError, BalanceHandler, PositionHandler, StatisticHandler},
+    vault::{determine_exited_positions_id, error::VaultError, BalanceHandler, PositionProcessor, StatisticHandler},
     Exchange,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
 
-/// 用于初步概念验证的内存仓库。实现了 [`PositionHandler`]、[`BalanceHandler`] 和 [`StatisticHandler`]。
+/// 用于初步概念验证的内存仓库。实现了 [`PositionProcessor`]、[`BalanceHandler`] 和 [`StatisticHandler`]。
 /// 用于概念验证投资组合实现，保存当前权益、可用资金、仓位和市场对的统计数据。
 /// 注意：此实现无容错保证，未排除极端情况下会出现性能抖动和OOM等情况，谨慎用于生产环境！
 /// 注意：此处的数据结构要重新设计。以和[`Account`]模块对齐。
@@ -24,7 +24,7 @@ pub struct InMemoryVault<Statistic>
     statistics: HashMap<(Exchange, Instrument), Statistic>,
 }
 
-impl<Statistic> PositionHandler for InMemoryVault<Statistic>
+impl<Statistic> PositionProcessor for InMemoryVault<Statistic>
 {
     fn add_open_position(&mut self, position: Position) -> Result<(), VaultError>
     {

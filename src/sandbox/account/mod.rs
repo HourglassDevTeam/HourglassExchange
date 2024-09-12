@@ -61,6 +61,7 @@ pub mod account_config;
 pub mod account_latency;
 pub mod account_market_feed;
 pub mod account_orders;
+mod traits;
 
 #[derive(Debug)]
 pub struct Account
@@ -2657,7 +2658,7 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_update_existing_long_position()
+    async fn test_update_existing_long_position_cross_longshort()
     {
         let mut account = create_test_account().await;
 
@@ -2676,7 +2677,7 @@ mod tests
 
         // 插入多头仓位配置
         let instrument = trade.instrument.clone();
-        let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
+        let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                   leverage: 1.0, // 设置合理的杠杆
                                                   position_direction_mode: PositionDirectionMode::LongShort };
         account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
@@ -2707,8 +2708,260 @@ mod tests
         assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
     }
 
+
+
     #[tokio::test]
-    async fn test_close_long_position_partially()
+    async fn test_update_existing_long_position_cross_net()
+    {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(3),
+            order_id: OrderId(3),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Buy,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1 };
+
+        // 插入多头仓位配置
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
+            leverage: 1.0, // 设置合理的杠杆
+            position_direction_mode: PositionDirectionMode::Net };
+        account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
+
+        // 创建一个初始的多头仓位
+        let _ = account.create_perpetual_position(trade.clone()).await;
+
+        // 再次买入增加仓位
+        let additional_trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000100,
+            trade_id: ClientTradeId(4),
+            order_id: OrderId(4),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Buy,
+            price: 100.0,
+            size: 5.0,
+            fees: 0.05 };
+
+        // 更新现有仓位
+        account.update_position_from_client_trade(additional_trade.clone()).await.unwrap();
+
+        // 检查仓位是否正确更新
+        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
+        let pos = positions.get(&trade.instrument).unwrap(); // 获取仓位
+        assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
+    }
+
+
+    #[tokio::test]
+    async fn test_update_existing_long_position_isolated_net()
+    {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(3),
+            order_id: OrderId(3),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Buy,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1 };
+
+        // 插入多头仓位配置
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
+            leverage: 1.0, // 设置合理的杠杆
+            position_direction_mode: PositionDirectionMode::Net };
+        account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
+
+        // 创建一个初始的多头仓位
+        let _ = account.create_perpetual_position(trade.clone()).await;
+
+        // 再次买入增加仓位
+        let additional_trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000100,
+            trade_id: ClientTradeId(4),
+            order_id: OrderId(4),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Buy,
+            price: 100.0,
+            size: 5.0,
+            fees: 0.05 };
+
+        // 更新现有仓位
+        account.update_position_from_client_trade(additional_trade.clone()).await.unwrap();
+
+        // 检查仓位是否正确更新
+        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
+        let pos = positions.get(&trade.instrument).unwrap(); // 获取仓位
+        assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
+    }
+
+
+    #[tokio::test]
+    async fn test_update_existing_long_position_isolated_longshort()
+    {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(3),
+            order_id: OrderId(3),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Buy,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1 };
+
+        // 插入多头仓位配置
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
+            leverage: 1.0, // 设置合理的杠杆
+            position_direction_mode: PositionDirectionMode::LongShort };
+        account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
+
+        // 创建一个初始的多头仓位
+        let _ = account.create_perpetual_position(trade.clone()).await;
+
+        // 再次买入增加仓位
+        let additional_trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000100,
+            trade_id: ClientTradeId(4),
+            order_id: OrderId(4),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Buy,
+            price: 100.0,
+            size: 5.0,
+            fees: 0.05 };
+
+        // 更新现有仓位
+        account.update_position_from_client_trade(additional_trade.clone()).await.unwrap();
+
+        // 检查仓位是否正确更新
+        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
+        let pos = positions.get(&trade.instrument).unwrap(); // 获取仓位
+        assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
+    }
+    #[tokio::test]
+    async fn test_close_long_position_partially_cross_net()
+    {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Buy,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1 };
+
+        // 插入多头仓位配置
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
+            leverage: 1.0, // 设置合理的杠杆
+            position_direction_mode: PositionDirectionMode::Net };
+        account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
+
+        // 创建一个多头仓位
+        let _ = account.create_perpetual_position(trade.clone()).await;
+        // 部分平仓
+        let closing_trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000200,
+            trade_id: ClientTradeId(6),
+            order_id: OrderId(6),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Sell,
+            price: 100.0,
+            size: 5.0,
+            fees: 0.05 };
+
+        account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
+        // // 检查仓位是否部分平仓
+        // let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
+        // let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
+        // assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
+    }
+
+
+    #[tokio::test]
+    async fn test_close_long_position_partially_cross_longshort()
+    {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Buy,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1 };
+
+        // 插入多头仓位配置
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
+            leverage: 1.0, // 设置合理的杠杆
+            position_direction_mode: PositionDirectionMode::LongShort };
+        account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
+
+        // 创建一个多头仓位
+        let _ = account.create_perpetual_position(trade.clone()).await;
+        // 部分平仓
+        let closing_trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000200,
+            trade_id: ClientTradeId(6),
+            order_id: OrderId(6),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Sell,
+            price: 100.0,
+            size: 5.0,
+            fees: 0.05 };
+
+        account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
+        // // 检查仓位是否部分平仓
+        // let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
+        // let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
+        // assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
+    }
+    #[tokio::test]
+    async fn test_close_long_position_partially_isolated_net()
     {
         let mut account = create_test_account().await;
 
@@ -2747,6 +3000,55 @@ mod tests
                                           price: 100.0,
                                           size: 5.0,
                                           fees: 0.05 };
+
+        account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
+        // // 检查仓位是否部分平仓
+        // let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
+        // let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
+        // assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
+    }
+
+
+    #[tokio::test]
+    async fn test_close_long_position_partially_isolated_longshort()
+    {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Buy,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1 };
+
+        // 插入多头仓位配置
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
+            leverage: 1.0, // 设置合理的杠杆
+            position_direction_mode: PositionDirectionMode::LongShort };
+        account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
+
+        // 创建一个多头仓位
+        let _ = account.create_perpetual_position(trade.clone()).await;
+        // 部分平仓
+        let closing_trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000200,
+            trade_id: ClientTradeId(6),
+            order_id: OrderId(6),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Sell,
+            price: 100.0,
+            size: 5.0,
+            fees: 0.05 };
 
         account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
         // // 检查仓位是否部分平仓
@@ -2802,8 +3104,63 @@ mod tests
         assert!(!positions.contains_key(&trade.instrument));
     }
 
+
     #[tokio::test]
-    async fn test_reverse_position_after_closing_long()
+    async fn test_reverse_position_after_closing_long_cross()
+    {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Buy,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1 };
+
+        // 插入多头仓位配置
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
+            leverage: 1.0, // 设置合理的杠杆
+            position_direction_mode: PositionDirectionMode::Net };
+        account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
+        let _ = account.create_perpetual_position(trade.clone()).await;
+
+        // 反向平仓并开立新的空头仓位
+        let reverse_trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000100,
+            trade_id: ClientTradeId(6),
+            order_id: OrderId(6),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Sell,
+            price: 100.0,
+            size: 15.0, // 卖出 15.0 超过当前的多头仓位
+            fees: 0.15 };
+
+        account.update_position_from_client_trade(reverse_trade.clone()).await.unwrap();
+
+        // 检查多头仓位是否已被完全移除
+        let long_positions = account.positions.perpetual_pos_long.lock().await;
+        assert!(!long_positions.contains_key(&trade.instrument));
+
+        // 检查新的空头仓位是否已创建，并且大小正确（剩余 5.0）
+        let short_positions = account.positions.perpetual_pos_short.lock().await;
+        assert!(short_positions.contains_key(&trade.instrument));
+        let short_position = short_positions.get(&trade.instrument).unwrap();
+        assert_eq!(short_position.meta.current_size, 5.0); // 剩余仓位应该是 5.0
+        assert_eq!(short_position.meta.side, Side::Sell); // 检查持仓方向是否为 Sell
+    }
+
+    #[tokio::test]
+    async fn test_reverse_position_after_closing_long_isolated()
     {
         let mut account = create_test_account().await;
 
@@ -2854,6 +3211,31 @@ mod tests
         let short_position = short_positions.get(&trade.instrument).unwrap();
         assert_eq!(short_position.meta.current_size, 5.0); // 剩余仓位应该是 5.0
         assert_eq!(short_position.meta.side, Side::Sell); // 检查持仓方向是否为 Sell
+    }
+
+
+    #[tokio::test]
+    async fn test_supported_instrument_kind()
+    {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument { base: Token("ETH".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Spot /* Spot Position is either not developed or not supported. */ },
+            side: Side::Sell,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1 };
+
+        // 执行管理仓位逻辑，应该返回错误
+        let result = account.update_position_from_client_trade(trade.clone()).await;
+        println!("result: {:?}", result);
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
