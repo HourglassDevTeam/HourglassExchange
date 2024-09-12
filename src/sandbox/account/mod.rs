@@ -1,15 +1,13 @@
 use crate::{
     common::{
-        account_positions::{
-            AccountPositions, PositionDirectionMode,
-        },
+        account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode},
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
         order::{
             identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id},
             order_instructions::OrderInstruction,
-            states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel},
+            states::{cancelled::Cancelled, open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
             Order,
         },
         token::Token,
@@ -17,18 +15,18 @@ use crate::{
     },
     error::ExchangeError,
     sandbox::{
-        account::{account_config::SandboxMode, handlers::position_handler::PositionHandler},
-        clickhouse_api::datatype::{ single_level_order_book::SingleLevelOrderBook},
+        account::{
+            account_config::SandboxMode,
+            handlers::{balance_handler::BalanceHandler, position_handler::PositionHandler},
+        },
+        clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook,
     },
     Exchange,
 };
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
 use chrono::Utc;
-use dashmap::{
-    mapref::one::{RefMut as DashMapRefMut},
-    DashMap,
-};
+use dashmap::{mapref::one::RefMut as DashMapRefMut, DashMap};
 use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
@@ -44,9 +42,6 @@ use std::{
 };
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use uuid::Uuid;
-use crate::common::account_positions::exited_positions::AccountExitedPositions;
-use crate::common::order::states::request_open::RequestOpen;
-use crate::sandbox::account::handlers::balance_handler::BalanceHandler;
 pub mod account_config;
 pub mod account_latency;
 pub mod account_market_feed;
@@ -676,7 +671,7 @@ impl Account
         }
     }
 
-    /// [PART 4] - [Miscellaneous]
+    /// [PART 3] - [Miscellaneous]
 
     pub(crate) fn get_exchange_ts(&self) -> Result<i64, ExchangeError>
     {
@@ -718,7 +713,6 @@ impl Account
     }
 }
 
-
 pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
     where Response: Debug + Send + 'static
 {
@@ -730,12 +724,9 @@ mod tests
 {
     use super::*;
     use crate::{
-        common::{
-            order::{identification::OrderId, states::request_open::RequestOpen},
-        },
+        common::order::{identification::OrderId, states::request_open::RequestOpen},
         test_utils::create_test_account,
     };
-
 
     #[tokio::test]
     async fn test_validate_order_request_open()
@@ -810,7 +801,6 @@ mod tests
         }
     }
 
-
     #[tokio::test]
     async fn test_deposit_u_base()
     {
@@ -874,8 +864,4 @@ mod tests
         assert_eq!(usdt_balance.total, 10_000.0);
         assert_eq!(btc_balance.total, usdt_amount / btc_price);
     }
-
-
-
-
 }

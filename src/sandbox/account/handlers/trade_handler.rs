@@ -1,46 +1,43 @@
-use std::sync::atomic::Ordering;
-use std::time::{SystemTime, UNIX_EPOCH};
+use crate::{
+    common::{
+        event::{AccountEvent, AccountEventKind},
+        instrument::{kind::InstrumentKind, Instrument},
+        order::OrderRole,
+        token::Token,
+        trade::ClientTrade,
+        Side,
+    },
+    error::ExchangeError,
+    sandbox::{
+        account::{account_config::SandboxMode, handlers::balance_handler::BalanceHandler, Account},
+        clickhouse_api::datatype::{clickhouse_trade_data::MarketTrade, single_level_order_book::SingleLevelOrderBook},
+    },
+    Exchange,
+};
 use async_trait::async_trait;
+use std::{
+    sync::atomic::Ordering,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use tracing::warn;
-use crate::common::event::{AccountEvent, AccountEventKind};
-use crate::common::instrument::Instrument;
-use crate::common::instrument::kind::InstrumentKind;
-use crate::common::order::OrderRole;
-use crate::common::Side;
-use crate::common::token::Token;
-use crate::common::trade::ClientTrade;
-use crate::error::ExchangeError;
-use crate::Exchange;
-use crate::sandbox::account::Account;
-use crate::sandbox::account::account_config::SandboxMode;
-use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
-use crate::sandbox::clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook;
-use crate::sandbox::account::handlers::balance_handler::BalanceHandler;
 
 #[async_trait]
-pub trait TradeHandler {
-    async fn create_or_single_level_orderbook_from_market_trade(&mut self, trade: &MarketTrade)
-    ;
-    async fn handle_trade_data(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>
-    ;
+pub trait TradeHandler
+{
+    async fn create_or_single_level_orderbook_from_market_trade(&mut self, trade: &MarketTrade);
+    async fn handle_trade_data(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>;
 
-    async fn match_orders(&mut self, market_trade: &MarketTrade) -> Result<Vec<ClientTrade>, ExchangeError>
-    ;
+    async fn match_orders(&mut self, market_trade: &MarketTrade) -> Result<Vec<ClientTrade>, ExchangeError>;
 
-    async fn fees_percent(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExchangeError>
-    ;
+    async fn fees_percent(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExchangeError>;
 
-    async fn process_trades(&mut self, client_trades: Vec<ClientTrade>)
-    ;
-    /// [PART 3] - [交易处理]
-    /// 更新交易所时间辍
-    fn update_exchange_ts(&self, timestamp: i64)
-    ;
+    async fn process_trades(&mut self, client_trades: Vec<ClientTrade>);
+    fn update_exchange_ts(&self, timestamp: i64);
 }
 
-
 #[async_trait]
-impl TradeHandler for Account {
+impl TradeHandler for Account
+{
     /// 创建或更新一个单级别的订单簿（SingleLevelOrderBook），基于传入的市场交易（MarketTrade）。
     ///
     /// # 参数
@@ -61,9 +58,10 @@ impl TradeHandler for Account {
         let mut orderbook = self.single_level_order_book.lock().await;
 
         orderbook.entry(instrument)
-            .or_insert_with(|| SingleLevelOrderBook::from(trade)) // 传递引用 &trade
-            .update_from_trade(&trade);
+                 .or_insert_with(|| SingleLevelOrderBook::from(trade)) // 传递引用 &trade
+                 .update_from_trade(&trade);
     }
+
     /// 处理交易数据的方法
     async fn handle_trade_data(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>
     {
@@ -75,6 +73,7 @@ impl TradeHandler for Account {
         self.match_orders(&trade).await?;
         Ok(())
     }
+
     /// 处理市场交易事件并尝试匹配订单。
     ///
     /// 该函数根据市场交易事件尝试匹配账户中的订单，并生成相应的交易。它会根据市场事件的方向（买或卖）
@@ -142,7 +141,8 @@ impl TradeHandler for Account {
                     }
                 }
             }
-        } else {
+        }
+        else {
             // 记录日志并继续，不返回错误
             warn!("未找到与市场事件相关的挂单，跳过处理。");
         }
@@ -152,6 +152,7 @@ impl TradeHandler for Account {
 
         Ok(trades)
     }
+
     /// 根据金融工具类型和订单角色返回相应的手续费百分比。 NOTE 需要扩展并支持现货和期货。
     ///
     /// # 参数
@@ -173,16 +174,17 @@ impl TradeHandler for Account {
     {
         // 直接访问 account 的 config 字段
         let commission_rates = self.config
-            .fees_book
-            .get(instrument_kind)
-            .cloned()
-            .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
+                                   .fees_book
+                                   .get(instrument_kind)
+                                   .cloned()
+                                   .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
 
         match role {
             | OrderRole::Maker => Ok(commission_rates.maker_fees),
             | OrderRole::Taker => Ok(commission_rates.taker_fees),
         }
     }
+
     /// 处理客户端交易列表并更新账户余额及交易事件。
     ///
     /// 该方法接收多个 `ClientTrade` 实例，并依次处理每笔交易：
@@ -218,11 +220,9 @@ impl TradeHandler for Account {
                     }
                 };
 
-                if let Err(err) = self.account_event_tx.send(AccountEvent {
-                    exchange_timestamp,
-                    exchange: Exchange::SandBox,
-                    kind: AccountEventKind::Trade(trade)
-                })
+                if let Err(err) = self.account_event_tx.send(AccountEvent { exchange_timestamp,
+                                                                            exchange: Exchange::SandBox,
+                                                                            kind: AccountEventKind::Trade(trade) })
                 {
                     // 如果发送交易事件失败，记录警告日志
                     warn!("[UniLinkEx] : Client offline - Failed to send AccountEvent::Trade: {:?}", err);
@@ -235,7 +235,7 @@ impl TradeHandler for Account {
             }
         }
     }
-    /// [PART 3] - [交易处理]
+
     /// 更新交易所时间辍
     fn update_exchange_ts(&self, timestamp: i64)
     {
@@ -247,26 +247,20 @@ impl TradeHandler for Account {
     }
 }
 
-
-
-
 #[cfg(test)]
 mod tests
 {
     use super::*;
     use crate::{
-        common::{
-            order::{identification::OrderId, states::request_open::RequestOpen},
+        common::order::{
+            identification::{client_order_id::ClientOrderId, OrderId},
+            order_instructions::OrderInstruction,
+            states::{open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
+            Order,
         },
+        sandbox::account::handlers::trade_handler::TradeHandler,
         test_utils::create_test_account,
     };
-    use crate::common::order::identification::client_order_id::ClientOrderId;
-    use crate::common::order::Order;
-    use crate::common::order::order_instructions::OrderInstruction;
-    use crate::common::order::states::open::Open;
-    use crate::common::order::states::request_cancel::RequestCancel;
-    use crate::sandbox::account::handlers::trade_handler::TradeHandler;
-
 
     #[tokio::test]
     async fn test_fail_to_cancel_limit_order_due_to_invalid_order_id()
@@ -276,188 +270,185 @@ mod tests
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
 
         let invalid_cancel_request = Order { instruction: OrderInstruction::Cancel,
-            exchange: Exchange::SandBox,
-            instrument: instrument.clone(),
-            timestamp: 1625247600000,
-            cid: Some(ClientOrderId("validCID123".into())),
-            side: Side::Buy,
-            state: RequestCancel { id: Some(OrderId(99999)) } /* 无效的OrderId */ };
+                                             exchange: Exchange::SandBox,
+                                             instrument: instrument.clone(),
+                                             timestamp: 1625247600000,
+                                             cid: Some(ClientOrderId("validCID123".into())),
+                                             side: Side::Buy,
+                                             state: RequestCancel { id: Some(OrderId(99999)) } /* 无效的OrderId */ };
 
         let result = account.atomic_cancel(invalid_cancel_request.clone()).await;
         // println!("Result: {:?}", result);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), ExchangeError::OrderNotFound { client_order_id: invalid_cancel_request.cid.clone(),
-            order_id: Some(OrderId(99999)) });
+                                                                       order_id: Some(OrderId(99999)) });
     }
 
-#[tokio::test]
-async fn test_match_market_event_with_open_order_sell_with_insufficient_balance()
-{
-    let mut account = create_test_account().await;
-
-    let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-
-    // 查询 USDT 和 ETH 余额并 clone，以避免借用冲突
-    let initial_usdt_balance = account.get_balance(&Token::from("USDT")).unwrap().clone();
-    let initial_eth_balance = account.get_balance(&Token::from("ETH")).unwrap().clone();
-
-    println!("[test_match_market_event_with_open_order_sell] : Initial ETH balance: {:?}", initial_eth_balance);
-    println!("[test_match_market_event_with_open_order_sell] : Initial USDT balance: {:?}", initial_usdt_balance);
-
-    // 创建一个待开卖单订单
-    let open_order = Order { instruction: OrderInstruction::Limit,
-        exchange: Exchange::SandBox,
-        instrument: instrument.clone(),
-        timestamp: 1625247600000,
-        cid: Some(ClientOrderId("validCID456".into())),
-        side: Side::Sell,
-        state: RequestOpen { reduce_only: false,
-            price: 16406.0,
-            size: 2.0 } };
-
-    // 将订单添加到账户
-    let result = account.atomic_open(open_order.clone()).await;
-    assert_eq!(result.is_ok(), false);
-    let market_event = MarketTrade { exchange: "binance-futures".to_string(),
-        symbol: "ETH_USDT".to_string(),
-        timestamp: 1625247600000,
-        price: 16605.0,
-        side: Side::Buy.to_string(),
-        amount: 2.0 };
-
-    // 匹配订单并生成交易事件
-    let _ = account.match_orders(&market_event).await.unwrap();
-
-    // 检查余额是否已更新
-    let base_balance = account.get_balance(&instrument.base).unwrap();
-    let quote_balance = account.get_balance(&instrument.quote).unwrap();
-
-    assert_eq!(base_balance.total, 10.0);
-    assert_eq!(base_balance.available, 10.0);
-    assert_eq!(quote_balance.available, 10000.0); // 根本不能成交。若以不应该变。
-    assert_eq!(quote_balance.total, 10000.0); // 根本不能成交。若以不应该变。
-}
-
-#[tokio::test]
-async fn test_match_market_event_with_open_order_sell_with_sufficient_balance()
-{
-    let mut account = create_test_account().await;
-
-    let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-    account.deposit_usdt(50000.0).unwrap(); // 往测试里面充 50000 USDT.
-    // 查询 USDT 和 ETH 余额并 clone，以避免借用冲突
-    let initial_usdt_balance = account.get_balance(&Token::from("USDT")).unwrap().clone();
-    let initial_eth_balance = account.get_balance(&Token::from("ETH")).unwrap().clone();
-
-    println!("[test_match_market_event_with_open_order_sell] : Initial ETH balance: {:?}", initial_eth_balance);
-    println!("[test_match_market_event_with_open_order_sell] : Initial USDT balance: {:?}", initial_usdt_balance);
-
-    // 创建一个待开卖单订单
-    let open_order = Order { instruction: OrderInstruction::Limit,
-        exchange: Exchange::SandBox,
-        instrument: instrument.clone(),
-        timestamp: 1625247600000,
-        cid: Some(ClientOrderId("validCID456".into())),
-        side: Side::Sell,
-        state: RequestOpen { reduce_only: false,
-            price: 16406.0,
-            size: 2.0 } };
-
-    // 将订单添加到账户
-    let result = account.atomic_open(open_order.clone()).await;
-    assert_eq!(result.is_ok(), false);
-    // let result = account.atomic_open(open_order).await;
-    // assert_eq!(result.is_ok(), true);
-    // // 创建一个市场事件，该事件与 open订单完全匹配
-    let market_event = MarketTrade { exchange: "binance-futures".to_string(),
-        symbol: "ETH_USDT".to_string(),
-        timestamp: 1625247600000,
-        price: 16605.0, // 前面已经确认是Maker单，成交计算的价格应该按照这里的 16605
-        side: Side::Buy.to_string(),
-        amount: 2.0 };
-
-    // 匹配订单并生成交易事件
-    let trades = account.match_orders(&market_event).await.unwrap();
-    println!("trades:{:?}", trades);
-
-    // 检查余额是否已更新 注意合约交易中base_balance不应该被改变
-    let base_balance = account.get_balance(&instrument.base).unwrap();
-    assert_eq!(base_balance.total, 10.0);
-    assert_eq!(base_balance.available, 10.0);
-    let quote_balance = account.get_balance(&instrument.quote).unwrap();
-    assert_eq!(quote_balance.available, 27155.188); // Maker 价格
-    assert_eq!(quote_balance.total, 59967.188); // NOTE this is correct remaining total
-}
-
-#[tokio::test]
-async fn test_get_open_orders_should_be_empty_after_matching()
-{
-    let mut account = create_test_account().await;
-
-    let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-
-    // 创建并添加订单
-    let open_order = Order { instruction: OrderInstruction::Limit,
-        exchange: Exchange::SandBox,
-        instrument: instrument.clone(),
-        timestamp: 1625247600000,
-        cid: Some(ClientOrderId("validCID123".into())),
-        side: Side::Buy,
-        state: Open { id: OrderId::new(0, 0, 0),
-
-            price: 100.0,
-            size: 2.0,
-            filled_quantity: 0.0,
-            order_role: OrderRole::Maker } };
-    account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
-
-    // 匹配一个完全匹配的市场事件
-    let market_event = MarketTrade { exchange: "binance-futures".to_string(),
-        symbol: "ETH_USDT".to_string(),
-        timestamp: 1625247600000,
-        price: 100.0,
-        side: Side::Sell.to_string(),
-        amount: 2.0 };
-    let _ = account.match_orders(&market_event).await;
-
-    // 获取未完成的订单
-    let orders = account.orders.read().await.fetch_all();
-    assert!(orders.is_empty(), "Expected no open orders after full match, but found some.");
-}
-
-#[tokio::test]
-async fn test_fail_to_open_limit_order_due_to_insufficient_funds()
-{
-    let mut account = create_test_account().await;
-
-    let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
-
-    // 设置一个资金不足的场景，减少USDT的余额
+    #[tokio::test]
+    async fn test_match_market_event_with_open_order_sell_with_insufficient_balance()
     {
-        let mut quote_balance = account.get_balance_mut(&instrument.quote).unwrap();
-        quote_balance.available = 1.0; // 模拟 USDT 余额不足
+        let mut account = create_test_account().await;
+
+        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
+
+        // 查询 USDT 和 ETH 余额并 clone，以避免借用冲突
+        let initial_usdt_balance = account.get_balance(&Token::from("USDT")).unwrap().clone();
+        let initial_eth_balance = account.get_balance(&Token::from("ETH")).unwrap().clone();
+
+        println!("[test_match_market_event_with_open_order_sell] : Initial ETH balance: {:?}", initial_eth_balance);
+        println!("[test_match_market_event_with_open_order_sell] : Initial USDT balance: {:?}", initial_usdt_balance);
+
+        // 创建一个待开卖单订单
+        let open_order = Order { instruction: OrderInstruction::Limit,
+                                 exchange: Exchange::SandBox,
+                                 instrument: instrument.clone(),
+                                 timestamp: 1625247600000,
+                                 cid: Some(ClientOrderId("validCID456".into())),
+                                 side: Side::Sell,
+                                 state: RequestOpen { reduce_only: false,
+                                                      price: 16406.0,
+                                                      size: 2.0 } };
+
+        // 将订单添加到账户
+        let result = account.atomic_open(open_order.clone()).await;
+        assert_eq!(result.is_ok(), false);
+        let market_event = MarketTrade { exchange: "binance-futures".to_string(),
+                                         symbol: "ETH_USDT".to_string(),
+                                         timestamp: 1625247600000,
+                                         price: 16605.0,
+                                         side: Side::Buy.to_string(),
+                                         amount: 2.0 };
+
+        // 匹配订单并生成交易事件
+        let _ = account.match_orders(&market_event).await.unwrap();
+
+        // 检查余额是否已更新
+        let base_balance = account.get_balance(&instrument.base).unwrap();
+        let quote_balance = account.get_balance(&instrument.quote).unwrap();
+
+        assert_eq!(base_balance.total, 10.0);
+        assert_eq!(base_balance.available, 10.0);
+        assert_eq!(quote_balance.available, 10000.0); // 根本不能成交。若以不应该变。
+        assert_eq!(quote_balance.total, 10000.0); // 根本不能成交。若以不应该变。
     }
 
-    // 创建一个待开买单订单
-    let open_order_request = Order { instruction: OrderInstruction::Limit,
-        exchange: Exchange::SandBox,
-        instrument: instrument.clone(),
-        timestamp: 1625247600000,
-        cid: Some(ClientOrderId("validCID123".into())),
-        side: Side::Buy,
-        state: RequestOpen { price: 16499.0,
-            size: 5.0,
-            reduce_only: false } };
+    #[tokio::test]
+    async fn test_match_market_event_with_open_order_sell_with_sufficient_balance()
+    {
+        let mut account = create_test_account().await;
 
-    let result = account.atomic_open(open_order_request).await;
+        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
+        account.deposit_usdt(50000.0).unwrap(); // 往测试里面充 50000 USDT.
+                                                // 查询 USDT 和 ETH 余额并 clone，以避免借用冲突
+        let initial_usdt_balance = account.get_balance(&Token::from("USDT")).unwrap().clone();
+        let initial_eth_balance = account.get_balance(&Token::from("ETH")).unwrap().clone();
 
-    // 断言开单失败，且返回的错误是余额不足
-    assert!(result.is_err());
-    assert_eq!(result.unwrap_err(), ExchangeError::InsufficientBalance(instrument.quote));
+        println!("[test_match_market_event_with_open_order_sell] : Initial ETH balance: {:?}", initial_eth_balance);
+        println!("[test_match_market_event_with_open_order_sell] : Initial USDT balance: {:?}", initial_usdt_balance);
 
+        // 创建一个待开卖单订单
+        let open_order = Order { instruction: OrderInstruction::Limit,
+                                 exchange: Exchange::SandBox,
+                                 instrument: instrument.clone(),
+                                 timestamp: 1625247600000,
+                                 cid: Some(ClientOrderId("validCID456".into())),
+                                 side: Side::Sell,
+                                 state: RequestOpen { reduce_only: false,
+                                                      price: 16406.0,
+                                                      size: 2.0 } };
 
-}
+        // 将订单添加到账户
+        let result = account.atomic_open(open_order.clone()).await;
+        assert_eq!(result.is_ok(), false);
+        // let result = account.atomic_open(open_order).await;
+        // assert_eq!(result.is_ok(), true);
+        // // 创建一个市场事件，该事件与 open订单完全匹配
+        let market_event = MarketTrade { exchange: "binance-futures".to_string(),
+                                         symbol: "ETH_USDT".to_string(),
+                                         timestamp: 1625247600000,
+                                         price: 16605.0, // 前面已经确认是Maker单，成交计算的价格应该按照这里的 16605
+                                         side: Side::Buy.to_string(),
+                                         amount: 2.0 };
 
+        // 匹配订单并生成交易事件
+        let trades = account.match_orders(&market_event).await.unwrap();
+        println!("trades:{:?}", trades);
+
+        // 检查余额是否已更新 注意合约交易中base_balance不应该被改变
+        let base_balance = account.get_balance(&instrument.base).unwrap();
+        assert_eq!(base_balance.total, 10.0);
+        assert_eq!(base_balance.available, 10.0);
+        let quote_balance = account.get_balance(&instrument.quote).unwrap();
+        assert_eq!(quote_balance.available, 27155.188); // Maker 价格
+        assert_eq!(quote_balance.total, 59967.188); // NOTE this is correct remaining total
+    }
+
+    #[tokio::test]
+    async fn test_get_open_orders_should_be_empty_after_matching()
+    {
+        let mut account = create_test_account().await;
+
+        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
+
+        // 创建并添加订单
+        let open_order = Order { instruction: OrderInstruction::Limit,
+                                 exchange: Exchange::SandBox,
+                                 instrument: instrument.clone(),
+                                 timestamp: 1625247600000,
+                                 cid: Some(ClientOrderId("validCID123".into())),
+                                 side: Side::Buy,
+                                 state: Open { id: OrderId::new(0, 0, 0),
+
+                                               price: 100.0,
+                                               size: 2.0,
+                                               filled_quantity: 0.0,
+                                               order_role: OrderRole::Maker } };
+        account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
+
+        // 匹配一个完全匹配的市场事件
+        let market_event = MarketTrade { exchange: "binance-futures".to_string(),
+                                         symbol: "ETH_USDT".to_string(),
+                                         timestamp: 1625247600000,
+                                         price: 100.0,
+                                         side: Side::Sell.to_string(),
+                                         amount: 2.0 };
+        let _ = account.match_orders(&market_event).await;
+
+        // 获取未完成的订单
+        let orders = account.orders.read().await.fetch_all();
+        assert!(orders.is_empty(), "Expected no open orders after full match, but found some.");
+    }
+
+    #[tokio::test]
+    async fn test_fail_to_open_limit_order_due_to_insufficient_funds()
+    {
+        let mut account = create_test_account().await;
+
+        let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
+
+        // 设置一个资金不足的场景，减少USDT的余额
+        {
+            let mut quote_balance = account.get_balance_mut(&instrument.quote).unwrap();
+            quote_balance.available = 1.0; // 模拟 USDT 余额不足
+        }
+
+        // 创建一个待开买单订单
+        let open_order_request = Order { instruction: OrderInstruction::Limit,
+                                         exchange: Exchange::SandBox,
+                                         instrument: instrument.clone(),
+                                         timestamp: 1625247600000,
+                                         cid: Some(ClientOrderId("validCID123".into())),
+                                         side: Side::Buy,
+                                         state: RequestOpen { price: 16499.0,
+                                                              size: 5.0,
+                                                              reduce_only: false } };
+
+        let result = account.atomic_open(open_order_request).await;
+
+        // 断言开单失败，且返回的错误是余额不足
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ExchangeError::InsufficientBalance(instrument.quote));
+    }
 
     #[tokio::test]
     async fn test_handle_trade_data()
@@ -465,11 +456,11 @@ async fn test_fail_to_open_limit_order_due_to_insufficient_funds()
         let mut account = create_test_account().await;
 
         let trade = MarketTrade { exchange: "binance-futures".to_string(),
-            symbol: "BTC_USDT".to_string(),
-            timestamp: 1625247600000,
-            price: 100.0,
-            side: Side::Buy.to_string(),
-            amount: 0.0 };
+                                  symbol: "BTC_USDT".to_string(),
+                                  timestamp: 1625247600000,
+                                  price: 100.0,
+                                  side: Side::Buy.to_string(),
+                                  amount: 0.0 };
 
         // 处理交易数据
         let result = account.handle_trade_data(&trade).await;

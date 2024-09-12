@@ -1,14 +1,17 @@
 use crate::{
     error::ExchangeError,
     network::{event::NetworkEvent, is_port_in_use},
-    sandbox::{account::handlers::position_handler::PositionHandler, sandbox_client::SandBoxClientEvent},
+    sandbox::{
+        account::handlers::{balance_handler::BalanceHandler, position_handler::PositionHandler, trade_handler::TradeHandler},
+        sandbox_client::SandBoxClientEvent,
+    },
 };
 use account::Account;
 use mpsc::UnboundedReceiver;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use warp::Filter;
-use crate::sandbox::account::handlers::balance_handler::BalanceHandler;
+
 pub mod account;
 pub mod clickhouse_api;
 pub mod config_request;
@@ -23,6 +26,7 @@ pub mod ws_trade;
 // }
 
 pub struct SandBoxExchange
+    where Account: PositionHandler + TradeHandler + BalanceHandler
 {
     /// data_source could be added here as a daughter struct with variants.
     // #[allow(dead_code)]
