@@ -148,8 +148,19 @@ pub enum ExchangeError
 
     #[error("[UniLinkEx] : UnsupportedInstrumentKind")]
     UnsupportedInstrumentKind,
+
     #[error("[UniLinkEx] : Trying to update a non-existingPosition")]
     AttemptToUpdateNonExistingPosition,
+
     #[error("[UniLinkEx] : Redis fails to write.")]
     WriteError,
+
+    #[error("[UniLinkEx] : Redis fails to read.")]
+    ReadError,
+
+    #[error("[UniLinkEx] : Redis fails to delete.")]
+    DeleteError,
+
+    #[error("[UniLinkEx] : Redis fails to Serialise/Deserialise.")]
+    JsonSerDeError,
 }

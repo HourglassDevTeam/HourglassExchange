@@ -15,9 +15,12 @@
 /// 这意味着即使 `Statistic` 在运行时没有被直接使用，Rust 的类型系统仍然会确保在编译时检查这个泛型参数的类型安全性。
 use crate::error::ExchangeError;
 use crate::{error::ExchangeError::RedisInitialisationError, sandbox::account::account_config::SandboxMode, vault::summariser::PositionSummariser};
-use redis::Connection;
+use redis::{Connection};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::marker::PhantomData;
+// use uuid::Uuid;
+// use crate::common::account_positions::Position;
+// use crate::common::account_positions::position_id::PositionId;
 
 /// 用于通过 new() 构造函数方法构造 [`RedisVault`] 的配置。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, Deserialize, Serialize)]
@@ -133,91 +136,91 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
     }
 }
 
-
-impl<Statistic> PositionProcessor for RedisVault<Statistic>
-where
-    Statistic: PositionSummariser + Serialize + DeserializeOwned,
-{
-    fn add_open_position(&mut self, account_positions: Position) -> Result<(), ExchangeError> {
-        // 将 Position 对象序列化为 JSON 字符串
-        let position_string = serde_json::to_string(&account_positions)?;
-
-        // 将序列化后的 Position 存入 Redis
-        self.conn
-            .set(account_positions.position_id.to_string(), position_string)
-            .map_err(|_| ExchangeError::WriteError)
-    }
-
-    fn get_open_position(
-        &mut self,
-        position_id: &PositionId,
-    ) -> Result<Option<Position>, ExchangeError> {
-        // 从 Redis 中获取与 position_id 关联的 Position 字符串
-        let position_value: String = self
-            .conn
-            .get(position_id.to_string())
-            .map_err(|_| ExchangeError::ReadError)?;
-
-        // 将 JSON 字符串反序列化为 Position 对象
-        Ok(Some(serde_json::from_str::<Position>(&position_value)?))
-    }
-
-    fn get_open_positions(
-        &mut self,
-        session_id: Uuid,
-        markets: impl Iterator<Item = Market>,
-    ) -> Result<Vec<Position>, ExchangeError> {
-        // 根据 markets 迭代器获取所有打开的 Position
-        markets
-            .filter_map(|market| {
-                self.get_open_position(&determine_position_id(
-                    session_id,
-                    &market.exchange,
-                    &market.instrument,
-                ))
-                    .transpose()
-            })
-            .collect()
-    }
-
-    fn remove_position(
-        &mut self,
-        position_id: &PositionId,
-    ) -> Result<Option<Position>, ExchangeError> {
-        // 获取并删除 Redis 中对应的 Position
-        let account_positions = self.get_open_position(position_id)?;
-
-        self.conn
-            .del(position_id.to_string())
-            .map_err(|_| ExchangeError::DeleteError)?;
-
-        Ok(account_positions)
-    }
-
-    fn set_exited_position(
-        &mut self,
-        session_id: Uuid,
-        account_positions: Position,
-    ) -> Result<(), ExchangeError> {
-        // 将已退出的 Position 推入 Redis 列表
-        self.conn
-            .lpush(
-                determine_exited_positions_id(session_id),
-                serde_json::to_string(&account_positions)?,
-            )
-            .map_err(|_| ExchangeError::WriteError)
-    }
-
-    fn get_exited_positions(&mut self, session_id: Uuid) -> Result<Vec<Position>, ExchangeError> {
-        // 获取 Redis 列表中的所有已退出 Position
-        let positions: Vec<String> = self.conn
-            .lrange(determine_exited_positions_id(session_id), 0, -1)
-            .map_err(|_| ExchangeError::ReadError)?;
-
-        positions
-            .iter()
-            .map(|position_str| serde_json::from_str::<Position>(position_str))
-            .collect::<Result<Vec<Position>, serde_json::Error>>()
-            .map_err(ExchangeError::JsonSerDeError)
-    }
-}
+//
+// impl<Statistic> PositionProcessor for RedisVault<Statistic>
+// where
+//     Statistic: PositionSummariser + Serialize + DeserializeOwned,
+// {
+//     fn add_open_position(&mut self, position: Position) -> Result<(), ExchangeError> {
+//         // 将 Position 对象序列化为 JSON 字符串
+//         let position_string = serde_json::to_string(&position)?;
+//
+//         // 将序列化后的 Position 存入 Redis
+//         self.conn
+//             .set(position.position_id.to_string(), position_string)
+//             .map_err(|_| ExchangeError::WriteError)
+//     }
+//
+//     fn get_open_position(
+//         &mut self,
+//         position_id: &PositionId,
+//     ) -> Result<Option<Position>, ExchangeError> {
+//         // 从 Redis 中获取与 position_id 关联的 Position 字符串
+//         let position_value: String = self
+//             .conn
+//             .get(position_id.to_string())
+//             .map_err(|_| ExchangeError::ReadError)?;
+//
+//         // 将 JSON 字符串反序列化为 Position 对象
+//         Ok(Some(serde_json::from_str::<Position>(&position_value)?))
+//     }
+//
+//     fn get_open_positions(
+//         &mut self,
+//         session_id: Uuid,
+//         markets: impl Iterator<Item = Market>,
+//     ) -> Result<Vec<Position>, ExchangeError> {
+//         // 根据 markets 迭代器获取所有打开的 Position
+//         markets
+//             .filter_map(|market| {
+//                 self.get_open_position(&determine_position_id(
+//                     session_id,
+//                     &market.exchange,
+//                     &market.instrument,
+//                 ))
+//                     .transpose()
+//             })
+//             .collect()
+//     }
+//
+//     fn remove_position(
+//         &mut self,
+//         position_id: &PositionId,
+//     ) -> Result<Option<Position>, ExchangeError> {
+//         // 获取并删除 Redis 中对应的 Position
+//         let account_positions = self.get_open_position(position_id)?;
+//
+//         self.conn
+//             .del(position_id.to_string())
+//             .map_err(|_| ExchangeError::DeleteError)?;
+//
+//         Ok(account_positions)
+//     }
+//
+//     fn set_exited_position(
+//         &mut self,
+//         session_id: Uuid,
+//         account_positions: Position,
+//     ) -> Result<(), ExchangeError> {
+//         // 将已退出的 Position 推入 Redis 列表
+//         self.conn
+//             .lpush(
+//                 determine_exited_positions_id(session_id),
+//                 serde_json::to_string(&account_positions)?,
+//             )
+//             .map_err(|_| ExchangeError::WriteError)
+//     }
+//
+//     fn get_exited_positions(&mut self, session_id: Uuid) -> Result<Vec<Position>, ExchangeError> {
+//         // 获取 Redis 列表中的所有已退出 Position
+//         let positions: Vec<String> = self.conn
+//             .lrange(determine_exited_positions_id(session_id), 0, -1)
+//             .map_err(|_| ExchangeError::ReadError)?;
+//
+//         positions
+//             .iter()
+//             .map(|position_str| serde_json::from_str::<Position>(position_str))
+//             .collect::<Result<Vec<Position>, serde_json::Error>>()
+//             .map_err(|_| ExchangeError::JsonSerDeError)
+//     }
+// }
