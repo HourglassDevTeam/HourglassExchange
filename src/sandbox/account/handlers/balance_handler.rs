@@ -19,8 +19,6 @@ use crate::sandbox::account::{respond, Account};
 
 #[async_trait]
 pub trait BalanceHandler {
-    /// [PART 4] - 余额管理
-
     async fn get_balances(&self) -> Vec<TokenBalance>
     ;
     /// 返回指定[`Token`]的[`Balance`]的引用。
@@ -361,7 +359,8 @@ mod tests
     use crate::common::order::identification::client_order_id::ClientOrderId;
     use crate::common::order::order_instructions::OrderInstruction;
     use crate::common::order::OrderRole;
-    use crate::sandbox::account::traits::position_handler::PositionHandler;
+    use crate::sandbox::account::handlers::position_handler::PositionHandler;
+    use crate::sandbox::account::handlers::trade_handler::TradeHandler;
 
     #[tokio::test]
 async fn test_get_balance()

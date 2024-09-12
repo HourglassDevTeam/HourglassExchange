@@ -1582,4 +1582,28 @@ mod tests
         assert_eq!(short_position.meta.current_size, 5.0); // 剩余仓位应该是 5.0
         assert_eq!(short_position.meta.side, Side::Sell); // 检查持仓方向是否为 Sell
     }
+
+    #[tokio::test]
+    async fn test_unsupported_instrument_kind()
+    {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument { base: Token("RRR".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Spot /* Spot Position is either not developed or not supported. */ },
+            side: Side::Sell,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1 };
+
+        // 执行管理仓位逻辑，应该返回错误
+        let result = account.update_position_from_client_trade(trade.clone()).await;
+        println!("result: {:?}", result);
+        assert!(result.is_err());
+    }
 }

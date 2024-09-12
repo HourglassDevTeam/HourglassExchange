@@ -1,14 +1,14 @@
 use crate::{
     error::ExchangeError,
     network::{event::NetworkEvent, is_port_in_use},
-    sandbox::{account::traits::position_handler::PositionHandler, sandbox_client::SandBoxClientEvent},
+    sandbox::{account::handlers::position_handler::PositionHandler, sandbox_client::SandBoxClientEvent},
 };
 use account::Account;
 use mpsc::UnboundedReceiver;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use warp::Filter;
-use crate::sandbox::account::traits::balance_handler::BalanceHandler;
+use crate::sandbox::account::handlers::balance_handler::BalanceHandler;
 pub mod account;
 pub mod clickhouse_api;
 pub mod config_request;
