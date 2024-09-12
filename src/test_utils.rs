@@ -214,7 +214,7 @@ pub fn create_test_future_position_with_side(instrument: Instrument, side: Side)
                                           realised_pnl: 0.0 },
                      pos_config: FuturePositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                         leverage: 1.0,
-                                                        position_mode: PositionDirectionMode::LongShort },
+                                                        position_direction_mode: PositionDirectionMode::LongShort },
                      liquidation_price: 0.0,
 
                      funding_fee: 0.0 }

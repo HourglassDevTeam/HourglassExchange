@@ -45,7 +45,7 @@ pub struct FuturePositionConfig
 {
     pub(crate) pos_margin_mode: PositionMarginMode,
     pub(crate) leverage: f64,
-    pub(crate) position_mode: PositionDirectionMode,
+    pub(crate) position_direction_mode: PositionDirectionMode,
 }
 
 impl From<ConfigurationRequest> for FuturePositionConfig
@@ -54,7 +54,7 @@ impl From<ConfigurationRequest> for FuturePositionConfig
     {
         FuturePositionConfig { pos_margin_mode: config_request.position_margin_mode,
                                leverage: config_request.leverage_rate,
-                               position_mode: config_request.position_direction_mode }
+                               position_direction_mode: config_request.position_direction_mode }
     }
 }
 
@@ -153,7 +153,7 @@ mod tests
                                                                  realised_pnl: 0.0 },
                                             pos_config: FuturePositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                                                leverage: 1.0,
-                                                                               position_mode: PositionDirectionMode::LongShort },
+                                                                               position_direction_mode: PositionDirectionMode::LongShort },
                                             liquidation_price: 100.0,
                                             funding_fee: 10.0 };
 
