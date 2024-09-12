@@ -803,7 +803,7 @@ impl Account
                 let perpetual_positions = &positions.perpetual_pos_long;
 
                 // 获取读锁
-                let read_lock = perpetual_positions.read().await;
+                let read_lock = perpetual_positions.lock().await;
 
                 // 在读锁上调用 `iter()` 遍历 HashMap
                 if let Some(position) = read_lock.iter().find(|(_, pos)| pos.meta.instrument == *instrument) {
@@ -840,7 +840,7 @@ impl Account
                 let perpetual_positions = &positions.perpetual_pos_short;
 
                 // 获取读锁
-                let read_lock = perpetual_positions.read().await;
+                let read_lock = perpetual_positions.lock().await;
 
                 // 通过读锁访问 HashMap
                 if let Some((_, position)) = read_lock.iter().find(|(_, pos)| pos.meta.instrument == *instrument) {
@@ -872,8 +872,8 @@ impl Account
             | InstrumentKind::Spot => Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument))),
             | InstrumentKind::Perpetual => {
                 // 获取读锁
-                let long_pos_lock = positions.perpetual_pos_long.read().await;
-                let short_pos_lock = positions.perpetual_pos_short.read().await;
+                let long_pos_lock = positions.perpetual_pos_long.lock().await;
+                let short_pos_lock = positions.perpetual_pos_short.lock().await;
 
                 // 通过读锁访问 HashMap
                 let long_pos = long_pos_lock.get(instrument).map(|pos| Position::Perpetual(pos.clone()));
@@ -950,8 +950,8 @@ impl Account
             }
             | InstrumentKind::Perpetual => {
                 // 获取读锁
-                let long_pos_read_lock = positions_lock.perpetual_pos_long.read().await;
-                let short_pos_read_lock = positions_lock.perpetual_pos_short.read().await;
+                let long_pos_read_lock = positions_lock.perpetual_pos_long.lock().await;
+                let short_pos_read_lock = positions_lock.perpetual_pos_short.lock().await;
 
                 // 在持有读锁的情况下调用 `iter()` 遍历 HashMap
                 let long_position_exists = long_pos_read_lock.iter().any(|(_, pos)| pos.meta.instrument == *instrument);
@@ -969,8 +969,8 @@ impl Account
             }
             | InstrumentKind::Future => {
                 // 获取读锁
-                let long_pos_read_lock = positions_lock.futures_pos_long.read().await;
-                let short_pos_read_lock = positions_lock.futures_pos_short.read().await;
+                let long_pos_read_lock = positions_lock.futures_pos_long.lock().await;
+                let short_pos_read_lock = positions_lock.futures_pos_short.lock().await;
 
                 let long_position_exists = long_pos_read_lock.iter().any(|(_, pos)| pos.meta.instrument == *instrument);
                 let short_position_exists = short_pos_read_lock.iter().any(|(_, pos)| pos.meta.instrument == *instrument);
@@ -1029,8 +1029,8 @@ impl Account
 
         // 根据买卖方向将仓位插入相应的仓位列表
         match trade.side {
-            | Side::Buy => self.positions.perpetual_pos_long.write().await.insert(trade.instrument, new_position.clone()),
-            | Side::Sell => self.positions.perpetual_pos_short.write().await.insert(trade.instrument, new_position.clone()),
+            | Side::Buy => self.positions.perpetual_pos_long.lock().await.insert(trade.instrument, new_position.clone()),
+            | Side::Sell => self.positions.perpetual_pos_short.lock().await.insert(trade.instrument, new_position.clone()),
         };
 
         Ok(new_position)
@@ -1051,10 +1051,10 @@ impl Account
         // 插入仓位到正确的仓位映射中
         match trade.side {
             | Side::Buy => {
-                self.positions.futures_pos_long.write().await.insert(trade.instrument.clone(), new_position.clone());
+                self.positions.futures_pos_long.lock().await.insert(trade.instrument.clone(), new_position.clone());
             }
             | Side::Sell => {
-                self.positions.futures_pos_short.write().await.insert(trade.instrument.clone(), new_position.clone());
+                self.positions.futures_pos_short.lock().await.insert(trade.instrument.clone(), new_position.clone());
             }
         }
 
@@ -1130,45 +1130,69 @@ impl Account
         Ok(())
     }
 
-    pub async fn update_position_long_short_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
-    {
+    /// NOTE isolated margin mode not supported yet, but handling logic for isolated margin added.
+    pub async fn update_position_long_short_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
         match trade.side {
-            | Side::Buy => {
+            // 买入处理逻辑
+            Side::Buy => {
                 // 获取写锁更新或创建多头仓位
-                let mut long_positions = self.positions.perpetual_pos_long.write().await;
-                if let Some(position) = long_positions.get_mut(&trade.instrument) {
-                    // 如果已经持有多头仓位，更新仓位
+                let mut long_positions = self.positions.perpetual_pos_long.lock().await;
+
+                if let Some( position) = long_positions.get_mut(&trade.instrument) {
+                    // 更新已有多头仓位
                     println!("[UniLinkEx] : Updating existing long position...");
                     position.meta.update_from_trade(&trade);
-                }
-                else {
-                    // 显式释放写锁
+
+                    // 处理隔离保证金模式
+                    if let PositionMarginMode::Isolated = position.pos_config.pos_margin_mode {
+                        // 初始化或更新隔离保证金
+                        if position.isolated_margin.is_none() {
+                            position.isolated_margin = Some(trade.price * trade.size * position.pos_config.leverage);
+                        } else if let Some(ref mut margin) = position.isolated_margin {
+                            *margin += trade.price * trade.size * position.pos_config.leverage;
+                        }
+                    }
+                } else {
+                    // 释放写锁后创建新的多头仓位
                     drop(long_positions);
 
-                    // 释放锁后创建新的仓位
+                    // 创建新的多头仓位
                     let new_position = self.create_perpetual_position(trade.clone()).await?;
-                    // 再次获取写锁插入新的仓位
-                    let mut long_positions = self.positions.perpetual_pos_long.write().await;
+
+                    // 获取写锁插入新的仓位
+                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
                     long_positions.insert(trade.instrument.clone(), new_position);
                 }
             }
 
-            | Side::Sell => {
+            // 卖出处理逻辑
+            Side::Sell => {
                 // 获取写锁更新或创建空头仓位
-                let mut short_positions = self.positions.perpetual_pos_short.write().await;
-                if let Some(position) = short_positions.get_mut(&trade.instrument) {
-                    // 如果已经持有空头仓位，更新仓位
+                let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+
+                if let Some( position) = short_positions.get_mut(&trade.instrument) {
+                    // 更新已有空头仓位
                     println!("[UniLinkEx] : Updating existing short position...");
                     position.meta.update_from_trade(&trade);
-                }
-                else {
-                    // 显式释放写锁
+
+                    // 处理隔离保证金模式
+                    if let PositionMarginMode::Isolated = position.pos_config.pos_margin_mode {
+                        // 初始化或更新隔离保证金
+                        if position.isolated_margin.is_none() {
+                            position.isolated_margin = Some(trade.price * trade.size * position.pos_config.leverage);
+                        } else if let Some(ref mut margin) = position.isolated_margin {
+                            *margin += trade.price * trade.size * position.pos_config.leverage;
+                        }
+                    }
+                } else {
+                    // 释放写锁后创建新的空头仓位
                     drop(short_positions);
 
-                    // 释放锁后创建新的空头仓位
+                    // 创建新的空头仓位
                     let new_position = self.create_perpetual_position(trade.clone()).await?;
-                    // 再次获取写锁插入新的仓位
-                    let mut short_positions = self.positions.perpetual_pos_short.write().await;
+
+                    // 获取写锁插入新的仓位
+                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
                     short_positions.insert(trade.instrument.clone(), new_position);
                 }
             }
@@ -1178,195 +1202,179 @@ impl Account
     }
 
     /// 注意 liquidation price 更新逻辑未实现.
-    pub async fn update_position_net_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
-    {
-
+    pub async fn update_position_net_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
         match trade.instrument.kind {
-            | InstrumentKind::Perpetual => {
+            InstrumentKind::Perpetual => {
                 match trade.side {
-                    | Side::Buy => {
-                        // 为相关变量提供默认值
+                    Side::Buy => {
+                        // 定义相关变量
                         let perfect_exit;
                         let exit_and_reverse;
                         let remaining_quantity;
 
-                        {
-                            // 先获取读锁以检查空头仓位
-                            let short_positions_read = self.positions.perpetual_pos_short.read().await;
-                            if let Some(short_position) = short_positions_read.get(&trade.instrument) {
-                                // 如果存在空头仓位，判断是否需要移除或反向开仓
-                                perfect_exit = short_position.meta.current_size == trade.size;
-                                exit_and_reverse = short_position.meta.current_size < trade.size;
-                                remaining_quantity = trade.size - short_position.meta.current_size;
-                                // 释放读锁后获取写锁进行更新
-                                let mut short_positions_write = self.positions.perpetual_pos_short.write().await;
-                                let mut short_position = short_positions_write.get_mut(&trade.instrument).unwrap().clone();
-                                let short_leverage = &short_position.pos_config.leverage.clone();
-                                if perfect_exit {
-                                    short_position.isolated_margin = Some(0.0); // NOTE 暂时先清零.实际操作中穿仓会很复杂.
-                                    short_position.meta.update_realised_pnl(trade.price);
-                                    let exited = PositionExit::from_position_meta(&short_position.meta);
-                                    self.exited_positions.insert_perpetual_pos_short(exited).await;
-                                    short_positions_write.remove(&trade.instrument);
-                                }
-                                else if exit_and_reverse {
-                                    let position_margin_mode = &short_position.pos_config.pos_margin_mode.clone();
-                                    short_position.meta.update_realised_pnl(trade.price);
-                                    short_position.isolated_margin = Some(0.0); // NOTE 暂时先清零.实际操作中穿仓会很复杂.
-                                    let exited = PositionExit::from_position_meta(&short_position.meta);
-                                    self.exited_positions.insert_perpetual_pos_short(exited).await;
-                                    short_positions_write.remove(&trade.instrument);
-                                    let new_position =
-                                        PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
-                                                            pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode.clone(),
-                                                                                                  leverage: short_position.pos_config.leverage,
-                                                                                                  position_direction_mode: short_position.pos_config.position_direction_mode
-                                                            },
-                                                            isolated_margin: Some(trade.price * remaining_quantity * short_leverage),
-                                                            liquidation_price: Some(0.0) };
-                                    self.positions.perpetual_pos_long.write().await.insert(trade.instrument.clone(), new_position);
-                                }
-                                else {
-                                    if let PositionMarginMode::Isolated = short_position.pos_config.pos_margin_mode {
-                                        // 如果隔离保证金为 None，则进行初始化计算
-                                        if short_position.isolated_margin.is_none() {
-                                            short_position.isolated_margin = Some(trade.price * trade.size * short_position.pos_config.leverage);
-                                        }
-                                        else if let Some(ref mut margin) = short_position.isolated_margin {
-                                            // 如果已存在隔离保证金，更新它
-                                            *margin += trade.price * remaining_quantity * short_position.pos_config.leverage;
-                                        }
+                        // 获取空头仓位的锁
+                        let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+
+                        if let Some(mut short_position) = short_positions.remove(&trade.instrument) {
+                            // 如果存在空头仓位，判断是否需要移除或反向开仓
+                            perfect_exit = short_position.meta.current_size == trade.size;
+                            exit_and_reverse = short_position.meta.current_size < trade.size;
+                            remaining_quantity = trade.size - short_position.meta.current_size;
+
+                            // 完全平仓
+                            if perfect_exit {
+                                short_position.isolated_margin = Some(0.0); // 暂时清零
+                                short_position.meta.update_realised_pnl(trade.price);
+                                let exited = PositionExit::from_position_meta(&short_position.meta);
+                                self.exited_positions.insert_perpetual_pos_short(exited).await;
+                            }
+                            // 反向开仓
+                            else if exit_and_reverse {
+                                let position_margin_mode = short_position.pos_config.pos_margin_mode.clone();
+                                short_position.meta.update_realised_pnl(trade.price);
+                                short_position.isolated_margin = Some(0.0); // 暂时清零
+                                let exited = PositionExit::from_position_meta(&short_position.meta);
+                                self.exited_positions.insert_perpetual_pos_short(exited).await;
+
+                                // 获取多头仓位的锁并插入新的仓位
+                                let mut long_positions = self.positions.perpetual_pos_long.lock().await;
+                                let new_position = PerpetualPosition {
+                                    meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
+                                    pos_config: PerpetualPositionConfig {
+                                        pos_margin_mode: position_margin_mode.clone(),
+                                        leverage: short_position.pos_config.leverage,
+                                        position_mode: self.config.global_position_direction_mode.clone(),
+                                    },
+                                    isolated_margin: Some(trade.price * remaining_quantity * short_position.pos_config.leverage),
+                                    liquidation_price: Some(0.0),
+                                };
+                                long_positions.insert(trade.instrument.clone(), new_position);
+                            }
+                            // 更新隔离保证金
+                            else {
+                                if let PositionMarginMode::Isolated = short_position.pos_config.pos_margin_mode {
+                                    if short_position.isolated_margin.is_none() {
+                                        short_position.isolated_margin = Some(trade.price * trade.size * short_position.pos_config.leverage);
+                                    } else if let Some(ref mut margin) = short_position.isolated_margin {
+                                        *margin += trade.price * remaining_quantity * short_position.pos_config.leverage;
                                     }
                                 }
+                                // 将更新后的 short_position 放回 HashMap
+                                short_positions.insert(trade.instrument.clone(), short_position);
+                            }
+                        } else {
+                            // 如果没有空头仓位，检查多头仓位，如果有，把增量保证金加入多头仓位。
+                            let mut long_positions = self.positions.perpetual_pos_long.lock().await;
+                            if let Some(long_position) = long_positions.get_mut(&trade.instrument) {
+                                if let PositionMarginMode::Isolated = long_position.pos_config.pos_margin_mode {
+                                    if long_position.isolated_margin.is_none() {
+                                        long_position.isolated_margin = Some(trade.price * trade.size * long_position.pos_config.leverage);
+                                    } else if let Some(ref mut margin) = long_position.isolated_margin {
+                                        *margin += trade.price * trade.size * long_position.pos_config.leverage;
+                                    }
+                                }
+                                long_position.meta.update_from_trade(&trade);
                             }
                             else {
-                                // 没有空头仓位，
-                                drop(short_positions_read);
-                                let mut long_positions_write = self.positions.perpetual_pos_long.write().await;
-                                // 检查是否已有多头仓位
-                                if let Some(long_position) = long_positions_write.get_mut(&trade.instrument) {
-                                    remaining_quantity = trade.size - long_position.meta.current_size;
-                                    // 检查该多头仓位的隔离保证金模式
-                                    if let PositionMarginMode::Isolated = long_position.pos_config.pos_margin_mode {
-                                        // 如果隔离保证金为 None，则进行初始化计算
-                                        if long_position.isolated_margin.is_none() {
-                                            long_position.isolated_margin = Some(trade.price * trade.size * long_position.pos_config.leverage);
-                                        }
-                                        else if let Some(ref mut margin) = long_position.isolated_margin {
-                                            // 如果已存在隔离保证金，更新它
-                                            *margin += trade.price * remaining_quantity * long_position.pos_config.leverage;
-                                        }
-                                    }
-                                    // 更新仓位的其他信息
-                                    long_position.meta.update_from_trade(&trade);
-                                }
-                                else {
-                                    drop(long_positions_write);
-                                    // 如果没有多头仓位，创建新的多头仓位
-                                    self.create_perpetual_position(trade.clone()).await?;
-                                }
+                                // 释放 `long_positions` 锁
+                                drop(short_positions);
+                                drop(long_positions);
+
+                                // 创建新的多头仓位
+                                self.create_perpetual_position(trade.clone()).await?;
                             }
                         }
                     }
-
-                    | Side::Sell => {
-                        // 为相关变量提供默认值
+                    Side::Sell => {
+                        // 定义相关变量
                         let perfect_exit;
                         let exit_and_reverse;
                         let remaining_quantity;
 
-                        {
-                            // 先获取读锁以检查多头仓位
-                            let long_positions_read = self.positions.perpetual_pos_long.read().await;
-                            if let Some(long_position) = long_positions_read.get(&trade.instrument) {
-                                // 如果存在多头仓位，判断是否需要移除或反向开仓
-                                perfect_exit = long_position.meta.current_size == trade.size;
-                                exit_and_reverse = long_position.meta.current_size < trade.size;
-                                remaining_quantity = trade.size - long_position.meta.current_size;
-                                // 释放读锁后获取写锁进行更新
-                                drop(long_positions_read);
-                                let mut long_positions_write = self.positions.perpetual_pos_long.write().await;
-                                let mut long_position = long_positions_write.get_mut(&trade.instrument).unwrap().clone();
-                                let long_leverage = &long_position.pos_config.leverage.clone();
-                                if perfect_exit {
-                                    long_position.isolated_margin = Some(0.0); // NOTE 暂时先清零.实际操作中穿仓会很复杂.
-                                    long_position.meta.update_realised_pnl(trade.price);
-                                    let exited = PositionExit::from_position_meta(&long_position.meta);
-                                    self.exited_positions.insert_perpetual_pos_long(exited).await;
-                                    long_positions_write.remove(&trade.instrument);
-                                }
-                                else if exit_and_reverse {
-                                    let position_margin_mode = &long_position.pos_config.pos_margin_mode.clone();
-                                    long_position.meta.update_realised_pnl(trade.price);
-                                    long_position.isolated_margin = Some(0.0); // NOTE 暂时先清零.实际操作中穿仓会很复杂.
-                                    let exited = PositionExit::from_position_meta(&long_position.meta);
-                                    self.exited_positions.insert_perpetual_pos_long(exited).await;
-                                    long_positions_write.remove(&trade.instrument);
-                                    let new_position =
-                                        PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
-                                                            pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode.clone(),
-                                                                                                  leverage: long_position.pos_config.leverage,
-                                                                                                  position_direction_mode: long_position.pos_config.position_direction_mode },
-                                                            isolated_margin: Some(trade.price * remaining_quantity * long_leverage),
-                                                            liquidation_price: Some(0.0) };
-                                    self.positions.perpetual_pos_short.write().await.insert(trade.instrument.clone(), new_position);
-                                }
-                                else {
-                                    if let PositionMarginMode::Isolated = long_position.pos_config.pos_margin_mode {
-                                        // 如果隔离保证金为 None，则进行初始化计算
-                                        if long_position.isolated_margin.is_none() {
-                                            long_position.isolated_margin = Some(trade.price * trade.size * long_position.pos_config.leverage);
-                                        }
-                                        else if let Some(ref mut margin) = long_position.isolated_margin {
-                                            // 如果已存在隔离保证金，更新它
-                                            *margin += trade.price * remaining_quantity * long_position.pos_config.leverage;
-                                        }
-                                    }
-                                }
-                            }
-                            else {
-                                drop(long_positions_read);
-                                // 没有多头仓位，检查是否已有空头仓位
-                                let mut short_positions_write = self.positions.perpetual_pos_long.write().await;
+                        // 获取多头仓位的锁
+                        let mut long_positions = self.positions.perpetual_pos_long.lock().await;
 
-                                if let Some(short_position) = short_positions_write.get_mut(&trade.instrument) {
-                                    remaining_quantity = trade.size - short_position.meta.current_size;
-                                    // 检查该空头仓位的隔离保证金模式
-                                    if let PositionMarginMode::Isolated = short_position.pos_config.pos_margin_mode {
-                                        // 如果隔离保证金为 None，则进行初始化计算
-                                        if short_position.isolated_margin.is_none() {
-                                            short_position.isolated_margin = Some(trade.price * trade.size * short_position.pos_config.leverage);
-                                        }
-                                        else if let Some(ref mut margin) = short_position.isolated_margin {
-                                            // 如果已存在隔离保证金，更新它
-                                            *margin += trade.price * remaining_quantity * short_position.pos_config.leverage;
-                                        }
+                        if let Some(mut long_position) = long_positions.remove(&trade.instrument) {
+                            perfect_exit = long_position.meta.current_size == trade.size;
+                            exit_and_reverse = long_position.meta.current_size < trade.size;
+                            remaining_quantity = trade.size - long_position.meta.current_size;
+
+                            // 完全平仓
+                            if perfect_exit {
+                                long_position.isolated_margin = Some(0.0); // 暂时清零
+                                long_position.meta.update_realised_pnl(trade.price);
+                                let exited = PositionExit::from_position_meta(&long_position.meta);
+                                self.exited_positions.insert_perpetual_pos_long(exited).await;
+                                // 注意：long_position 已经被移除了，因此不需要再次调用 remove
+                            }
+                            // 反向开仓
+                            else if exit_and_reverse {
+                                let position_margin_mode = long_position.pos_config.pos_margin_mode.clone();
+                                long_position.meta.update_realised_pnl(trade.price);
+                                long_position.isolated_margin = Some(0.0); // 暂时清零
+                                let exited = PositionExit::from_position_meta(&long_position.meta);
+                                self.exited_positions.insert_perpetual_pos_long(exited).await;
+
+                                // 获取空头仓位的锁并插入新的仓位
+                                let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+                                let new_position = PerpetualPosition {
+                                    meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
+                                    pos_config: PerpetualPositionConfig {
+                                        pos_margin_mode: position_margin_mode.clone(),
+                                        leverage: long_position.pos_config.leverage,
+                                        position_mode: self.config.global_position_direction_mode.clone(),
+                                    },
+                                    isolated_margin: Some(trade.price * remaining_quantity * long_position.pos_config.leverage),
+                                    liquidation_price: Some(0.0),
+                                };
+                                short_positions.insert(trade.instrument.clone(), new_position);
+                            }
+                            // 更新隔离保证金
+                            else {
+                                if let PositionMarginMode::Isolated = long_position.pos_config.pos_margin_mode {
+                                    if long_position.isolated_margin.is_none() {
+                                        long_position.isolated_margin = Some(trade.price * trade.size * long_position.pos_config.leverage);
+                                    } else if let Some(ref mut margin) = long_position.isolated_margin {
+                                        *margin += trade.price * remaining_quantity * long_position.pos_config.leverage;
                                     }
-                                    // 更新仓位的其他信息
-                                    short_position.meta.update_from_trade(&trade);
                                 }
-                                else {
-                                    drop(short_positions_write);
-                                    // 如果没有空头仓位，创建新的空头仓位
-                                    self.create_perpetual_position(trade.clone()).await?;
+                                // 将更新后的 long_position 放回 HashMap
+                                long_positions.insert(trade.instrument.clone(), long_position);
+                            }
+                        } else {
+                            // 如果没有多头仓位，检查空头仓位，如果有，把增量保证金加入空头仓位
+                            let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+                            if let Some(short_position) = short_positions.get_mut(&trade.instrument) {
+                                if let PositionMarginMode::Isolated = short_position.pos_config.pos_margin_mode {
+                                    if short_position.isolated_margin.is_none() {
+                                        short_position.isolated_margin = Some(trade.price * trade.size * short_position.pos_config.leverage);
+                                    } else if let Some(ref mut margin) = short_position.isolated_margin {
+                                        *margin += trade.price * trade.size * short_position.pos_config.leverage;
+                                    }
                                 }
+                                short_position.meta.update_from_trade(&trade);
+                            } else {
+                                drop(short_positions);
+                                drop(long_positions);
+                                // 创建新的空头仓位
+                                self.create_perpetual_position(trade.clone()).await?;
                             }
                         }
                     }
                 }
             }
 
-            | InstrumentKind::Future => {
+            InstrumentKind::Future => {
                 println!("[UniLinkEx] : Futures trading is not yet supported.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
 
-            | InstrumentKind::Spot => {
+            InstrumentKind::Spot => {
                 println!("[UniLinkEx] : Spot trading is not yet supported.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
 
-            | _ => {
+            _ => {
                 println!("[UniLinkEx] : Unsupported instrument kind.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
@@ -1374,6 +1382,7 @@ impl Account
 
         Ok(())
     }
+
 
     /// 在 create_position 过程中确保仓位的杠杆率不超过账户的最大杠杆率。  [TODO] : TO BE CHECKED & APPLIED
     pub fn enforce_leverage_limits(&self, new_position: &PerpetualPosition) -> Result<(), ExchangeError>
@@ -1954,7 +1963,7 @@ mod tests
     {
         PositionConfig::Perpetual(PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                             leverage: 1.0,
-                                                            position_direction_mode: PositionDirectionMode::LongShort })
+                                                            position_mode: PositionDirectionMode::LongShort })
     }
 
     #[allow(dead_code)]
@@ -1962,7 +1971,7 @@ mod tests
     {
         PositionConfig::Perpetual(PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                             leverage: 1.0,
-                                                            position_direction_mode: PositionDirectionMode::LongShort })
+                                                            position_mode: PositionDirectionMode::LongShort })
     }
 
     #[allow(dead_code)]
@@ -1970,7 +1979,7 @@ mod tests
     {
         PositionConfig::Perpetual(PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
                                                             leverage: 1.0,
-                                                            position_direction_mode: PositionDirectionMode::Net })
+                                                            position_mode: PositionDirectionMode::Net })
     }
 
     #[allow(dead_code)]
@@ -1978,7 +1987,7 @@ mod tests
     {
         PositionConfig::Perpetual(PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                             leverage: 1.0,
-                                                            position_direction_mode: PositionDirectionMode::Net })
+                                                            position_mode: PositionDirectionMode::Net })
     }
 
     #[tokio::test]
@@ -2588,7 +2597,7 @@ mod tests
         let instrument = trade.instrument.clone();
         let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                   leverage: 1.0, // 设置合理的杠杆
-                                                  position_direction_mode: PositionDirectionMode::LongShort };
+                                                  position_mode: PositionDirectionMode::LongShort };
 
         // 将 PerpetualPositionConfig 插入到多头配置中
         account.positions.perpetual_pos_long_config.write().await.insert(instrument.clone(), preconfig);
@@ -2598,7 +2607,7 @@ mod tests
         assert!(result.is_ok());
 
         // 检查多头仓位是否成功创建
-        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
         println!("positions:{:?}", positions); // 打印多头仓位
         assert!(positions.contains_key(&trade.instrument)); // 检查 HashMap 中是否有该键
         let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
@@ -2630,7 +2639,7 @@ mod tests
         // 预先配置 PerpetualPositionConfig
         let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                   leverage: 1.0, // 确保 leverage 设置正确
-                                                  position_direction_mode: PositionDirectionMode::LongShort };
+                                                  position_mode: PositionDirectionMode::LongShort };
 
         // 将配置插入 `perpetual_pos_short_config`
         account.positions.perpetual_pos_short_config.write().await.insert(instrument.clone(), preconfig);
@@ -2641,7 +2650,7 @@ mod tests
         assert!(result.is_ok());
 
         // 检查空头仓位是否成功创建
-        let positions = account.positions.perpetual_pos_short.read().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_short.lock().await; // 获取读锁
         assert!(positions.contains_key(&trade.instrument)); // 检查 HashMap 中是否有该键
         let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
         assert_eq!(pos.meta.current_size, 5.0); // 检查仓位大小
@@ -2669,7 +2678,7 @@ mod tests
         let instrument = trade.instrument.clone();
         let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                   leverage: 1.0, // 设置合理的杠杆
-                                                  position_direction_mode: PositionDirectionMode::LongShort };
+                                                  position_mode: PositionDirectionMode::LongShort };
         account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
 
         // 创建一个初始的多头仓位
@@ -2693,7 +2702,7 @@ mod tests
         account.update_position_from_client_trade(additional_trade.clone()).await.unwrap();
 
         // 检查仓位是否正确更新
-        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
         let pos = positions.get(&trade.instrument).unwrap(); // 获取仓位
         assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
     }
@@ -2720,7 +2729,7 @@ mod tests
         let instrument = trade.instrument.clone();
         let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                   leverage: 1.0, // 设置合理的杠杆
-                                                  position_direction_mode: PositionDirectionMode::Net };
+                                                  position_mode: PositionDirectionMode::Net };
         account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
 
         // 创建一个多头仓位
@@ -2768,7 +2777,7 @@ mod tests
         let instrument = trade.instrument.clone();
         let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                   leverage: 1.0, // 设置合理的杠杆
-                                                  position_direction_mode: PositionDirectionMode::Net };
+                                                  position_mode: PositionDirectionMode::Net };
         account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
         let _ = account.create_perpetual_position(trade.clone()).await;
 
@@ -2789,7 +2798,7 @@ mod tests
         account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
 
         // 检查仓位是否已被完全移除
-        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
         assert!(!positions.contains_key(&trade.instrument));
     }
 
@@ -2815,7 +2824,7 @@ mod tests
         let instrument = trade.instrument.clone();
         let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Isolated,
                                                   leverage: 1.0, // 设置合理的杠杆
-                                                  position_direction_mode: PositionDirectionMode::Net };
+                                                  position_mode: PositionDirectionMode::Net };
         account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
         let _ = account.create_perpetual_position(trade.clone()).await;
 
@@ -2836,11 +2845,11 @@ mod tests
         account.update_position_from_client_trade(reverse_trade.clone()).await.unwrap();
 
         // 检查多头仓位是否已被完全移除
-        let long_positions = account.positions.perpetual_pos_long.read().await;
+        let long_positions = account.positions.perpetual_pos_long.lock().await;
         assert!(!long_positions.contains_key(&trade.instrument));
 
         // 检查新的空头仓位是否已创建，并且大小正确（剩余 5.0）
-        let short_positions = account.positions.perpetual_pos_short.read().await;
+        let short_positions = account.positions.perpetual_pos_short.lock().await;
         assert!(short_positions.contains_key(&trade.instrument));
         let short_position = short_positions.get(&trade.instrument).unwrap();
         assert_eq!(short_position.meta.current_size, 5.0); // 剩余仓位应该是 5.0
