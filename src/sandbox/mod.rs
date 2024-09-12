@@ -108,6 +108,9 @@ impl SandBoxExchange
                 | SandBoxClientEvent::ConfigureInstruments(position_configs, response_tx) => {
                     let _ = self.account.lock().await.preconfigure_positions(position_configs, response_tx).await;
                 }
+                | SandBoxClientEvent::LetItRoll => {
+                    println!("Received NoOp event, no action taken.");
+                }
             }
         }
     }
