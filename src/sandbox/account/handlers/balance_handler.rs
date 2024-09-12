@@ -12,7 +12,7 @@ use crate::{
         Side,
     },
     error::ExchangeError,
-    sandbox::account::{respond, SandboxAccount, DashMapRefMut},
+    sandbox::account::{respond, DashMapRefMut, SandboxAccount},
     Exchange,
 };
 use async_trait::async_trait;

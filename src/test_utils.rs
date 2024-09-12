@@ -152,19 +152,19 @@ pub async fn create_test_account() -> SandboxAccount
 
     // 创建 Account 实例，并将其包裹在 Arc<Account> 中
     SandboxAccount { current_session: Uuid::new_v4(),
-              machine_id,
-              exchange_timestamp: AtomicI64::new(1234567),
-              account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-              config: account_config,
-              balances,
-              positions,
-              exited_positions: closed_positions,
-              orders: Arc::new(RwLock::new(AccountOrders::new(machine_id, vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))], AccountLatency { fluctuation_mode:
-                                                                                                                                                                   FluctuationMode::Sine,
-                                                                                                                                                               maximum: 300,
-                                                                                                                                                               minimum: 0,
-                                                                                                                                                               current_value: 0 }).await)),
-              single_level_order_book: Arc::new(Mutex::new(single_level_order_books)) }
+                     machine_id,
+                     exchange_timestamp: AtomicI64::new(1234567),
+                     account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+                     config: account_config,
+                     balances,
+                     positions,
+                     exited_positions: closed_positions,
+                     orders: Arc::new(RwLock::new(AccountOrders::new(machine_id, vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))], AccountLatency { fluctuation_mode:
+                                                                                                                                                                          FluctuationMode::Sine,
+                                                                                                                                                                      maximum: 300,
+                                                                                                                                                                      minimum: 0,
+                                                                                                                                                                      current_value: 0 }).await)),
+                     single_level_order_book: Arc::new(Mutex::new(single_level_order_books)) }
 }
 
 /// 创建一个测试用的 `PerpetualPosition` 实例。

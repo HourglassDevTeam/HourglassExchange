@@ -71,15 +71,15 @@ impl Clone for SandboxAccount
     fn clone(&self) -> Self
     {
         SandboxAccount { current_session: Uuid::new_v4(),
-                  machine_id: self.machine_id,
-                  exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
-                  account_event_tx: self.account_event_tx.clone(),
-                  config: self.config.clone(),
-                  orders: Arc::clone(&self.orders),
-                  single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
-                  balances: self.balances.clone(),
-                  positions: self.positions.clone(),
-                  exited_positions: self.exited_positions.clone() }
+                         machine_id: self.machine_id,
+                         exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
+                         account_event_tx: self.account_event_tx.clone(),
+                         config: self.config.clone(),
+                         orders: Arc::clone(&self.orders),
+                         single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
+                         balances: self.balances.clone(),
+                         positions: self.positions.clone(),
+                         exited_positions: self.exited_positions.clone() }
     }
 }
 #[derive(Debug)]
@@ -146,15 +146,15 @@ impl AccountInitiator
     pub fn build(self) -> Result<SandboxAccount, String>
     {
         Ok(SandboxAccount { current_session: Uuid::new_v4(),
-                     machine_id: generate_machine_id()?,
-                     exchange_timestamp: 0.into(),
-                     account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?,
-                     config: self.config.ok_or("config is required")?,
-                     orders: self.orders.ok_or("orders are required")?,
-                     balances: self.balances.ok_or("balances are required")?,
-                     positions: self.positions.ok_or("positions are required")?,
-                     single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
-                     exited_positions: self.closed_positions.ok_or("closed_positions sink are required")? })
+                            machine_id: generate_machine_id()?,
+                            exchange_timestamp: 0.into(),
+                            account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?,
+                            config: self.config.ok_or("config is required")?,
+                            orders: self.orders.ok_or("orders are required")?,
+                            balances: self.balances.ok_or("balances are required")?,
+                            positions: self.positions.ok_or("positions are required")?,
+                            single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
+                            exited_positions: self.closed_positions.ok_or("closed_positions sink are required")? })
     }
 }
 
