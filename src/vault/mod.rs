@@ -10,7 +10,6 @@ use crate::{
 use uuid::Uuid;
 
 pub mod error;
-pub mod in_memory;
 pub mod redis;
 mod summariser;
 

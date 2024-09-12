@@ -150,4 +150,6 @@ pub enum ExchangeError
     UnsupportedInstrumentKind,
     #[error("[UniLinkEx] : Trying to update a non-existingPosition")]
     AttemptToUpdateNonExistingPosition,
+    #[error("[UniLinkEx] : Redis fails to write.")]
+    WriteError,
 }
