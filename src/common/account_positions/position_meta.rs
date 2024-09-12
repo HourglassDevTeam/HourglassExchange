@@ -81,32 +81,6 @@ impl PositionMeta
                        realised_pnl: 0.0 }
     }
 
-    /// 此函数可以处理 `Net` 和 `LongShort` 两种模式。
-    /// 根据新的交易更新或创建持仓。
-    /// 该函数既可以处理常规的更新逻辑，也可以处理反向持仓的逻辑。
-    pub fn update_or_create_from_trade(&mut self, trade: &ClientTrade) -> Self
-    {
-        if self.side == trade.side {
-            // 如果交易方向与当前持仓方向相同，则正常更新持仓
-            self.update_from_trade(trade);
-            self.clone() // 返回更新后的持仓
-        }
-        else {
-            // 如果交易方向相反，减少或关闭当前持仓，并可能开立新持仓
-            let remaining_quantity = trade.size - self.current_size;
-            if remaining_quantity >= 0.0 {
-                // 完全平仓，并用剩余的数量反向开仓
-                self.update_realised_pnl(trade.price);
-                PositionMeta::create_from_trade_with_remaining(trade, remaining_quantity)
-            }
-            else {
-                // 部分平仓，不反向，仅减少持仓量
-                self.current_size -= trade.size;
-                self.update_realised_pnl(trade.price);
-                self.clone() // 返回更新后的持仓
-            }
-        }
-    }
 }
 
 impl PositionMeta
