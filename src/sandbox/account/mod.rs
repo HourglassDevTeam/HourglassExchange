@@ -1182,9 +1182,7 @@ impl Account
                         let remaining_quantity;
 
                         // 获取空头仓位的锁
-                        let mut short_positions = self.positions.perpetual_pos_short.lock().await;
-
-                        if let Some(mut short_position) = short_positions.remove(&trade.instrument).await {
+                        if let Some(Position::Perpetual(mut short_position)) = self.remove_position(trade.instrument.clone(), Side::Sell).await {
                             // 如果存在空头仓位，判断是否需要移除或反向开仓
                             perfect_exit = short_position.meta.current_size == trade.size;
                             exit_and_reverse = short_position.meta.current_size < trade.size;
@@ -1194,16 +1192,15 @@ impl Account
                             if perfect_exit {
                                 short_position.isolated_margin = Some(0.0); // 暂时清零
                                 short_position.meta.update_realised_pnl(trade.price);
-                                let exited = PositionExit::from_position_meta(&short_position.meta);
-                                self.exited_positions.insert_perpetual_pos_short(exited).await;
+                                let _ = self.exit_position_and_dump(&short_position.meta, Side::Sell).await;
                             }
                             // 反向开仓
                             else if exit_and_reverse {
                                 let position_margin_mode = short_position.pos_config.pos_margin_mode.clone();
                                 short_position.meta.update_realised_pnl(trade.price);
                                 short_position.isolated_margin = Some(0.0); // 暂时清零
-                                let exited = PositionExit::from_position_meta(&short_position.meta);
-                                self.exited_positions.insert_perpetual_pos_short(exited).await;
+                                let _ = self.exit_position_and_dump(&short_position.meta, Side::Sell).await;
+
 
                                 // 获取多头仓位的锁并插入新的仓位
                                 let mut long_positions = self.positions.perpetual_pos_long.lock().await;
@@ -1225,6 +1222,8 @@ impl Account
                                         *margin += trade.price * remaining_quantity * short_position.pos_config.leverage;
                                     }
                                 }
+                                let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+
                                 // 将更新后的 short_position 放回 HashMap
                                 short_positions.insert(trade.instrument.clone(), short_position);
                             }
@@ -1245,7 +1244,6 @@ impl Account
                             }
                             else {
                                 // 释放 `long_positions` 锁
-                                drop(short_positions);
                                 drop(long_positions);
 
                                 // 创建新的多头仓位
@@ -1260,9 +1258,8 @@ impl Account
                         let remaining_quantity;
 
                         // 获取多头仓位的锁
-                        let mut long_positions = self.positions.perpetual_pos_long.lock().await;
 
-                        if let Some(mut long_position) = long_positions.remove(&trade.instrument) {
+                        if let Some(Position::Perpetual(mut long_position)) = self.remove_position(trade.instrument.clone(), Side::Buy).await {
                             perfect_exit = long_position.meta.current_size == trade.size;
                             exit_and_reverse = long_position.meta.current_size < trade.size;
                             remaining_quantity = trade.size - long_position.meta.current_size;
@@ -1271,8 +1268,7 @@ impl Account
                             if perfect_exit {
                                 long_position.isolated_margin = Some(0.0); // 暂时清零
                                 long_position.meta.update_realised_pnl(trade.price);
-                                let exited = PositionExit::from_position_meta(&long_position.meta);
-                                self.exited_positions.insert_perpetual_pos_long(exited).await;
+                                let _ = self.exit_position_and_dump(&long_position.meta, Side::Buy).await;
                                 // 注意：long_position 已经被移除了，因此不需要再次调用 remove
                             }
                             // 反向开仓
@@ -1280,9 +1276,7 @@ impl Account
                                 let position_margin_mode = long_position.pos_config.pos_margin_mode.clone();
                                 long_position.meta.update_realised_pnl(trade.price);
                                 long_position.isolated_margin = Some(0.0); // 暂时清零
-                                let exited = PositionExit::from_position_meta(&long_position.meta);
-                                self.exited_positions.insert_perpetual_pos_long(exited).await;
-
+                                let _ = self.exit_position_and_dump(&long_position.meta, Side::Buy).await;
                                 // 获取空头仓位的锁并插入新的仓位
                                 let mut short_positions = self.positions.perpetual_pos_short.lock().await;
                                 let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
@@ -1303,6 +1297,7 @@ impl Account
                                         *margin += trade.price * remaining_quantity * long_position.pos_config.leverage;
                                     }
                                 }
+                                let mut long_positions = self.positions.perpetual_pos_long.lock().await;
                                 // 将更新后的 long_position 放回 HashMap
                                 long_positions.insert(trade.instrument.clone(), long_position);
                             }
@@ -1323,7 +1318,6 @@ impl Account
                             }
                             else {
                                 drop(short_positions);
-                                drop(long_positions);
                                 // 创建新的空头仓位
                                 self.create_perpetual_position(trade.clone()).await?;
                             }
@@ -1362,88 +1356,69 @@ impl Account
         }
     }
 
-    pub async fn remove_position(
-        &self,
-        instrument: Instrument,
-        side: Side,
-    ) -> Option<Position> {
+    pub async fn remove_position(&self, instrument: Instrument, side: Side) -> Option<Position>
+    {
         match instrument.kind {
-            InstrumentKind::Perpetual => self.remove_perpetual_position(instrument, side).await.map(Position::Perpetual),
-            InstrumentKind::Future => self.remove_future_position(instrument, side).await.map(Position::Future),
-            InstrumentKind::CryptoLeveragedToken => {
-                self.remove_leveraged_token_position(instrument, side).await.map(Position::LeveragedToken)
-            }
-            InstrumentKind::CryptoOption => self.remove_option_position(instrument, side).await.map(Position::Option),
-            _ => None,
+            | InstrumentKind::Perpetual => self.remove_perpetual_position(instrument, side).await.map(Position::Perpetual),
+            | InstrumentKind::Future => self.remove_future_position(instrument, side).await.map(Position::Future),
+            | InstrumentKind::CryptoLeveragedToken => self.remove_leveraged_token_position(instrument, side).await.map(Position::LeveragedToken),
+            | InstrumentKind::CryptoOption => self.remove_option_position(instrument, side).await.map(Position::Option),
+            | _ => None,
         }
     }
 
-
-    pub async fn remove_perpetual_position(
-        &self,
-        instrument: Instrument,
-        side: Side,
-    ) -> Option<PerpetualPosition> {
+    pub async fn remove_perpetual_position(&self, instrument: Instrument, side: Side) -> Option<PerpetualPosition>
+    {
         match side {
-            Side::Buy => {
+            | Side::Buy => {
                 let mut long_positions = self.positions.perpetual_pos_long.lock().await;
                 long_positions.remove(&instrument)
             }
-            Side::Sell => {
+            | Side::Sell => {
                 let mut short_positions = self.positions.perpetual_pos_short.lock().await;
                 short_positions.remove(&instrument)
             }
         }
     }
 
-    pub async fn remove_future_position(
-        &self,
-        instrument: Instrument,
-        side: Side,
-    ) -> Option<FuturePosition> {
+    pub async fn remove_future_position(&self, instrument: Instrument, side: Side) -> Option<FuturePosition>
+    {
         match side {
-            Side::Buy => {
+            | Side::Buy => {
                 let mut long_positions = self.positions.futures_pos_long.lock().await;
                 long_positions.remove(&instrument)
             }
-            Side::Sell => {
+            | Side::Sell => {
                 let mut short_positions = self.positions.futures_pos_short.lock().await;
                 short_positions.remove(&instrument)
             }
         }
     }
 
-
-    pub async fn remove_leveraged_token_position(
-        &self,
-        instrument: Instrument,
-        side: Side,
-    ) -> Option<LeveragedTokenPosition> {
+    pub async fn remove_leveraged_token_position(&self, instrument: Instrument, side: Side) -> Option<LeveragedTokenPosition>
+    {
         match side {
-            Side::Buy => {
+            | Side::Buy => {
                 let mut long_positions = self.positions.margin_pos_long.lock().await;
                 long_positions.remove(&instrument)
             }
-            Side::Sell => {
+            | Side::Sell => {
                 let mut short_positions = self.positions.margin_pos_short.lock().await;
                 short_positions.remove(&instrument)
             }
         }
     }
 
-    pub async fn remove_option_position(
-        &self,
-        instrument: Instrument,
-        side: Side,
-    ) -> Option<OptionPosition> {
+    pub async fn remove_option_position(&self, instrument: Instrument, side: Side) -> Option<OptionPosition>
+    {
         match side {
-            Side::Buy => {
+            | Side::Buy => {
                 let mut long_call_positions = self.positions.option_pos_long_call.lock().await;
                 let mut long_put_positions = self.positions.option_pos_long_put.lock().await;
 
                 long_call_positions.remove(&instrument).or_else(|| long_put_positions.remove(&instrument))
             }
-            Side::Sell => {
+            | Side::Sell => {
                 let mut short_call_positions = self.positions.option_pos_short_call.lock().await;
                 let mut short_put_positions = self.positions.option_pos_short_put.lock().await;
 
@@ -1451,8 +1426,28 @@ impl Account
             }
         }
     }
+    pub async fn exit_position_and_dump(
+        &self,
+        meta: &PositionMeta,
+        side: Side,
+    ) -> Result<(), ExchangeError> {
+        // Convert `PositionMeta` into `PositionExit`
+        let exited = PositionExit::from_position_meta(meta);
 
+        // Insert into the appropriate exited positions collection
+        match (meta.instrument.kind, side) {
+            (InstrumentKind::Perpetual, Side::Buy) => {
+                self.exited_positions.insert_perpetual_pos_long(exited).await;
+            }
+            (InstrumentKind::Perpetual, Side::Sell) => {
+                self.exited_positions.insert_perpetual_pos_short(exited).await;
+            }
+            // You can add handling for other position types here
+            _ => return Err(ExchangeError::UnsupportedInstrumentKind),
+        }
 
+        Ok(())
+    }
     /// [PART 4] - 余额管理
 
     pub async fn get_balances(&self) -> Vec<TokenBalance>

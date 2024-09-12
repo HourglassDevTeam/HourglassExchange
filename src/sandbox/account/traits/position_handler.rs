@@ -49,9 +49,7 @@ pub trait PositionHandler
 
     async fn update_position_from_client_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>;
 
-
-    // /// 移除在 [`PositionId`] 位置的 [`Position`]。
-    // fn remove_position(&mut self, position_id: &PositionId) -> Result<Option<Position>, ExchangeError>;
+    async fn remove_position(&self, instrument: Instrument, side: Side) -> Option<Position>;
 
     // /// 将一个已退出的 [`Position`] 附加到投资组合的已退出持仓列表中。
     // fn set_exited_position(&mut self, session_id: Uuid, position: Position) -> Result<(), ExchangeError>;
