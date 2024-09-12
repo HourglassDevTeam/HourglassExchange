@@ -136,6 +136,8 @@ pub struct AccountConfigInitiator
     commission_level: Option<CommissionLevel>,
     fund_fee_rate: Option<f64>,
     max_price_deviation: Option<f64>,
+    lazy_account_positions:  Option<bool>,
+
 }
 impl Default for AccountConfigInitiator
 {
@@ -153,7 +155,9 @@ impl AccountConfigInitiator
                position_mode: None,
                commission_level: None,
                fund_fee_rate: None,
-               max_price_deviation: None }
+               max_price_deviation: None,
+               lazy_account_positions: None,
+        }
     }
 
     pub fn margin_mode(mut self, margin_mode: MarginMode) -> Self
@@ -174,6 +178,11 @@ impl AccountConfigInitiator
         self
     }
 
+    pub fn lazy_account_positions(mut self, lazy:bool) -> Self{
+        self.lazy_account_positions = Some(lazy);
+        self
+    }
+
     pub fn initiate(self) -> Result<AccountConfig, &'static str>
     {
         Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
@@ -185,6 +194,6 @@ impl AccountConfigInitiator
                            fees_book: Default::default(),
                            execution_mode: SandboxMode::Backtest,
                            max_price_deviation: self.max_price_deviation.ok_or("max price deviation is required")?,
-                           lazy_account_positions: false })
+                           lazy_account_positions: self.lazy_account_positions.ok_or("lazy_account_positions switch is required")? })
     }
 }
