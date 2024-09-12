@@ -86,12 +86,7 @@ impl ClickHouseClient
     pub fn construct_table_name(&self, exchange: &str, instrument: &str, channel: &str, date: &str, base: &str, quote: &str) -> String
     {
         match exchange {
-            | "binance" => format!("{}_{}_{}_{}_{}",
-                                   exchange,
-                                   instrument,
-                                   channel,
-                                   date.replace("-", "_"),
-                                   base.to_uppercase() + &*quote.to_uppercase()),
+            | "binance" => format!("{}_{}_{}_{}_{}", exchange, instrument, channel, date.replace("-", "_"), base.to_uppercase() + &*quote.to_uppercase()),
             | "okex" => format!("{}_{}_{}_{}_{}_{}_{}",
                                 exchange,
                                 instrument,
@@ -132,8 +127,7 @@ impl ClickHouseClient
     pub async fn get_union_table_names(&self, database: &str) -> Vec<String>
     {
         let table_names_query = format!("SHOW TABLES FROM {database} LIKE '%union%'",);
-        println!("[UniLinkEx] : Trying to retrieve table names within the database that contain 'union': {:?}",
-                 table_names_query);
+        println!("[UniLinkEx] : Trying to retrieve table names within the database that contain 'union': {:?}", table_names_query);
         self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
                                                                                           eprintln!("[UniLinkEx] : Error loading table names: {:?}", e);
 
@@ -243,8 +237,7 @@ impl ClickHouseClient
     {
         let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
         let database = self.construct_database_name(exchange, instrument, "trades");
-        let query = format!("SELECT exchange, symbol, side, price, timestamp, amount FROM {}.{} ORDER BY timestamp",
-                            database, table_name);
+        let query = format!("SELECT exchange, symbol, side, price, timestamp, amount FROM {}.{} ORDER BY timestamp", database, table_name);
         println!("[UniLinkEx] : Executing query: {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<MarketTrade>().await?;
         Ok(trade_datas)
@@ -332,11 +325,7 @@ impl ClickHouseClient
             }
 
             let progress = (processed_days as f64 / total_days as f64) * 100.0;
-            println!("Date: {} - Union tables processed: {}/{}, Total progress: {:.2}%",
-                     date_str,
-                     processed_tables,
-                     table_names.len(),
-                     progress);
+            println!("Date: {} - Union tables processed: {}/{}, Total progress: {:.2}%", date_str, processed_tables, table_names.len(), progress);
 
             start_date += chrono::Duration::days(1);
         }
@@ -352,10 +341,9 @@ impl ClickHouseClient
         let total_tables = additional_table_names.len();
 
         additional_table_names.par_iter().enumerate().for_each(|(i, table_name)| {
-                                                         let select_query =
-                                                             ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount") // Select required fields
-                                                                                          .from(database, table_name) // Format the table name with database
-                                                                                          .build(); // Build the individual query
+                                                         let select_query = ClickHouseQueryBuilder::new().select("symbol, side, price, timestamp, amount") // Select required fields
+                                                                                                         .from(database, table_name) // Format the table name with database
+                                                                                                         .build(); // Build the individual query
 
                                                          let mut queries_lock = queries.lock().unwrap();
                                                          queries_lock.push(select_query);

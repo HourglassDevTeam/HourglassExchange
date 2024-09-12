@@ -63,8 +63,7 @@ impl CommissionRatesInitiator
 {
     pub fn new() -> Self
     {
-        Self { maker_fees: None,
-               taker_fees: None }
+        Self { maker_fees: None, taker_fees: None }
     }
 
     pub fn maker(mut self, rate: f64) -> Self

@@ -13,19 +13,17 @@
 /// use unilink_execution::{
 ///     common::{
 ///         instrument::{kind::InstrumentKind, Instrument},
-///         order::{Order},
+///         order::{order_instructions::OrderInstruction, Order},
 ///         Side,
 ///     },
 ///     network::event::NetworkEvent,
 ///     Exchange,
 /// };
 /// use uuid::Uuid;
-/// use unilink_execution::common::order::order_instructions::OrderInstruction;
 ///
-///
-/// use unilink_execution::common::order::states::request_open::RequestOpen;///
-///
+/// ///
 /// use unilink_execution::common::order::identification::client_order_id::ClientOrderId;
+/// use unilink_execution::common::order::states::request_open::RequestOpen;
 ///
 /// fn create_open_orders_event() -> NetworkEvent
 /// {
@@ -33,11 +31,11 @@
 ///     let event_type = "OpenOrders";
 ///
 ///     // 2. 构建 payload
-///     let orders = vec![Order { instruction: OrderInstruction::Limit,                                       // 订单类型，例如限价单
+///     let orders = vec![Order { instruction: OrderInstruction::Limit,                                  // 订单类型，例如限价单
 ///                               exchange: Exchange::Binance,                                           // 交易所名称
 ///                               instrument: Instrument::new("BTC", "USDT", InstrumentKind::Perpetual), // 交易对
 ///                               timestamp: chrono::Utc::now().timestamp_millis(),                      // 客户端下单时间戳
-///                               cid:  Some(ClientOrderId("OJBK".to_string())),     // 客户端订单 ID
+///                               cid: Some(ClientOrderId("OJBK".to_string())),                          // 客户端订单 ID
 ///                               side: Side::Buy,                                                       // 买卖方向
 ///                               state: RequestOpen { reduce_only: false, // 非减仓订单
 ///                                                    price: 50000.0,     // 下单价格
@@ -55,8 +53,7 @@
 ///                    timestamp: chrono::Utc::now().timestamp(),
 ///                    source,
 ///                    destination,
-///                    event_id: uuid::Uuid::new_v4().to_string()
-///                    /* 其他字段可以根据需要添加，例如 `version`, `correlation_id`, `priority`, `retry_count` 等 */ }
+///                    event_id: uuid::Uuid::new_v4().to_string() /* 其他字段可以根据需要添加，例如 `version`, `correlation_id`, `priority`, `retry_count` 等 */ }
 /// }
 /// ```
 ///

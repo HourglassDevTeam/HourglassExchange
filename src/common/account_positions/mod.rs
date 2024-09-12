@@ -224,12 +224,7 @@ impl AccountPositions
     }
 
     /// TODO check init logic
-    pub async fn build_new_perpetual_position(&self,
-                                              config: &AccountConfig,
-                                              trade: &ClientTrade,
-                                              exchange_ts: i64,
-                                              mode: PositionMarginMode)
-                                              -> Result<PerpetualPosition, ExchangeError>
+    pub async fn build_new_perpetual_position(&self, config: &AccountConfig, trade: &ClientTrade, exchange_ts: i64, mode: PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
     {
         let position_mode = config.global_position_direction_mode.clone();
         // 计算初始保证金
@@ -267,8 +262,7 @@ impl AccountPositions
         };
         let pos_config = PerpetualPositionConfig { pos_margin_mode: mode,
                                                    leverage: config.global_leverage_rate,
-            position_direction_mode: position_mode
-        };
+                                                   position_direction_mode: position_mode };
 
         let new_position = PerpetualPositionBuilder::new().meta(position_meta)
                                                           .pos_config(pos_config)
@@ -350,58 +344,6 @@ impl AccountPositions
             },
             | Position::Option(_p) => {
                 todo!()
-            }
-        }
-    }
-
-    /// 检查账户中是否持有指定交易工具的多头仓位
-    pub(crate) async fn has_long_position(&self, instrument: &Instrument) -> bool
-    {
-        match instrument.kind {
-            | InstrumentKind::Spot => todo!("[UniLinkEx] : The system does not support creation or processing of positions of Spot as of yet."),
-            | InstrumentKind::CommodityOption => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityOption as of yet."),
-            | InstrumentKind::CommodityFuture => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
-            | InstrumentKind::Perpetual => {
-                let positions = self.perpetual_pos_long.lock().await;
-                positions.iter().any(|(key, _)| key == instrument)
-            }
-            | InstrumentKind::Future => {
-                let positions = self.futures_pos_long.lock().await;
-                positions.iter().any(|(key, _)| key == instrument)
-            }
-            | InstrumentKind::CryptoOption => {
-                let positions = self.option_pos_long_call.lock().await;
-                positions.iter().any(|(key, _)| key == instrument)
-            }
-            | InstrumentKind::CryptoLeveragedToken => {
-                let positions = self.margin_pos_long.lock().await;
-                positions.iter().any(|(key, _)| key == instrument)
-            }
-        }
-    }
-
-    /// 检查账户中是否持有指定交易工具的空头仓位
-    pub(crate) async fn has_short_position(&self, instrument: &Instrument) -> bool
-    {
-        match instrument.kind {
-            | InstrumentKind::Spot => todo!("[UniLinkEx] : The system does not support creation or processing of positions of Spot as of yet."),
-            | InstrumentKind::CommodityOption => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityOption as of yet."),
-            | InstrumentKind::CommodityFuture => todo!("[UniLinkEx] : The system does not support creation or processing of positions of CommodityFuture as of yet."),
-            | InstrumentKind::Perpetual => {
-                let positions = self.perpetual_pos_short.lock().await;
-                positions.iter().any(|(key, _)| key == instrument)
-            }
-            | InstrumentKind::Future => {
-                let positions = self.futures_pos_short.lock().await;
-                positions.iter().any(|(key, _)| key == instrument)
-            }
-            | InstrumentKind::CryptoOption => {
-                let positions = self.option_pos_short_put.lock().await;
-                positions.iter().any(|(key, _)| key == instrument)
-            }
-            | InstrumentKind::CryptoLeveragedToken => {
-                let positions = self.margin_pos_short.lock().await;
-                positions.iter().any(|(key, _)| key == instrument)
             }
         }
     }

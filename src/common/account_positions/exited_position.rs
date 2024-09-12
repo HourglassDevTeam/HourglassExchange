@@ -22,9 +22,9 @@ pub struct PositionExit
     pub exit_fees: f64,          // 退出仓位时产生的所有费用类型及其关联的费用。
     pub exit_fees_total: f64,
     pub exit_avg_price_gross: f64, // 不包含 exit_fees_total 的退出平均价格。
-    pub exit_value_gross: f64, // abs(数量) * exit_avg_price_gross。
-    pub realised_pnl: f64,     // 退出后实现的盈亏。
-    pub liquidation_price: f64, // 退出平仓时的价格
+    pub exit_value_gross: f64,     // abs(数量) * exit_avg_price_gross。
+    pub realised_pnl: f64,         // 退出后实现的盈亏。
+    pub liquidation_price: f64,    // 退出平仓时的价格
 }
 
 #[allow(dead_code)]
@@ -53,14 +53,13 @@ impl PositionExit
                        instrument: position_meta.instrument.clone(),                                    // 从 PositionMeta 获取静态数据
                        side: position_meta.side,                                                        // 从 PositionMeta 获取静态数据
                        position_id: position_meta.position_id.clone(),                                  // 获取仓位的唯一标识符
-                       exit_ts:position_meta.update_ts,                                                                       // 应该使用推出时候的交易时间辍
+                       exit_ts: position_meta.update_ts,                                                // 应该使用推出时候的交易时间辍
                        exit_balance: Balance::new(exit_quantity, exit_value_gross, Some(realised_pnl)), // 计算平仓时的余额信息 NOTE 不前不确定。
                        exit_fees: position_meta.current_fees_total,                                     // 使用 PositionMeta 中累计的费用
                        exit_fees_total: position_meta.current_fees_total,                               // 平仓时的总费用
-                       exit_avg_price_gross: position_meta.current_avg_price_gross,                                                // 平仓时的价格
+                       exit_avg_price_gross: position_meta.current_avg_price_gross,                     // 平仓时的价格
                        exit_value_gross,                                                                // 平仓时的总价值
                        realised_pnl,
-                       liquidation_price: position_meta.current_symbol_price,
-        }
+                       liquidation_price: position_meta.current_symbol_price }
     }
 }

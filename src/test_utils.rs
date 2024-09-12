@@ -123,8 +123,7 @@ pub async fn create_test_account() -> Account
     balances.insert(Token::from("ETH"), Balance::new(10.0, 10.0, Some(16305.0)));
     balances.insert(Token::from("USDT"), Balance::new(10_000.0, 10_000.0, Some(1.0)));
 
-    let commission_rates = CommissionRates { maker_fees: 0.001,
-                                             taker_fees: 0.002 };
+    let commission_rates = CommissionRates { maker_fees: 0.001, taker_fees: 0.002 };
 
     let mut account_config = AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
                                              global_position_direction_mode: PositionDirectionMode::Net,
@@ -160,12 +159,11 @@ pub async fn create_test_account() -> Account
               balances,
               positions,
               exited_positions: closed_positions,
-              orders: Arc::new(RwLock::new(AccountOrders::new(machine_id,
-                                                              vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))],
-                                                              AccountLatency { fluctuation_mode: FluctuationMode::Sine,
-                                                                               maximum: 300,
-                                                                               minimum: 0,
-                                                                               current_value: 0 }).await)),
+              orders: Arc::new(RwLock::new(AccountOrders::new(machine_id, vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))], AccountLatency { fluctuation_mode:
+                                                                                                                                                                   FluctuationMode::Sine,
+                                                                                                                                                               maximum: 300,
+                                                                                                                                                               minimum: 0,
+                                                                                                                                                               current_value: 0 }).await)),
               single_level_order_book: Arc::new(Mutex::new(single_level_order_books)) }
 }
 
@@ -217,5 +215,6 @@ pub fn create_test_future_position_with_side(instrument: Instrument, side: Side)
                                                         position_direction_mode: PositionDirectionMode::LongShort },
                      liquidation_price: 0.0,
 
+                     isolated_margin: None,
                      funding_fee: 0.0 }
 }

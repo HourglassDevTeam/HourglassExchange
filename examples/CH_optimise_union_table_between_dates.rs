@@ -100,8 +100,7 @@ async fn main()
         }
 
         // 汇报最终结果
-        let final_message = format!("[UniLinkEx] : Clickhouse Database Optimization is complete for {} tables across {} days.",
-                                    total_tables, total_days);
+        let final_message = format!("[UniLinkEx] : Clickhouse Database Optimization is complete for {} tables across {} days.", total_tables, total_days);
 
         let message = MessageText::new(final_message.as_str());
         bot.send_message(message).await.unwrap();
@@ -142,8 +141,7 @@ async fn main()
         }
 
         // 汇报最终结果
-        let final_message = format!("[UniLinkEx] : Clickhouse Database Optimization is complete for {} tables across {} days.",
-                                    total_tables, total_days);
+        let final_message = format!("[UniLinkEx] : Clickhouse Database Optimization is complete for {} tables across {} days.", total_tables, total_days);
 
         println!("{}", final_message);
     }

@@ -10,7 +10,8 @@ pub struct FuturePosition
     pub meta: PositionMeta,
     pub pos_config: FuturePositionConfig, // 静态数据
     pub liquidation_price: f64,           // 实时更新
-    pub funding_fee: f64,                 // 实时更新
+    pub isolated_margin: Option<f64>,
+    pub funding_fee: f64, // 实时更新
 }
 
 impl FuturePosition
@@ -115,6 +116,7 @@ impl FuturePositionBuilder
         Some(FuturePosition { meta: self.meta?,
                               pos_config: self.pos_config?,
                               liquidation_price: self.liquidation_price?,
+                              isolated_margin: None,
                               funding_fee: self.funding_fee? })
     }
 }
@@ -155,6 +157,7 @@ mod tests
                                                                                leverage: 1.0,
                                                                                position_direction_mode: PositionDirectionMode::LongShort },
                                             liquidation_price: 100.0,
+                                            isolated_margin: None,
                                             funding_fee: 10.0 };
 
         position.update_liquidation_price(150.0);

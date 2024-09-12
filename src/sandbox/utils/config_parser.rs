@@ -111,12 +111,8 @@ mod tests
         assert_eq!(config.global_position_direction_mode, PositionDirectionMode::Net);
         assert_eq!(config.commission_level, CommissionLevel::Lv2);
         assert_eq!(config.global_leverage_rate, 1.0);
-        assert_eq!(config.fees_book.get(&InstrumentKind::Spot).cloned(),
-                   Some(CommissionRates { maker_fees: 0.001,
-                                          taker_fees: 0.002 }));
-        assert_eq!(config.fees_book.get(&InstrumentKind::Perpetual).cloned(),
-                   Some(CommissionRates { maker_fees: 0.0005,
-                                          taker_fees: 0.001 }));
+        assert_eq!(config.fees_book.get(&InstrumentKind::Spot).cloned(), Some(CommissionRates { maker_fees: 0.001, taker_fees: 0.002 }));
+        assert_eq!(config.fees_book.get(&InstrumentKind::Perpetual).cloned(), Some(CommissionRates { maker_fees: 0.0005, taker_fees: 0.001 }));
     }
 
     /// 测试配置文件缺失的情况
@@ -132,9 +128,7 @@ mod tests
 
         // 调用函数并检查结果
         let config_result = read_config_file();
-        assert!(matches!(config_result, Err(ExchangeError::ConfigMissing(_))),
-                "Expected ConfigMissing error, got {:?}",
-                config_result);
+        assert!(matches!(config_result, Err(ExchangeError::ConfigMissing(_))), "Expected ConfigMissing error, got {:?}", config_result);
 
         // 将当前目录切换回原来的目录
         std::env::set_current_dir(original_dir).unwrap();

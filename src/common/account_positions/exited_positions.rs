@@ -1,5 +1,4 @@
-use crate::common::account_positions::exited_position::PositionExit;
-use crate::common::account_positions::position_id::PositionId;
+use crate::common::account_positions::{exited_position::PositionExit, position_id::PositionId};
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 use tokio::sync::RwLock;

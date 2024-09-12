@@ -120,30 +120,21 @@ mod tests
     #[test]
     fn test_where_query()
     {
-        let query = ClickHouseQueryBuilder::new().select("*")
-                                                 .from("default_db", "users")
-                                                 .where_clause("identification = 1")
-                                                 .build();
+        let query = ClickHouseQueryBuilder::new().select("*").from("default_db", "users").where_clause("identification = 1").build();
         assert_eq!(query, "SELECT * FROM default_db.users WHERE identification = 1");
     }
 
     #[test]
     fn test_like_query()
     {
-        let query = ClickHouseQueryBuilder::new().select("*")
-                                                 .from("default_db", "users")
-                                                 .like_clause("name", "%example%")
-                                                 .build();
+        let query = ClickHouseQueryBuilder::new().select("*").from("default_db", "users").like_clause("name", "%example%").build();
         assert_eq!(query, "SELECT * FROM default_db.users WHERE name LIKE '%example%'");
     }
 
     #[test]
     fn test_not_like_query()
     {
-        let query = ClickHouseQueryBuilder::new().select("*")
-                                                 .from("default_db", "products")
-                                                 .not_like_clause("description", "%old%")
-                                                 .build();
+        let query = ClickHouseQueryBuilder::new().select("*").from("default_db", "products").not_like_clause("description", "%old%").build();
         assert_eq!(query, "SELECT * FROM default_db.products WHERE description NOT LIKE '%old%'");
     }
 
@@ -170,7 +161,6 @@ mod tests
                                                  .like_clause("username", "%user%")
                                                  .not_like_clause("password", "%weak%")
                                                  .build();
-        assert_eq!(query,
-                   "SELECT * FROM default_db.users WHERE identification = 1 AND username LIKE '%user%' AND password NOT LIKE '%weak%'");
+        assert_eq!(query, "SELECT * FROM default_db.users WHERE identification = 1 AND username LIKE '%user%' AND password NOT LIKE '%weak%'");
     }
 }

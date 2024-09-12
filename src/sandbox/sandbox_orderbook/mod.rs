@@ -152,12 +152,7 @@ impl SandBoxOrderBook
                 // 如果买单价格大于或等于卖单价格，则可以成交
                 if buy_order.state.price >= sell_order.state.price {
                     // 计算成交量，取买单和卖单的最小剩余数量
-                    let executed_quantity = if buy_order.state.size < sell_order.state.size {
-                        buy_order.state.size
-                    }
-                    else {
-                        sell_order.state.size
-                    };
+                    let executed_quantity = if buy_order.state.size < sell_order.state.size { buy_order.state.size } else { sell_order.state.size };
 
                     // 更新订单的剩余数量
                     buy_order.state.size -= executed_quantity;

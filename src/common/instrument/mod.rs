@@ -70,9 +70,7 @@ impl InstrumentInitiator
     // 初始化构建器，所有字段均为None。
     pub fn new() -> Self
     {
-        InstrumentInitiator { base: None,
-                              quote: None,
-                              kind: None }
+        InstrumentInitiator { base: None, quote: None, kind: None }
     }
 
     // 设置基础货币。

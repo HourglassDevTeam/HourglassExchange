@@ -49,8 +49,8 @@ impl From<ConfigurationRequest> for PerpetualPositionConfig
 {
     fn from(config_request: ConfigurationRequest) -> Self
     {
-        PerpetualPositionConfig { pos_margin_mode: config_request.position_margin_mode,  // 提供默认值或根据需求处理 None
-                                  leverage: config_request.leverage_rate,                // 提供默认杠杆值，或根据需求处理 None
+        PerpetualPositionConfig { pos_margin_mode: config_request.position_margin_mode,            // 提供默认值或根据需求处理 None
+                                  leverage: config_request.leverage_rate,                          // 提供默认杠杆值，或根据需求处理 None
                                   position_direction_mode: config_request.position_direction_mode  /* 提供默认值或根据需求处理 None */ }
     }
 }
@@ -60,6 +60,7 @@ pub struct PerpetualPositionBuilder
 {
     meta: Option<PositionMeta>,
     pos_config: Option<PerpetualPositionConfig>,
+    isolated_margin: Option<f64>,
     liquidation_price: Option<f64>,
 }
 
@@ -78,6 +79,7 @@ impl PerpetualPositionBuilder
     {
         Self { meta: None,
                pos_config: None,
+               isolated_margin: None,
                liquidation_price: None }
     }
 

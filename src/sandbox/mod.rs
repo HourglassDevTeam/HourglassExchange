@@ -145,8 +145,7 @@ impl ExchangeInitiator
 
     pub fn event_sandbox_rx(self, value: UnboundedReceiver<SandBoxClientEvent>) -> Self
     {
-        Self { event_sandbox_rx: Some(value),
-               ..self }
+        Self { event_sandbox_rx: Some(value), ..self }
     }
 
     pub fn account(self, value: Arc<Mutex<Account>>) -> Self
