@@ -172,16 +172,16 @@ impl TradeHandler for SandboxAccount
     /// * 如果传入的 `InstrumentKind` 不受支持，函数会记录一个警告并返回 `None`。
     async fn fees_percent(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExchangeError>
     {
-        // 直接访问 account 的 config 字段
-        let commission_rates = self.config
-                                   .fees_book
-                                   .get(instrument_kind)
-                                   .cloned()
-                                   .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for InstrumentKind: {:?}", instrument_kind)))?;
-
+        // Access the account's config field
         match role {
-            | OrderRole::Maker => Ok(commission_rates.maker_fees),
-            | OrderRole::Taker => Ok(commission_rates.taker_fees),
+            | OrderRole::Maker => {
+                // Fetch the maker fee rate using AccountConfig's method
+                self.config.get_maker_fee_rate(instrument_kind)
+            }
+            | OrderRole::Taker => {
+                // Fetch the taker fee rate using AccountConfig's method
+                self.config.get_taker_fee_rate(instrument_kind)
+            }
         }
     }
 
