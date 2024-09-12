@@ -37,7 +37,7 @@ pub trait PositionProcessor
 }
 
 /// 处理投资组合当前余额在持久层的读写操作。
-pub trait BalanceHandler
+pub trait BalanceProcessor
 {
     /// 使用 session_id 更新或插入投资组合 [`Balance`]。
     fn set_balance(&mut self, session_id: Uuid, balance: Balance) -> Result<(), VaultError>;
