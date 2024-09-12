@@ -9,7 +9,7 @@ use crate::{
     },
     error::ExchangeError,
     sandbox::{
-        account::{account_config::SandboxMode, handlers::balance_handler::BalanceHandler, Account},
+        account::{account_config::SandboxMode, handlers::balance_handler::BalanceHandler, SandboxAccount},
         clickhouse_api::datatype::{clickhouse_trade_data::MarketTrade, single_level_order_book::SingleLevelOrderBook},
     },
     Exchange,
@@ -36,7 +36,7 @@ pub trait TradeHandler
 }
 
 #[async_trait]
-impl TradeHandler for Account
+impl TradeHandler for SandboxAccount
 {
     /// 创建或更新一个单级别的订单簿（SingleLevelOrderBook），基于传入的市场交易（MarketTrade）。
     ///

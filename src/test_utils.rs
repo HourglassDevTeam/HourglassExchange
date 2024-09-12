@@ -29,7 +29,7 @@ use crate::{
             account_config::{AccountConfig, CommissionLevel, CommissionRates, MarginMode, SandboxMode},
             account_latency::{AccountLatency, FluctuationMode},
             account_orders::AccountOrders,
-            Account,
+            SandboxAccount,
         },
         clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook,
     },
@@ -116,7 +116,7 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen>
                                  reduce_only: false } }
 }
 
-pub async fn create_test_account() -> Account
+pub async fn create_test_account() -> SandboxAccount
 {
     let leverage_rate = 1.0;
     let balances = DashMap::new();
@@ -151,7 +151,7 @@ pub async fn create_test_account() -> Account
                                                            latest_price: 0.0 });
 
     // 创建 Account 实例，并将其包裹在 Arc<Account> 中
-    Account { current_session: Uuid::new_v4(),
+    SandboxAccount { current_session: Uuid::new_v4(),
               machine_id,
               exchange_timestamp: AtomicI64::new(1234567),
               account_event_tx: tokio::sync::mpsc::unbounded_channel().0,

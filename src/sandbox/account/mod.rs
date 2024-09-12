@@ -49,7 +49,7 @@ pub mod account_orders;
 pub mod handlers;
 
 #[derive(Debug)]
-pub struct Account
+pub struct SandboxAccount
 // where Vault: PositionHandler + BalanceHandler + StatisticHandler<Statistic>,
 //       Statistic: Initialiser + PositionSummariser,
 {
@@ -66,11 +66,11 @@ pub struct Account
 }
 
 // 手动实现 Clone trait
-impl Clone for Account
+impl Clone for SandboxAccount
 {
     fn clone(&self) -> Self
     {
-        Account { current_session: Uuid::new_v4(),
+        SandboxAccount { current_session: Uuid::new_v4(),
                   machine_id: self.machine_id,
                   exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
                   account_event_tx: self.account_event_tx.clone(),
@@ -143,9 +143,9 @@ impl AccountInitiator
         self
     }
 
-    pub fn build(self) -> Result<Account, String>
+    pub fn build(self) -> Result<SandboxAccount, String>
     {
-        Ok(Account { current_session: Uuid::new_v4(),
+        Ok(SandboxAccount { current_session: Uuid::new_v4(),
                      machine_id: generate_machine_id()?,
                      exchange_timestamp: 0.into(),
                      account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?,
@@ -158,7 +158,7 @@ impl AccountInitiator
     }
 }
 
-impl Account
+impl SandboxAccount
 {
     /// [PART 1] - [账户初始化与配置]
     pub fn initiate() -> AccountInitiator
@@ -493,7 +493,7 @@ impl Account
             }
         }
         // 检查订单类型是否合法
-        Account::validate_order_instruction(order.instruction)?;
+        SandboxAccount::validate_order_instruction(order.instruction)?;
 
         // 检查价格是否合法（应为正数）
         if order.state.price <= 0.0 {
@@ -743,11 +743,11 @@ mod tests
                                                  size: 1.0,
                                                  reduce_only: false } };
 
-        assert!(Account::validate_order_request_open(&order).is_ok());
+        assert!(SandboxAccount::validate_order_request_open(&order).is_ok());
 
         let invalid_order = Order { cid: Some(ClientOrderId("ars3214321431234rafsftdarstdars".into())), // Invalid ClientOrderId
                                     ..order.clone() };
-        assert!(Account::validate_order_request_open(&invalid_order).is_err());
+        assert!(SandboxAccount::validate_order_request_open(&invalid_order).is_err());
     }
 
     #[tokio::test]
@@ -763,11 +763,11 @@ mod tests
                                    side: Side::Buy,
                                    state: RequestCancel { id: Some(OrderId::new(17213412341233948, generate_machine_id().unwrap(), 23)) } };
 
-        assert!(Account::validate_order_request_cancel(&cancel_order).is_ok());
+        assert!(SandboxAccount::validate_order_request_cancel(&cancel_order).is_ok());
 
         let invalid_cancel_order = Order { state: RequestCancel { id: Some(OrderId(0)) }, // Invalid OrderId
                                            ..cancel_order.clone() };
-        assert!(Account::validate_order_request_cancel(&invalid_cancel_order).is_err());
+        assert!(SandboxAccount::validate_order_request_cancel(&invalid_cancel_order).is_err());
     }
 
     #[tokio::test]

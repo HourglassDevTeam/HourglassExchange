@@ -23,7 +23,7 @@ use crate::{
         trade::ClientTrade,
         Side,
     },
-    sandbox::account::{respond, Account},
+    sandbox::account::{respond, SandboxAccount},
 };
 use tokio::sync::oneshot::Sender;
 
@@ -74,7 +74,7 @@ pub trait PositionHandler
 }
 
 #[async_trait]
-impl PositionHandler for Account
+impl PositionHandler for SandboxAccount
 {
     /// 预先设置控制仓位的字段。
     async fn preconfigure_position(&mut self, config_request: ConfigurationRequest) -> Result<PositionConfig, ExchangeError>

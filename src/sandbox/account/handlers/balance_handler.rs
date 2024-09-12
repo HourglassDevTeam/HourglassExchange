@@ -12,7 +12,7 @@ use crate::{
         Side,
     },
     error::ExchangeError,
-    sandbox::account::{respond, Account, DashMapRefMut},
+    sandbox::account::{respond, SandboxAccount, DashMapRefMut},
     Exchange,
 };
 use async_trait::async_trait;
@@ -46,7 +46,7 @@ pub trait BalanceHandler
 }
 
 #[async_trait]
-impl BalanceHandler for Account
+impl BalanceHandler for SandboxAccount
 {
     async fn get_balances(&self) -> Vec<TokenBalance>
     {

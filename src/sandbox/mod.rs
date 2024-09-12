@@ -6,7 +6,7 @@ use crate::{
         sandbox_client::SandBoxClientEvent,
     },
 };
-use account::Account;
+use account::SandboxAccount;
 use mpsc::UnboundedReceiver;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
@@ -26,14 +26,14 @@ pub mod ws_trade;
 // }
 
 pub struct SandBoxExchange
-    where Account: PositionHandler + TradeHandler + BalanceHandler
+    where SandboxAccount: PositionHandler + TradeHandler + BalanceHandler
 {
     /// data_source could be added here as a daughter struct with variants.
     // #[allow(dead_code)]
     // pub data_source: TradeEventSource,
     pub event_sandbox_rx: UnboundedReceiver<SandBoxClientEvent>,
     // pub market_event_tx: UnboundedReceiver<MarketEvent<MarketTrade>>,
-    pub account: Arc<Mutex<Account>>,
+    pub account: Arc<Mutex<SandboxAccount>>,
 }
 
 impl SandBoxExchange
@@ -133,7 +133,7 @@ impl Default for ExchangeInitiator
 pub struct ExchangeInitiator
 {
     pub(crate) event_sandbox_rx: Option<UnboundedReceiver<SandBoxClientEvent>>,
-    pub(crate) account: Option<Arc<Mutex<Account>>>,
+    pub(crate) account: Option<Arc<Mutex<SandboxAccount>>>,
     // pub(crate) market_event_tx: Option<UnboundedReceiver<MarketEvent<MarketTrade>>>,
     // pub(crate) data_source: Option<TradeEventSource>,
 }
@@ -152,7 +152,7 @@ impl ExchangeInitiator
         Self { event_sandbox_rx: Some(value), ..self }
     }
 
-    pub fn account(self, value: Arc<Mutex<Account>>) -> Self
+    pub fn account(self, value: Arc<Mutex<SandboxAccount>>) -> Self
     {
         Self { account: Some(value), ..self }
     }
