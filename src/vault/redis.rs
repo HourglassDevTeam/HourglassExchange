@@ -15,7 +15,7 @@
 /// 这意味着即使 `Statistic` 在运行时没有被直接使用，Rust 的类型系统仍然会确保在编译时检查这个泛型参数的类型安全性。
 use crate::error::ExchangeError;
 use crate::{error::ExchangeError::RedisInitialisationError, sandbox::account::account_config::SandboxMode, vault::summariser::PositionSummariser};
-use redis::{Connection};
+use redis::Connection;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::marker::PhantomData;
 // use uuid::Uuid;
@@ -136,7 +136,6 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
     }
 }
 
-//
 // impl<Statistic> PositionProcessor for RedisVault<Statistic>
 // where
 //     Statistic: PositionSummariser + Serialize + DeserializeOwned,

@@ -72,6 +72,7 @@ mod tests
     global_leverage_rate = 100.0
     execution_mode = "Backtest"
     max_price_deviation = 0.05
+    lazy_account_positions = false
 
 
     [current_commission_rate]
@@ -111,6 +112,7 @@ mod tests
         assert_eq!(config.global_position_direction_mode, PositionDirectionMode::Net);
         assert_eq!(config.commission_level, CommissionLevel::Lv2);
         assert_eq!(config.global_leverage_rate, 1.0);
+        assert_eq!(config.lazy_account_positions, false);
         assert_eq!(config.fees_book.get(&InstrumentKind::Spot).cloned(), Some(CommissionRates { maker_fees: 0.001, taker_fees: 0.002 }));
         assert_eq!(config.fees_book.get(&InstrumentKind::Perpetual).cloned(), Some(CommissionRates { maker_fees: 0.0005, taker_fees: 0.001 }));
     }

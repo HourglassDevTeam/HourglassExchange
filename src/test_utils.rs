@@ -66,7 +66,8 @@ pub fn create_test_account_config() -> AccountConfig
                     global_leverage_rate: leverage_rate,
                     fees_book: HashMap::new(),
                     execution_mode: SandboxMode::Backtest,
-                    max_price_deviation: 0.05 }
+                    max_price_deviation: 0.05,
+                    lazy_account_positions: false }
 }
 // 帮助函数，用于创建测试用的 AccountOrders 实例
 pub async fn create_test_account_orders() -> AccountOrders
@@ -133,7 +134,8 @@ pub async fn create_test_account() -> SandboxAccount
                                              max_price_deviation: 0.05,
                                              global_leverage_rate: leverage_rate,
                                              fees_book: HashMap::new(),
-                                             execution_mode: SandboxMode::Backtest };
+                                             execution_mode: SandboxMode::Backtest,
+                                             lazy_account_positions: false };
 
     account_config.fees_book.insert(Perpetual, commission_rates);
 

@@ -184,6 +184,7 @@ impl AccountConfigInitiator
                            global_leverage_rate: Default::default(),
                            fees_book: Default::default(),
                            execution_mode: SandboxMode::Backtest,
-                           max_price_deviation: self.max_price_deviation.ok_or("max price deviation is required")? })
+                           max_price_deviation: self.max_price_deviation.ok_or("max price deviation is required")?,
+                           lazy_account_positions: false })
     }
 }
