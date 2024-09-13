@@ -1345,7 +1345,7 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_reverse_position_after_closing_long_cross()
+    async fn test_reverse_position_after_closing_long_cross_net()
     {
         let mut account = create_test_account().await;
 
@@ -1399,7 +1399,7 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_reverse_position_after_closing_long_isolated()
+    async fn test_reverse_position_after_closing_long_isolated_net()
     {
         let mut account = create_test_account().await;
 
@@ -1453,7 +1453,7 @@ mod tests
     }
 
     #[tokio::test]
-    async fn test_reverse_position_after_closing_long_longshort()
+    async fn test_reverse_position_after_closing_long_cross_longshort()
     {
         let mut account = create_test_account().await;
 
@@ -1493,7 +1493,7 @@ mod tests
                                           fees: 0.15 };
 
         let result = account.update_position_from_client_trade(reverse_trade.clone()).await;
-        assert!(result.is_err());
+        assert!(matches!(result, Err(ExchangeError::ConfigInheritanceNotAllowed)), "Unexpected error: {:?}", result);
     }
 
     #[tokio::test]
