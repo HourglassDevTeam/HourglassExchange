@@ -346,7 +346,6 @@ impl PositionHandler for SandboxAccount
 
     /// 更新 PerpetualPosition 的方法
     /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的
-
     async fn create_perpetual_position(&mut self, trade: ClientTrade) -> Result<PerpetualPosition, ExchangeError>
     {
         // 获取预存储的配置，首先获取写锁
@@ -359,6 +358,7 @@ impl PositionHandler for SandboxAccount
         let perpetual_config = pos_config_lock.get_mut(&trade.instrument)
                                               .ok_or_else(|| ExchangeError::SandBox("No pre-configuration found for the given instrument.".to_string()))?;
 
+        println!("perpetual_config is : {:#?}",perpetual_config);
         // 创建 PositionMeta 和新的 PerpetualPosition
         let meta = PositionMeta::create_from_trade(&trade);
 
@@ -444,28 +444,39 @@ impl PositionHandler for SandboxAccount
         todo!("[UniLinkEx] : Updating Leveraged Token positions is not yet implemented")
     }
 
-    /// 根据[PositionDirectionMode]分流
-    async fn update_position_from_client_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
-    {
-        // println!("[UniLinkEx] : Received a new trade: {:?}", trade);
+    async fn update_position_from_client_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+        // 使用 let 语句来创建 pos_config_lock，这样它就不会在 match 语句中被立即移动
+        let pos_config_lock = match (trade.side, trade.instrument.kind) {
+            (Side::Buy, InstrumentKind::Perpetual) => self.positions.perpetual_pos_long_config.read().await,
+            (Side::Sell, InstrumentKind::Perpetual) => self.positions.perpetual_pos_short_config.read().await,
+            _ => {
+                return Err(ExchangeError::UnsupportedInstrumentKind);
+            }
+        };
 
+        // 获取该 instrument 的配置，如果没有找到则返回错误
+        let perpetual_config = pos_config_lock.get(&trade.instrument)
+            .ok_or_else(|| ExchangeError::SandBox("No pre-configuration found for the given instrument.".to_string()))?;
+
+        // 现在我们可以安全地对 self 进行可变操作，因为 pos_config_lock 是可变的
+        // 并且 perpetual_config 已经被获取，我们可以在更大的作用域内使用它
         match trade.instrument.kind {
-            | InstrumentKind::Perpetual => {
-                match self.config.global_position_direction_mode {
-                    | PositionDirectionMode::Net => {
-                        // Net Mode 逻辑
+            InstrumentKind::Perpetual => {
+                match perpetual_config.position_direction_mode {
+                    PositionDirectionMode::Net => {
+                        drop(pos_config_lock);
                         self.update_position_net_mode(trade).await?;
                     }
-                    | PositionDirectionMode::LongShort => {
-                        // LongShort Mode 逻辑
+                    PositionDirectionMode::LongShort => {
+                        drop(pos_config_lock);
                         self.update_position_long_short_mode(trade).await?;
                     }
                 }
             }
-            | _ => {
+            _ => {
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
-        }
+        } // 这里 pos_config_lock 的生命周期结束，自动释放
 
         Ok(())
     }
@@ -545,7 +556,9 @@ impl PositionHandler for SandboxAccount
         Ok(())
     }
 
-    /// 注意 liquidation price 更新逻辑未实现.
+    /// 注意 1. liquidation price 更新逻辑未实现.
+    ///     2. 反向开仓时的设置继承和renew需要加强设计.尤其是考虑是否需要支持更改设杠杆率和模式反向开仓行为.
+    ///     3. 需要对isolated mode下的保证金更新机制进行严密测试
     async fn update_position_net_mode(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
     {
         match trade.instrument.kind {
@@ -1189,6 +1202,57 @@ mod tests
         assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
     }
 
+
+
+
+    #[tokio::test]
+    async fn test_close_short_position_partially_cross_net()
+    {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Sell,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1 };
+
+        // 插入多头仓位配置
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
+            leverage: 1.0, // 设置合理的杠杆
+            position_direction_mode: PositionDirectionMode::Net };
+        account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
+
+        // 创建一个多头仓位
+        let _ = account.create_perpetual_position(trade.clone()).await;
+        // 部分平仓
+        let closing_trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000200,
+            trade_id: ClientTradeId(6),
+            order_id: OrderId(6),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Buy,
+            price: 100.0,
+            size: 5.0,
+            fees: 0.05 };
+
+        account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
+        // // 检查仓位是否部分平仓
+        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
+        let pos = positions.get(&closing_trade.instrument).unwrap(); // 获取对应的仓位
+        assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
+    }
+
     #[tokio::test]
     async fn test_close_long_position_partially_isolated_net()
     {
@@ -1238,7 +1302,6 @@ mod tests
         let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
         assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
     }
-
 
     #[tokio::test]
     async fn test_close_long_position_completely()
@@ -1393,6 +1456,50 @@ mod tests
         let short_position = short_positions.get(&trade.instrument).unwrap();
         assert_eq!(short_position.meta.current_size, 5.0); // 剩余仓位应该是 5.0
         assert_eq!(short_position.meta.side, Side::Sell); // 检查持仓方向是否为 Sell
+    }
+
+    #[tokio::test]
+    async fn test_reverse_position_after_closing_long_longshort()
+    {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: OrderId(5),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Buy,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1 };
+
+        // 插入多头仓位配置
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig { pos_margin_mode: PositionMarginMode::Cross,
+            leverage: 1.0, // 设置合理的杠杆
+            position_direction_mode: PositionDirectionMode::LongShort };
+        account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
+        let _ = account.create_perpetual_position(trade.clone()).await;
+
+        // 反向平仓并开立新的空头仓位
+        let reverse_trade = ClientTrade { exchange: Exchange::SandBox,
+            timestamp: 1690000100,
+            trade_id: ClientTradeId(6),
+            order_id: OrderId(6),
+            cid: None,
+            instrument: Instrument { base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual },
+            side: Side::Sell,
+            price: 100.0,
+            size: 15.0, // 卖出 15.0 超过当前的多头仓位
+            fees: 0.15 };
+
+        let result = account.update_position_from_client_trade(reverse_trade.clone()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
