@@ -152,6 +152,9 @@ pub enum ExchangeError
     #[error("[UniLinkEx] : Trying to update a non-existingPosition")]
     AttemptToUpdateNonExistingPosition,
 
+    #[error("[UniLinkEx] : Trying to remove a non-existingPosition")]
+    AttemptToRemoveNonExistingPosition,
+
     #[error("[UniLinkEx] : Redis fails to write.")]
     WriteError,
 
