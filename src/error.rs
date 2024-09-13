@@ -165,5 +165,5 @@ pub enum ExchangeError
     JsonSerDeError,
 
     #[error("[UniLinkEx] : Config Inheritance Not Allowed.")]
-    ConfigInheritanceNotAllowed
+    ConfigInheritanceNotAllowed,
 }
