@@ -525,7 +525,6 @@ impl PositionHandler for SandboxAccount
         // 检查是否存在既有反向仓位
         let has_existing_short_position = self.get_position_short(&trade.instrument).await?.is_some();
 
-
         // 根据仓位方向和大小判断处理类型
         if position_side != trade.side {
             // 方向不同，可能是反向操作
