@@ -27,7 +27,6 @@ pub struct PositionMeta
 
 impl PositionMeta
 {
-    /// 根据 `ClientTrade` 更新仓位
     pub fn update_from_trade(&mut self, trade: &ClientTrade)
     {
         self.update_ts = trade.timestamp;
@@ -36,8 +35,23 @@ impl PositionMeta
         // 更新当前交易的总费用
         self.current_fees_total += trade.fees;
 
-        // 更新均价和持仓大小
-        self.update_avg_price(trade.price, trade.size);
+        // 判断交易方向是否与当前仓位方向相反
+        let is_opposite = match (self.side, trade.side) {
+            (Side::Buy, Side::Sell) | (Side::Sell, Side::Buy) => true,
+            _ => false,
+        };
+
+        // 更新持仓大小和均价
+        self.update_avg_price(trade.price, trade.size, trade.side);
+
+        // 如果交易方向相反，检查是否平仓或反向开仓
+        if is_opposite {
+            // 如果交易导致完全平仓
+            if self.current_size == 0.0 {
+                self.realised_pnl += self.unrealised_pnl; // 平仓时将未实现盈亏变为已实现盈亏
+                self.unrealised_pnl = 0.0; // 清除未实现盈亏
+            }
+        }
 
         // 更新未实现盈亏
         self.update_unrealised_pnl();
@@ -85,14 +99,28 @@ impl PositionMeta
 
 impl PositionMeta
 {
-    /// Net Mode 下更新均价和持仓大小
-    fn update_avg_price(&mut self, trade_price: f64, trade_size: f64)
+    fn update_avg_price(&mut self, trade_price: f64, trade_size: f64, trade_side: Side)
     {
-        let total_size = self.current_size + trade_size;
+        // 判断交易方向是否与当前仓位相反
+        let is_opposite = match (self.side, trade_side) {
+            (Side::Buy, Side::Sell) | (Side::Sell, Side::Buy) => true,
+            _ => false,
+        };
 
-        if total_size > 0.0 {
+        let total_size = if is_opposite {
+            self.current_size - trade_size // 如果方向相反，减少仓位大小
+        } else {
+            self.current_size + trade_size // 如果方向相同，增加仓位大小
+        };
+
+        if total_size.abs() > 0.0 {
             // 计算新的持仓均价（未考虑费用的粗略均价）
-            self.current_avg_price_gross = (self.current_avg_price_gross * self.current_size + trade_price * trade_size) / total_size;
+            self.current_avg_price_gross = if is_opposite {
+                // 如果是平仓行为，不需要更新均价
+                self.current_avg_price_gross
+            } else {
+                (self.current_avg_price_gross * self.current_size + trade_price * trade_size) / total_size
+            };
             self.current_size = total_size;
         }
 
@@ -100,22 +128,6 @@ impl PositionMeta
         self.current_avg_price = self.current_avg_price_gross;
     }
 
-    /// 更新 current_avg_price，同时考虑费用
-    /// 在 update_avg_price_and_fees 方法中，您试图在计算平均价格时加入费用，但当前的计算公式可能会导致均价计算不准确。
-    /// 特别是在考虑交易费用的情况下，费用应被视为独立于价格的一项成本，而不是直接加入到价格中去。
-    pub fn update_avg_price_and_fees(&mut self, trade_price: f64, trade_size: f64, trade_fees: f64)
-    {
-        // 计算总费用（直接从 `ClientTrade` 中获取）
-        self.current_fees_total += trade_fees;
-
-        // 调用方法更新均价（不处理费用，在外部考虑费用）
-        self.update_avg_price(trade_price, trade_size);
-
-        // 考虑费用后的均价更新
-        if self.current_size > 0.0 {
-            self.current_avg_price = (self.current_avg_price_gross * self.current_size + self.current_fees_total) / self.current_size;
-        }
-    }
 
     /// 更新 unrealised_pnl
     /// FIXME 在更新未实现盈亏时，现在使用 self.current_size 来计算，但是在反向仓位或部分平仓的情况下，会不会有问题，
@@ -323,16 +335,6 @@ mod tests
         assert_eq!(position_meta.current_avg_price, trade.price);
         assert_eq!(position_meta.current_symbol_price, 50000.0);
         assert_eq!(position_meta.current_fees_total, trade.fees);
-    }
-
-    #[test]
-    fn test_update_avg_price_with_fees()
-    {
-        let mut meta = PositionMeta::create_from_trade(&create_test_trade());
-        meta.update_avg_price_and_fees(60_000.0, 1.0, 2.0); // Include additional fees
-
-        assert!(meta.current_avg_price > meta.current_avg_price_gross); // Avg price includes fees
-        assert_eq!(meta.current_size, 2.0); // Size should be updated
     }
 
     #[test]

@@ -463,7 +463,6 @@ impl PositionHandler for SandboxAccount
                 }
             }
             | _ => {
-                println!("[UniLinkEx] : Unsupported yet or illegal instrument kind.");
                 return Err(ExchangeError::UnsupportedInstrumentKind);
             }
         }
@@ -563,7 +562,7 @@ impl PositionHandler for SandboxAccount
                             // 如果存在空头仓位，判断是否需要移除或反向开仓
                             perfect_exit = short_position.meta.current_size == trade.size;
                             exit_and_reverse = short_position.meta.current_size < trade.size;
-                            remaining_quantity = trade.size - short_position.meta.current_size;
+                            remaining_quantity = (trade.size - short_position.meta.current_size).abs();
 
                             // 完全平仓
                             if perfect_exit {
@@ -588,19 +587,23 @@ impl PositionHandler for SandboxAccount
                                                                        liquidation_price: Some(0.0) };
                                 long_positions.insert(trade.instrument.clone(), new_position);
                             }
-                            // 更新隔离保证金
+                            // 部分对冲
                             else {
                                 if let PositionMarginMode::Isolated = short_position.pos_config.pos_margin_mode {
                                     if short_position.isolated_margin.is_none() {
                                         short_position.isolated_margin = Some(trade.price * trade.size * short_position.pos_config.leverage);
-                                    }
-                                    else if let Some(ref mut margin) = short_position.isolated_margin {
-                                        *margin += trade.price * remaining_quantity * short_position.pos_config.leverage;
+                                    } else if let Some(ref mut margin) = short_position.isolated_margin {
+                                        *margin -= trade.price * trade.size * short_position.pos_config.leverage;
                                     }
                                 }
+
                                 short_position.meta.update_from_trade(&trade);
 
+                                // 确保更新的 short_position 被写回
+                                let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+                                short_positions.insert(trade.instrument.clone(), short_position); // 确保更新写回
                             }
+
                         }
                         else {
                             // 如果没有空头仓位，检查多头仓位，如果有，把增量保证金加入多头仓位。
@@ -633,24 +636,29 @@ impl PositionHandler for SandboxAccount
 
                         // 获取多头仓位的锁
 
-                        if let Some(Position::Perpetual(mut long_position)) = self.remove_position(trade.instrument.clone(), Side::Buy).await {
+                        if let Some(Position::Perpetual(mut long_position)) = self.get_position_long(&trade.instrument).await? {
                             perfect_exit = long_position.meta.current_size == trade.size;
                             exit_and_reverse = long_position.meta.current_size < trade.size;
-                            remaining_quantity = trade.size - long_position.meta.current_size;
+                            remaining_quantity = (trade.size - long_position.meta.current_size).abs();
 
                             // 完全平仓
                             if perfect_exit {
                                 long_position.isolated_margin = Some(0.0); // 暂时清零
                                 long_position.meta.update_realised_pnl(trade.price);
+                                self.remove_position(trade.instrument,Side::Buy).await;
                                 let _ = self.exit_position_and_dump(&long_position.meta, Side::Buy).await;
                                 // 注意：long_position 已经被移除了，因此不需要再次调用 remove
                             }
                             // 反向开仓
                             else if exit_and_reverse {
+                                println!("反向开仓, 尚未更新隔离保证金");
                                 let position_margin_mode = long_position.pos_config.pos_margin_mode.clone();
                                 long_position.meta.update_realised_pnl(trade.price);
                                 long_position.isolated_margin = Some(0.0); // 暂时清零
+                                self.remove_position(trade.instrument.clone(),Side::Buy).await;
+
                                 let _ = self.exit_position_and_dump(&long_position.meta, Side::Buy).await;
+
                                 // 获取空头仓位的锁并插入新的仓位
                                 let mut short_positions = self.positions.perpetual_pos_short.lock().await;
                                 let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
@@ -661,17 +669,20 @@ impl PositionHandler for SandboxAccount
                                                                        liquidation_price: Some(0.0) };
                                 short_positions.insert(trade.instrument.clone(), new_position);
                             }
-                            // 更新隔离保证金
+                            // 部分平仓, 更新隔离保证金
                             else {
+
                                 if let PositionMarginMode::Isolated = long_position.pos_config.pos_margin_mode {
                                     if long_position.isolated_margin.is_none() {
                                         long_position.isolated_margin = Some(trade.price * trade.size * long_position.pos_config.leverage);
-                                    }
-                                    else if let Some(ref mut margin) = long_position.isolated_margin {
-                                        *margin += trade.price * remaining_quantity * long_position.pos_config.leverage;
+                                    } else if let Some(ref mut margin) = long_position.isolated_margin {
+                                        *margin -= trade.price * trade.size * long_position.pos_config.leverage;
                                     }
                                 }
                                 long_position.meta.update_from_trade(&trade);
+                                // 确保更新的 long_position 被写回
+                                let mut positions = self.positions.perpetual_pos_long.lock().await;
+                                positions.insert(trade.instrument.clone(), long_position); // 确保更新写回
                             }
                         }
                         else {
@@ -863,7 +874,6 @@ mod tests
 
         // 检查多头仓位是否成功创建
         let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
-        println!("positions:{:?}", positions); // 打印多头仓位
         assert!(positions.contains_key(&trade.instrument)); // 检查 HashMap 中是否有该键
         let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
         assert_eq!(pos.meta.current_size, 1.0); // 检查仓位大小
@@ -901,7 +911,6 @@ mod tests
 
         // 执行创建新空头仓位的逻辑
         let result = account.create_perpetual_position(trade.clone()).await;
-        println!("result: {:?}", result); // 打印结果
         assert!(result.is_ok());
 
         // 检查空头仓位是否成功创建
@@ -1161,7 +1170,7 @@ mod tests
         account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
         // // 检查仓位是否部分平仓
         let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
-        let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
+        let pos = positions.get(&closing_trade.instrument).unwrap(); // 获取对应的仓位
         assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
     }
 
@@ -1190,9 +1199,11 @@ mod tests
                                                   position_direction_mode: PositionDirectionMode::Net };
         account.positions.perpetual_pos_long_config.write().await.insert(instrument, preconfig);
 
+
         // 创建一个多头仓位
         let _ = account.create_perpetual_position(trade.clone()).await;
-        // 部分平仓
+
+        // 部分平仓 注意 现在部分平仓存在bug会删除仓位
         let closing_trade = ClientTrade { exchange: Exchange::SandBox,
                                           timestamp: 1690000200,
                                           trade_id: ClientTradeId(6),
@@ -1389,7 +1400,6 @@ mod tests
 
         // 执行管理仓位逻辑，应该返回错误
         let result = account.update_position_from_client_trade(trade.clone()).await;
-        println!("result: {:?}", result);
         assert!(result.is_err());
     }
 }
