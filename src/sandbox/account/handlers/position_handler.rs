@@ -707,9 +707,10 @@ impl PositionHandler for SandboxAccount
 
                 if let Some(mut position) = position {
                     // 减少仓位大小
-                    position.meta.current_size -= trade.size;
                     self.update_isolated_margin(&mut position, &trade).await;
-
+                    println!("before position update : currently the size is {:#?}",position.meta.current_size);
+                    position.meta.update_from_trade(&trade);
+                    println!("after position update : currently the size is {:#?}",position.meta.current_size);
                     // Re-lock to update the position in the map
                     let mut long_positions = self.positions.perpetual_pos_long.lock().await;
                     long_positions.insert(trade.instrument.clone(), position);
@@ -723,9 +724,10 @@ impl PositionHandler for SandboxAccount
 
                 if let Some(mut position) = position {
                     // 减少仓位大小
-                    position.meta.current_size -= trade.size;
                     self.update_isolated_margin(&mut position, &trade).await;
-
+                    println!("before position update : currently the size is {:#?}",position.meta.current_size);
+                    position.meta.update_from_trade(&trade);
+                    println!("after position update : currently the size is {:#?}",position.meta.current_size);
                     // Re-lock to update the position in the map
                     let mut short_positions = self.positions.perpetual_pos_short.lock().await;
                     short_positions.insert(trade.instrument.clone(), position);
