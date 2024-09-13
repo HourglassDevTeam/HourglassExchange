@@ -32,7 +32,6 @@ mod position_delta;
 pub(crate) mod position_id;
 pub mod position_meta;
 
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Position
 {
@@ -374,4 +373,3 @@ pub enum PositionMarginMode
     Cross,
     Isolated,
 }
-
