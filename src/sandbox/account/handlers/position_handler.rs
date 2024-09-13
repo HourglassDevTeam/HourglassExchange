@@ -579,12 +579,19 @@ impl PositionHandler for SandboxAccount
 
                                 // 获取多头仓位的锁并插入新的仓位
                                 let mut long_positions = self.positions.perpetual_pos_long.lock().await;
-                                let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
+                                let mut new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
                                                                        pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode.clone(),
                                                                                                              leverage: short_position.pos_config.leverage,
                                                                                                              position_direction_mode: self.config.global_position_direction_mode.clone() },
                                                                        isolated_margin: Some(trade.price * remaining_quantity * short_position.pos_config.leverage),
                                                                        liquidation_price: Some(0.0) };
+                                if let PositionMarginMode::Isolated = new_position.pos_config.pos_margin_mode {
+                                    if new_position.isolated_margin.is_none() {
+                                        new_position.isolated_margin = Some(trade.price * trade.size * new_position.pos_config.leverage);
+                                    } else if let Some(ref mut margin) = new_position.isolated_margin {
+                                        *margin += trade.price * remaining_quantity * new_position.pos_config.leverage;
+                                    }
+                                }
                                 long_positions.insert(trade.instrument.clone(), new_position);
                             }
                             // 部分对冲
@@ -651,7 +658,6 @@ impl PositionHandler for SandboxAccount
                             }
                             // 反向开仓
                             else if exit_and_reverse {
-                                println!("反向开仓, 尚未更新隔离保证金");
                                 let position_margin_mode = long_position.pos_config.pos_margin_mode.clone();
                                 long_position.meta.update_realised_pnl(trade.price);
                                 long_position.isolated_margin = Some(0.0); // 暂时清零
@@ -661,12 +667,21 @@ impl PositionHandler for SandboxAccount
 
                                 // 获取空头仓位的锁并插入新的仓位
                                 let mut short_positions = self.positions.perpetual_pos_short.lock().await;
-                                let new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
+
+                                let mut new_position = PerpetualPosition { meta: PositionMeta::create_from_trade_with_remaining(&trade, remaining_quantity),
                                                                        pos_config: PerpetualPositionConfig { pos_margin_mode: position_margin_mode.clone(),
                                                                                                              leverage: long_position.pos_config.leverage,
                                                                                                              position_direction_mode: self.config.global_position_direction_mode.clone() },
                                                                        isolated_margin: Some(trade.price * remaining_quantity * long_position.pos_config.leverage),
                                                                        liquidation_price: Some(0.0) };
+
+                                if let PositionMarginMode::Isolated = new_position.pos_config.pos_margin_mode {
+                                    if new_position.isolated_margin.is_none() {
+                                        new_position.isolated_margin = Some(trade.price * trade.size * new_position.pos_config.leverage);
+                                    } else if let Some(ref mut margin) = new_position.isolated_margin {
+                                        *margin += trade.price * remaining_quantity * new_position.pos_config.leverage;
+                                    }
+                                }
                                 short_positions.insert(trade.instrument.clone(), new_position);
                             }
                             // 部分平仓, 更新隔离保证金
