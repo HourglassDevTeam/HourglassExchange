@@ -37,8 +37,8 @@ impl PositionMeta
 
         // 判断交易方向是否与当前仓位方向相反
         let is_opposite = match (self.side, trade.side) {
-            (Side::Buy, Side::Sell) | (Side::Sell, Side::Buy) => true,
-            _ => false,
+            | (Side::Buy, Side::Sell) | (Side::Sell, Side::Buy) => true,
+            | _ => false,
         };
 
         // 更新持仓大小和均价
@@ -94,7 +94,6 @@ impl PositionMeta
                        unrealised_pnl: 0.0,
                        realised_pnl: 0.0 }
     }
-
 }
 
 impl PositionMeta
@@ -103,13 +102,14 @@ impl PositionMeta
     {
         // 判断交易方向是否与当前仓位相反
         let is_opposite = match (self.side, trade_side) {
-            (Side::Buy, Side::Sell) | (Side::Sell, Side::Buy) => true,
-            _ => false,
+            | (Side::Buy, Side::Sell) | (Side::Sell, Side::Buy) => true,
+            | _ => false,
         };
 
         let total_size = if is_opposite {
             self.current_size - trade_size // 如果方向相反，减少仓位大小
-        } else {
+        }
+        else {
             self.current_size + trade_size // 如果方向相同，增加仓位大小
         };
 
@@ -118,7 +118,8 @@ impl PositionMeta
             self.current_avg_price_gross = if is_opposite {
                 // 如果是平仓行为，不需要更新均价
                 self.current_avg_price_gross
-            } else {
+            }
+            else {
                 (self.current_avg_price_gross * self.current_size + trade_price * trade_size) / total_size
             };
             self.current_size = total_size;
@@ -127,7 +128,6 @@ impl PositionMeta
         // 更新平均价格（默认 gross 作为基础）
         self.current_avg_price = self.current_avg_price_gross;
     }
-
 
     /// 更新 unrealised_pnl
     /// FIXME 在更新未实现盈亏时，现在使用 self.current_size 来计算，但是在反向仓位或部分平仓的情况下，会不会有问题，

@@ -136,8 +136,7 @@ pub struct AccountConfigInitiator
     commission_level: Option<CommissionLevel>,
     fund_fee_rate: Option<f64>,
     max_price_deviation: Option<f64>,
-    lazy_account_positions:  Option<bool>,
-
+    lazy_account_positions: Option<bool>,
 }
 impl Default for AccountConfigInitiator
 {
@@ -156,8 +155,7 @@ impl AccountConfigInitiator
                commission_level: None,
                fund_fee_rate: None,
                max_price_deviation: None,
-               lazy_account_positions: None,
-        }
+               lazy_account_positions: None }
     }
 
     pub fn margin_mode(mut self, margin_mode: MarginMode) -> Self
@@ -178,7 +176,8 @@ impl AccountConfigInitiator
         self
     }
 
-    pub fn lazy_account_positions(mut self, lazy:bool) -> Self{
+    pub fn lazy_account_positions(mut self, lazy: bool) -> Self
+    {
         self.lazy_account_positions = Some(lazy);
         self
     }
