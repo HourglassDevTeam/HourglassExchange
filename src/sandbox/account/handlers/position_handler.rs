@@ -78,6 +78,7 @@ pub trait PositionHandler
     async fn remove_leveraged_token_position(&self, instrument: Instrument, side: Side) -> Option<LeveragedTokenPosition>;
     async fn remove_option_position(&self, instrument: Instrument, side: Side) -> Option<OptionPosition>;
 
+    /// NOTE this is currently omitted and should be applied appropriately.
     async fn exit_position_and_dump(&self, meta: &PositionMeta, side: Side) -> Result<(), ExchangeError>;
 
     async fn get_position_long_config(&self, instrument: &Instrument) -> Result<Option<PerpetualPositionConfig>, ExchangeError>;
@@ -90,7 +91,7 @@ pub trait PositionHandler
     async fn close_and_reverse_position(&mut self, trade: ClientTrade,remaining:f64) -> Result<(), ExchangeError>;
     // 部分平仓
     async fn partial_close_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>;
-    // 更新隔离保证金
+    // 更新隔离保证金 /// NOTE this is currently problematic and should be checked very carefully.
     async fn update_isolated_margin(&mut self, position: &mut PerpetualPosition, trade: &ClientTrade);
 }
 
