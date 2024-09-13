@@ -609,123 +609,6 @@ impl PositionHandler for SandboxAccount
     }
 
 
-    // 更新已有仓位
-    async fn update_existing_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
-        match trade.side {
-            Side::Buy => {
-                let position = {
-                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
-                    long_positions.get_mut(&trade.instrument).map(|p| p.clone()) // Clone the position out of the lock
-                };
-
-                if let Some(mut position) = position {
-                    position.meta.update_from_trade(&trade);
-                    self.update_isolated_margin(&mut position, &trade).await;
-                    // Re-lock to update the position in the map
-                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
-                    long_positions.insert(trade.instrument.clone(), position);
-                }
-            }
-            Side::Sell => {
-                let position = {
-                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
-                    short_positions.get_mut(&trade.instrument).map(|p| p.clone()) // Clone the position out of the lock
-                };
-
-                if let Some(mut position) = position {
-                    position.meta.update_from_trade(&trade);
-                    self.update_isolated_margin(&mut position, &trade).await;
-                    // Re-lock to update the position in the map
-                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
-                    short_positions.insert(trade.instrument.clone(), position);
-                }
-            }
-        }
-        Ok(())
-    }
-
-
-
-    // 关闭仓位
-    async fn close_position(&mut self, instrument: Instrument, side: Side) -> Result<(), ExchangeError> {
-        match side {
-            Side::Buy => {
-                // 使用 `ok_or` 将 `Option` 转换为 `Result`
-                self.remove_position(instrument, Side::Sell).await.ok_or(ExchangeError::AttemptToRemoveNonExistingPosition)?;
-            }
-            Side::Sell => {
-                self.remove_position(instrument, Side::Buy).await.ok_or(ExchangeError::AttemptToRemoveNonExistingPosition)?;
-            }
-        }
-        Ok(())
-    }
-
-    // 关闭并反向开仓
-    async fn close_and_reverse_position(&mut self, trade: ClientTrade, remaining: f64) -> Result<(), ExchangeError> {
-        self.close_position(trade.instrument.clone(), trade.side).await?;
-        // Ignore the returned `PerpetualPosition`
-        let _ = self.create_perpetual_position(trade.clone(), CloseCompleteAndReverse { reverse_size: remaining }).await?;
-        Ok(())
-    }
-
-
-    async fn partial_close_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
-        match trade.side {
-            Side::Sell => {
-                println!("Buy side partial_close_position");
-                let position = {
-                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
-                    long_positions.get_mut(&trade.instrument).map(|p| p.clone()) // Clone the position out of the lock
-                };
-
-                if let Some(mut position) = position {
-                    // 减少仓位大小
-                    self.update_isolated_margin(&mut position, &trade).await;
-                    println!("before position update : currently the size is {:#?}",position.meta.current_size);
-                    position.meta.update_from_trade(&trade);
-                    println!("after position update : currently the size is {:#?}",position.meta.current_size);
-                    // Re-lock to update the position in the map
-                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
-                    long_positions.insert(trade.instrument.clone(), position);
-                }
-            }
-            Side::Buy => {
-                println!("Sell side partial_close_position");
-                let position = {
-                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
-                    short_positions.get_mut(&trade.instrument).map(|p| p.clone()) // Clone the position out of the lock
-                };
-
-                if let Some(mut position) = position {
-                    // 减少仓位大小
-                    self.update_isolated_margin(&mut position, &trade).await;
-                    println!("before position update : currently the size is {:#?}",position.meta.current_size);
-                    position.meta.update_from_trade(&trade);
-                    println!("after position update : currently the size is {:#?}",position.meta.current_size);
-                    println!("after position update : currently position is {:#?}",position);
-                    // Re-lock to update the position in the map
-                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
-                    short_positions.insert(trade.instrument.clone(), position);
-                    println!("successfully inserted among short positions");
-                }
-            }
-        }
-        Ok(())
-    }
-
-    // 更新隔离保证金
-    async fn update_isolated_margin(&mut self, position: &mut PerpetualPosition, trade: &ClientTrade) {
-        if let PositionMarginMode::Isolated = position.pos_config.pos_margin_mode {
-            if let Some(ref mut margin) = position.isolated_margin {
-                *margin += trade.price * trade.size * position.pos_config.leverage;
-            } else {
-                position.isolated_margin = Some(trade.price * trade.size * position.pos_config.leverage);
-            }
-        }
-    }
-
-
-
     /// 在 create_position 过程中确保仓位的杠杆率不超过账户的最大杠杆率。  [TODO] : TO BE CHECKED & APPLIED
     fn enforce_leverage_limits(&self, new_position: &PerpetualPosition) -> Result<(), ExchangeError>
     {
@@ -736,6 +619,7 @@ impl PositionHandler for SandboxAccount
             Ok(())
         }
     }
+
 
     async fn remove_position(&self, instrument: Instrument, side: Side) -> Option<Position>
     {
@@ -761,6 +645,7 @@ impl PositionHandler for SandboxAccount
             }
         }
     }
+
 
     async fn remove_future_position(&self, instrument: Instrument, side: Side) -> Option<FuturePosition>
     {
@@ -789,6 +674,7 @@ impl PositionHandler for SandboxAccount
             }
         }
     }
+
 
     async fn remove_option_position(&self, instrument: Instrument, side: Side) -> Option<OptionPosition>
     {
@@ -844,6 +730,118 @@ impl PositionHandler for SandboxAccount
 
         // 查找并返回相应的空头仓位配置
         short_configs.get(instrument).cloned().map_or(Ok(None), |config| Ok(Some(config)))
+    }
+
+    // 更新已有仓位
+    async fn update_existing_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+        match trade.side {
+            Side::Buy => {
+                let position = {
+                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
+                    long_positions.get_mut(&trade.instrument).map(|p| p.clone()) // Clone the position out of the lock
+                };
+
+                if let Some(mut position) = position {
+                    position.meta.update_from_trade(&trade);
+                    self.update_isolated_margin(&mut position, &trade).await;
+                    // Re-lock to update the position in the map
+                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
+                    long_positions.insert(trade.instrument.clone(), position);
+                }
+            }
+            Side::Sell => {
+                let position = {
+                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+                    short_positions.get_mut(&trade.instrument).map(|p| p.clone()) // Clone the position out of the lock
+                };
+
+                if let Some(mut position) = position {
+                    position.meta.update_from_trade(&trade);
+                    self.update_isolated_margin(&mut position, &trade).await;
+                    // Re-lock to update the position in the map
+                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+                    short_positions.insert(trade.instrument.clone(), position);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    // 关闭仓位
+    async fn close_position(&mut self, instrument: Instrument, side: Side) -> Result<(), ExchangeError> {
+        match side {
+            Side::Buy => {
+                // 使用 `ok_or` 将 `Option` 转换为 `Result`
+                self.remove_position(instrument, Side::Sell).await.ok_or(ExchangeError::AttemptToRemoveNonExistingPosition)?;
+            }
+            Side::Sell => {
+                self.remove_position(instrument, Side::Buy).await.ok_or(ExchangeError::AttemptToRemoveNonExistingPosition)?;
+            }
+        }
+        Ok(())
+    }
+
+    // 关闭并反向开仓
+    async fn close_and_reverse_position(&mut self, trade: ClientTrade, remaining: f64) -> Result<(), ExchangeError> {
+        self.close_position(trade.instrument.clone(), trade.side).await?;
+        // Ignore the returned `PerpetualPosition`
+        let _ = self.create_perpetual_position(trade.clone(), CloseCompleteAndReverse { reverse_size: remaining }).await?;
+        Ok(())
+    }
+
+    async fn partial_close_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+        match trade.side {
+            Side::Sell => {
+                println!("Buy side partial_close_position");
+                let position = {
+                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
+                    long_positions.get_mut(&trade.instrument).map(|p| p.clone()) // Clone the position out of the lock
+                };
+
+                if let Some(mut position) = position {
+                    // 减少仓位大小
+                    self.update_isolated_margin(&mut position, &trade).await;
+                    println!("before position update : currently the size is {:#?}",position.meta.current_size);
+                    position.meta.update_from_trade(&trade);
+                    println!("after position update : currently the size is {:#?}",position.meta.current_size);
+                    // Re-lock to update the position in the map
+                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
+                    long_positions.insert(trade.instrument.clone(), position);
+                }
+            }
+            Side::Buy => {
+                println!("Sell side partial_close_position");
+                let position = {
+                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+                    short_positions.get_mut(&trade.instrument).map(|p| p.clone()) // Clone the position out of the lock
+                };
+
+                if let Some(mut position) = position {
+                    // 减少仓位大小
+                    self.update_isolated_margin(&mut position, &trade).await;
+                    println!("before position update : currently the size is {:#?}",position.meta.current_size);
+                    position.meta.update_from_trade(&trade);
+                    println!("after position update : currently the size is {:#?}",position.meta.current_size);
+                    println!("after position update : currently position is {:#?}",position);
+                    // Re-lock to update the position in the map
+                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+                    short_positions.insert(trade.instrument.clone(), position);
+                    println!("successfully inserted among short positions");
+                }
+            }
+        }
+        Ok(())
+    }
+
+    // 更新隔离保证金
+    async fn update_isolated_margin(&mut self, position: &mut PerpetualPosition, trade: &ClientTrade) {
+        if let PositionMarginMode::Isolated = position.pos_config.pos_margin_mode {
+            if let Some(ref mut margin) = position.isolated_margin {
+                *margin += trade.price * trade.size * position.pos_config.leverage;
+            } else {
+                position.isolated_margin = Some(trade.price * trade.size * position.pos_config.leverage);
+            }
+        }
     }
 }
 
