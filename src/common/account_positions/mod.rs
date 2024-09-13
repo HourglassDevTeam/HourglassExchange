@@ -32,6 +32,16 @@ mod position_delta;
 pub(crate) mod position_id;
 pub mod position_meta;
 
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum Position
+{
+    Perpetual(PerpetualPosition),
+    LeveragedToken(LeveragedTokenPosition),
+    Future(FuturePosition),
+    Option(OptionPosition),
+}
+
 #[derive(Clone, Debug)]
 pub struct AccountPositions
 {
@@ -365,13 +375,3 @@ pub enum PositionMarginMode
     Isolated,
 }
 
-/// NOTE: 可能需要多种头寸类型共存
-#[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum Position
-{
-    Perpetual(PerpetualPosition),
-    LeveragedToken(LeveragedTokenPosition),
-    Future(FuturePosition),
-    Option(OptionPosition),
-}
