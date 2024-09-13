@@ -93,6 +93,12 @@ pub trait PositionHandler
     //     current_size: f64,
     //     position_side: Side,
     // ) -> Result<PositionHandling, ExchangeError>;
+    async fn determine_handling_type(
+        &self,
+        trade: ClientTrade,
+        current_size: f64,
+        position_side: Side,
+    ) -> Result<PositionHandling, ExchangeError>;
 }
 
 #[async_trait]
@@ -508,46 +514,44 @@ impl PositionHandler for SandboxAccount
         Err(ExchangeError::ConfigMissing)
     }
 
+    async fn determine_handling_type(
+        &self,
+        trade: ClientTrade,
+        current_size: f64,
+        position_side: Side,
+    ) -> Result<PositionHandling, ExchangeError> {
+        // 检查是否存在既有同向仓位
+        let has_existing_long_position = self.get_position_long(&trade.instrument).await?.is_some();
+        // 检查是否存在既有反向仓位
+        let has_existing_short_position = self.get_position_short(&trade.instrument).await?.is_some();
 
-    // async fn determine_handling_type(
-    //     &self,
-    //     trade: ClientTrade,
-    //     current_size: f64,
-    //     position_side: Side,
-    // ) -> Result<PositionHandling, ExchangeError> {
-    //     // 检查是否存在既有同向仓位
-    //     let has_existing_long_position = self.get_position_long(&trade.instrument).await?.is_some();
-    //     // 检查是否存在既有反向仓位
-    //     let has_existing_short_position = self.get_position_short(&trade.instrument).await?.is_some();
-    //
-    //
-    //     // 根据仓位方向和大小判断处理类型
-    //     if position_side != trade.side {
-    //         // 方向不同，可能是反向操作
-    //         if current_size == trade.size {
-    //             Ok(PositionHandling::CloseComplete)
-    //         } else if current_size < trade.size {
-    //             Ok(PositionHandling::CloseCompleteAndReverse)
-    //         } else {
-    //             Ok(PositionHandling::ClosePartial)
-    //         }
-    //     }
-    //     else {
-    //         // 方向相同，更新或开启新仓位
-    //         if has_existing_long_position || has_existing_short_position {
-    //             if current_size > 0.0 {
-    //                 Ok(PositionHandling::UpdateExisting)
-    //             } else {
-    //                 Ok(PositionHandling::OpenBrandNewPosition)
-    //             }
-    //         } else {
-    //             Ok(PositionHandling::OpenBrandNewPosition)
-    //         }
-    //     }
-    // }
+
+        // 根据仓位方向和大小判断处理类型
+        if position_side != trade.side {
+            // 方向不同，可能是反向操作
+            if current_size == trade.size {
+                Ok(PositionHandling::CloseComplete)
+            } else if current_size < trade.size {
+                Ok(PositionHandling::CloseCompleteAndReverse)
+            } else {
+                Ok(PositionHandling::ClosePartial)
+            }
+        }
+        else {
+            // 方向相同，更新或开启新仓位
+            if has_existing_long_position || has_existing_short_position {
+                if current_size > 0.0 {
+                    Ok(PositionHandling::UpdateExisting)
+                } else {
+                    Ok(PositionHandling::OpenBrandNewPosition)
+                }
+            } else {
+                Ok(PositionHandling::OpenBrandNewPosition)
+            }
+        }
+    }
 
     #[allow(dead_code)]
-
     /// 更新 LeveragedTokenPosition 的方法（占位符）
     async fn create_leveraged_token_position(&mut self, _trade: ClientTrade) -> Result<LeveragedTokenPosition, ExchangeError>
     {
