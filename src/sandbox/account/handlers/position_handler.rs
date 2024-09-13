@@ -57,8 +57,6 @@ pub trait PositionHandler
 
     async fn check_position_direction_conflict(&self, instrument: &Instrument, new_order_side: Side, is_reduce_only: bool) -> Result<(), ExchangeError>;
 
-    fn determine_handling_type_net(current_size: f64, position_side: Side, trade_size: f64, trade_side: Side) -> PositionHandling;
-
     async fn create_perpetual_position(&mut self, trade: ClientTrade,handle_type:PositionHandling) -> Result<PerpetualPosition, ExchangeError>;
 
     async fn create_future_position(&mut self, trade: ClientTrade) -> Result<FuturePosition, ExchangeError>;
@@ -80,6 +78,21 @@ pub trait PositionHandler
     async fn remove_option_position(&self, instrument: Instrument, side: Side) -> Option<OptionPosition>;
 
     async fn exit_position_and_dump(&self, meta: &PositionMeta, side: Side) -> Result<(), ExchangeError>;
+
+    async fn get_position_long_config(&self, instrument: &Instrument) -> Result<Option<PerpetualPositionConfig>, ExchangeError>;
+    async fn get_position_short_config(&self, instrument: &Instrument) -> Result<Option<PerpetualPositionConfig>, ExchangeError>;
+    async fn handle_config_inheritance (
+        &self,
+        trade: &ClientTrade,
+    ) -> Result<PerpetualPositionConfig, ExchangeError>;
+
+    //
+    // async fn determine_handling_type(
+    //     &self,
+    //     trade: ClientTrade,
+    //     current_size: f64,
+    //     position_side: Side,
+    // ) -> Result<PositionHandling, ExchangeError>;
 }
 
 #[async_trait]
@@ -355,31 +368,6 @@ impl PositionHandler for SandboxAccount
         Ok(())
     }
 
-    fn determine_handling_type_net(current_size: f64, position_side: Side, trade_size: f64, trade_side: Side) -> PositionHandling
-    {
-        if position_side != trade_side {
-            // 方向不同的情况，可能是反向操作
-            if current_size == trade_size {
-                PositionHandling::CloseComplete
-            }
-            else if current_size < trade_size {
-                PositionHandling::CloseCompleteAndReverse
-            }
-            else {
-                PositionHandling::ClosePartial
-            }
-        }
-        else {
-            // 方向相同，可能是更新仓位
-            if current_size > 0.0 {
-                PositionHandling::UpdateExisting
-            }
-            else {
-                PositionHandling::OpenBrandNewPosition
-            }
-        }
-    }
-
     /// 更新 PerpetualPosition 的方法
     /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的
     async fn create_perpetual_position(&mut self, trade: ClientTrade,handle_type:PositionHandling) -> Result<PerpetualPosition, ExchangeError>
@@ -483,6 +471,81 @@ impl PositionHandler for SandboxAccount
         todo!("[UniLinkEx] : Updating Option positions is not yet implemented")
     }
 
+
+
+    async fn handle_config_inheritance(
+        &self,
+        trade: &ClientTrade,
+    ) -> Result<PerpetualPositionConfig, ExchangeError> {
+        // 尝试获取同向仓位配置
+        let same_side_config = match trade.side {
+            Side::Buy => self.get_position_long_config(&trade.instrument).await?,
+            Side::Sell => self.get_position_short_config(&trade.instrument).await?,
+        };
+
+        // 检查是否找到了同向配置
+        if let Some(config) = same_side_config {
+            return Ok(config);
+        }
+
+        // 如果没有找到同向配置，尝试获取反向仓位配置
+        let opposite_side_config = match trade.side {
+            Side::Buy => self.get_position_short_config(&trade.instrument).await?,
+            Side::Sell => self.get_position_long_config(&trade.instrument).await?,
+        };
+
+        // 检查是否找到了反向配置
+        if let Some(config) = opposite_side_config {
+            // 检查配置的模式是否允许继承
+            return if config.position_direction_mode == PositionDirectionMode::Net {
+                Ok(config)
+            } else {
+                Err(ExchangeError::ConfigInheritanceNotAllowed)
+            }
+        }
+
+        // 如果两个方向的配置都不存在，报错
+        Err(ExchangeError::ConfigMissing)
+    }
+
+
+    // async fn determine_handling_type(
+    //     &self,
+    //     trade: ClientTrade,
+    //     current_size: f64,
+    //     position_side: Side,
+    // ) -> Result<PositionHandling, ExchangeError> {
+    //     // 检查是否存在既有同向仓位
+    //     let has_existing_long_position = self.get_position_long(&trade.instrument).await?.is_some();
+    //     // 检查是否存在既有反向仓位
+    //     let has_existing_short_position = self.get_position_short(&trade.instrument).await?.is_some();
+    //
+    //
+    //     // 根据仓位方向和大小判断处理类型
+    //     if position_side != trade.side {
+    //         // 方向不同，可能是反向操作
+    //         if current_size == trade.size {
+    //             Ok(PositionHandling::CloseComplete)
+    //         } else if current_size < trade.size {
+    //             Ok(PositionHandling::CloseCompleteAndReverse)
+    //         } else {
+    //             Ok(PositionHandling::ClosePartial)
+    //         }
+    //     }
+    //     else {
+    //         // 方向相同，更新或开启新仓位
+    //         if has_existing_long_position || has_existing_short_position {
+    //             if current_size > 0.0 {
+    //                 Ok(PositionHandling::UpdateExisting)
+    //             } else {
+    //                 Ok(PositionHandling::OpenBrandNewPosition)
+    //             }
+    //         } else {
+    //             Ok(PositionHandling::OpenBrandNewPosition)
+    //         }
+    //     }
+    // }
+
     #[allow(dead_code)]
 
     /// 更新 LeveragedTokenPosition 的方法（占位符）
@@ -502,9 +565,7 @@ impl PositionHandler for SandboxAccount
             }
         };
 
-        // 获取该 instrument 的配置，如果没有找到则返回错误
-        let perpetual_config = pos_config_lock.get(&trade.instrument)
-                                              .ok_or_else(|| ExchangeError::SandBox("No pre-configuration found for the given instrument.".to_string()))?;
+        let perpetual_config = self.handle_config_inheritance(&trade).await?;
 
         // 现在我们可以安全地对 self 进行可变操作，因为 pos_config_lock 是可变的
         // 并且 perpetual_config 已经被获取，我们可以在更大的作用域内使用它
@@ -690,8 +751,7 @@ impl PositionHandler for SandboxAccount
                             else {
                                 // 释放 `long_positions` 锁
                                 drop(long_positions);
-
-                                // 创建新的多头仓位
+                                println!("创建新的多头仓位");
                                 self.create_perpetual_position(trade.clone(),PositionHandling::OpenBrandNewPosition).await?;
                             }
                         }
@@ -779,8 +839,8 @@ impl PositionHandler for SandboxAccount
                                 short_position.meta.update_from_trade(&trade);
                             }
                             else {
+                                println!("创建新的空头仓位");
                                 drop(short_positions);
-                                // 创建新的空头仓位
                                 self.create_perpetual_position(trade.clone(),PositionHandling::OpenBrandNewPosition).await?;
                             }
                         }
@@ -908,6 +968,23 @@ impl PositionHandler for SandboxAccount
 
         Ok(())
     }
+
+    async fn get_position_long_config(&self, instrument: &Instrument) -> Result<Option<PerpetualPositionConfig>, ExchangeError> {
+        // 获取多头仓位配置的锁
+        let long_configs = self.positions.perpetual_pos_long_config.read().await;
+
+        // 查找并返回相应的多头仓位配置
+        long_configs.get(instrument).cloned().map_or(Ok(None), |config| Ok(Some(config)))
+    }
+
+    async fn get_position_short_config(&self, instrument: &Instrument) -> Result<Option<PerpetualPositionConfig>, ExchangeError> {
+        // 获取空头仓位配置的锁
+        let short_configs = self.positions.perpetual_pos_short_config.read().await;
+
+        // 查找并返回相应的空头仓位配置
+        short_configs.get(instrument).cloned().map_or(Ok(None), |config| Ok(Some(config)))
+    }
+
 }
 
 #[cfg(test)]
@@ -1342,7 +1419,7 @@ mod tests
                                           size: 5.0,
                                           fees: 0.05 };
 
-        let _ = account.update_position_from_client_trade(closing_trade.clone()).await;
+        account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
         // 检查仓位是否部分平仓
         let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
         let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位

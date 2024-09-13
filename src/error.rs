@@ -106,8 +106,8 @@ pub enum ExchangeError
     ConfigParseError(String),
 
     /// 配置缺少。
-    #[error("[UniLinkEx] : Missing configuration: {0}")]
-    ConfigMissing(String),
+    #[error("[UniLinkEx] : Missing configuration")]
+    ConfigMissing,
 
     /// 解析响应失败。
     #[error("[UniLinkEx] : Failed to parse response: {0}")]
@@ -163,4 +163,7 @@ pub enum ExchangeError
 
     #[error("[UniLinkEx] : Redis fails to Serialise/Deserialise.")]
     JsonSerDeError,
+
+    #[error("[UniLinkEx] : Config Inheritance Not Allowed.")]
+    ConfigInheritanceNotAllowed
 }

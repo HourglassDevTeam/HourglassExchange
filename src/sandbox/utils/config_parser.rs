@@ -16,7 +16,7 @@ pub fn read_config_file() -> Result<AccountConfig, ExchangeError>
 
     // 检查配置文件是否存在
     if !config_path.exists() {
-        return Err(ExchangeError::ConfigMissing("config.toml not found in the project root directory".to_string()));
+        return Err(ExchangeError::ConfigMissing);
     }
 
     // 读取配置文件内容
@@ -130,7 +130,7 @@ mod tests
 
         // 调用函数并检查结果
         let config_result = read_config_file();
-        assert!(matches!(config_result, Err(ExchangeError::ConfigMissing(_))), "Expected ConfigMissing error, got {:?}", config_result);
+        assert!(matches!(config_result, Err(ExchangeError::ConfigMissing)), "Expected ConfigMissing error, got {:?}", config_result);
 
         // 将当前目录切换回原来的目录
         std::env::set_current_dir(original_dir).unwrap();
