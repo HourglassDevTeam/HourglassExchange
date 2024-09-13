@@ -368,31 +368,14 @@ impl PositionHandler for SandboxAccount
 
     /// 更新 PerpetualPosition 的方法
     /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的
-    async fn create_perpetual_position(&mut self, trade: ClientTrade, handle_type: PositionHandling) -> Result<PerpetualPosition, ExchangeError>
-    {
-        // 获取预存储的配置，首先获取写锁
-        let mut pos_config_lock = match (trade.side, handle_type) {
-            | (Side::Buy, PositionHandling::OpenBrandNewPosition) => self.positions.perpetual_pos_long_config.write().await,
-            | (Side::Sell, PositionHandling::OpenBrandNewPosition) => self.positions.perpetual_pos_short_config.write().await,
-            | (Side::Buy, PositionHandling::CloseCompleteAndReverse) => self.positions.perpetual_pos_short_config.write().await,
-            | (Side::Sell, PositionHandling::CloseCompleteAndReverse) => self.positions.perpetual_pos_long_config.write().await,
-            | _ => {
-                return Err(ExchangeError::SandBox("Unexpected request to create new position".into()));
-            }
-        };
+    /// 更新 PerpetualPosition 的方法
+    /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的
+    /// 更新 PerpetualPosition 的方法
+    /// 这里传入了一个 `PositionMarginMode`， 意味着初始化的
+    async fn create_perpetual_position(&mut self, trade: ClientTrade, handle_type: PositionHandling) -> Result<PerpetualPosition, ExchangeError> {
+        // 获取该 instrument 的配置
+        let perpetual_config = self.handle_config_inheritance(&trade).await?;
 
-        // 获取该 instrument 的配置，如果没有找到则返回错误
-        let result = pos_config_lock.get_mut(&trade.instrument);
-        let perpetual_config = match result {
-            | Some(config) => config,
-            | None => {
-                // 如果没有找到配置，打印错误并返回错误
-                eprintln!("Error: No pre-configuration found for the given instrument.");
-                return Err(ExchangeError::SandBox("No pre-configuration found for the given instrument.".to_string()));
-            }
-        };
-
-        println!("perpetual_config is : {:#?}", perpetual_config);
         // 创建 PositionMeta 和新的 PerpetualPosition
         let meta = PositionMeta::create_from_trade(&trade);
 
@@ -400,25 +383,28 @@ impl PositionHandler for SandboxAccount
         let isolated_margin = if let PositionMarginMode::Isolated { .. } = perpetual_config.pos_margin_mode {
             // 根据 trade.price, leverage 和 size 计算 isolated_margin
             Some(trade.price * perpetual_config.leverage * trade.size)
-        }
-        else {
+        } else {
             None
         };
 
         // 创建新的 PerpetualPosition，包括 isolated_margin
-        let new_position = PerpetualPosition { meta,
-                                               pos_config: perpetual_config.clone(),
-                                               isolated_margin,         // 直接赋值
-                                               liquidation_price: None  /* 后续可计算 */ };
+        let new_position = PerpetualPosition {
+            meta,
+            pos_config: perpetual_config.clone(),
+            isolated_margin,  // 直接赋值
+            liquidation_price: None  // 后续可计算
+        };
 
         // 根据买卖方向将仓位插入相应的仓位列表
         match trade.side {
-            | Side::Buy => self.positions.perpetual_pos_long.lock().await.insert(trade.instrument, new_position.clone()),
-            | Side::Sell => self.positions.perpetual_pos_short.lock().await.insert(trade.instrument, new_position.clone()),
+            Side::Buy => self.positions.perpetual_pos_long.lock().await.insert(trade.instrument, new_position.clone()),
+            Side::Sell => self.positions.perpetual_pos_short.lock().await.insert(trade.instrument, new_position.clone()),
         };
 
         Ok(new_position)
     }
+
+
 
     #[allow(dead_code)]
     /// 更新 FuturePosition 的方法（占位符）
@@ -671,7 +657,7 @@ impl PositionHandler for SandboxAccount
     async fn close_and_reverse_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
         self.close_position(trade.instrument.clone(), trade.side).await?;
         // Ignore the returned `PerpetualPosition`
-        let _ = self.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await?;
+        let _ = self.create_perpetual_position(trade.clone(), PositionHandling::CloseCompleteAndReverse).await?;
         Ok(())
     }
 
