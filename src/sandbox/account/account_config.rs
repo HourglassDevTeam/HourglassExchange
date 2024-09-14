@@ -145,17 +145,21 @@ pub enum CommissionLevel
     Lv5,
 }
 
-pub struct AccountConfigInitiator
+pub struct AccountConfigBuilder
 {
     margin_mode: Option<MarginMode>,
     position_mode: Option<PositionDirectionMode>,
     commission_level: Option<CommissionLevel>,
     fund_fee_rate: Option<f64>,
+    global_leverage_rate: Option<f64>,
+    fees_book: Option<HashMap<InstrumentKind, CommissionRates>>,
+    execution_mode: Option<SandboxMode>,
     max_price_deviation: Option<f64>,
     lazy_account_positions: Option<bool>,
     liquidation_threshold: Option<f64>,
 }
-impl Default for AccountConfigInitiator
+
+impl Default for AccountConfigBuilder
 {
     fn default() -> Self
     {
@@ -163,7 +167,7 @@ impl Default for AccountConfigInitiator
     }
 }
 
-impl AccountConfigInitiator
+impl AccountConfigBuilder
 {
     pub fn new() -> Self
     {
@@ -171,6 +175,9 @@ impl AccountConfigInitiator
                position_mode: None,
                commission_level: None,
                fund_fee_rate: None,
+               global_leverage_rate: None,
+               fees_book: None,
+               execution_mode: None,
                max_price_deviation: None,
                lazy_account_positions: None,
                liquidation_threshold: None }
@@ -179,6 +186,12 @@ impl AccountConfigInitiator
     pub fn margin_mode(mut self, margin_mode: MarginMode) -> Self
     {
         self.margin_mode = Some(margin_mode);
+        self
+    }
+
+    pub fn max_price_deviation(mut self, max_price_deviation: f64) -> Self
+    {
+        self.max_price_deviation = Some(max_price_deviation);
         self
     }
 
@@ -194,17 +207,55 @@ impl AccountConfigInitiator
         self
     }
 
-    /// NOTE 这里可以设置合法的`liquidation_threshold`限制
-    pub fn liquidation_threshold(mut self, liquidation_threshold: f64) -> Result<Self, ExchangeError> {
-        if liquidation_threshold >= 0.8 && liquidation_threshold <= 0.999 {
-            self.liquidation_threshold = Some(liquidation_threshold);
+    pub fn funding_rate(mut self, funding_rate: f64) -> Result<Self, ExchangeError> {
+        // 假设资金费率的合理范围是 -0.003 到 0.003
+        if funding_rate >= -0.003 && funding_rate <= 0.003 {
+            self.fund_fee_rate = Some(funding_rate);
             Ok(self)
         } else {
-            Err(ExchangeError::SandBox("input liquidation threshold invalid.".into()))
+            Err(ExchangeError::SandBox("Invalid funding rate".into()))
         }
     }
 
+    pub fn global_leverage_rate(mut self, global_leverage_rate: f64) -> Result<Self, ExchangeError> {
+        // 假设杠杆率的合理范围是 1 到 100
+        if global_leverage_rate >= 1.0 && global_leverage_rate <= 100.0 {
+            self.global_leverage_rate = Some(global_leverage_rate);
+            Ok(self)
+        } else {
+            Err(ExchangeError::SandBox("Invalid global leverage rate".into()))
+        }
+    }
 
+    pub fn fees_book(mut self, fees_book: HashMap<InstrumentKind, CommissionRates>) -> Self
+    {
+        self.fees_book = Some(fees_book);
+        self
+    }
+
+    pub fn execution_mode(mut self, execution_mode: SandboxMode) -> Self
+    {
+        self.execution_mode = Some(execution_mode);
+        self
+    }
+
+    pub fn lazy_account_positions(mut self, lazy_account_positions: bool) -> Self
+    {
+        self.lazy_account_positions = Some(lazy_account_positions);
+        self
+    }
+
+    /// NOTE 这里可以设置合法的`liquidation_threshold`限制
+    pub fn liquidation_threshold(mut self, liquidation_threshold: f64) -> Result<Self, ExchangeError>
+    {
+        if liquidation_threshold >= 0.8 && liquidation_threshold <= 0.999 {
+            self.liquidation_threshold = Some(liquidation_threshold);
+            Ok(self)
+        }
+        else {
+            Err(ExchangeError::SandBox("input liquidation threshold invalid.".into()))
+        }
+    }
 
     pub fn initiate(self) -> Result<AccountConfig, &'static str>
     {
