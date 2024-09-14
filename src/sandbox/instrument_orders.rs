@@ -20,7 +20,7 @@ use crate::{
 pub struct InstrumentOrders
 {
     /// 在当前的代码设计中，batch_id 的递增仅在成功匹配订单并生成交易事件时发生
-    pub batch_id: i64, // NOTE might be redundant
+    pub batch_id: i64,
     pub bids: Vec<Order<Open>>,
     pub asks: Vec<Order<Open>>,
 }
@@ -208,7 +208,7 @@ impl InstrumentOrders
 
         Ok(ClientTrade { exchange: Exchange::SandBox,
                          timestamp,
-                         trade_id: self.batch_id.into(), // NOTE trade_id 现在本质上是InstrumentOrders的一个counter生成的
+                         trade_id: self.batch_id.into(), // NOTE `trade_id` 现在本质上是InstrumentOrders的一个counter生成的
                          order_id: order.state.id.clone(),
                          cid: order.cid.clone(),
                          instrument: order.instrument.clone(),

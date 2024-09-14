@@ -69,8 +69,10 @@ impl TradeHandler for SandboxAccount
         self.update_exchange_ts(trade.timestamp);
         // 更新单层OrderBook，注意 这个做法仅仅适用于回测。
         self.create_or_single_level_orderbook_from_market_trade(trade).await;
-        // 用交易所记录的用户第开放订单去匹配 market_rade 以实现模拟的目的
+        // 用交易所记录的用户的挂单去匹配 market_rade 以实现模拟的目的
         self.match_orders(&trade).await?;
+        // NOTE 在此处还要加一个方法查看是否爆仓,强平
+        // self.check_and_handle_liquidation
         Ok(())
     }
 
