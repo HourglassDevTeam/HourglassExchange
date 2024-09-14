@@ -59,7 +59,7 @@ pub trait PositionHandler
 
     async fn fetch_short_position_and_respond(&self, instrument: &Instrument, response_tx: Sender<Result<Option<Position>, ExchangeError>>);
 
-    async fn check_and_handle_liquidation(&mut self, trade:MarketTrade) -> Result<(), ExchangeError>;
+    async fn check_and_handle_liquidation(&mut self, trade:&MarketTrade) -> Result<(), ExchangeError>;
     async fn check_position_direction_conflict(&self, instrument: &Instrument, new_order_side: Side, is_reduce_only: bool) -> Result<(), ExchangeError>;
 
     async fn create_perpetual_position(&mut self, trade: ClientTrade, handle_type: PositionHandling) -> Result<PerpetualPosition, ExchangeError>;
@@ -297,9 +297,10 @@ impl PositionHandler for SandboxAccount
         respond(response_tx, Ok(position));
     }
 
+    /// 注意 目前只支持匹配单一InstrumentKind，是临时的解决方案。
     async fn check_and_handle_liquidation(
         &mut self,
-        trade: MarketTrade,
+        trade: &MarketTrade,
     ) -> Result<(), ExchangeError> {
         let instrument = trade.parse_instrument().unwrap().clone();
         let instrument_clone_for_close = instrument.clone(); // Clone the instrument here

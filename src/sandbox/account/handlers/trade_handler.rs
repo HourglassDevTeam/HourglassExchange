@@ -20,6 +20,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use tracing::warn;
+use crate::sandbox::account::handlers::position_handler::PositionHandler;
 
 #[async_trait]
 pub trait TradeHandler
@@ -91,9 +92,8 @@ impl TradeHandler for SandboxAccount
         // 更新单层OrderBook，注意 这个做法仅仅适用于回测。
         self.create_or_single_level_orderbook_from_market_trade(trade).await;
         // 用交易所记录的用户的挂单去匹配 market_rade 以实现模拟的目的
+        self.check_and_handle_liquidation(trade).await?;
         self.match_orders(&trade).await?;
-        // NOTE 在此处还要加一个方法查看是否爆仓,强平
-        // self.check_and_handle_liquidation
         Ok(())
     }
 
