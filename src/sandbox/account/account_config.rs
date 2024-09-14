@@ -194,17 +194,17 @@ impl AccountConfigInitiator
         self
     }
 
-    pub fn lazy_account_positions(mut self, lazy: bool) -> Self
-    {
-        self.lazy_account_positions = Some(lazy);
-        self
+    /// NOTE 这里可以设置合法的`liquidation_threshold`限制
+    pub fn liquidation_threshold(mut self, liquidation_threshold: f64) -> Result<Self, ExchangeError> {
+        if liquidation_threshold >= 0.8 && liquidation_threshold <= 0.999 {
+            self.liquidation_threshold = Some(liquidation_threshold);
+            Ok(self)
+        } else {
+            Err(ExchangeError::SandBox("input liquidation threshold invalid.".into()))
+        }
     }
 
-    pub fn liquidation_threshold(mut self, liquidation_threshold: f64) -> Self
-    {
-        self.liquidation_threshold = Some(liquidation_threshold);
-        self
-    }
+
 
     pub fn initiate(self) -> Result<AccountConfig, &'static str>
     {
