@@ -1,11 +1,8 @@
-use crate::{
-    common::{
-        account_positions::{Position, PositionConfig},
-        instrument::Instrument,
-    },
-    error::ExchangeError,
-    sandbox::{config_request::ConfigurationRequest, sandbox_client::ConfigureInstrumentsResults},
-};
+use std::sync::atomic::Ordering;
+use crate::{common::{
+    account_positions::{Position, PositionConfig},
+    instrument::Instrument,
+}, error::ExchangeError, sandbox::{config_request::ConfigurationRequest, sandbox_client::ConfigureInstrumentsResults}, Exchange};
 use async_trait::async_trait;
 
 use crate::{
@@ -26,6 +23,8 @@ use crate::{
     sandbox::account::{handlers::position_handler::PositionHandling::CloseCompleteAndReverse, respond, SandboxAccount},
 };
 use tokio::sync::oneshot::Sender;
+use crate::common::trade::ClientTradeId;
+use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum PositionHandling
@@ -59,7 +58,7 @@ pub trait PositionHandler
 
     async fn fetch_short_position_and_respond(&self, instrument: &Instrument, response_tx: Sender<Result<Option<Position>, ExchangeError>>);
 
-    // async fn check_and_handle_liquidation(&mut self, trade: ClientTrade) -> Result<Option<ClientTrade>, ExchangeError>;
+    async fn check_and_handle_liquidation(&mut self, trade:MarketTrade) -> Result<Option<ClientTrade>, ExchangeError>;
     async fn check_position_direction_conflict(&self, instrument: &Instrument, new_order_side: Side, is_reduce_only: bool) -> Result<(), ExchangeError>;
 
     async fn create_perpetual_position(&mut self, trade: ClientTrade, handle_type: PositionHandling) -> Result<PerpetualPosition, ExchangeError>;
@@ -297,66 +296,73 @@ impl PositionHandler for SandboxAccount
         respond(response_tx, Ok(position));
     }
 
-    //  async fn check_and_handle_liquidation(&mut self, trade: ClientTrade) -> Result<Option<ClientTrade>, ExchangeError> {
-    //     let instrument = &trade.instrument;
-    //
-    //     // 获取多头和空头仓位
-    //     let (long_position, short_position) = self.get_position_both_ways(instrument).await?;
-    //
-    //     // 用于存储平仓的 `ClientTrade`
-    //     let mut liquidation_trade: Option<ClientTrade> = None;
-    //
-    //     // 检查多头仓位是否爆仓
-    //     if let Some(Position::Perpetual(long_pos)) = long_position {
-    //         if let Some(liquidation_price) = long_pos.liquidation_price {
-    //             if trade.price <= liquidation_price {
-    //                 // 多头仓位爆仓，生成平仓的 `ClientTrade`
-    //                 liquidation_trade = Some(ClientTrade {
-    //                     exchange: trade.exchange,
-    //                     timestamp: trade.timestamp,  // 使用当前时间戳
-    //                     trade_id: ClientTradeId::new(), // 生成新的 trade_id
-    //                     order_id: long_pos.meta.position_id.into(),  // 使用仓位的ID作为order_id
-    //                     cid: trade.cid.clone(),
-    //                     instrument: instrument.clone(),
-    //                     side: Side::Sell,  // 平仓方向为卖出
-    //                     price: trade.price,  // 平仓时的价格
-    //                     size: long_pos.meta.current_size,  // 全部平仓
-    //                     fees: 0.0,  // 可以根据实际情况计算费用
-    //                 });
-    //
-    //                 // 处理平仓
-    //                 self.close_position(instrument.clone(), Side::Buy).await?;
-    //             }
-    //         }
-    //     }
-    //
-    //     // 检查空头仓位是否爆仓
-    //     if let Some(Position::Perpetual(short_pos)) = short_position {
-    //         if let Some(liquidation_price) = short_pos.liquidation_price {
-    //             if trade.price >= liquidation_price {
-    //                 // 空头仓位爆仓，生成平仓的 `ClientTrade`
-    //                 liquidation_trade = Some(ClientTrade {
-    //                     exchange: trade.exchange,
-    //                     timestamp: trade.timestamp,  // 使用当前时间戳
-    //                     trade_id: ClientTradeId::new(), // 生成新的 trade_id
-    //                     order_id: short_pos.meta.position_id.into(),  // 使用仓位的ID作为order_id
-    //                     cid: trade.cid.clone(),
-    //                     instrument: instrument.clone(),
-    //                     side: Side::Buy,  // 平仓方向为买入
-    //                     price: trade.price,  // 平仓时的价格
-    //                     size: short_pos.meta.current_size,  // 全部平仓
-    //                     fees: 0.0,  // 可以根据实际情况计算费用
-    //                 });
-    //
-    //                 // 处理平仓
-    //                 self.close_position(instrument.clone(), Side::Sell).await?;
-    //             }
-    //         }
-    //     }
-    //
-    //     // 返回生成的平仓交易（如果有的话）
-    //     Ok(liquidation_trade)
-    // }
+
+    async fn check_and_handle_liquidation(
+        &mut self,
+        trade: MarketTrade,
+    ) -> Result<Option<ClientTrade>, ExchangeError> {
+        let instrument = trade.parse_instrument().unwrap().clone();
+        let instrument_clone_for_close = instrument.clone(); // Clone the instrument here
+
+        // 获取多头和空头仓位
+        let (long_position, short_position) = self.get_position_both_ways(&instrument).await?;
+
+        // 用于存储平仓的 `ClientTrade`
+        let mut liquidation_trade: Option<ClientTrade> = None;
+        let trade_id_value = self.client_trade_counter.fetch_add(1, Ordering::SeqCst);
+        let trade_id = ClientTradeId(trade_id_value);
+
+        // 检查多头仓位是否爆仓
+        if let Some(Position::Perpetual(long_pos)) = long_position {
+            if let Some(liquidation_price) = long_pos.liquidation_price {
+                if trade.price <= liquidation_price {
+                    // 多头仓位爆仓，生成平仓的 `ClientTrade`
+                    liquidation_trade = Some(ClientTrade {
+                        exchange: Exchange::SandBox,
+                        timestamp: trade.timestamp, // 使用当前时间戳
+                        trade_id,                    // 生成新的 trade_id
+                        order_id: None,              // 使用仓位的ID作为order_id
+                        cid: None,
+                        instrument: instrument.clone(), // Use the original `instrument`
+                        side: Side::Sell,               // 平仓方向为卖出
+                        price: trade.price,             // 平仓时的价格
+                        size: long_pos.meta.current_size, // 全部平仓
+                        fees: 0.0,                      // 可以根据实际情况计算费用
+                    });
+
+                    // 处理平仓
+                    self.close_position(instrument_clone_for_close.clone(), Side::Buy).await?;
+                }
+            }
+        }
+
+        // 检查空头仓位是否爆仓
+        if let Some(Position::Perpetual(short_pos)) = short_position {
+            if let Some(liquidation_price) = short_pos.liquidation_price {
+                if trade.price >= liquidation_price {
+                    // 空头仓位爆仓，生成平仓的 `ClientTrade`
+                    liquidation_trade = Some(ClientTrade {
+                        exchange: Exchange::SandBox,
+                        timestamp: trade.timestamp, // 使用当前时间戳
+                        trade_id,                    // 生成新的 trade_id
+                        order_id: None,              // 使用仓位的ID作为order_id
+                        cid: None,
+                        instrument,      // Use the original `instrument`
+                        side: Side::Buy,             // 平仓方向为买入
+                        price: trade.price,          // 平仓时的价格
+                        size: short_pos.meta.current_size, // 全部平仓
+                        fees: 0.0,                      // 可以根据实际情况计算费用
+                    });
+
+                    // 处理平仓
+                    self.close_position(instrument_clone_for_close, Side::Sell).await?;
+                }
+            }
+        }
+
+        // 返回生成的平仓交易（如果有的话）
+        Ok(liquidation_trade)
+    }
 
     /// 检查给定的 `new_order_side` 是否与现有仓位方向冲突，并根据 `is_reduce_only` 标志做出相应处理。
     ///
@@ -936,7 +942,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(1),
-                                  order_id: OrderId(1),
+                                  order_id: Some(OrderId(1)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -976,7 +982,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(2),
-                                  order_id: OrderId(2),
+                                  order_id: Some(OrderId(2)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -1016,7 +1022,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(3),
-                                  order_id: OrderId(3),
+                                  order_id: Some(OrderId(3)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -1040,7 +1046,7 @@ mod tests
         let additional_trade = ClientTrade { exchange: Exchange::SandBox,
                                              timestamp: 1690000100,
                                              trade_id: ClientTradeId(4),
-                                             order_id: OrderId(4),
+                                             order_id: Some(OrderId(4)),
                                              cid: None,
                                              instrument: Instrument { base: Token("BTC".to_string()),
                                                                       quote: Token("USDT".to_string()),
@@ -1067,7 +1073,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(3),
-                                  order_id: OrderId(3),
+                                  order_id: Some(OrderId(3)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -1091,7 +1097,7 @@ mod tests
         let additional_trade = ClientTrade { exchange: Exchange::SandBox,
                                              timestamp: 1690000100,
                                              trade_id: ClientTradeId(4),
-                                             order_id: OrderId(4),
+                                             order_id: Some(OrderId(4)),
                                              cid: None,
                                              instrument: Instrument { base: Token("BTC".to_string()),
                                                                       quote: Token("USDT".to_string()),
@@ -1118,7 +1124,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(3),
-                                  order_id: OrderId(3),
+                                  order_id: Some(OrderId(3)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -1142,7 +1148,7 @@ mod tests
         let additional_trade = ClientTrade { exchange: Exchange::SandBox,
                                              timestamp: 1690000100,
                                              trade_id: ClientTradeId(4),
-                                             order_id: OrderId(4),
+                                             order_id: Some(OrderId(4)),
                                              cid: None,
                                              instrument: Instrument { base: Token("BTC".to_string()),
                                                                       quote: Token("USDT".to_string()),
@@ -1169,7 +1175,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(3),
-                                  order_id: OrderId(3),
+                                  order_id: Some(OrderId(3)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -1193,7 +1199,7 @@ mod tests
         let additional_trade = ClientTrade { exchange: Exchange::SandBox,
                                              timestamp: 1690000100,
                                              trade_id: ClientTradeId(4),
-                                             order_id: OrderId(4),
+                                             order_id: Some(OrderId(4)),
                                              cid: None,
                                              instrument: Instrument { base: Token("BTC".to_string()),
                                                                       quote: Token("USDT".to_string()),
@@ -1220,7 +1226,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
-                                  order_id: OrderId(5),
+                                  order_id: Some(OrderId(5)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -1245,7 +1251,7 @@ mod tests
         let closing_trade = ClientTrade { exchange: Exchange::SandBox,
                                           timestamp: 1690000200,
                                           trade_id: ClientTradeId(6),
-                                          order_id: OrderId(6),
+                                          order_id: Some(OrderId(6)),
                                           cid: None,
                                           instrument: Instrument { base: Token("BTC".to_string()),
                                                                    quote: Token("USDT".to_string()),
@@ -1270,7 +1276,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
-                                  order_id: OrderId(5),
+                                  order_id: Some(OrderId(5)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -1293,7 +1299,7 @@ mod tests
         let closing_trade = ClientTrade { exchange: Exchange::SandBox,
                                           timestamp: 1690000200,
                                           trade_id: ClientTradeId(6),
-                                          order_id: OrderId(6),
+                                          order_id: Some(OrderId(6)),
                                           cid: None,
                                           instrument: Instrument { base: Token("BTC".to_string()),
                                                                    quote: Token("USDT".to_string()),
@@ -1318,7 +1324,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
-                                  order_id: OrderId(5),
+                                  order_id: Some(OrderId(5)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -1342,7 +1348,7 @@ mod tests
         let closing_trade = ClientTrade { exchange: Exchange::SandBox,
                                           timestamp: 1690000200,
                                           trade_id: ClientTradeId(6),
-                                          order_id: OrderId(6),
+                                          order_id: Some(OrderId(6)),
                                           cid: None,
                                           instrument: Instrument { base: Token("BTC".to_string()),
                                                                    quote: Token("USDT".to_string()),
@@ -1367,7 +1373,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
-                                  order_id: OrderId(5),
+                                  order_id: Some(OrderId(5)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -1389,7 +1395,7 @@ mod tests
         let closing_trade = ClientTrade { exchange: Exchange::SandBox,
                                           timestamp: 1690000000,
                                           trade_id: ClientTradeId(5),
-                                          order_id: OrderId(5),
+                                          order_id: Some(OrderId(5)),
                                           cid: None,
                                           instrument: Instrument { base: Token("BTC".to_string()),
                                                                    quote: Token("USDT".to_string()),
@@ -1414,7 +1420,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
-                                  order_id: OrderId(5),
+                                  order_id: Some(OrderId(5)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -1436,7 +1442,7 @@ mod tests
         let reverse_trade = ClientTrade { exchange: Exchange::SandBox,
                                           timestamp: 1690000100,
                                           trade_id: ClientTradeId(6),
-                                          order_id: OrderId(6),
+                                          order_id: Some(OrderId(6)),
                                           cid: None,
                                           instrument: Instrument { base: Token("BTC".to_string()),
                                                                    quote: Token("USDT".to_string()),
@@ -1468,7 +1474,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
-                                  order_id: OrderId(5),
+                                  order_id: Some(OrderId(5)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -1490,7 +1496,7 @@ mod tests
         let reverse_trade = ClientTrade { exchange: Exchange::SandBox,
                                           timestamp: 1690000100,
                                           trade_id: ClientTradeId(6),
-                                          order_id: OrderId(6),
+                                          order_id: Some(OrderId(6)),
                                           cid: None,
                                           instrument: Instrument { base: Token("BTC".to_string()),
                                                                    quote: Token("USDT".to_string()),
@@ -1522,7 +1528,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
-                                  order_id: OrderId(5),
+                                  order_id: Some(OrderId(5)),
                                   cid: None,
                                   instrument: Instrument { base: Token("BTC".to_string()),
                                                            quote: Token("USDT".to_string()),
@@ -1544,7 +1550,7 @@ mod tests
         let reverse_trade = ClientTrade { exchange: Exchange::SandBox,
                                           timestamp: 1690000100,
                                           trade_id: ClientTradeId(6),
-                                          order_id: OrderId(6),
+                                          order_id: Some(OrderId(6)),
                                           cid: None,
                                           instrument: Instrument { base: Token("BTC".to_string()),
                                                                    quote: Token("USDT".to_string()),
@@ -1566,7 +1572,7 @@ mod tests
         let trade = ClientTrade { exchange: Exchange::SandBox,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
-                                  order_id: OrderId(5),
+                                  order_id: Some(OrderId(5)),
                                   cid: None,
                                   instrument: Instrument { base: Token("RRR".to_string()),
                                                            quote: Token("USDT".to_string()),

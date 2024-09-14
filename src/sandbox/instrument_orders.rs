@@ -201,7 +201,7 @@ impl InstrumentOrders
             exchange: Exchange::SandBox,
             timestamp,
             trade_id: trade_id.into(), // Use the fetched trade ID
-            order_id: order.state.id.clone(),
+            order_id: Some(order.state.id.clone()),
             cid: order.cid.clone(),
             instrument: order.instrument.clone(),
             side: order.side,

@@ -15,7 +15,7 @@ pub struct ClientTrade
     pub exchange: Exchange,
     pub timestamp: i64,
     pub trade_id: ClientTradeId,
-    pub order_id: OrderId,
+    pub order_id: Option<OrderId>,
     pub cid: Option<ClientOrderId>,
     pub instrument: Instrument,
     pub side: Side,
@@ -24,7 +24,7 @@ pub struct ClientTrade
     pub fees: f64,
 }
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy,Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct ClientTradeId(pub i64);
 
 impl<S> From<S> for ClientTradeId where S: Into<i64>

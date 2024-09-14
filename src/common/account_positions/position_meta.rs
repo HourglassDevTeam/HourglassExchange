@@ -316,7 +316,7 @@ mod tests
         ClientTrade { exchange: Exchange::SandBox,
                       timestamp: 1625247600,
                       trade_id: ClientTradeId::from(1),         // This works fine
-                      order_id: OrderId::new(1625247600, 1, 1), // Use the constructor for OrderId
+                      order_id: Some(OrderId::new(1625247600, 1, 1)), // Use the constructor for OrderId
                       cid: None,
                       instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
                       side: Side::Buy,
@@ -366,7 +366,7 @@ mod tests
         let new_trade = ClientTrade { exchange: Exchange::SandBox,
                                       timestamp: 1625248600,
                                       trade_id: ClientTradeId::from(1),         // This works fine
-                                      order_id: OrderId::new(1625247600, 1, 1), // Use the constructor for OrderId
+                                      order_id: Some(OrderId::new(1625247600, 1, 1)), // Use the constructor for OrderId
                                       cid: None,
                                       instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
                                       side: Side::Buy,
