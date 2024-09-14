@@ -100,9 +100,7 @@ impl InstrumentOrders
         }
         None
     }
-
-    pub fn match_bids(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade>
-    {
+    pub fn match_bids(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade> {
         let latest_trade_ts = market_trade.timestamp;
 
         // Track remaining liquidity for matching
@@ -118,8 +116,8 @@ impl InstrumentOrders
                 break;
             }
 
-            // Increment the atomic counter
-            let current_counter = counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            // Increment the atomic counter (this returns the old value)
+            counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
             // Get the remaining quantity of the order
             let remaining_quantity = best_bid.state.remaining_quantity();
@@ -128,18 +126,17 @@ impl InstrumentOrders
             if remaining_quantity <= remaining_liquidity {
                 // Full fill
                 remaining_liquidity -= remaining_quantity;
-                trades.push(self.generate_client_trade_event(latest_trade_ts, &best_bid, remaining_quantity, fees_percent, current_counter).unwrap());
+                trades.push(self.generate_client_trade_event(latest_trade_ts, &best_bid, remaining_quantity, fees_percent, counter).unwrap());
 
                 // If liquidity is exactly exhausted, exit loop
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            }
-            else {
+            } else {
                 // Partial fill
                 let trade_quantity = remaining_liquidity;
                 best_bid.state.filled_quantity += trade_quantity;
-                trades.push(self.generate_client_trade_event(latest_trade_ts, &best_bid, trade_quantity, fees_percent, current_counter).unwrap());
+                trades.push(self.generate_client_trade_event(latest_trade_ts, &best_bid, trade_quantity, fees_percent, counter).unwrap());
                 self.bids.push(best_bid); // Put the partially filled order back into the queue
                 break;
             }
@@ -147,8 +144,6 @@ impl InstrumentOrders
 
         trades
     }
-
-
 
     pub fn match_asks(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade> {
         let latest_trade_ts = market_trade.timestamp;
@@ -166,17 +161,17 @@ impl InstrumentOrders
                 break;
             }
 
-            // Increment the atomic counter
-            let current_counter = counter.fetch_add(1, Ordering::SeqCst);
+            // Increment the atomic counter, but pass the counter reference to generate_client_trade_event
+            counter.fetch_add(1, Ordering::SeqCst);
 
             // Get the remaining quantity of the order
             let remaining_quantity = best_ask.state.remaining_quantity();
 
             // Determine if it's a full or partial fill
             if remaining_quantity <= remaining_liquidity {
-                // Full fill
+                // Fully fill
                 remaining_liquidity -= remaining_quantity;
-                trades.push(self.generate_client_trade_event(latest_trade_ts, &best_ask, remaining_quantity, fees_percent, current_counter).unwrap());
+                trades.push(self.generate_client_trade_event(latest_trade_ts, &best_ask, remaining_quantity, fees_percent, counter).unwrap());
 
                 // If liquidity is exactly exhausted, exit loop
                 if remaining_liquidity == 0.0 {
@@ -186,7 +181,7 @@ impl InstrumentOrders
                 // Partial fill
                 let trade_quantity = remaining_liquidity;
                 best_ask.state.filled_quantity += trade_quantity;
-                trades.push(self.generate_client_trade_event(latest_trade_ts, &best_ask, trade_quantity, fees_percent, current_counter).unwrap());
+                trades.push(self.generate_client_trade_event(latest_trade_ts, &best_ask, trade_quantity, fees_percent, counter).unwrap());
                 self.asks.push(best_ask); // Put the partially filled order back into the queue
                 break;
             }
@@ -195,23 +190,27 @@ impl InstrumentOrders
         trades
     }
 
-    // 辅助函数：生成 ClientTrade
-    // NOTE 直接生成 ClientTrade 事件而不生成 OrderFill（例如 FullyFill 或 PartialFill）在某些场景下是合理的，但也有一些需要注意的地方。
-    pub fn generate_client_trade_event(&self, timestamp: i64, order: &Order<Open>, trade_quantity: f64, fees_percent: f64,counter: i64) -> Result<ClientTrade, ExchangeError>
+    pub fn generate_client_trade_event(&self, timestamp: i64, order: &Order<Open>, trade_quantity: f64, fees_percent: f64, counter: &AtomicI64) -> Result<ClientTrade, ExchangeError>
     {
         let fee = trade_quantity * order.state.price * fees_percent;
 
-        Ok(ClientTrade { exchange: Exchange::SandBox,
-                         timestamp,
-                         trade_id: counter.into(), // NOTE `trade_id` 现在本质上是InstrumentOrders的一个counter生成的
-                         order_id: order.state.id.clone(),
-                         cid: order.cid.clone(),
-                         instrument: order.instrument.clone(),
-                         side: order.side,
-                         price: order.state.price,
-                         size: trade_quantity,
-                         fees: fee })
+        // Fetch the current value from the AtomicI64
+        let trade_id = counter.load(Ordering::SeqCst); // Get the current value as an `i64`
+
+        Ok(ClientTrade {
+            exchange: Exchange::SandBox,
+            timestamp,
+            trade_id: trade_id.into(), // Use the fetched trade ID
+            order_id: order.state.id.clone(),
+            cid: order.cid.clone(),
+            instrument: order.instrument.clone(),
+            side: order.side,
+            price: order.state.price,
+            size: trade_quantity,
+            fees: fee,
+        })
     }
+
 
     /// 计算所有未成交买单和卖单的总数。
     pub fn num_orders(&self) -> usize
