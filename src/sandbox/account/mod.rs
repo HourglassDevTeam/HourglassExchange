@@ -43,6 +43,7 @@ use std::{
 };
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use uuid::Uuid;
+use atomic_float::AtomicF64;
 
 pub mod account_config;
 pub mod account_handlers;
@@ -68,7 +69,7 @@ pub struct SandboxAccount
     pub balances: DashMap<Token, Balance>,                                              // 每个币种的细分余额
     pub positions: AccountPositions,                                                    // 帐户持仓
     pub exited_positions: AccountExitedPositions,                                       // pub vault: Vault,
-    // pub global_margin:f64,
+    pub global_margin: Arc<AtomicF64>,
 }
 
 // 手动实现 Clone trait
@@ -86,7 +87,9 @@ impl Clone for SandboxAccount
                          single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
                          balances: self.balances.clone(),
                          positions: self.positions.clone(),
-                         exited_positions: self.exited_positions.clone() }
+                         exited_positions: self.exited_positions.clone(),
+                         global_margin: self.global_margin.clone(),
+        }
     }
 }
 #[derive(Debug)]
@@ -162,7 +165,9 @@ impl AccountInitiator
                             balances: self.balances.ok_or("balances are required")?,
                             positions: self.positions.ok_or("positions are required")?,
                             single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
-                            exited_positions: self.closed_positions.ok_or("closed_positions sink are required")? })
+                            exited_positions: self.closed_positions.ok_or("closed_positions sink are required")?,
+                            global_margin: Arc::new(0.0.into()),
+        })
     }
 }
 

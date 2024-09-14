@@ -171,7 +171,9 @@ pub async fn create_test_account() -> SandboxAccount
                                                                                                                                                                       maximum: 300,
                                                                                                                                                                       minimum: 0,
                                                                                                                                                                       current_value: 0 }).await)),
-                     single_level_order_book: Arc::new(Mutex::new(single_level_order_books)) }
+                     single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
+        global_margin: Arc::new(0.0.into()),
+    }
 }
 
 /// 创建一个测试用的 `PerpetualPosition` 实例。

@@ -46,6 +46,7 @@ chrono = { version = "0.4.22", features = ["serde"] } # 日期和时间库，支
 rand = "0.8.5" # 随机数生成库
 regex = { version = "1.10.0", features = ["unicode-perl"] } # 正则表达式库，支持Unicode和Perl风格的正则表达式
 futures-core = "0.3.30" # 核心异步编程工具库，提供Future和Stream的基础定义
+atomic_float = "1.1"
 
 url = "2.5.2"
 toml = "0.8.19"
