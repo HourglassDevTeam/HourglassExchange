@@ -68,8 +68,7 @@ pub fn create_test_account_config() -> AccountConfig
                     execution_mode: SandboxMode::Backtest,
                     max_price_deviation: 0.05,
                     lazy_account_positions: false,
-        liquidation_threshold: 0.9,
-    }
+                    liquidation_threshold: 0.9 }
 }
 // 帮助函数，用于创建测试用的 AccountOrders 实例
 pub async fn create_test_account_orders() -> AccountOrders
@@ -138,8 +137,7 @@ pub async fn create_test_account() -> SandboxAccount
                                              fees_book: HashMap::new(),
                                              execution_mode: SandboxMode::Backtest,
                                              lazy_account_positions: false,
-                                             liquidation_threshold: 0.9,
-    };
+                                             liquidation_threshold: 0.9 };
 
     account_config.fees_book.insert(Perpetual, commission_rates);
 
@@ -172,8 +170,7 @@ pub async fn create_test_account() -> SandboxAccount
                                                                                                                                                                       minimum: 0,
                                                                                                                                                                       current_value: 0 }).await)),
                      single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
-        account_margin: Arc::new(0.0.into()),
-    }
+                     account_margin: Arc::new(0.0.into()) }
 }
 
 /// 创建一个测试用的 `PerpetualPosition` 实例。

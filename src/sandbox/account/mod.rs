@@ -26,6 +26,7 @@ use crate::{
 };
 use account_config::AccountConfig;
 use account_orders::AccountOrders;
+use atomic_float::AtomicF64;
 use chrono::Utc;
 use dashmap::{mapref::one::RefMut as DashMapRefMut, DashMap};
 use futures::future::join_all;
@@ -43,7 +44,6 @@ use std::{
 };
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use uuid::Uuid;
-use atomic_float::AtomicF64;
 
 pub mod account_config;
 pub mod account_handlers;
@@ -88,8 +88,7 @@ impl Clone for SandboxAccount
                          balances: self.balances.clone(),
                          positions: self.positions.clone(),
                          exited_positions: self.exited_positions.clone(),
-                         account_margin: self.account_margin.clone(),
-        }
+                         account_margin: self.account_margin.clone() }
     }
 }
 #[derive(Debug)]
@@ -166,8 +165,7 @@ impl AccountInitiator
                             positions: self.positions.ok_or("positions are required")?,
                             single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
                             exited_positions: self.closed_positions.ok_or("closed_positions sink are required")?,
-                            account_margin: Arc::new(0.0.into()),
-        })
+                            account_margin: Arc::new(0.0.into()) })
     }
 }
 

@@ -22,7 +22,7 @@ pub struct AccountConfig
     pub execution_mode: SandboxMode,                           // 执行模式，定义账户是在沙盒模式（模拟交易）还是在真实环境中运行
     pub max_price_deviation: f64,                              // 最大价格偏差，用于限制订单价格与市场价格的偏离范围
     pub lazy_account_positions: bool,                          // 是否惰性更新以节约性能
-    pub liquidation_threshold:f64,                             // 平仓的门槛，通常为一个0.9~1的系数
+    pub liquidation_threshold: f64,                            // 平仓的门槛，通常为一个0.9~1的系数
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -154,7 +154,6 @@ pub struct AccountConfigInitiator
     max_price_deviation: Option<f64>,
     lazy_account_positions: Option<bool>,
     liquidation_threshold: Option<f64>,
-
 }
 impl Default for AccountConfigInitiator
 {
@@ -174,8 +173,7 @@ impl AccountConfigInitiator
                fund_fee_rate: None,
                max_price_deviation: None,
                lazy_account_positions: None,
-               liquidation_threshold: None,
-        }
+               liquidation_threshold: None }
     }
 
     pub fn margin_mode(mut self, margin_mode: MarginMode) -> Self
@@ -220,7 +218,6 @@ impl AccountConfigInitiator
                            execution_mode: SandboxMode::Backtest,
                            max_price_deviation: self.max_price_deviation.ok_or("max price deviation is required")?,
                            lazy_account_positions: self.lazy_account_positions.ok_or("lazy_account_positions switch is required")?,
-                            liquidation_threshold:self.liquidation_threshold.ok_or("liquidation threshold is required")?,
-        })
+                           liquidation_threshold: self.liquidation_threshold.ok_or("liquidation threshold is required")? })
     }
 }
