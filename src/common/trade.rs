@@ -24,7 +24,7 @@ pub struct ClientTrade
     pub fees: f64,
 }
 
-#[derive(Clone, Copy,Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct ClientTradeId(pub i64);
 
 impl<S> From<S> for ClientTradeId where S: Into<i64>

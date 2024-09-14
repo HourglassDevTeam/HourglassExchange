@@ -73,6 +73,8 @@ mod tests
     execution_mode = "Backtest"
     max_price_deviation = 0.05
     lazy_account_positions = false
+    liquidation_threshold = 0.9
+
 
 
     [current_commission_rate]

@@ -315,7 +315,7 @@ mod tests
     {
         ClientTrade { exchange: Exchange::SandBox,
                       timestamp: 1625247600,
-                      trade_id: ClientTradeId::from(1),         // This works fine
+                      trade_id: ClientTradeId::from(1),               // This works fine
                       order_id: Some(OrderId::new(1625247600, 1, 1)), // Use the constructor for OrderId
                       cid: None,
                       instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
@@ -365,7 +365,7 @@ mod tests
         let mut meta = PositionMeta::create_from_trade(&create_test_trade());
         let new_trade = ClientTrade { exchange: Exchange::SandBox,
                                       timestamp: 1625248600,
-                                      trade_id: ClientTradeId::from(1),         // This works fine
+                                      trade_id: ClientTradeId::from(1),               // This works fine
                                       order_id: Some(OrderId::new(1625247600, 1, 1)), // Use the constructor for OrderId
                                       cid: None,
                                       instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),

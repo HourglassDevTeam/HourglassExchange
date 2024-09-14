@@ -22,6 +22,7 @@ pub struct AccountConfig
     pub execution_mode: SandboxMode,                           // 执行模式，定义账户是在沙盒模式（模拟交易）还是在真实环境中运行
     pub max_price_deviation: f64,                              // 最大价格偏差，用于限制订单价格与市场价格的偏离范围
     pub lazy_account_positions: bool,                          // 是否惰性更新以节约性能
+    pub liquidation_threshold:f64,                             // 平仓的门槛，通常为一个0.9~1的系数
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -86,14 +87,29 @@ impl CommissionRatesInitiator
     }
 }
 
-impl AccountConfig
+pub trait FeesQuerier
 {
-    pub fn new() -> Result<AccountConfig, ExchangeError>
+    fn get_maker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExchangeError>;
+
+    fn get_taker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExchangeError>;
+}
+
+pub trait ConfigLoader
+{
+    fn load_config() -> Result<AccountConfig, ExchangeError>;
+}
+
+impl ConfigLoader for AccountConfig
+{
+    fn load_config() -> Result<AccountConfig, ExchangeError>
     {
         read_config_file()
     }
+}
 
-    pub fn get_maker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExchangeError>
+impl FeesQuerier for AccountConfig
+{
+    fn get_maker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExchangeError>
     {
         self.fees_book
             .get(instrument_kind)
@@ -101,7 +117,7 @@ impl AccountConfig
             .ok_or_else(|| ExchangeError::SandBox(format!("Open fee rate for {:?} not found", instrument_kind)))
     }
 
-    pub fn get_taker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExchangeError>
+    fn get_taker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExchangeError>
     {
         self.fees_book
             .get(instrument_kind)
@@ -137,6 +153,8 @@ pub struct AccountConfigInitiator
     fund_fee_rate: Option<f64>,
     max_price_deviation: Option<f64>,
     lazy_account_positions: Option<bool>,
+    liquidation_threshold: Option<f64>,
+
 }
 impl Default for AccountConfigInitiator
 {
@@ -155,7 +173,9 @@ impl AccountConfigInitiator
                commission_level: None,
                fund_fee_rate: None,
                max_price_deviation: None,
-               lazy_account_positions: None }
+               lazy_account_positions: None,
+               liquidation_threshold: None,
+        }
     }
 
     pub fn margin_mode(mut self, margin_mode: MarginMode) -> Self
@@ -182,6 +202,12 @@ impl AccountConfigInitiator
         self
     }
 
+    pub fn liquidation_threshold(mut self, liquidation_threshold: f64) -> Self
+    {
+        self.liquidation_threshold = Some(liquidation_threshold);
+        self
+    }
+
     pub fn initiate(self) -> Result<AccountConfig, &'static str>
     {
         Ok(AccountConfig { margin_mode: self.margin_mode.ok_or("margin_mode is required")?,
@@ -193,6 +219,8 @@ impl AccountConfigInitiator
                            fees_book: Default::default(),
                            execution_mode: SandboxMode::Backtest,
                            max_price_deviation: self.max_price_deviation.ok_or("max price deviation is required")?,
-                           lazy_account_positions: self.lazy_account_positions.ok_or("lazy_account_positions switch is required")? })
+                           lazy_account_positions: self.lazy_account_positions.ok_or("lazy_account_positions switch is required")?,
+                            liquidation_threshold:self.liquidation_threshold.ok_or("liquidation threshold is required")?,
+        })
     }
 }

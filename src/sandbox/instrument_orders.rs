@@ -1,18 +1,20 @@
-use rayon::prelude::ParallelSliceMut;
-use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
-use std::sync::atomic::{AtomicI64, Ordering};
 use crate::{
     common::{
         friction::{Fees, InstrumentFees, OptionFees, PerpetualFees, SpotFees},
         instrument::kind::InstrumentKind,
         order::{states::open::Open, Order},
-        trade::{ClientTrade},
+        trade::ClientTrade,
         Side,
     },
     error::ExchangeError,
     sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
     Exchange,
+};
+use rayon::prelude::ParallelSliceMut;
+use serde::{Deserialize, Serialize};
+use std::{
+    fmt::Debug,
+    sync::atomic::{AtomicI64, Ordering},
 };
 
 /// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
@@ -100,7 +102,9 @@ impl InstrumentOrders
         }
         None
     }
-    pub fn match_bids(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade> {
+
+    pub fn match_bids(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade>
+    {
         let latest_trade_ts = market_trade.timestamp;
 
         // Track remaining liquidity for matching
@@ -132,7 +136,8 @@ impl InstrumentOrders
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            } else {
+            }
+            else {
                 // Partial fill
                 let trade_quantity = remaining_liquidity;
                 best_bid.state.filled_quantity += trade_quantity;
@@ -145,7 +150,8 @@ impl InstrumentOrders
         trades
     }
 
-    pub fn match_asks(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade> {
+    pub fn match_asks(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade>
+    {
         let latest_trade_ts = market_trade.timestamp;
 
         // Track remaining liquidity for matching
@@ -177,7 +183,8 @@ impl InstrumentOrders
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            } else {
+            }
+            else {
                 // Partial fill
                 let trade_quantity = remaining_liquidity;
                 best_ask.state.filled_quantity += trade_quantity;
@@ -197,20 +204,17 @@ impl InstrumentOrders
         // Fetch the current value from the AtomicI64
         let trade_id = counter.load(Ordering::SeqCst); // Get the current value as an `i64`
 
-        Ok(ClientTrade {
-            exchange: Exchange::SandBox,
-            timestamp,
-            trade_id: trade_id.into(), // Use the fetched trade ID
-            order_id: Some(order.state.id.clone()),
-            cid: order.cid.clone(),
-            instrument: order.instrument.clone(),
-            side: order.side,
-            price: order.state.price,
-            size: trade_quantity,
-            fees: fee,
-        })
+        Ok(ClientTrade { exchange: Exchange::SandBox,
+                         timestamp,
+                         trade_id: trade_id.into(), // Use the fetched trade ID
+                         order_id: Some(order.state.id.clone()),
+                         cid: order.cid.clone(),
+                         instrument: order.instrument.clone(),
+                         side: order.side,
+                         price: order.state.price,
+                         size: trade_quantity,
+                         fees: fee })
     }
-
 
     /// 计算所有未成交买单和卖单的总数。
     pub fn num_orders(&self) -> usize

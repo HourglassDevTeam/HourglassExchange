@@ -337,7 +337,7 @@ mod tests
             states::request_open::RequestOpen,
             OrderRole,
         },
-        sandbox::account::handlers::{position_handler::PositionHandler, trade_handler::TradeHandler},
+        sandbox::account::account_handlers::{position_handler::PositionHandler, trade_handler::TradeHandler},
         test_utils::create_test_account,
     };
 

@@ -1,9 +1,14 @@
-use std::sync::atomic::Ordering;
-use crate::{common::{
-    account_positions::{Position, PositionConfig},
-    instrument::Instrument,
-}, error::ExchangeError, sandbox::{config_request::ConfigurationRequest, sandbox_client::ConfigureInstrumentsResults}, Exchange};
+use crate::{
+    common::{
+        account_positions::{Position, PositionConfig},
+        instrument::Instrument,
+    },
+    error::ExchangeError,
+    sandbox::{config_request::ConfigurationRequest, sandbox_client::ConfigureInstrumentsResults},
+    Exchange,
+};
 use async_trait::async_trait;
+use std::sync::atomic::Ordering;
 
 use crate::{
     common::{
@@ -17,15 +22,18 @@ use crate::{
             AccountPositions, PositionDirectionMode, PositionMarginMode,
         },
         instrument::kind::InstrumentKind,
-        trade::ClientTrade,
+        trade::{ClientTrade, ClientTradeId},
         Side,
     },
-    sandbox::account::{handlers::position_handler::PositionHandling::CloseCompleteAndReverse, respond, SandboxAccount},
+    sandbox::{
+        account::{
+            account_handlers::{position_handler::PositionHandling::CloseCompleteAndReverse, trade_handler::TradeHandler},
+            respond, SandboxAccount,
+        },
+        clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
+    },
 };
 use tokio::sync::oneshot::Sender;
-use crate::common::trade::ClientTradeId;
-use crate::sandbox::account::handlers::trade_handler::TradeHandler;
-use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum PositionHandling
@@ -59,7 +67,7 @@ pub trait PositionHandler
 
     async fn fetch_short_position_and_respond(&self, instrument: &Instrument, response_tx: Sender<Result<Option<Position>, ExchangeError>>);
 
-    async fn check_and_handle_liquidation(&mut self, trade:&MarketTrade) -> Result<(), ExchangeError>;
+    async fn check_and_handle_liquidation(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>;
     async fn check_position_direction_conflict(&self, instrument: &Instrument, new_order_side: Side, is_reduce_only: bool) -> Result<(), ExchangeError>;
 
     async fn create_perpetual_position(&mut self, trade: ClientTrade, handle_type: PositionHandling) -> Result<PerpetualPosition, ExchangeError>;
@@ -298,10 +306,8 @@ impl PositionHandler for SandboxAccount
     }
 
     /// 注意 目前只支持匹配单一InstrumentKind，是临时的解决方案。
-    async fn check_and_handle_liquidation(
-        &mut self,
-        trade: &MarketTrade,
-    ) -> Result<(), ExchangeError> {
+    async fn check_and_handle_liquidation(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>
+    {
         let instrument = trade.parse_instrument().unwrap().clone();
         let instrument_clone_for_close = instrument.clone(); // Clone the instrument here
 
@@ -318,18 +324,16 @@ impl PositionHandler for SandboxAccount
             if let Some(liquidation_price) = long_pos.liquidation_price {
                 if trade.price <= liquidation_price {
                     // 多头仓位爆仓，生成平仓的 `ClientTrade`
-                    liquidation_trade = Some(ClientTrade {
-                        exchange: Exchange::SandBox,
-                        timestamp: trade.timestamp, // 使用当前时间戳
-                        trade_id,                    // 生成新的 trade_id
-                        order_id: None,              // 使用仓位的ID作为order_id
-                        cid: None,
-                        instrument: instrument.clone(), // Use the original `instrument`
-                        side: Side::Sell,               // 平仓方向为卖出
-                        price: trade.price,             // 平仓时的价格
-                        size: long_pos.meta.current_size, // 全部平仓
-                        fees: 0.0,                      // 可以根据实际情况计算费用
-                    });
+                    liquidation_trade = Some(ClientTrade { exchange: Exchange::SandBox,
+                                                           timestamp: trade.timestamp, // 使用当前时间戳
+                                                           trade_id,                   // 生成新的 trade_id
+                                                           order_id: None,             // 使用仓位的ID作为order_id
+                                                           cid: None,
+                                                           instrument: instrument.clone(),   // Use the original `instrument`
+                                                           side: Side::Sell,                 // 平仓方向为卖出
+                                                           price: trade.price,               // 平仓时的价格
+                                                           size: long_pos.meta.current_size, // 全部平仓
+                                                           fees: 0.0                         /* 可以根据实际情况计算费用 */ });
 
                     // 处理平仓
                     self.close_position(instrument_clone_for_close.clone(), Side::Buy).await?;
@@ -342,18 +346,16 @@ impl PositionHandler for SandboxAccount
             if let Some(liquidation_price) = short_pos.liquidation_price {
                 if trade.price >= liquidation_price {
                     // 空头仓位爆仓，生成平仓的 `ClientTrade`
-                    liquidation_trade = Some(ClientTrade {
-                        exchange: Exchange::SandBox,
-                        timestamp: trade.timestamp, // 使用当前时间戳
-                        trade_id,                    // 生成新的 trade_id
-                        order_id: None,              // 使用仓位的ID作为order_id
-                        cid: None,
-                        instrument,      // Use the original `instrument`
-                        side: Side::Buy,             // 平仓方向为买入
-                        price: trade.price,          // 平仓时的价格
-                        size: short_pos.meta.current_size, // 全部平仓
-                        fees: 0.0,                      // 可以根据实际情况计算费用
-                    });
+                    liquidation_trade = Some(ClientTrade { exchange: Exchange::SandBox,
+                                                           timestamp: trade.timestamp, // 使用当前时间戳
+                                                           trade_id,                   // 生成新的 trade_id
+                                                           order_id: None,             // 使用仓位的ID作为order_id
+                                                           cid: None,
+                                                           instrument,                        // Use the original `instrument`
+                                                           side: Side::Buy,                   // 平仓方向为买入
+                                                           price: trade.price,                // 平仓时的价格
+                                                           size: short_pos.meta.current_size, // 全部平仓
+                                                           fees: 0.0                          /* 可以根据实际情况计算费用 */ });
 
                     // 处理平仓
                     self.close_position(instrument_clone_for_close, Side::Sell).await?;
@@ -365,7 +367,6 @@ impl PositionHandler for SandboxAccount
             self.process_trade(trade).await?;
         }
         Ok(())
-
     }
 
     /// 检查给定的 `new_order_side` 是否与现有仓位方向冲突，并根据 `is_reduce_only` 标志做出相应处理。

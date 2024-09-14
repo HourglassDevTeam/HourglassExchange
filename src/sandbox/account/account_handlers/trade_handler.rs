@@ -9,8 +9,15 @@ use crate::{
     },
     error::ExchangeError,
     sandbox::{
-        account::{account_config::SandboxMode, handlers::balance_handler::BalanceHandler, SandboxAccount},
-        clickhouse_api::datatype::{clickhouse_trade_data::MarketTrade, single_level_order_book::SingleLevelOrderBook},
+        account::{
+            account_config::{FeesQuerier, SandboxMode},
+            account_handlers::{balance_handler::BalanceHandler, position_handler::PositionHandler},
+            SandboxAccount,
+        },
+        clickhouse_api::datatype::{
+            clickhouse_trade_data::MarketTrade,
+            single_level_order_book::{OrderBookUpdater, SingleLevelOrderBook},
+        },
     },
     Exchange,
 };
@@ -20,7 +27,6 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use tracing::warn;
-use crate::sandbox::account::handlers::position_handler::PositionHandler;
 
 #[async_trait]
 pub trait TradeHandler
@@ -228,24 +234,24 @@ impl TradeHandler for SandboxAccount
     /// # 注意事项
     ///
     /// * 当 `client_trades` 为空时，该方法不会执行任何操作。
-    async fn process_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+    async fn process_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
+    {
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
         // 直接调用 `self.apply_trade_changes` 来处理余额更新
         let balance_event = match self.apply_trade_changes(&trade).await {
-            Ok(event) => event,
-            Err(err) => {
+            | Ok(event) => event,
+            | Err(err) => {
                 warn!("Failed to update balance: {:?}", err);
                 return Err(err);
             }
         };
 
         // 发送交易事件
-        if let Err(err) = self.account_event_tx.send(AccountEvent {
-            exchange_timestamp,
-            exchange: Exchange::SandBox,
-            kind: AccountEventKind::Trade(trade.clone()), // 发送交易事件
-        }) {
+        if let Err(err) = self.account_event_tx.send(AccountEvent { exchange_timestamp,
+                                                                    exchange: Exchange::SandBox,
+                                                                    kind: AccountEventKind::Trade(trade.clone()) /* 发送交易事件 */ })
+        {
             warn!("[UniLinkEx] : Client offline - Failed to send AccountEvent::Trade: {:?}", err);
         }
 
@@ -257,7 +263,8 @@ impl TradeHandler for SandboxAccount
         Ok(())
     }
 
-    async fn process_trades(&mut self, client_trades: Vec<ClientTrade>) {
+    async fn process_trades(&mut self, client_trades: Vec<ClientTrade>)
+    {
         if !client_trades.is_empty() {
             for trade in client_trades {
                 if let Err(err) = self.process_trade(trade).await {
@@ -266,7 +273,6 @@ impl TradeHandler for SandboxAccount
             }
         }
     }
-
 
     /// 更新交易所时间辍
     fn update_exchange_ts(&self, timestamp: i64)
@@ -290,7 +296,7 @@ mod tests
             states::{open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
             Order,
         },
-        sandbox::account::handlers::trade_handler::TradeHandler,
+        sandbox::account::account_handlers::trade_handler::TradeHandler,
         test_utils::create_test_account,
     };
 

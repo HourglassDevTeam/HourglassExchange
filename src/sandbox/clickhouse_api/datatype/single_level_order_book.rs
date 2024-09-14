@@ -14,10 +14,14 @@ pub struct SingleLevelOrderBook
     pub(crate) latest_price: f64, // 记录最新的交易价格
 }
 
-#[allow(dead_code)]
-impl SingleLevelOrderBook
+pub trait OrderBookUpdater
 {
-    pub fn update_from_trade(&mut self, market_trade: &MarketTrade)
+    fn update_from_trade(&mut self, market_trade: &MarketTrade);
+}
+
+impl OrderBookUpdater for SingleLevelOrderBook
+{
+    fn update_from_trade(&mut self, market_trade: &MarketTrade)
     {
         match Side::from_str(&market_trade.side) {
             | Ok(Side::Buy) => {

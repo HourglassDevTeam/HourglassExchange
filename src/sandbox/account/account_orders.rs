@@ -16,6 +16,7 @@ use crate::{
         instrument_orders::InstrumentOrders,
     },
 };
+use async_trait::async_trait;
 use dashmap::{mapref::one::RefMut, DashMap};
 use rand::Rng;
 use std::{
@@ -84,6 +85,333 @@ impl AccountOrders
                selectable_latencies }
     }
 
+    /// 返回指定 [`Instrument`] 的 [`InstrumentOrders`] 的可变引用。
+
+    pub fn get_ins_orders_mut(&self, instrument: &Instrument) -> Result<RefMut<Instrument, InstrumentOrders>, ExchangeError>
+    {
+        self.instrument_orders_map
+            .get_mut(instrument)
+            .ok_or_else(|| ExchangeError::SandBox(format!("Sandbox exchange is not configured for Instrument: {instrument}")))
+    }
+
+    /// 为每个 [`Instrument`] 获取出价和要价 [`Order<Open>`]。
+    ///
+    /// 该函数在以下情况下会被使用:
+    ///
+    /// 1. **查询订单状态**: 用户或系统需要查询当前账户的所有挂单，例如在界面上显示当前的挂单状态，或在数据分析时，了解有哪些订单还未成交。
+    /// 2. **取消所有挂单**: 在需要一次性取消所有挂单的情况下，首先可以通过 `fetch_all()` 获取所有挂单的列表，然后逐一取消这些订单。
+    /// 3. **定期检查或清理**: 系统可能会定期检查账户的挂单情况，确保所有挂单都在合理状态，或者在清理过程中使用该函数获取需要清理的订单。
+    /// 4. **系统恢复或重启后重建状态**: 如果交易系统因某种原因重启，系统可能需要重建账户的内部状态，此时 `fetch_all()` 可以用于获取所有挂单，以便在内存中重新建立订单簿的状态。
+    /// 5. **监控和日志记录**: 在监控或日志记录系统中，记录当前账户所有挂单的状态，有助于在出问题时追踪系统中未成交订单的详细信息。
+    ///
+    /// # 返回值
+    ///
+    /// 返回一个包含所有未完成订单的 `Vec<Order<Open>>`。
+    pub fn fetch_all(&self) -> Vec<Order<Open>>
+    {
+        self.instrument_orders_map
+            .iter()
+            .flat_map(|entry| {
+                let orders = entry.value();
+                orders.bids.iter().chain(orders.asks.iter()).cloned().collect::<Vec<_>>()
+            })
+            .collect()
+    }
+
+    /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
+    /// 在 increment_request_counter 方法中，使用 Ordering::Relaxed 进行递增。
+    pub async fn build_order_open(&mut self, request: Order<RequestOpen>, role: OrderRole) -> Order<Open>
+    {
+        self.increment_order_counter();
+
+        // 直接构建 Order<Open>
+        Order { instruction: request.instruction,
+                exchange: request.exchange,
+                instrument: request.instrument,
+                cid: request.cid,
+                timestamp: request.timestamp,
+                side: request.side,
+                state: Open { id: self.order_id(),
+                              price: request.state.price,
+                              size: request.state.size,
+                              filled_quantity: 0.0,
+                              order_role: role } }
+    }
+
+    /// 增加请求计数器的值。
+    ///
+    /// 该函数使用 [`Ordering::Relaxed`] 来递增请求计数器 `request_counter` 的值，
+    /// 不保证线程同步的顺序一致性。这意味着多个线程可以并发调用此函数，
+    /// 但不保证对其他线程的立即可见性或顺序一致性。
+    ///
+    /// # 注意
+    ///
+    /// - 此函数的主要用途是在每次接收到新的订单请求时递增计数器，以确保订单 ID 的唯一性。
+    /// - 由于使用了 `Relaxed` 顺序，这种递增操作的结果可能对其他线程不可见。
+    pub fn increment_order_counter(&self)
+    {
+        self.order_counter.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// 生成一个新的 [OrderId]。
+    ///
+    /// 该函数根据当前的系统时间戳和订单计数器生成一个唯一的 [OrderId]。
+    /// 系统时间戳以毫秒为单位计算，并结合机器 ID 和计数器来确保生成的 ID 唯一。
+    /// 由于计数器使用 [Ordering::SeqCst] 进行递增，确保了在多线程环境下的顺序一致性和原子性。
+    ///
+    /// # 返回值
+    ///
+    /// 返回一个唯一的 [OrderId]，该 ID 是基于当前的时间戳、机器 ID 和计数器生成的。
+    ///
+    /// # 错误处理
+    ///
+    /// 如果系统时间出现倒退，将导致程序崩溃并输出错误信息 "时间出现倒退"。
+    pub fn order_id(&self) -> OrderId
+    {
+        let now_ts = SystemTime::now().duration_since(UNIX_EPOCH).expect("时间出现倒退").as_millis() as u64;
+        let counter = self.order_counter.fetch_add(1, Ordering::SeqCst);
+        OrderId::new(now_ts, self.machine_id, counter)
+    }
+}
+#[async_trait]
+impl OrderRoleClassifier for AccountOrders
+{
+    /// 根据订单类型和当前市场价格，确定订单是 Maker 还是 Taker。
+    ///
+    /// # 参数
+    ///
+    /// - `order`: 待处理的订单 (`Order<RequestOpen>`)。
+    /// - `current_price`: 当前市场价格。
+    ///
+    /// # 返回值
+    ///
+    /// - 返回 `Ok(OrderRole::Maker)` 或 `Ok(OrderRole::Taker)`，分别表示订单是 Maker 或 Taker。
+    /// - 如果订单类型无法判断，返回 `Err(ExecutionError)`。
+    ///
+    /// # 逻辑
+    ///
+    /// - 对于 `Market` 类型的订单，总是返回 `OrderRole::Taker`，因为`Market`订单总是`Taker`订单。
+    /// - 对于 `Limit` 类型的订单，调用 `determine_limit_order_role` 来确定订单角色。
+    /// - 对于 `PostOnly` 类型的订单，调用 `determine_post_only_order_role` 来判断订单是否能作为 Maker，否则拒绝该订单。
+    /// - 对于 `ImmediateOrCancel` 和 `FillOrKill` 类型的订单，总是返回 `OrderRole::Taker`，因为这些订单需要立即成交。
+    /// - 对于 `GoodTilCancelled` 类型的订单，按照限价订单的逻辑来判断角色。
+    fn determine_maker_taker(&self, order: &Order<RequestOpen>, order_book: &SingleLevelOrderBook) -> Result<OrderRole, ExchangeError>
+    {
+        // 根据订单方向设置 current_price
+        let current_price = match order.side {
+            | Side::Buy => order_book.latest_ask,  // 买单参考最新卖价
+            | Side::Sell => order_book.latest_bid, // 卖单参考最新买价
+        };
+
+        match order.instruction {
+            | OrderInstruction::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
+
+            | OrderInstruction::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
+
+            | OrderInstruction::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
+
+            | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => {
+                let is_immediate = match order.side {
+                    | Side::Buy => order.state.price >= current_price,  // 买单判断是否立刻成交
+                    | Side::Sell => order.state.price <= current_price, // 卖单判断是否立刻成交
+                };
+
+                if is_immediate {
+                    Ok(OrderRole::Taker) // 可以立即成交
+                }
+                else {
+                    Ok(OrderRole::Maker) // 不能立即成交
+                }
+            }
+
+            | OrderInstruction::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
+
+            | OrderInstruction::Cancel => {
+                todo!() // 取消订单逻辑
+            }
+        }
+    }
+
+    /// 根据限价订单的价格和当前市场价格，确定订单是 Maker 还是 Taker。
+    ///
+    /// # 参数
+    ///
+    /// - `order`: 待处理的限价订单 (`Order<RequestOpen>`)。
+    /// - `current_price`: 当前市场价格。
+    ///
+    /// # 返回值
+    ///
+    /// - `Ok(OrderRole::Maker)`: 如果订单价格与当前市场价格相比，具有优势（买单价格高于或等于市场价格，或卖单价格低于或等于市场价格），则订单作为 Maker 角色。
+    /// - `Ok(OrderRole::Taker)`: 如果订单价格与当前市场价格相比，处于劣势（买单价格低于市场价格，或卖单价格高于市场价格），则订单作为 Taker 角色。
+    ///
+    /// # 逻辑
+    ///
+    /// - 对于买单 (`Side::Buy`):
+    ///   - 如果订单价格 (`order.state.price`) 大于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
+    ///   - 否则，返回 `OrderRole::Taker`。
+    ///
+    /// - 对于卖单 (`Side::Sell`):
+    ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
+    ///   - 否则，返回 `OrderRole::Taker`。
+    fn determine_limit_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>
+    {
+        match order.side {
+            | Side::Buy => {
+                if order.state.price < current_price {
+                    Ok(OrderRole::Maker)
+                }
+                else {
+                    Ok(OrderRole::Taker)
+                }
+            }
+            | Side::Sell => {
+                if order.state.price > current_price {
+                    Ok(OrderRole::Maker)
+                }
+                else {
+                    Ok(OrderRole::Taker)
+                }
+            }
+        }
+    }
+
+    /// FIXME 这个逻辑提前到了 open_orders 中。所以可能产生重复。
+    /// 判断 PostOnly 订单是否符合条件，并确定其是 Maker 还是被拒绝。
+    ///
+    /// 如果订单不符合 PostOnly 的条件（即买单价格低于当前市场价格，或卖单价格高于当前市场价格），
+    /// 则会拒绝该订单，并将其从待处理订单中删除。
+    ///
+    /// # 参数
+    ///
+    /// - `order`: 待处理的 PostOnly 订单 (`Order<RequestOpen>`)。
+    /// - `current_price`: 当前市场价格。
+    ///
+    /// # 返回值
+    ///
+    /// - `Ok(OrderRole::Maker)`: 如果订单价格符合 PostOnly 的条件，
+    ///   即买单价格高于或等于市场价格，或者卖单价格低于或等于市场价格，则订单作为 Maker 角色。
+    /// - `Err(ExecutionError::OrderRejected)`: 如果订单价格不符合 PostOnly 的条件，
+    ///   即买单价格低于市场价格，或者卖单价格高于市场价格，则订单会被拒绝并从待处理订单中删除。
+    ///
+    /// # 逻辑
+    ///
+    /// - 对于买单 (`Side::Buy`):
+    ///   - 如果订单价格 (`order.state.price`) 大于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
+    ///   - 否则，调用 `self.reject_post_only_order(order)` 拒绝订单，并返回错误。
+    ///
+    /// - 对于卖单 (`Side::Sell`):
+    ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
+    ///   - 否则，调用 `self.reject_post_only_order(order)` 拒绝订单，并返回错误。
+    fn determine_post_only_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>
+    {
+        match order.side {
+            | Side::Buy => {
+                if order.state.price < current_price {
+                    Ok(OrderRole::Maker)
+                }
+                else {
+                    Err(ExchangeError::PostOnlyViolation("PostOnly order should be rejected".into()))
+                }
+            }
+            | Side::Sell => {
+                if order.state.price > current_price {
+                    Ok(OrderRole::Maker)
+                }
+                else {
+                    Err(ExchangeError::PostOnlyViolation("PostOnly order should be rejected".into()))
+                    // 返回需要拒绝的错误，但不立即执行拒绝操作
+                }
+            }
+        }
+    }
+}
+#[async_trait]
+pub trait OrderRoleClassifier
+{
+    /// 根据订单类型和当前市场价格，确定订单是 Maker 还是 Taker。
+    ///
+    /// # 参数
+    ///
+    /// - `order`: 待处理的订单 (`Order<RequestOpen>`)。
+    /// - `current_price`: 当前市场价格。
+    ///
+    /// # 返回值
+    ///
+    /// - 返回 `Ok(OrderRole::Maker)` 或 `Ok(OrderRole::Taker)`，分别表示订单是 Maker 或 Taker。
+    /// - 如果订单类型无法判断，返回 `Err(ExecutionError)`。
+    ///
+    /// # 逻辑
+    ///
+    /// - 对于 `Market` 类型的订单，总是返回 `OrderRole::Taker`，因为`Market`订单总是`Taker`订单。
+    /// - 对于 `Limit` 类型的订单，调用 `determine_limit_order_role` 来确定订单角色。
+    /// - 对于 `PostOnly` 类型的订单，调用 `determine_post_only_order_role` 来判断订单是否能作为 Maker，否则拒绝该订单。
+    /// - 对于 `ImmediateOrCancel` 和 `FillOrKill` 类型的订单，总是返回 `OrderRole::Taker`，因为这些订单需要立即成交。
+    /// - 对于 `GoodTilCancelled` 类型的订单，按照限价订单的逻辑来判断角色。
+    fn determine_maker_taker(&self, order: &Order<RequestOpen>, order_book: &SingleLevelOrderBook) -> Result<OrderRole, ExchangeError>;
+    /// 根据限价订单的价格和当前市场价格，确定订单是 Maker 还是 Taker。
+    ///
+    /// # 参数
+    ///
+    /// - `order`: 待处理的限价订单 (`Order<RequestOpen>`)。
+    /// - `current_price`: 当前市场价格。
+    ///
+    /// # 返回值
+    ///
+    /// - `Ok(OrderRole::Maker)`: 如果订单价格与当前市场价格相比，具有优势（买单价格高于或等于市场价格，或卖单价格低于或等于市场价格），则订单作为 Maker 角色。
+    /// - `Ok(OrderRole::Taker)`: 如果订单价格与当前市场价格相比，处于劣势（买单价格低于市场价格，或卖单价格高于市场价格），则订单作为 Taker 角色。
+    ///
+    /// # 逻辑
+    ///
+    /// - 对于买单 (`Side::Buy`):
+    ///   - 如果订单价格 (`order.state.price`) 大于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
+    ///   - 否则，返回 `OrderRole::Taker`。
+    ///
+    /// - 对于卖单 (`Side::Sell`):
+    ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
+    ///   - 否则，返回 `OrderRole::Taker`。
+    fn determine_limit_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>;
+    /// FIXME 这个逻辑提前到了 open_orders 中。所以可能产生重复。
+    /// 判断 PostOnly 订单是否符合条件，并确定其是 Maker 还是被拒绝。
+    ///
+    /// 如果订单不符合 PostOnly 的条件（即买单价格低于当前市场价格，或卖单价格高于当前市场价格），
+    /// 则会拒绝该订单，并将其从待处理订单中删除。
+    ///
+    /// # 参数
+    ///
+    /// - `order`: 待处理的 PostOnly 订单 (`Order<RequestOpen>`)。
+    /// - `current_price`: 当前市场价格。
+    ///
+    /// # 返回值
+    ///
+    /// - `Ok(OrderRole::Maker)`: 如果订单价格符合 PostOnly 的条件，
+    ///   即买单价格高于或等于市场价格，或者卖单价格低于或等于市场价格，则订单作为 Maker 角色。
+    /// - `Err(ExecutionError::OrderRejected)`: 如果订单价格不符合 PostOnly 的条件，
+    ///   即买单价格低于市场价格，或者卖单价格高于市场价格，则订单会被拒绝并从待处理订单中删除。
+    ///
+    /// # 逻辑
+    ///
+    /// - 对于买单 (`Side::Buy`):
+    ///   - 如果订单价格 (`order.state.price`) 大于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
+    ///   - 否则，调用 `self.reject_post_only_order(order)` 拒绝订单，并返回错误。
+    ///
+    /// - 对于卖单 (`Side::Sell`):
+    ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
+    ///   - 否则，调用 `self.reject_post_only_order(order)` 拒绝订单，并返回错误。
+    fn determine_post_only_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>;
+}
+
+#[async_trait]
+pub trait LatencySimulator
+{
+    async fn generate_latencies(latency_generator: &mut AccountLatency) -> [i64; 20];
+    fn get_random_latency(&self) -> i64;
+    async fn process_backtest_requestopen_with_a_simulated_latency(&mut self, order: Order<RequestOpen>) -> Order<RequestOpen>;
+    fn update_latency(&mut self, current_time: i64);
+}
+
+#[async_trait]
+impl LatencySimulator for AccountOrders
+{
     /// 生成一个新的 `RequestId`
     /// NOTE 可能暂时永不上。但是在日后的web版本中很可能会被用到。
     /// # 参数
@@ -146,39 +474,6 @@ impl AccountOrders
         self.selectable_latencies[idx]
     }
 
-    /// 返回指定 [`Instrument`] 的 [`InstrumentOrders`] 的可变引用。
-
-    pub fn get_ins_orders_mut(&self, instrument: &Instrument) -> Result<RefMut<Instrument, InstrumentOrders>, ExchangeError>
-    {
-        self.instrument_orders_map
-            .get_mut(instrument)
-            .ok_or_else(|| ExchangeError::SandBox(format!("Sandbox exchange is not configured for Instrument: {instrument}")))
-    }
-
-    /// 为每个 [`Instrument`] 获取出价和要价 [`Order<Open>`]。
-    ///
-    /// 该函数在以下情况下会被使用:
-    ///
-    /// 1. **查询订单状态**: 用户或系统需要查询当前账户的所有挂单，例如在界面上显示当前的挂单状态，或在数据分析时，了解有哪些订单还未成交。
-    /// 2. **取消所有挂单**: 在需要一次性取消所有挂单的情况下，首先可以通过 `fetch_all()` 获取所有挂单的列表，然后逐一取消这些订单。
-    /// 3. **定期检查或清理**: 系统可能会定期检查账户的挂单情况，确保所有挂单都在合理状态，或者在清理过程中使用该函数获取需要清理的订单。
-    /// 4. **系统恢复或重启后重建状态**: 如果交易系统因某种原因重启，系统可能需要重建账户的内部状态，此时 `fetch_all()` 可以用于获取所有挂单，以便在内存中重新建立订单簿的状态。
-    /// 5. **监控和日志记录**: 在监控或日志记录系统中，记录当前账户所有挂单的状态，有助于在出问题时追踪系统中未成交订单的详细信息。
-    ///
-    /// # 返回值
-    ///
-    /// 返回一个包含所有未完成订单的 `Vec<Order<Open>>`。
-    pub fn fetch_all(&self) -> Vec<Order<Open>>
-    {
-        self.instrument_orders_map
-            .iter()
-            .flat_map(|entry| {
-                let orders = entry.value();
-                orders.bids.iter().chain(orders.asks.iter()).cloned().collect::<Vec<_>>()
-            })
-            .collect()
-    }
-
     /// # 参数
     ///
     /// - `order`: 要处理的订单请求 (`Order<RequestOpen>`)。
@@ -187,7 +482,7 @@ impl AccountOrders
     ///
     /// - 返回一个包含预测时间戳的待处理订单 (`Order<RequestOpen>`)。
     ///   注意 : 仅在回测场景下用这个方法！！！
-    pub async fn process_backtest_requestopen_with_a_simulated_latency(&mut self, order: Order<RequestOpen>) -> Order<RequestOpen>
+    async fn process_backtest_requestopen_with_a_simulated_latency(&mut self, order: Order<RequestOpen>) -> Order<RequestOpen>
     {
         // 从预定义的延迟值数组中选择一个延迟值
         let latency = self.get_random_latency();
@@ -205,210 +500,6 @@ impl AccountOrders
                                      size: order.state.size } }
     }
 
-    /// 根据订单类型和当前市场价格，确定订单是 Maker 还是 Taker。
-    ///
-    /// # 参数
-    ///
-    /// - `order`: 待处理的订单 (`Order<RequestOpen>`)。
-    /// - `current_price`: 当前市场价格。
-    ///
-    /// # 返回值
-    ///
-    /// - 返回 `Ok(OrderRole::Maker)` 或 `Ok(OrderRole::Taker)`，分别表示订单是 Maker 或 Taker。
-    /// - 如果订单类型无法判断，返回 `Err(ExecutionError)`。
-    ///
-    /// # 逻辑
-    ///
-    /// - 对于 `Market` 类型的订单，总是返回 `OrderRole::Taker`，因为`Market`订单总是`Taker`订单。
-    /// - 对于 `Limit` 类型的订单，调用 `determine_limit_order_role` 来确定订单角色。
-    /// - 对于 `PostOnly` 类型的订单，调用 `determine_post_only_order_role` 来判断订单是否能作为 Maker，否则拒绝该订单。
-    /// - 对于 `ImmediateOrCancel` 和 `FillOrKill` 类型的订单，总是返回 `OrderRole::Taker`，因为这些订单需要立即成交。
-    /// - 对于 `GoodTilCancelled` 类型的订单，按照限价订单的逻辑来判断角色。
-    pub fn determine_maker_taker(&self, order: &Order<RequestOpen>, order_book: &SingleLevelOrderBook) -> Result<OrderRole, ExchangeError>
-    {
-        // 根据订单方向设置 current_price
-        let current_price = match order.side {
-            | Side::Buy => order_book.latest_ask,  // 买单参考最新卖价
-            | Side::Sell => order_book.latest_bid, // 卖单参考最新买价
-        };
-
-        match order.instruction {
-            | OrderInstruction::Market => Ok(OrderRole::Taker), // 市场订单总是 Taker
-
-            | OrderInstruction::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
-
-            | OrderInstruction::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
-
-            | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => {
-                let is_immediate = match order.side {
-                    | Side::Buy => order.state.price >= current_price,  // 买单判断是否立刻成交
-                    | Side::Sell => order.state.price <= current_price, // 卖单判断是否立刻成交
-                };
-
-                if is_immediate {
-                    Ok(OrderRole::Taker) // 可以立即成交
-                }
-                else {
-                    Ok(OrderRole::Maker) // 不能立即成交
-                }
-            }
-
-            | OrderInstruction::GoodTilCancelled => self.determine_limit_order_role(order, current_price), // GTC订单与限价订单处理类似
-
-            | OrderInstruction::Cancel => {
-                todo!() // 取消订单逻辑
-            }
-        }
-    }
-
-    /// 根据限价订单的价格和当前市场价格，确定订单是 Maker 还是 Taker。
-    ///
-    /// # 参数
-    ///
-    /// - `order`: 待处理的限价订单 (`Order<RequestOpen>`)。
-    /// - `current_price`: 当前市场价格。
-    ///
-    /// # 返回值
-    ///
-    /// - `Ok(OrderRole::Maker)`: 如果订单价格与当前市场价格相比，具有优势（买单价格高于或等于市场价格，或卖单价格低于或等于市场价格），则订单作为 Maker 角色。
-    /// - `Ok(OrderRole::Taker)`: 如果订单价格与当前市场价格相比，处于劣势（买单价格低于市场价格，或卖单价格高于市场价格），则订单作为 Taker 角色。
-    ///
-    /// # 逻辑
-    ///
-    /// - 对于买单 (`Side::Buy`):
-    ///   - 如果订单价格 (`order.state.price`) 大于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
-    ///   - 否则，返回 `OrderRole::Taker`。
-    ///
-    /// - 对于卖单 (`Side::Sell`):
-    ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
-    ///   - 否则，返回 `OrderRole::Taker`。
-    pub(crate) fn determine_limit_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>
-    {
-        match order.side {
-            | Side::Buy => {
-                if order.state.price < current_price {
-                    Ok(OrderRole::Maker)
-                }
-                else {
-                    Ok(OrderRole::Taker)
-                }
-            }
-            | Side::Sell => {
-                if order.state.price > current_price {
-                    Ok(OrderRole::Maker)
-                }
-                else {
-                    Ok(OrderRole::Taker)
-                }
-            }
-        }
-    }
-
-    /// FIXME 这个逻辑提前到了 open_orders 中。所以可能产生重复。
-    /// 判断 PostOnly 订单是否符合条件，并确定其是 Maker 还是被拒绝。
-    ///
-    /// 如果订单不符合 PostOnly 的条件（即买单价格低于当前市场价格，或卖单价格高于当前市场价格），
-    /// 则会拒绝该订单，并将其从待处理订单中删除。
-    ///
-    /// # 参数
-    ///
-    /// - `order`: 待处理的 PostOnly 订单 (`Order<RequestOpen>`)。
-    /// - `current_price`: 当前市场价格。
-    ///
-    /// # 返回值
-    ///
-    /// - `Ok(OrderRole::Maker)`: 如果订单价格符合 PostOnly 的条件，
-    ///   即买单价格高于或等于市场价格，或者卖单价格低于或等于市场价格，则订单作为 Maker 角色。
-    /// - `Err(ExecutionError::OrderRejected)`: 如果订单价格不符合 PostOnly 的条件，
-    ///   即买单价格低于市场价格，或者卖单价格高于市场价格，则订单会被拒绝并从待处理订单中删除。
-    ///
-    /// # 逻辑
-    ///
-    /// - 对于买单 (`Side::Buy`):
-    ///   - 如果订单价格 (`order.state.price`) 大于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
-    ///   - 否则，调用 `self.reject_post_only_order(order)` 拒绝订单，并返回错误。
-    ///
-    /// - 对于卖单 (`Side::Sell`):
-    ///   - 如果订单价格 (`order.state.price`) 小于或等于当前市场价格 (`current_price`)，则返回 `OrderRole::Maker`。
-    ///   - 否则，调用 `self.reject_post_only_order(order)` 拒绝订单，并返回错误。
-    pub(crate) fn determine_post_only_order_role(&self, order: &Order<RequestOpen>, current_price: f64) -> Result<OrderRole, ExchangeError>
-    {
-        match order.side {
-            | Side::Buy => {
-                if order.state.price < current_price {
-                    Ok(OrderRole::Maker)
-                }
-                else {
-                    Err(ExchangeError::PostOnlyViolation("PostOnly order should be rejected".into()))
-                }
-            }
-            | Side::Sell => {
-                if order.state.price > current_price {
-                    Ok(OrderRole::Maker)
-                }
-                else {
-                    Err(ExchangeError::PostOnlyViolation("PostOnly order should be rejected".into()))
-                    // 返回需要拒绝的错误，但不立即执行拒绝操作
-                }
-            }
-        }
-    }
-
-    /// 从提供的 [`Order<RequestOpen>`] 构建一个 [`Order<Open>`]。请求计数器递增，
-    /// 在 increment_request_counter 方法中，使用 Ordering::Relaxed 进行递增。
-    pub async fn build_order_open(&mut self, request: Order<RequestOpen>, role: OrderRole) -> Order<Open>
-    {
-        self.increment_order_counter();
-
-        // 直接构建 Order<Open>
-        Order { instruction: request.instruction,
-                exchange: request.exchange,
-                instrument: request.instrument,
-                cid: request.cid,
-                timestamp: request.timestamp,
-                side: request.side,
-                state: Open { id: self.order_id(),
-                              price: request.state.price,
-                              size: request.state.size,
-                              filled_quantity: 0.0,
-                              order_role: role } }
-    }
-
-    /// 增加请求计数器的值。
-    ///
-    /// 该函数使用 [`Ordering::Relaxed`] 来递增请求计数器 `request_counter` 的值，
-    /// 不保证线程同步的顺序一致性。这意味着多个线程可以并发调用此函数，
-    /// 但不保证对其他线程的立即可见性或顺序一致性。
-    ///
-    /// # 注意
-    ///
-    /// - 此函数的主要用途是在每次接收到新的订单请求时递增计数器，以确保订单 ID 的唯一性。
-    /// - 由于使用了 `Relaxed` 顺序，这种递增操作的结果可能对其他线程不可见。
-    pub fn increment_order_counter(&self)
-    {
-        self.order_counter.fetch_add(1, Ordering::Relaxed);
-    }
-
-    /// 生成一个新的 [OrderId]。
-    ///
-    /// 该函数根据当前的系统时间戳和订单计数器生成一个唯一的 [OrderId]。
-    /// 系统时间戳以毫秒为单位计算，并结合机器 ID 和计数器来确保生成的 ID 唯一。
-    /// 由于计数器使用 [Ordering::SeqCst] 进行递增，确保了在多线程环境下的顺序一致性和原子性。
-    ///
-    /// # 返回值
-    ///
-    /// 返回一个唯一的 [OrderId]，该 ID 是基于当前的时间戳、机器 ID 和计数器生成的。
-    ///
-    /// # 错误处理
-    ///
-    /// 如果系统时间出现倒退，将导致程序崩溃并输出错误信息 "时间出现倒退"。
-    pub fn order_id(&self) -> OrderId
-    {
-        let now_ts = SystemTime::now().duration_since(UNIX_EPOCH).expect("时间出现倒退").as_millis() as u64;
-        let counter = self.order_counter.fetch_add(1, Ordering::SeqCst);
-        OrderId::new(now_ts, self.machine_id, counter)
-    }
-
     /// 更新账户的延迟值。
     ///
     /// 该函数通过调用 [fluctuate_latency] 方法来更新账户的延迟生成器，并根据当前的时间进行动态调整。
@@ -417,7 +508,7 @@ impl AccountOrders
     /// # 参数
     ///
     /// - current_time: 当前时间，以微秒为单位，作为调整延迟值的参考点。
-    pub fn update_latency(&mut self, current_time: i64)
+    fn update_latency(&mut self, current_time: i64)
     {
         fluctuate_latency(&mut self.latency_generator, current_time);
     }
@@ -432,7 +523,10 @@ mod tests
             instrument::{kind::InstrumentKind, Instrument},
             order::identification,
         },
-        sandbox::account::account_latency::{AccountLatency, FluctuationMode},
+        sandbox::account::{
+            account_latency::{AccountLatency, FluctuationMode},
+            account_orders::{LatencySimulator, OrderRoleClassifier},
+        },
         Exchange,
     };
     use client_order_id::ClientOrderId;

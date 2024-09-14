@@ -16,10 +16,11 @@ use crate::{
     error::ExchangeError,
     sandbox::{
         account::{
-            account_config::SandboxMode,
-            handlers::{balance_handler::BalanceHandler, position_handler::PositionHandler},
+            account_config::{ConfigLoader, FeesQuerier, SandboxMode},
+            account_handlers::{balance_handler::BalanceHandler, position_handler::PositionHandler, trade_handler::TradeHandler},
+            account_orders::{LatencySimulator, OrderRoleClassifier},
         },
-        clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook,
+        clickhouse_api::datatype::single_level_order_book::{OrderBookUpdater, SingleLevelOrderBook},
     },
     Exchange,
 };
@@ -42,17 +43,19 @@ use std::{
 };
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use uuid::Uuid;
-use crate::sandbox::account::handlers::trade_handler::TradeHandler;
 
 pub mod account_config;
+pub mod account_handlers;
 pub mod account_latency;
 pub mod account_market_feed;
 pub mod account_orders;
-pub mod handlers;
 
 #[derive(Debug)]
 pub struct SandboxAccount
- where SandboxAccount: PositionHandler + BalanceHandler + TradeHandler
+    where SandboxAccount: PositionHandler + BalanceHandler + TradeHandler,
+          AccountConfig: FeesQuerier + ConfigLoader,
+          SingleLevelOrderBook: OrderBookUpdater,
+          AccountOrders: LatencySimulator + OrderRoleClassifier
 {
     pub current_session: Uuid,
     pub machine_id: u64,
@@ -65,6 +68,7 @@ pub struct SandboxAccount
     pub balances: DashMap<Token, Balance>,                                              // 每个币种的细分余额
     pub positions: AccountPositions,                                                    // 帐户持仓
     pub exited_positions: AccountExitedPositions,                                       // pub vault: Vault,
+    // pub global_margin:f64,
 }
 
 // 手动实现 Clone trait

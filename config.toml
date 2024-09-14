@@ -7,6 +7,7 @@ global_leverage_rate = 1.0  # 账户杠杆率设置为1.0倍，示例杠杆率
 execution_mode = "Backtest"  # 执行模式设置为回测模式
 max_price_deviation = 0.05  # 最大价格偏差设置为0.05
 lazy_account_positions = false
+liquidation_threshold = 0.9
 
 
 [fees_book]  # 费用设置部分

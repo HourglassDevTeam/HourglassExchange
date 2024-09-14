@@ -4,18 +4,11 @@ use crate::{
             future::{FuturePosition, FuturePositionConfig},
             leveraged_token::{LeveragedTokenPosition, LeveragedTokenPositionConfig},
             option::{OptionPosition, OptionPositionConfig},
-            perpetual::{PerpetualPosition, PerpetualPositionConfig}
-
-            ,
-        }
-        ,
-        instrument::{kind::InstrumentKind, Instrument}
-
-        ,
-    }
-    ,
-    sandbox::config_request::ConfigurationRequest
-    ,
+            perpetual::{PerpetualPosition, PerpetualPositionConfig},
+        },
+        instrument::{kind::InstrumentKind, Instrument},
+    },
+    sandbox::config_request::ConfigurationRequest,
 };
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashMap, hash::Hash, sync::Arc};
@@ -230,7 +223,6 @@ impl AccountPositions
                option_pos_short_call_config: Arc::new(RwLock::new(HashMap::new())),
                option_pos_short_put_config: Arc::new(RwLock::new(HashMap::new())) }
     }
-
 }
 
 #[derive(Clone, PartialOrd, Debug, PartialEq, Deserialize, Serialize)]
