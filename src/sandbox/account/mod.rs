@@ -69,7 +69,7 @@ pub struct SandboxAccount
     pub balances: DashMap<Token, Balance>,                                              // 每个币种的细分余额
     pub positions: AccountPositions,                                                    // 帐户持仓
     pub exited_positions: AccountExitedPositions,                                       // pub vault: Vault,
-    pub global_margin: Arc<AtomicF64>,
+    pub account_margin: Arc<AtomicF64>,
 }
 
 // 手动实现 Clone trait
@@ -88,7 +88,7 @@ impl Clone for SandboxAccount
                          balances: self.balances.clone(),
                          positions: self.positions.clone(),
                          exited_positions: self.exited_positions.clone(),
-                         global_margin: self.global_margin.clone(),
+                         account_margin: self.account_margin.clone(),
         }
     }
 }
@@ -166,7 +166,7 @@ impl AccountInitiator
                             positions: self.positions.ok_or("positions are required")?,
                             single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
                             exited_positions: self.closed_positions.ok_or("closed_positions sink are required")?,
-                            global_margin: Arc::new(0.0.into()),
+                            account_margin: Arc::new(0.0.into()),
         })
     }
 }
@@ -870,8 +870,8 @@ mod tests
         let usdt_balance = account.get_balance(&Token::from("USDT")).unwrap();
         let btc_balance = account.get_balance(&Token::from("BTC")).unwrap();
 
-        println!("Updated USDT balance: {:?}", usdt_balance);
-        println!("Updated BTC balance: {:?}", btc_balance);
+        println!("Updated USDT balance: {:?}", *usdt_balance);
+        println!("Updated BTC balance: {:?}", *btc_balance);
 
         // 购买后，USDT 余额应为 10_000 - 100，BTC 余额应为 0.002
         assert_eq!(usdt_balance.total, 10_000.0);

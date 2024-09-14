@@ -10,6 +10,7 @@ pub struct TokenBalance
     pub balance: Balance, // 账单
 }
 
+
 impl TokenBalance
 {
     pub fn new(token: impl Into<Token>, balance: Balance) -> Self

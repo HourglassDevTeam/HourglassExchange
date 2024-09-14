@@ -172,7 +172,7 @@ pub async fn create_test_account() -> SandboxAccount
                                                                                                                                                                       minimum: 0,
                                                                                                                                                                       current_value: 0 }).await)),
                      single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
-        global_margin: Arc::new(0.0.into()),
+        account_margin: Arc::new(0.0.into()),
     }
 }
 
