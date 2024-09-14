@@ -296,7 +296,6 @@ impl PositionHandler for SandboxAccount
         respond(response_tx, Ok(position));
     }
 
-
     async fn check_and_handle_liquidation(
         &mut self,
         trade: MarketTrade,
