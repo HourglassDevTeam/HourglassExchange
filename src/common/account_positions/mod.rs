@@ -4,20 +4,19 @@ use crate::{
             future::{FuturePosition, FuturePositionConfig},
             leveraged_token::{LeveragedTokenPosition, LeveragedTokenPositionConfig},
             option::{OptionPosition, OptionPositionConfig},
-            perpetual::{PerpetualPosition, PerpetualPositionBuilder, PerpetualPositionConfig},
-            position_id::PositionId,
-            position_meta::PositionMetaBuilder,
-        },
-        balance::{Balance, TokenBalance},
-        instrument::{kind::InstrumentKind, Instrument},
-        trade::ClientTrade,
-        Side,
-    },
-    error::ExchangeError,
-    sandbox::{account::account_config::AccountConfig, config_request::ConfigurationRequest},
-    Exchange,
+            perpetual::{PerpetualPosition, PerpetualPositionConfig}
+
+            ,
+        }
+        ,
+        instrument::{kind::InstrumentKind, Instrument}
+
+        ,
+    }
+    ,
+    sandbox::config_request::ConfigurationRequest
+    ,
 };
-use chrono::Utc;
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 use tokio::sync::RwLock;
@@ -232,134 +231,8 @@ impl AccountPositions
                option_pos_short_put_config: Arc::new(RwLock::new(HashMap::new())) }
     }
 
-    /// TODO check init logic
-    pub async fn build_new_perpetual_position(&self, config: &AccountConfig, trade: &ClientTrade, exchange_ts: i64, mode: PositionMarginMode) -> Result<PerpetualPosition, ExchangeError>
-    {
-        let position_mode = config.global_position_direction_mode.clone();
-        // 计算初始保证金
-        let initial_margin = trade.price * trade.size / config.global_leverage_rate;
-
-        // 根据 Instrument 和 Side 动态生成 position_id
-        let position_meta = PositionMetaBuilder::new().position_id(PositionId::new(&trade.instrument.clone(), trade.timestamp))
-                                                      .enter_ts(exchange_ts)
-                                                      .update_ts(exchange_ts)
-                                                      .exit_balance(TokenBalance { // 初始化为 exit_balance
-                                                                                   token: trade.instrument.base.clone(),
-                                                                                   balance: Balance { time: Utc::now(),
-                                                                                                      current_price: None,
-                                                                                                      total: trade.size,
-                                                                                                      available: trade.size } })
-                                                      .exchange(Exchange::SandBox)
-                                                      .instrument(trade.instrument.clone())
-                                                      .side(trade.side)
-                                                      .current_size(trade.size)
-                                                      .current_fees_total(trade.fees)
-                                                      .current_avg_price_gross(trade.price)
-                                                      .current_symbol_price(trade.price)
-                                                      .current_avg_price(trade.price)
-                                                      .unrealised_pnl(0.0) // 初始化为 0.0
-                                                      .realised_pnl(0.0) // 初始化为 0.0
-                                                      .build()
-                                                      .map_err(|err| ExchangeError::SandBox(format!("Failed to build account_positions meta: {}", err)))?;
-
-        // 计算 liquidation_price
-        let liquidation_price = if trade.side == Side::Buy {
-            trade.price * (1.0 - initial_margin / (trade.size * trade.price))
-        }
-        else {
-            trade.price * (1.0 + initial_margin / (trade.size * trade.price))
-        };
-        let pos_config = PerpetualPositionConfig { pos_margin_mode: mode,
-                                                   leverage: config.global_leverage_rate,
-                                                   position_direction_mode: position_mode };
-
-        let new_position = PerpetualPositionBuilder::new().meta(position_meta)
-                                                          .pos_config(pos_config)
-                                                          .liquidation_price(liquidation_price)
-                                                          .build()
-                                                          .ok_or_else(|| ExchangeError::SandBox("Failed to build new account_positions".to_string()))?;
-
-        Ok(new_position)
-    }
-
-    pub async fn update_position(&self, new_position: Position)
-    {
-        match new_position {
-            | Position::Perpetual(p) => match p.meta.side {
-                | Side::Buy => {
-                    let positions = &self.perpetual_pos_long;
-                    let mut positions_lock = positions.write().await;
-                    if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
-                        *existing_position = p;
-                    }
-                    else {
-                        positions_lock.insert(p.meta.instrument.clone(), p);
-                    }
-                }
-                | Side::Sell => {
-                    let positions = &self.perpetual_pos_short;
-                    let mut positions_lock = positions.write().await;
-                    if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
-                        *existing_position = p;
-                    }
-                    else {
-                        positions_lock.insert(p.meta.instrument.clone(), p);
-                    }
-                }
-            },
-            | Position::LeveragedToken(p) => match p.meta.side {
-                | Side::Buy => {
-                    let positions = &self.margin_pos_long;
-                    let mut positions_lock = positions.write().await;
-                    if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
-                        *existing_position = p;
-                    }
-                    else {
-                        positions_lock.insert(p.meta.instrument.clone(), p);
-                    }
-                }
-                | Side::Sell => {
-                    let positions = &self.margin_pos_short;
-                    let mut positions_lock = positions.write().await;
-                    if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
-                        *existing_position = p;
-                    }
-                    else {
-                        positions_lock.insert(p.meta.instrument.clone(), p);
-                    }
-                }
-            },
-            | Position::Future(p) => match p.meta.side {
-                | Side::Buy => {
-                    let positions = &self.futures_pos_long;
-                    let mut positions_lock = positions.write().await;
-                    if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
-                        *existing_position = p;
-                    }
-                    else {
-                        positions_lock.insert(p.meta.instrument.clone(), p);
-                    }
-                }
-                | Side::Sell => {
-                    let positions = &self.futures_pos_short;
-                    let mut positions_lock = positions.write().await;
-                    if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
-                        *existing_position = p;
-                    }
-                    else {
-                        positions_lock.insert(p.meta.instrument.clone(), p);
-                    }
-                }
-            },
-            | Position::Option(_p) => {
-                todo!()
-            }
-        }
-    }
 }
 
-///  [NetMode] : 单向模式。在这种模式下，用户只能持有一个方向的仓位（多头或空头），而不能同时持有两个方向的仓位。
-///  [LongShortMode] : 双向模式。在这种模式下，用户可以同时持有多头和空头仓位。这在一些复杂的交易策略中可能会有用，例如对冲策略。
 #[derive(Clone, PartialOrd, Debug, PartialEq, Deserialize, Serialize)]
 pub enum PositionDirectionMode
 {

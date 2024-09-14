@@ -42,6 +42,8 @@ use std::{
 };
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use uuid::Uuid;
+use crate::sandbox::account::handlers::trade_handler::TradeHandler;
+
 pub mod account_config;
 pub mod account_latency;
 pub mod account_market_feed;
@@ -50,11 +52,10 @@ pub mod handlers;
 
 #[derive(Debug)]
 pub struct SandboxAccount
-// where Vault: PositionHandler + BalanceHandler + StatisticHandler<Statistic>,
-//       Statistic: Initialiser + PositionSummariser,
+ where SandboxAccount: PositionHandler + BalanceHandler + TradeHandler
 {
     pub current_session: Uuid,
-    pub machine_id: u64, // 机器ID
+    pub machine_id: u64,
     pub client_trade_counter: AtomicI64,
     pub exchange_timestamp: AtomicI64,                                                  // 交易所时间戳
     pub account_event_tx: UnboundedSender<AccountEvent>,                                // 帐户事件发送器
