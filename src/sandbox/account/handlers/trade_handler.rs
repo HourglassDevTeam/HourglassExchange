@@ -127,7 +127,7 @@ impl TradeHandler for SandboxAccount
                             let fees_percent = self.fees_percent(&kind, order_role).await.map_err(|_| ExchangeError::SandBox("Missing fees.".to_string()))?;
 
                             // 使用计算出的手续费比例匹配买单
-                            trades.append(&mut instrument_orders.match_bids(market_trade, fees_percent));
+                            trades.append(&mut instrument_orders.match_bids(market_trade, fees_percent, &self.client_trade_counter));
                         }
                     }
                     | Side::Sell => {
@@ -138,7 +138,7 @@ impl TradeHandler for SandboxAccount
                             let fees_percent = self.fees_percent(&kind, order_role).await.map_err(|_| ExchangeError::SandBox("Missing fees.".to_string()))?;
 
                             // 使用计算出的手续费比例匹配卖单
-                            trades.append(&mut instrument_orders.match_asks(market_trade, fees_percent));
+                            trades.append(&mut instrument_orders.match_asks(market_trade, fees_percent, &self.client_trade_counter));
                         }
                     }
                 }

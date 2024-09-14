@@ -54,7 +54,8 @@ pub struct SandboxAccount
 //       Statistic: Initialiser + PositionSummariser,
 {
     pub current_session: Uuid,
-    pub machine_id: u64,                                                                // 机器ID
+    pub machine_id: u64, // 机器ID
+    pub client_trade_counter: AtomicI64,
     pub exchange_timestamp: AtomicI64,                                                  // 交易所时间戳
     pub account_event_tx: UnboundedSender<AccountEvent>,                                // 帐户事件发送器
     pub config: AccountConfig,                                                          // 帐户配置
@@ -72,6 +73,7 @@ impl Clone for SandboxAccount
     {
         SandboxAccount { current_session: Uuid::new_v4(),
                          machine_id: self.machine_id,
+                         client_trade_counter: 0.into(),
                          exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
                          account_event_tx: self.account_event_tx.clone(),
                          config: self.config.clone(),
@@ -147,6 +149,7 @@ impl AccountInitiator
     {
         Ok(SandboxAccount { current_session: Uuid::new_v4(),
                             machine_id: generate_machine_id()?,
+                            client_trade_counter: 0.into(),
                             exchange_timestamp: 0.into(),
                             account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?,
                             config: self.config.ok_or("config is required")?,

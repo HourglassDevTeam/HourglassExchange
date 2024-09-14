@@ -155,6 +155,7 @@ pub async fn create_test_account() -> SandboxAccount
     // 创建 Account 实例，并将其包裹在 Arc<Account> 中
     SandboxAccount { current_session: Uuid::new_v4(),
                      machine_id,
+                     client_trade_counter: 0.into(),
                      exchange_timestamp: AtomicI64::new(1234567),
                      account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
                      config: account_config,
