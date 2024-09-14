@@ -185,7 +185,7 @@ impl PositionHandler for SandboxAccount
                 let perpetual_positions = &positions.perpetual_pos_long;
 
                 // 获取读锁
-                let read_lock = perpetual_positions.lock().await;
+                let read_lock = perpetual_positions.read().await;
 
                 // 在读锁上调用 `iter()` 遍历 HashMap
                 if let Some(position) = read_lock.iter().find(|(_, pos)| pos.meta.instrument == *instrument) {
@@ -222,7 +222,7 @@ impl PositionHandler for SandboxAccount
                 let perpetual_positions = &positions.perpetual_pos_short;
 
                 // 获取读锁
-                let read_lock = perpetual_positions.lock().await;
+                let read_lock = perpetual_positions.read().await;
 
                 // 通过读锁访问 HashMap
                 if let Some((_, position)) = read_lock.iter().find(|(_, pos)| pos.meta.instrument == *instrument) {
@@ -254,8 +254,8 @@ impl PositionHandler for SandboxAccount
             | InstrumentKind::Spot => Err(ExchangeError::InvalidInstrument(format!("Spots do not support positions: {:?}", instrument))),
             | InstrumentKind::Perpetual => {
                 // 获取读锁
-                let long_pos_lock = positions.perpetual_pos_long.lock().await;
-                let short_pos_lock = positions.perpetual_pos_short.lock().await;
+                let long_pos_lock = positions.perpetual_pos_long.read().await;
+                let short_pos_lock = positions.perpetual_pos_short.read().await;
 
                 // 通过读锁访问 HashMap
                 let long_pos = long_pos_lock.get(instrument).map(|pos| Position::Perpetual(pos.clone()));
@@ -328,8 +328,8 @@ impl PositionHandler for SandboxAccount
             }
             | InstrumentKind::Perpetual => {
                 // 获取读锁
-                let long_pos_read_lock = positions_lock.perpetual_pos_long.lock().await;
-                let short_pos_read_lock = positions_lock.perpetual_pos_short.lock().await;
+                let long_pos_read_lock = positions_lock.perpetual_pos_long.read().await;
+                let short_pos_read_lock = positions_lock.perpetual_pos_short.read().await;
 
                 // 在持有读锁的情况下调用 `iter()` 遍历 HashMap
                 let long_position_exists = long_pos_read_lock.iter().any(|(_, pos)| pos.meta.instrument == *instrument);
@@ -347,8 +347,8 @@ impl PositionHandler for SandboxAccount
             }
             | InstrumentKind::Future => {
                 // 获取读锁
-                let long_pos_read_lock = positions_lock.futures_pos_long.lock().await;
-                let short_pos_read_lock = positions_lock.futures_pos_short.lock().await;
+                let long_pos_read_lock = positions_lock.futures_pos_long.read().await;
+                let short_pos_read_lock = positions_lock.futures_pos_short.read().await;
 
                 let long_position_exists = long_pos_read_lock.iter().any(|(_, pos)| pos.meta.instrument == *instrument);
                 let short_position_exists = short_pos_read_lock.iter().any(|(_, pos)| pos.meta.instrument == *instrument);
@@ -402,8 +402,8 @@ impl PositionHandler for SandboxAccount
 
         // 根据买卖方向将仓位插入相应的仓位列表
         match trade.side {
-            | Side::Buy => self.positions.perpetual_pos_long.lock().await.insert(trade.instrument, new_position.clone()),
-            | Side::Sell => self.positions.perpetual_pos_short.lock().await.insert(trade.instrument, new_position.clone()),
+            | Side::Buy => self.positions.perpetual_pos_long.write().await.insert(trade.instrument, new_position.clone()),
+            | Side::Sell => self.positions.perpetual_pos_short.write().await.insert(trade.instrument, new_position.clone()),
         };
 
         Ok(new_position)
@@ -441,10 +441,10 @@ impl PositionHandler for SandboxAccount
         // 插入仓位到正确的仓位映射中
         match trade.side {
             | Side::Buy => {
-                self.positions.futures_pos_long.lock().await.insert(trade.instrument.clone(), new_position.clone());
+                self.positions.futures_pos_long.write().await.insert(trade.instrument.clone(), new_position.clone());
             }
             | Side::Sell => {
-                self.positions.futures_pos_short.lock().await.insert(trade.instrument.clone(), new_position.clone());
+                self.positions.futures_pos_short.write().await.insert(trade.instrument.clone(), new_position.clone());
             }
         }
 
@@ -639,11 +639,11 @@ impl PositionHandler for SandboxAccount
     {
         match side {
             | Side::Buy => {
-                let mut long_positions = self.positions.perpetual_pos_long.lock().await;
+                let mut long_positions = self.positions.perpetual_pos_long.write().await;
                 long_positions.remove(&instrument)
             }
             | Side::Sell => {
-                let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+                let mut short_positions = self.positions.perpetual_pos_short.write().await;
                 short_positions.remove(&instrument)
             }
         }
@@ -653,11 +653,11 @@ impl PositionHandler for SandboxAccount
     {
         match side {
             | Side::Buy => {
-                let mut long_positions = self.positions.futures_pos_long.lock().await;
+                let mut long_positions = self.positions.futures_pos_long.write().await;
                 long_positions.remove(&instrument)
             }
             | Side::Sell => {
-                let mut short_positions = self.positions.futures_pos_short.lock().await;
+                let mut short_positions = self.positions.futures_pos_short.write().await;
                 short_positions.remove(&instrument)
             }
         }
@@ -667,11 +667,11 @@ impl PositionHandler for SandboxAccount
     {
         match side {
             | Side::Buy => {
-                let mut long_positions = self.positions.margin_pos_long.lock().await;
+                let mut long_positions = self.positions.margin_pos_long.write().await;
                 long_positions.remove(&instrument)
             }
             | Side::Sell => {
-                let mut short_positions = self.positions.margin_pos_short.lock().await;
+                let mut short_positions = self.positions.margin_pos_short.write().await;
                 short_positions.remove(&instrument)
             }
         }
@@ -681,14 +681,14 @@ impl PositionHandler for SandboxAccount
     {
         match side {
             | Side::Buy => {
-                let mut long_call_positions = self.positions.option_pos_long_call.lock().await;
-                let mut long_put_positions = self.positions.option_pos_long_put.lock().await;
+                let mut long_call_positions = self.positions.option_pos_long_call.write().await;
+                let mut long_put_positions = self.positions.option_pos_long_put.write().await;
 
                 long_call_positions.remove(&instrument).or_else(|| long_put_positions.remove(&instrument))
             }
             | Side::Sell => {
-                let mut short_call_positions = self.positions.option_pos_short_call.lock().await;
-                let mut short_put_positions = self.positions.option_pos_short_put.lock().await;
+                let mut short_call_positions = self.positions.option_pos_short_call.write().await;
+                let mut short_put_positions = self.positions.option_pos_short_put.write().await;
 
                 short_call_positions.remove(&instrument).or_else(|| short_put_positions.remove(&instrument))
             }
@@ -739,7 +739,7 @@ impl PositionHandler for SandboxAccount
         match trade.side {
             | Side::Buy => {
                 let position = {
-                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
+                    let mut long_positions = self.positions.perpetual_pos_long.write().await;
                     long_positions.get_mut(&trade.instrument).map(|p| p.clone())
                     // Clone the position out of the lock
                 };
@@ -748,13 +748,13 @@ impl PositionHandler for SandboxAccount
                     position.meta.update_from_trade(&trade);
                     self.update_isolated_margin(&mut position, &trade).await;
                     // Re-lock to update the position in the map
-                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
+                    let mut long_positions = self.positions.perpetual_pos_long.write().await;
                     long_positions.insert(trade.instrument.clone(), position);
                 }
             }
             | Side::Sell => {
                 let position = {
-                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+                    let mut short_positions = self.positions.perpetual_pos_short.write().await;
                     short_positions.get_mut(&trade.instrument).map(|p| p.clone())
                     // Clone the position out of the lock
                 };
@@ -763,7 +763,7 @@ impl PositionHandler for SandboxAccount
                     position.meta.update_from_trade(&trade);
                     self.update_isolated_margin(&mut position, &trade).await;
                     // Re-lock to update the position in the map
-                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+                    let mut short_positions = self.positions.perpetual_pos_short.write().await;
                     short_positions.insert(trade.instrument.clone(), position);
                 }
             }
@@ -801,7 +801,7 @@ impl PositionHandler for SandboxAccount
             | Side::Sell => {
                 println!("Buy side partial_close_position");
                 let position = {
-                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
+                    let mut long_positions = self.positions.perpetual_pos_long.write().await;
                     long_positions.get_mut(&trade.instrument).map(|p| p.clone())
                     // Clone the position out of the lock
                 };
@@ -813,14 +813,14 @@ impl PositionHandler for SandboxAccount
                     position.meta.update_from_trade(&trade);
                     println!("after position update : currently the size is {:#?}", position.meta.current_size);
                     // Re-lock to update the position in the map
-                    let mut long_positions = self.positions.perpetual_pos_long.lock().await;
+                    let mut long_positions = self.positions.perpetual_pos_long.write().await;
                     long_positions.insert(trade.instrument.clone(), position);
                 }
             }
             | Side::Buy => {
                 println!("Sell side partial_close_position");
                 let position = {
-                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+                    let mut short_positions = self.positions.perpetual_pos_short.write().await;
                     short_positions.get_mut(&trade.instrument).map(|p| p.clone())
                     // Clone the position out of the lock
                 };
@@ -833,7 +833,7 @@ impl PositionHandler for SandboxAccount
                     println!("after position update : currently the size is {:#?}", position.meta.current_size);
                     println!("after position update : currently position is {:#?}", position);
                     // Re-lock to update the position in the map
-                    let mut short_positions = self.positions.perpetual_pos_short.lock().await;
+                    let mut short_positions = self.positions.perpetual_pos_short.write().await;
                     short_positions.insert(trade.instrument.clone(), position);
                     println!("successfully inserted among short positions");
                 }
@@ -899,7 +899,7 @@ mod tests
         assert!(result.is_ok());
 
         // 检查多头仓位是否成功创建
-        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
         assert!(positions.contains_key(&trade.instrument)); // 检查 HashMap 中是否有该键
         let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
         assert_eq!(pos.meta.current_size, 1.0); // 检查仓位大小
@@ -940,7 +940,7 @@ mod tests
         assert!(result.is_ok());
 
         // 检查空头仓位是否成功创建
-        let positions = account.positions.perpetual_pos_short.lock().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_short.read().await; // 获取读锁
         assert!(positions.contains_key(&trade.instrument)); // 检查 HashMap 中是否有该键
         let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
         assert_eq!(pos.meta.current_size, 5.0); // 检查仓位大小
@@ -992,7 +992,7 @@ mod tests
         account.update_position_from_client_trade(additional_trade.clone()).await.unwrap();
 
         // 检查仓位是否正确更新
-        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
         let pos = positions.get(&trade.instrument).unwrap(); // 获取仓位
         assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
     }
@@ -1043,7 +1043,7 @@ mod tests
         account.update_position_from_client_trade(additional_trade.clone()).await.unwrap();
 
         // 检查仓位是否正确更新
-        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
         let pos = positions.get(&trade.instrument).unwrap(); // 获取仓位
         assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
     }
@@ -1094,7 +1094,7 @@ mod tests
         account.update_position_from_client_trade(additional_trade.clone()).await.unwrap();
 
         // 检查仓位是否正确更新
-        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
         let pos = positions.get(&trade.instrument).unwrap(); // 获取仓位
         assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
     }
@@ -1145,7 +1145,7 @@ mod tests
         account.update_position_from_client_trade(additional_trade.clone()).await.unwrap();
 
         // 检查仓位是否正确更新
-        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
         let pos = positions.get(&trade.instrument).unwrap(); // 获取仓位
         assert_eq!(pos.meta.current_size, 15.0); // 原来的10加上新的5
     }
@@ -1195,7 +1195,7 @@ mod tests
 
         account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
         // // 检查仓位是否部分平仓
-        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
         let pos = positions.get(&closing_trade.instrument).unwrap(); // 获取对应的仓位
         assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
     }
@@ -1243,7 +1243,7 @@ mod tests
 
         account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
         // // 检查仓位是否部分平仓
-        let positions = account.positions.perpetual_pos_short.lock().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_short.read().await; // 获取读锁
         let pos = positions.get(&closing_trade.instrument).unwrap(); // 获取对应的仓位
         assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
     }
@@ -1292,7 +1292,7 @@ mod tests
 
         account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
         // 检查仓位是否部分平仓
-        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
         let pos = positions.get(&trade.instrument).unwrap(); // 获取对应的仓位
         assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
     }
@@ -1340,7 +1340,7 @@ mod tests
         account.update_position_from_client_trade(closing_trade.clone()).await.unwrap();
 
         // 检查仓位是否已被完全移除
-        let positions = account.positions.perpetual_pos_long.lock().await; // 获取读锁
+        let positions = account.positions.perpetual_pos_long.read().await; // 获取读锁
         assert!(!positions.contains_key(&trade.instrument));
     }
 
@@ -1387,11 +1387,11 @@ mod tests
         account.update_position_from_client_trade(reverse_trade.clone()).await.unwrap();
 
         // 检查多头仓位是否已被完全移除
-        let long_positions = account.positions.perpetual_pos_long.lock().await;
+        let long_positions = account.positions.perpetual_pos_long.read().await;
         assert!(!long_positions.contains_key(&trade.instrument));
 
         // 检查新的空头仓位是否已创建，并且大小正确（剩余 5.0）
-        let short_positions = account.positions.perpetual_pos_short.lock().await;
+        let short_positions = account.positions.perpetual_pos_short.read().await;
         assert!(short_positions.contains_key(&trade.instrument));
         let short_position = short_positions.get(&trade.instrument).unwrap();
         assert_eq!(short_position.meta.current_size, 5.0); // 剩余仓位应该是 5.0
@@ -1441,11 +1441,11 @@ mod tests
         let _ = account.update_position_from_client_trade(reverse_trade.clone()).await;
 
         // 检查多头仓位是否已被完全移除
-        let long_positions = account.positions.perpetual_pos_long.lock().await;
+        let long_positions = account.positions.perpetual_pos_long.read().await;
         assert!(!long_positions.contains_key(&trade.instrument));
 
         // 检查新的空头仓位是否已创建，并且大小正确（剩余 5.0）
-        let short_positions = account.positions.perpetual_pos_short.lock().await;
+        let short_positions = account.positions.perpetual_pos_short.read().await;
         assert!(short_positions.contains_key(&trade.instrument));
         let short_position = short_positions.get(&trade.instrument).unwrap();
         assert_eq!(short_position.meta.current_size, 5.0); // 剩余仓位应该是 5.0

@@ -20,7 +20,7 @@ use crate::{
 use chrono::Utc;
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashMap, hash::Hash, sync::Arc};
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 
 pub(crate) mod exited_position;
 pub mod exited_positions;
@@ -44,16 +44,16 @@ pub enum Position
 #[derive(Clone, Debug)]
 pub struct AccountPositions
 {
-    pub margin_pos_long: Arc<Mutex<HashMap<Instrument, LeveragedTokenPosition>>>,
-    pub margin_pos_short: Arc<Mutex<HashMap<Instrument, LeveragedTokenPosition>>>,
-    pub perpetual_pos_long: Arc<Mutex<HashMap<Instrument, PerpetualPosition>>>,
-    pub perpetual_pos_short: Arc<Mutex<HashMap<Instrument, PerpetualPosition>>>,
-    pub futures_pos_long: Arc<Mutex<HashMap<Instrument, FuturePosition>>>,
-    pub futures_pos_short: Arc<Mutex<HashMap<Instrument, FuturePosition>>>,
-    pub option_pos_long_call: Arc<Mutex<HashMap<Instrument, OptionPosition>>>,
-    pub option_pos_long_put: Arc<Mutex<HashMap<Instrument, OptionPosition>>>,
-    pub option_pos_short_call: Arc<Mutex<HashMap<Instrument, OptionPosition>>>,
-    pub option_pos_short_put: Arc<Mutex<HashMap<Instrument, OptionPosition>>>,
+    pub margin_pos_long: Arc<RwLock<HashMap<Instrument, LeveragedTokenPosition>>>,
+    pub margin_pos_short: Arc<RwLock<HashMap<Instrument, LeveragedTokenPosition>>>,
+    pub perpetual_pos_long: Arc<RwLock<HashMap<Instrument, PerpetualPosition>>>,
+    pub perpetual_pos_short: Arc<RwLock<HashMap<Instrument, PerpetualPosition>>>,
+    pub futures_pos_long: Arc<RwLock<HashMap<Instrument, FuturePosition>>>,
+    pub futures_pos_short: Arc<RwLock<HashMap<Instrument, FuturePosition>>>,
+    pub option_pos_long_call: Arc<RwLock<HashMap<Instrument, OptionPosition>>>,
+    pub option_pos_long_put: Arc<RwLock<HashMap<Instrument, OptionPosition>>>,
+    pub option_pos_short_call: Arc<RwLock<HashMap<Instrument, OptionPosition>>>,
+    pub option_pos_short_put: Arc<RwLock<HashMap<Instrument, OptionPosition>>>,
     pub margin_pos_long_config: Arc<RwLock<HashMap<Instrument, LeveragedTokenPositionConfig>>>,
     pub margin_pos_short_config: Arc<RwLock<HashMap<Instrument, LeveragedTokenPositionConfig>>>,
     pub perpetual_pos_long_config: Arc<RwLock<HashMap<Instrument, PerpetualPositionConfig>>>,
@@ -95,11 +95,11 @@ impl Serialize for AccountPositions
         where S: Serializer
     {
         // Helper function to convert Arc<RwLock<HashMap<K, V>>> to HashMap<K, V>
-        fn to_map<K, V>(positions: &Arc<Mutex<HashMap<K, V>>>) -> HashMap<K, V>
+        fn to_map<K, V>(positions: &Arc<RwLock<HashMap<K, V>>>) -> HashMap<K, V>
             where K: Clone + Eq + Hash,
                   V: Clone
         {
-            let positions_read = positions.blocking_lock();
+            let positions_read = positions.blocking_read();
             positions_read.clone()
         }
 
@@ -124,12 +124,12 @@ impl PartialEq for AccountPositions
 {
     fn eq(&self, other: &Self) -> bool
     {
-        fn hashmap_eq<K, V>(a: &Arc<Mutex<HashMap<K, V>>>, b: &Arc<Mutex<HashMap<K, V>>>) -> bool
+        fn hashmap_eq<K, V>(a: &Arc<RwLock<HashMap<K, V>>>, b: &Arc<RwLock<HashMap<K, V>>>) -> bool
             where K: Eq + Hash + Clone,
                   V: PartialEq + Clone
         {
-            let a_read = a.blocking_lock();
-            let b_read = b.blocking_lock();
+            let a_read = a.blocking_read();
+            let b_read = b.blocking_read();
 
             let a_map: HashMap<K, V> = a_read.clone();
             let b_map: HashMap<K, V> = b_read.clone();
@@ -182,16 +182,16 @@ impl<'de> Deserialize<'de> for AccountPositions
 
         let data = AccountPositionsData::deserialize(deserializer)?;
 
-        Ok(AccountPositions { margin_pos_long: Arc::new(Mutex::new(data.margin_pos_long)),
-                              margin_pos_short: Arc::new(Mutex::new(data.margin_pos_short)),
-                              perpetual_pos_long: Arc::new(Mutex::new(data.perpetual_pos_long)),
-                              perpetual_pos_short: Arc::new(Mutex::new(data.perpetual_pos_short)),
-                              futures_pos_long: Arc::new(Mutex::new(data.futures_pos_long)),
-                              futures_pos_short: Arc::new(Mutex::new(data.futures_pos_short)),
-                              option_pos_long_call: Arc::new(Mutex::new(data.option_pos_long_call)),
-                              option_pos_long_put: Arc::new(Mutex::new(data.option_pos_long_put)),
-                              option_pos_short_call: Arc::new(Mutex::new(data.option_pos_short_call)),
-                              option_pos_short_put: Arc::new(Mutex::new(data.option_pos_short_put)),
+        Ok(AccountPositions { margin_pos_long: Arc::new(RwLock::new(data.margin_pos_long)),
+                              margin_pos_short: Arc::new(RwLock::new(data.margin_pos_short)),
+                              perpetual_pos_long: Arc::new(RwLock::new(data.perpetual_pos_long)),
+                              perpetual_pos_short: Arc::new(RwLock::new(data.perpetual_pos_short)),
+                              futures_pos_long: Arc::new(RwLock::new(data.futures_pos_long)),
+                              futures_pos_short: Arc::new(RwLock::new(data.futures_pos_short)),
+                              option_pos_long_call: Arc::new(RwLock::new(data.option_pos_long_call)),
+                              option_pos_long_put: Arc::new(RwLock::new(data.option_pos_long_put)),
+                              option_pos_short_call: Arc::new(RwLock::new(data.option_pos_short_call)),
+                              option_pos_short_put: Arc::new(RwLock::new(data.option_pos_short_put)),
                               margin_pos_long_config: Arc::new(RwLock::new(data.margin_pos_long_config)),
                               margin_pos_short_config: Arc::new(RwLock::new(data.margin_pos_short_config)),
                               perpetual_pos_long_config: Arc::new(RwLock::new(data.perpetual_pos_long_config)),
@@ -210,16 +210,16 @@ impl AccountPositions
     /// 创建一个新的 `AccountPositions` 实例
     pub fn init() -> Self
     {
-        Self { margin_pos_long: Arc::new(Mutex::new(HashMap::new())),
-               margin_pos_short: Arc::new(Mutex::new(HashMap::new())),
-               perpetual_pos_long: Arc::new(Mutex::new(HashMap::new())),
-               perpetual_pos_short: Arc::new(Mutex::new(HashMap::new())),
-               futures_pos_long: Arc::new(Mutex::new(HashMap::new())),
-               futures_pos_short: Arc::new(Mutex::new(HashMap::new())),
-               option_pos_long_call: Arc::new(Mutex::new(HashMap::new())),
-               option_pos_long_put: Arc::new(Mutex::new(HashMap::new())),
-               option_pos_short_call: Arc::new(Mutex::new(HashMap::new())),
-               option_pos_short_put: Arc::new(Mutex::new(HashMap::new())),
+        Self { margin_pos_long: Arc::new(RwLock::new(HashMap::new())),
+               margin_pos_short: Arc::new(RwLock::new(HashMap::new())),
+               perpetual_pos_long: Arc::new(RwLock::new(HashMap::new())),
+               perpetual_pos_short: Arc::new(RwLock::new(HashMap::new())),
+               futures_pos_long: Arc::new(RwLock::new(HashMap::new())),
+               futures_pos_short: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_long_call: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_long_put: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_short_call: Arc::new(RwLock::new(HashMap::new())),
+               option_pos_short_put: Arc::new(RwLock::new(HashMap::new())),
                margin_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
                margin_pos_short_config: Arc::new(RwLock::new(HashMap::new())),
                perpetual_pos_long_config: Arc::new(RwLock::new(HashMap::new())),
@@ -288,7 +288,7 @@ impl AccountPositions
             | Position::Perpetual(p) => match p.meta.side {
                 | Side::Buy => {
                     let positions = &self.perpetual_pos_long;
-                    let mut positions_lock = positions.lock().await;
+                    let mut positions_lock = positions.write().await;
                     if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
                         *existing_position = p;
                     }
@@ -298,7 +298,7 @@ impl AccountPositions
                 }
                 | Side::Sell => {
                     let positions = &self.perpetual_pos_short;
-                    let mut positions_lock = positions.lock().await;
+                    let mut positions_lock = positions.write().await;
                     if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
                         *existing_position = p;
                     }
@@ -310,7 +310,7 @@ impl AccountPositions
             | Position::LeveragedToken(p) => match p.meta.side {
                 | Side::Buy => {
                     let positions = &self.margin_pos_long;
-                    let mut positions_lock = positions.lock().await;
+                    let mut positions_lock = positions.write().await;
                     if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
                         *existing_position = p;
                     }
@@ -320,7 +320,7 @@ impl AccountPositions
                 }
                 | Side::Sell => {
                     let positions = &self.margin_pos_short;
-                    let mut positions_lock = positions.lock().await;
+                    let mut positions_lock = positions.write().await;
                     if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
                         *existing_position = p;
                     }
@@ -332,7 +332,7 @@ impl AccountPositions
             | Position::Future(p) => match p.meta.side {
                 | Side::Buy => {
                     let positions = &self.futures_pos_long;
-                    let mut positions_lock = positions.lock().await;
+                    let mut positions_lock = positions.write().await;
                     if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
                         *existing_position = p;
                     }
@@ -342,7 +342,7 @@ impl AccountPositions
                 }
                 | Side::Sell => {
                     let positions = &self.futures_pos_short;
-                    let mut positions_lock = positions.lock().await;
+                    let mut positions_lock = positions.write().await;
                     if let Some(existing_position) = positions_lock.get_mut(&p.meta.instrument) {
                         *existing_position = p;
                     }
