@@ -49,15 +49,15 @@ impl Instrument
     }
 }
 
-// InstrumentInitiator结构用于通过步骤方式构建Instrument。
-pub struct InstrumentInitiator
+// InstrumentBuilder结构用于通过步骤方式构建Instrument。
+pub struct InstrumentBuilder
 {
     base: Option<Token>,
     quote: Option<Token>,
     kind: Option<InstrumentKind>,
 }
 
-impl Default for InstrumentInitiator
+impl Default for InstrumentBuilder
 {
     fn default() -> Self
     {
@@ -65,12 +65,12 @@ impl Default for InstrumentInitiator
     }
 }
 
-impl InstrumentInitiator
+impl InstrumentBuilder
 {
     // 初始化构建器，所有字段均为None。
     pub fn new() -> Self
     {
-        InstrumentInitiator { base: None, quote: None, kind: None }
+        InstrumentBuilder { base: None, quote: None, kind: None }
     }
 
     // 设置基础货币。

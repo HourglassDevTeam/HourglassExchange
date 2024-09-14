@@ -39,7 +39,7 @@ pub struct CommissionRates
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CommissionRatesInitiator
+pub struct CommissionRatesBuilder
 {
     pub maker_fees: Option<f64>,
     pub taker_fees: Option<f64>,
@@ -47,13 +47,13 @@ pub struct CommissionRatesInitiator
 
 impl CommissionRates
 {
-    pub fn builder() -> CommissionRatesInitiator
+    pub fn builder() -> CommissionRatesBuilder
     {
-        CommissionRatesInitiator::new()
+        CommissionRatesBuilder::new()
     }
 }
 
-impl Default for CommissionRatesInitiator
+impl Default for CommissionRatesBuilder
 {
     fn default() -> Self
     {
@@ -61,7 +61,7 @@ impl Default for CommissionRatesInitiator
     }
 }
 
-impl CommissionRatesInitiator
+impl CommissionRatesBuilder
 {
     pub fn new() -> Self
     {

@@ -40,7 +40,7 @@ mod tests
 {
     use super::*;
     use crate::common::{
-        instrument::{kind::InstrumentKind, InstrumentInitiator},
+        instrument::{kind::InstrumentKind, InstrumentBuilder},
         token::Token,
     };
 
@@ -69,7 +69,7 @@ mod tests
     #[test]
     fn instrument_initiator_should_create_instrument()
     {
-        let initiator = InstrumentInitiator::new().base(Token::new("BTC")).quote(Token::new("USDT")).kind(InstrumentKind::Spot);
+        let initiator = InstrumentBuilder::new().base(Token::new("BTC")).quote(Token::new("USDT")).kind(InstrumentKind::Spot);
         let instrument = initiator.initiate().expect("Failed to create instrument");
         assert_eq!(format!("{}", instrument), "(BTC_USDT, spot)");
     }
@@ -77,7 +77,7 @@ mod tests
     #[test]
     fn instrument_initiator_should_fail_if_missing_base()
     {
-        let initiator = InstrumentInitiator::new().quote(Token::new("USDT")).kind(InstrumentKind::Spot);
+        let initiator = InstrumentBuilder::new().quote(Token::new("USDT")).kind(InstrumentKind::Spot);
         let result = initiator.initiate();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Base is missing");
@@ -86,7 +86,7 @@ mod tests
     #[test]
     fn instrument_initiator_should_fail_if_missing_quote()
     {
-        let initiator = InstrumentInitiator::new().base(Token::new("BTC")).kind(InstrumentKind::Spot);
+        let initiator = InstrumentBuilder::new().base(Token::new("BTC")).kind(InstrumentKind::Spot);
         let result = initiator.initiate();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Quote is missing");
@@ -95,7 +95,7 @@ mod tests
     #[test]
     fn instrument_initiator_should_fail_if_missing_kind()
     {
-        let initiator = InstrumentInitiator::new().base(Token::new("BTC")).quote(Token::new("USDT"));
+        let initiator = InstrumentBuilder::new().base(Token::new("BTC")).quote(Token::new("USDT"));
         let result = initiator.initiate();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Instrument kind is missing");

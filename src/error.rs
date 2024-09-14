@@ -15,7 +15,7 @@ pub enum ExchangeError
 {
     /// 缺少属性，无法构建组件。
     #[error("[UniLinkEx] : Unable to construct component due to missing property: {0}")]
-    InitiatorIncomplete(String),
+    BuilderIncomplete(String),
 
     /// 模拟交易所出错。
     #[error("[UniLinkEx] : Sandbox error: {0}")]

@@ -92,7 +92,7 @@ impl Clone for SandboxAccount
     }
 }
 #[derive(Debug)]
-pub struct AccountInitiator
+pub struct AccountBuilder
 {
     account_event_tx: Option<UnboundedSender<AccountEvent>>,
     config: Option<AccountConfig>,
@@ -102,7 +102,7 @@ pub struct AccountInitiator
     closed_positions: Option<AccountExitedPositions>,
 }
 
-impl Default for AccountInitiator
+impl Default for AccountBuilder
 {
     fn default() -> Self
     {
@@ -110,11 +110,11 @@ impl Default for AccountInitiator
     }
 }
 
-impl AccountInitiator
+impl AccountBuilder
 {
     pub fn new() -> Self
     {
-        AccountInitiator { account_event_tx: None,
+        AccountBuilder { account_event_tx: None,
                            config: None,
                            orders: None,
                            balances: None,
@@ -172,9 +172,9 @@ impl AccountInitiator
 impl SandboxAccount
 {
     /// [PART 1] - [账户初始化与配置]
-    pub fn initiate() -> AccountInitiator
+    pub fn initiate() -> AccountBuilder
     {
-        AccountInitiator::new()
+        AccountBuilder::new()
     }
 
     /// 初始化账户中要使用的币种，初始余额设为 0。

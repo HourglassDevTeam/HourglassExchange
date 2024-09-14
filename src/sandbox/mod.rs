@@ -20,6 +20,8 @@ pub mod sandbox_client;
 pub mod sandbox_orderbook;
 pub mod utils;
 pub mod ws_trade;
+
+
 // pub enum TradeEventSource {
 //     RealTime(UnboundedReceiver<MarketEvent<MarketTrade>>),
 //     Backtest(RowCursor<MarketTrade>),
@@ -38,9 +40,9 @@ pub struct SandBoxExchange
 
 impl SandBoxExchange
 {
-    pub fn initiator() -> ExchangeInitiator
+    pub fn builder() -> ExchangeBuilder
     {
-        ExchangeInitiator::new()
+        ExchangeBuilder::new()
     }
 
     /// 本地运行 [`SandBoxExchange`] 并响应各种 [`SandBoxClientEvent`]。
@@ -120,7 +122,7 @@ impl SandBoxExchange
     }
 }
 
-impl Default for ExchangeInitiator
+impl Default for ExchangeBuilder
 {
     fn default() -> Self
     {
@@ -130,7 +132,7 @@ impl Default for ExchangeInitiator
                               * data_source: None, */ }
     }
 }
-pub struct ExchangeInitiator
+pub struct ExchangeBuilder
 {
     pub(crate) event_sandbox_rx: Option<UnboundedReceiver<SandBoxClientEvent>>,
     pub(crate) account: Option<Arc<Mutex<SandboxAccount>>>,
@@ -138,7 +140,7 @@ pub struct ExchangeInitiator
     // pub(crate) data_source: Option<TradeEventSource>,
 }
 
-impl ExchangeInitiator
+impl ExchangeBuilder
 {
     pub fn new() -> Self
     {
@@ -159,9 +161,9 @@ impl ExchangeInitiator
 
     pub fn initiate(self) -> Result<SandBoxExchange, ExchangeError>
     {
-        Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExchangeError::InitiatorIncomplete("event_sandbox_rx".to_string()))?,
-                             // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::InitiatorIncomplete("market_event_tx".to_string()))?,
-                             account: self.account.ok_or_else(|| ExchangeError::InitiatorIncomplete("account".to_string()))? })
+        Ok(SandBoxExchange { event_sandbox_rx: self.event_sandbox_rx.ok_or_else(|| ExchangeError::BuilderIncomplete("event_sandbox_rx".to_string()))?,
+                             // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::BuilderIncomplete("market_event_tx".to_string()))?,
+                             account: self.account.ok_or_else(|| ExchangeError::BuilderIncomplete("account".to_string()))? })
     }
 
     // pub fn trade_event_source(self, value: TradeEventSource) -> Self
@@ -179,46 +181,46 @@ mod tests
     use tokio::sync::mpsc;
 
     #[tokio::test]
-    async fn initiator_should_create_exchange_initiator_with_default_values()
+    async fn builder_should_create_exchange_builder_with_default_values()
     {
-        let initiator = ExchangeInitiator::new();
-        assert!(initiator.event_sandbox_rx.is_none());
-        assert!(initiator.account.is_none());
+        let builder = ExchangeBuilder::new();
+        assert!(builder.event_sandbox_rx.is_none());
+        assert!(builder.account.is_none());
     }
 
     #[tokio::test]
-    async fn initiator_should_set_event_sandbox_rx()
+    async fn builder_should_set_event_sandbox_rx()
     {
         let (_tx, rx) = mpsc::unbounded_channel();
-        let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
-        assert!(initiator.event_sandbox_rx.is_some());
+        let builder = ExchangeBuilder::new().event_sandbox_rx(rx);
+        assert!(builder.event_sandbox_rx.is_some());
     }
 
     #[tokio::test]
-    async fn initiator_should_set_account()
+    async fn builder_should_set_account()
     {
         let account = create_test_account().await;
         let account = Arc::new(Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
-        let initiator = ExchangeInitiator::new().account(account.clone());
-        assert!(initiator.account.is_some());
+        let builder = ExchangeBuilder::new().account(account.clone());
+        assert!(builder.account.is_some());
     }
 
     #[tokio::test]
-    async fn initiator_should_return_error_if_event_sandbox_rx_is_missing()
+    async fn builder_should_return_error_if_event_sandbox_rx_is_missing()
     {
         let account = create_test_account().await;
         let account = Arc::new(Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
-        let initiator = ExchangeInitiator::new().account(account.clone());
-        let result = initiator.initiate();
+        let builder = ExchangeBuilder::new().account(account.clone());
+        let result = builder.initiate();
         assert!(result.is_err());
     }
 
     #[tokio::test]
-    async fn initiator_should_return_error_if_account_is_missing()
+    async fn builder_should_return_error_if_account_is_missing()
     {
         let (_tx, rx) = mpsc::unbounded_channel();
-        let initiator = ExchangeInitiator::new().event_sandbox_rx(rx);
-        let result = initiator.initiate();
+        let builder = ExchangeBuilder::new().event_sandbox_rx(rx);
+        let result = builder.initiate();
         assert!(result.is_err());
     }
 
