@@ -24,6 +24,7 @@ use crate::{
 };
 use tokio::sync::oneshot::Sender;
 use crate::common::trade::ClientTradeId;
+use crate::sandbox::account::handlers::trade_handler::TradeHandler;
 use crate::sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -58,7 +59,7 @@ pub trait PositionHandler
 
     async fn fetch_short_position_and_respond(&self, instrument: &Instrument, response_tx: Sender<Result<Option<Position>, ExchangeError>>);
 
-    async fn check_and_handle_liquidation(&mut self, trade:MarketTrade) -> Result<Option<ClientTrade>, ExchangeError>;
+    async fn check_and_handle_liquidation(&mut self, trade:MarketTrade) -> Result<(), ExchangeError>;
     async fn check_position_direction_conflict(&self, instrument: &Instrument, new_order_side: Side, is_reduce_only: bool) -> Result<(), ExchangeError>;
 
     async fn create_perpetual_position(&mut self, trade: ClientTrade, handle_type: PositionHandling) -> Result<PerpetualPosition, ExchangeError>;
@@ -299,7 +300,7 @@ impl PositionHandler for SandboxAccount
     async fn check_and_handle_liquidation(
         &mut self,
         trade: MarketTrade,
-    ) -> Result<Option<ClientTrade>, ExchangeError> {
+    ) -> Result<(), ExchangeError> {
         let instrument = trade.parse_instrument().unwrap().clone();
         let instrument_clone_for_close = instrument.clone(); // Clone the instrument here
 
@@ -359,8 +360,11 @@ impl PositionHandler for SandboxAccount
             }
         }
 
-        // 返回生成的平仓交易（如果有的话）
-        Ok(liquidation_trade)
+        if let Some(trade) = liquidation_trade {
+            self.process_trade(trade).await?;
+        }
+        Ok(())
+
     }
 
     /// 检查给定的 `new_order_side` 是否与现有仓位方向冲突，并根据 `is_reduce_only` 标志做出相应处理。

@@ -30,6 +30,27 @@ pub trait TradeHandler
     async fn match_orders(&mut self, market_trade: &MarketTrade) -> Result<Vec<ClientTrade>, ExchangeError>;
 
     async fn fees_percent(&self, instrument_kind: &InstrumentKind, role: OrderRole) -> Result<f64, ExchangeError>;
+    /// 处理客户端交易列表并更新账户余额及交易事件。
+    ///
+    /// 该方法接收多个 `ClientTrade` 实例，并依次处理每笔交易：
+    ///
+    /// 1. 更新账户的相关余额信息。
+    /// 2. 发送交易事件 `AccountEventKind::Trade`。
+    /// 3. 发送余额更新事件 `AccountEventKind::Balance`。
+    ///
+    /// # 参数
+    ///
+    /// * `client_trades` - 一个包含多个 `ClientTrade` 实例的向量，表示客户端生成的交易记录。
+    ///
+    /// # 错误处理
+    ///
+    /// * 如果在应用交易变化时发生错误，会记录警告日志并继续处理下一笔交易。
+    /// * 如果发送交易事件或余额事件失败，也会记录警告日志。
+    ///
+    /// # 注意事项
+    ///
+    /// * 当 `client_trades` 为空时，该方法不会执行任何操作。
+    async fn process_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>;
 
     async fn process_trades(&mut self, client_trades: Vec<ClientTrade>);
     fn update_exchange_ts(&self, timestamp: i64);
@@ -207,36 +228,45 @@ impl TradeHandler for SandboxAccount
     /// # 注意事项
     ///
     /// * 当 `client_trades` 为空时，该方法不会执行任何操作。
-    async fn process_trades(&mut self, client_trades: Vec<ClientTrade>)
-    {
+    async fn process_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
+        let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
+
+        // 直接调用 `self.apply_trade_changes` 来处理余额更新
+        let balance_event = match self.apply_trade_changes(&trade).await {
+            Ok(event) => event,
+            Err(err) => {
+                warn!("Failed to update balance: {:?}", err);
+                return Err(err);
+            }
+        };
+
+        // 发送交易事件
+        if let Err(err) = self.account_event_tx.send(AccountEvent {
+            exchange_timestamp,
+            exchange: Exchange::SandBox,
+            kind: AccountEventKind::Trade(trade.clone()), // 发送交易事件
+        }) {
+            warn!("[UniLinkEx] : Client offline - Failed to send AccountEvent::Trade: {:?}", err);
+        }
+
+        // 发送余额更新事件
+        if let Err(err) = self.account_event_tx.send(balance_event) {
+            warn!("[UniLinkEx] : Client offline - Failed to send AccountEvent::Balance: {:?}", err);
+        }
+
+        Ok(())
+    }
+
+    async fn process_trades(&mut self, client_trades: Vec<ClientTrade>) {
         if !client_trades.is_empty() {
-            let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
-
             for trade in client_trades {
-                // 直接调用 `self.apply_trade_changes` 来处理余额更新
-                let balance_event = match self.apply_trade_changes(&trade).await {
-                    | Ok(event) => event,
-                    | Err(err) => {
-                        warn!("Failed to update balance: {:?}", err);
-                        continue;
-                    }
-                };
-
-                if let Err(err) = self.account_event_tx.send(AccountEvent { exchange_timestamp,
-                                                                            exchange: Exchange::SandBox,
-                                                                            kind: AccountEventKind::Trade(trade) })
-                {
-                    // 如果发送交易事件失败，记录警告日志
-                    warn!("[UniLinkEx] : Client offline - Failed to send AccountEvent::Trade: {:?}", err);
-                }
-
-                if let Err(err) = self.account_event_tx.send(balance_event) {
-                    // 如果发送余额事件失败，记录警告日志
-                    warn!("[UniLinkEx] : Client offline - Failed to send AccountEvent::Balance: {:?}", err);
+                if let Err(err) = self.process_trade(trade).await {
+                    warn!("Failed to process trade: {:?}", err);
                 }
             }
         }
     }
+
 
     /// 更新交易所时间辍
     fn update_exchange_ts(&self, timestamp: i64)
