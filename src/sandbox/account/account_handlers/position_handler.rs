@@ -326,6 +326,7 @@ impl PositionHandler for SandboxAccount
         let trade_id = ClientTradeId(trade_id_value);
 
         // 检查并处理多头仓位
+        // 这里建议使用 当前的交易价格 (trade.price) 来进行平仓，因为平仓操作是以实际成交价格为准的。如果你按照清算价格来平仓，可能会导致实际成交价格与预期不一致，这在市场波动时尤其重要。
         if let Some(Position::Perpetual(long_pos)) = long_position {
             if let Some(liquidation_price) = long_pos.liquidation_price {
                 if trade.price <= liquidation_price {
