@@ -169,4 +169,6 @@ pub enum ExchangeError
 
     #[error("Config Inheritance Not Allowed.")]
     ConfigInheritanceNotAllowed,
+    #[error("InvalidTradeSize.")]
+    InvalidTradeSize,
 }

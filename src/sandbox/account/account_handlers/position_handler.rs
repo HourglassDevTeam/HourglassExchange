@@ -504,6 +504,7 @@ impl PositionHandler for SandboxAccount
             }
         };
 
+        // FIXME 单独处理 Cross mode的新仓构建
         // 创建新的 PerpetualPosition，包括 liquidation_price
         let new_position = PerpetualPosition { meta,
                                                pos_config: perpetual_config.clone(),
@@ -540,8 +541,9 @@ impl PositionHandler for SandboxAccount
         todo!("Updating Leveraged Token positions is not yet implemented")
     }
 
-    /// 当且仅当 `PositionDirectionMode` 是 `Net` 的时候, 允许在处理新的trade的时候继承反向仓位的configuration.并且返回.
-    async fn handle_config_inheritance(&self, trade: &ClientTrade) -> Result<PerpetualPositionConfig, ExchangeError>
+     /// FIXME 查看是否仅在 `Net` 的时候 才会继承
+     /// 当且仅当 `PositionDirectionMode` 是 `Net` 的时候, 允许在处理新的trade的时候继承反向仓位的configuration.并且返回.
+     async fn handle_config_inheritance(&self, trade: &ClientTrade) -> Result<PerpetualPositionConfig, ExchangeError>
     {
         // 尝试获取同向仓位配置
         let same_side_config = match trade.side {
@@ -692,7 +694,7 @@ impl PositionHandler for SandboxAccount
     fn enforce_leverage_limits(&self, new_position: &PerpetualPosition) -> Result<(), ExchangeError>
     {
         if new_position.pos_config.leverage > self.config.global_leverage_rate {
-            Err(ExchangeError::InvalidLeverage(format!("Leverage is beyond configured rate: {}", new_position.pos_config.leverage)))
+            Err(ExchangeError::InvalidLeverage(format!("Leverage is beyond leverage rate: {}", new_position.pos_config.leverage)))
         }
         else {
             Ok(())
@@ -943,51 +945,75 @@ impl PositionHandler for SandboxAccount
         Ok(())
     }
 
-    async fn partial_close_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
-    {
+    // 部分平仓 FIXME 要检查一下逻辑是否正确
+    async fn partial_close_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
         match trade.side {
-            | Side::Sell => {
+            Side::Sell => {
                 println!("Buy side partial_close_position");
-                let position = {
-                    let mut long_positions = self.positions.perpetual_pos_long.write().await;
-                    long_positions.get_mut(&trade.instrument).map(|p| p.clone())
-                };
+                // 获取并锁定多头仓位
+                let mut long_positions = self.positions.perpetual_pos_long.write().await;
+                if let Some(position) = long_positions.get_mut(&trade.instrument) {
+                    // 更新仓位大小，减少交易数量
+                    if trade.size > position.meta.current_size {
+                        return Err(ExchangeError::InvalidTradeSize);
+                    }
+                    position.meta.update_from_trade(&trade); // 更新 PositionMeta
 
-                if let Some(mut position) = position {
-                    // 减少仓位大小
-                    self.update_isolated_margin(&mut position, &trade).await;
-                    println!("before position update : currently the size is {:#?}", position.meta.current_size);
-                    position.meta.update_from_trade(&trade);
-                    println!("after position update : currently the size is {:#?}", position.meta.current_size);
-                    // Re-lock to update the position in the map
-                    let mut long_positions = self.positions.perpetual_pos_long.write().await;
-                    long_positions.insert(trade.instrument.clone(), position);
+                    // 根据保证金模式调整保证金
+                    match position.pos_config.pos_margin_mode {
+                        PositionMarginMode::Cross => {
+                            // 减去对应的 Cross 保证金
+                            let margin_to_subtract = trade.size * trade.price / position.pos_config.leverage;
+                            self.account_margin.fetch_sub(margin_to_subtract, Ordering::SeqCst);
+                        }
+                        PositionMarginMode::Isolated => {
+                            // 根据平仓比例减少 Isolated 保证金
+                            if let Some(isolated_margin) = position.isolated_margin {
+                                let margin_to_subtract = isolated_margin * (trade.size / position.meta.current_size);
+                                position.isolated_margin = Some(isolated_margin - margin_to_subtract);
+                            }
+                        }
+                    }
+
+                } else {
+                    return Err(ExchangeError::AttemptToRemoveNonExistingPosition);
                 }
             }
-            | Side::Buy => {
+            Side::Buy => {
                 println!("Sell side partial_close_position");
-                let position = {
-                    let mut short_positions = self.positions.perpetual_pos_short.write().await;
-                    short_positions.get_mut(&trade.instrument).map(|p| p.clone())
-                    // Clone the position out of the lock
-                };
+                // 获取并锁定空头仓位
+                let mut short_positions = self.positions.perpetual_pos_short.write().await;
+                if let Some(position) = short_positions.get_mut(&trade.instrument) {
+                    // 更新仓位大小，减少交易数量
+                    if trade.size > position.meta.current_size {
+                        return Err(ExchangeError::InvalidTradeSize);
+                    }
+                    position.meta.update_from_trade(&trade); // 更新 PositionMeta
 
-                if let Some(mut position) = position {
-                    // 减少仓位大小
-                    self.update_isolated_margin(&mut position, &trade).await;
-                    println!("before position update : currently the size is {:#?}", position.meta.current_size);
-                    position.meta.update_from_trade(&trade);
-                    println!("after position update : currently the size is {:#?}", position.meta.current_size);
-                    println!("after position update : currently position is {:#?}", position);
-                    // Re-lock to update the position in the map
-                    let mut short_positions = self.positions.perpetual_pos_short.write().await;
-                    short_positions.insert(trade.instrument.clone(), position);
-                    println!("successfully inserted among short positions");
+                    // 根据保证金模式调整保证金
+                    match position.pos_config.pos_margin_mode {
+                        PositionMarginMode::Cross => {
+                            // 减去对应的 Cross 保证金
+                            let margin_to_subtract = trade.size * trade.price / position.pos_config.leverage;
+                            self.account_margin.fetch_sub(margin_to_subtract, Ordering::SeqCst);
+                        }
+                        PositionMarginMode::Isolated => {
+                            // 根据平仓比例减少 Isolated 保证金
+                            if let Some(isolated_margin) = position.isolated_margin {
+                                let margin_to_subtract = isolated_margin * (trade.size / position.meta.current_size);
+                                position.isolated_margin = Some(isolated_margin - margin_to_subtract);
+                            }
+                        }
+                    }
+
+                } else {
+                    return Err(ExchangeError::AttemptToRemoveNonExistingPosition);
                 }
             }
         }
         Ok(())
     }
+
 
     // 更新隔离保证金
     async fn update_isolated_margin(&mut self, position: &mut PerpetualPosition, trade: &ClientTrade)
