@@ -41,8 +41,7 @@ impl Ord for Order<Open>
     {
         match self.state.price.partial_cmp(&other.state.price) {
             | Some(ordering) => ordering,
-            | None => panic!("Failed to compare prices. One of the prices is NaN: self = {:?}, other = {:?}",
-                             self.state.price, other.state.price),
+            | None => panic!("Failed to compare prices. One of the prices is NaN: self = {:?}, other = {:?}", self.state.price, other.state.price),
         }
     }
 }

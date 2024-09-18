@@ -16,8 +16,6 @@ impl TokenBalance
     {
         Self { token: token.into(), balance }
     }
-
-
 }
 
 /// 总余额和可用余额。
@@ -93,7 +91,6 @@ mod tests
         assert_eq!(token_balance.token, token);
         assert_eq!(token_balance.balance, balance);
     }
-
 
     #[test]
     fn balance_new_should_create_balance()

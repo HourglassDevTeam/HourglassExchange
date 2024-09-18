@@ -51,7 +51,6 @@ pub enum PositionHandling
 #[async_trait]
 pub trait PositionHandler
 {
-
     async fn preconfigure_position(&mut self, config_request: ConfigurationRequest) -> Result<PositionConfig, ExchangeError>;
 
     async fn preconfigure_positions(&mut self, config_requests: Vec<ConfigurationRequest>, response_tx: Sender<ConfigureInstrumentsResults>) -> Result<Vec<PositionConfig>, ExchangeError>;
@@ -92,7 +91,7 @@ pub trait PositionHandler
     async fn remove_option_position(&self, instrument: Instrument, side: Side) -> Option<OptionPosition>;
 
     /// NOTE this is currently omitted and should be applied appropriately.
-    async fn register_exit_position(&self, meta: &PositionMeta, side: Side, exit_margin:Option<f64>) -> Result<(), ExchangeError>;
+    async fn register_exit_position(&self, meta: &PositionMeta, side: Side, exit_margin: Option<f64>) -> Result<(), ExchangeError>;
 
     async fn get_position_long_config(&self, instrument: &Instrument) -> Result<Option<PerpetualPositionConfig>, ExchangeError>;
     async fn get_position_short_config(&self, instrument: &Instrument) -> Result<Option<PerpetualPositionConfig>, ExchangeError>;
@@ -445,7 +444,6 @@ impl PositionHandler for SandboxAccount
         Ok(())
     }
 
-
     /// 根据传入的 `ClientTrade` 和 之前判断的`PositionHandling` 来创建 `PerpetualPosition` 的方法
     ///
     /// 该方法根据给定的交易信息和处理类型创建一个新的 `PerpetualPosition`。
@@ -467,14 +465,14 @@ impl PositionHandler for SandboxAccount
 
         // 创建 PositionMeta 和新的 PerpetualPosition
         let meta = match handle_type {
-            PositionHandling::OpenBrandNewPosition => PositionMeta::create_from_trade(&trade),
-            CloseCompleteAndReverse { reverse_size } => PositionMeta::create_from_trade_with_remaining(&trade, reverse_size),
-            _ => return Err(ExchangeError::SandBox("Not supposed to create any position here.".into())),
+            | PositionHandling::OpenBrandNewPosition => PositionMeta::create_from_trade(&trade),
+            | CloseCompleteAndReverse { reverse_size } => PositionMeta::create_from_trade_with_remaining(&trade, reverse_size),
+            | _ => return Err(ExchangeError::SandBox("Not supposed to create any position here.".into())),
         };
 
         // 创建新的 PerpetualPosition 变量
         let (isolated_margin, liquidation_price) = match perpetual_config.pos_margin_mode {
-            PositionMarginMode::Cross => {
+            | PositionMarginMode::Cross => {
                 // 使用 fetch_add 更新 account_margin
                 let margin_to_add = trade.size * trade.price / perpetual_config.leverage;
                 self.account_margin.fetch_add(margin_to_add, Ordering::SeqCst);
@@ -487,7 +485,7 @@ impl PositionHandler for SandboxAccount
 
                 (None, liquidation_price)
             }
-            PositionMarginMode::Isolated => {
+            | PositionMarginMode::Isolated => {
                 let isolated_margin = Some(trade.price / perpetual_config.leverage * trade.size);
 
                 // 计算 liquidation_price
@@ -500,17 +498,15 @@ impl PositionHandler for SandboxAccount
         };
 
         // 创建新的 PerpetualPosition，包括 liquidation_price
-        let new_position = PerpetualPosition {
-            meta,
-            pos_config: perpetual_config.clone(),
-            isolated_margin,
-            liquidation_price: Some(liquidation_price), // 直接赋值
-        };
+        let new_position = PerpetualPosition { meta,
+                                               pos_config: perpetual_config.clone(),
+                                               isolated_margin,
+                                               liquidation_price: Some(liquidation_price) /* 直接赋值 */ };
 
         // 根据买卖方向将仓位插入相应的仓位列表
         match trade.side {
-            Side::Buy => self.positions.perpetual_pos_long.write().await.insert(trade.instrument, new_position.clone()),
-            Side::Sell => self.positions.perpetual_pos_short.write().await.insert(trade.instrument, new_position.clone()),
+            | Side::Buy => self.positions.perpetual_pos_long.write().await.insert(trade.instrument, new_position.clone()),
+            | Side::Sell => self.positions.perpetual_pos_short.write().await.insert(trade.instrument, new_position.clone()),
         };
 
         Ok(new_position)
@@ -520,7 +516,7 @@ impl PositionHandler for SandboxAccount
     /// 更新 FuturePosition 的方法（占位符）
     async fn create_future_position(&mut self, _trade: ClientTrade) -> Result<FuturePosition, ExchangeError>
     {
-       todo!()
+        todo!()
     }
 
     #[allow(dead_code)]
@@ -767,10 +763,10 @@ impl PositionHandler for SandboxAccount
         }
     }
 
-    async fn register_exit_position(&self, meta: &PositionMeta, side: Side, exit_margin:Option<f64>) -> Result<(), ExchangeError>
+    async fn register_exit_position(&self, meta: &PositionMeta, side: Side, exit_margin: Option<f64>) -> Result<(), ExchangeError>
     {
         // Convert `PositionMeta` into `PositionExit`
-        let exited = PositionExit::from_position_meta(meta,exit_margin);
+        let exited = PositionExit::from_position_meta(meta, exit_margin);
 
         // Insert into the appropriate exited positions collection
         match (meta.instrument.kind, side) {
@@ -809,7 +805,7 @@ impl PositionHandler for SandboxAccount
     async fn update_existing_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
     {
         match trade.side {
-            Side::Buy => {
+            | Side::Buy => {
                 let position = {
                     let mut long_positions = self.positions.perpetual_pos_long.write().await;
                     long_positions.get_mut(&trade.instrument).map(|p| p.clone())
@@ -820,7 +816,7 @@ impl PositionHandler for SandboxAccount
 
                     // 根据仓位模式更新保证金和清算价格
                     match position.pos_config.pos_margin_mode {
-                        PositionMarginMode::Cross => {
+                        | PositionMarginMode::Cross => {
                             // 更新 Cross 模式下的保证金
                             let margin_to_add = trade.size * trade.price / position.pos_config.leverage;
                             self.account_margin.fetch_add(margin_to_add, Ordering::SeqCst);
@@ -828,7 +824,7 @@ impl PositionHandler for SandboxAccount
                             // 更新清算价格
                             position.liquidation_price = Some(self.config.liquidation_threshold * self.account_margin.load(Ordering::SeqCst) / (position.meta.current_size + trade.size));
                         }
-                        PositionMarginMode::Isolated => {
+                        | PositionMarginMode::Isolated => {
                             // 更新 Isolated 模式下的保证金
                             self.update_isolated_margin(&mut position, &trade).await;
 
@@ -843,7 +839,7 @@ impl PositionHandler for SandboxAccount
                     long_positions.insert(trade.instrument.clone(), position);
                 }
             }
-            Side::Sell => {
+            | Side::Sell => {
                 let position = {
                     let mut short_positions = self.positions.perpetual_pos_short.write().await;
                     short_positions.get_mut(&trade.instrument).map(|p| p.clone())
@@ -854,12 +850,12 @@ impl PositionHandler for SandboxAccount
 
                     // 根据仓位模式更新保证金和清算价格
                     match position.pos_config.pos_margin_mode {
-                        PositionMarginMode::Cross => {
+                        | PositionMarginMode::Cross => {
                             let margin_to_add = trade.size * trade.price / position.pos_config.leverage;
                             self.account_margin.fetch_add(margin_to_add, Ordering::SeqCst);
                             position.liquidation_price = Some(self.config.liquidation_threshold * self.account_margin.load(Ordering::SeqCst) / (position.meta.current_size + trade.size));
                         }
-                        PositionMarginMode::Isolated => {
+                        | PositionMarginMode::Isolated => {
                             self.update_isolated_margin(&mut position, &trade).await;
                             let isolated_margin = position.isolated_margin.unwrap_or(0.0);
                             position.liquidation_price = Some(self.config.liquidation_threshold * isolated_margin / (position.meta.current_size + trade.size));
@@ -878,25 +874,25 @@ impl PositionHandler for SandboxAccount
     /// 关闭仓位
     async fn close_position(&mut self, instrument: Instrument, side: Side) -> Result<(), ExchangeError>
     {
-
         match side {
-            Side::Buy => {
+            | Side::Buy => {
                 // 处理空头仓位关闭
                 let position = self.get_position_short(&instrument).await?;
                 if let Some(Position::Perpetual(position)) = position {
                     match position.pos_config.pos_margin_mode {
-                        PositionMarginMode::Cross => {
+                        | PositionMarginMode::Cross => {
                             // 减去对应的保证金
                             let margin_to_subtract = position.meta.current_size / position.pos_config.leverage;
                             self.account_margin.fetch_sub(margin_to_subtract, Ordering::SeqCst);
                             self.register_exit_position(&position.meta, side, None).await?;
                         }
-                        PositionMarginMode::Isolated => {
+                        | PositionMarginMode::Isolated => {
                             // 并不清空 isolated 保证金，只需要 dump
                             self.register_exit_position(&position.meta, side, position.isolated_margin).await?;
                         }
                     };
-                } else {
+                }
+                else {
                     // 返回不支持的仓位类型错误
                     return Err(ExchangeError::UnsupportedInstrumentKind);
                 }
@@ -904,22 +900,23 @@ impl PositionHandler for SandboxAccount
                 // 使用 `ok_or` 将 `Option` 转换为 `Result`
                 self.remove_position(instrument, Side::Sell).await.ok_or(ExchangeError::AttemptToRemoveNonExistingPosition)?;
             }
-            Side::Sell => {
+            | Side::Sell => {
                 // 处理多头仓位关闭
                 let position = self.get_position_long(&instrument).await?;
                 if let Some(Position::Perpetual(mut position)) = position {
                     match position.pos_config.pos_margin_mode {
-                        PositionMarginMode::Cross => {
+                        | PositionMarginMode::Cross => {
                             // 减去对应的保证金
                             let margin_to_subtract = position.meta.current_size / position.pos_config.leverage;
                             self.account_margin.fetch_sub(margin_to_subtract, Ordering::SeqCst);
                         }
-                        PositionMarginMode::Isolated => {
+                        | PositionMarginMode::Isolated => {
                             // 清空 isolated 保证金
                             position.isolated_margin = Some(0.0);
                         }
                     }
-                } else {
+                }
+                else {
                     // 返回不支持的仓位类型错误
                     return Err(ExchangeError::UnsupportedInstrumentKind);
                 }
@@ -929,7 +926,6 @@ impl PositionHandler for SandboxAccount
         }
         Ok(())
     }
-
 
     // 关闭并反向开仓
     async fn close_and_reverse_position(&mut self, trade: ClientTrade, remaining: f64) -> Result<(), ExchangeError>

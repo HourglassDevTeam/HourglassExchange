@@ -91,8 +91,7 @@ async fn main()
 
                 // 打印当前总进度
                 let progress = (processed_tables as f64 / total_tables as f64) * 100.0;
-                println!("Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)",
-                         date_str, processed_tables, total_tables, progress);
+                println!("Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)", date_str, processed_tables, total_tables, progress);
             }
 
             // 迭代到下一天
@@ -132,8 +131,7 @@ async fn main()
 
                 // 打印当前总进度
                 let progress = (processed_tables as f64 / total_tables as f64) * 100.0;
-                println!("Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)",
-                         date_str, processed_tables, total_tables, progress);
+                println!("Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)", date_str, processed_tables, total_tables, progress);
             }
 
             // 迭代到下一天

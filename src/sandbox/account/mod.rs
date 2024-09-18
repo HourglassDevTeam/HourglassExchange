@@ -115,11 +115,11 @@ impl AccountBuilder
     pub fn new() -> Self
     {
         AccountBuilder { account_event_tx: None,
-                           config: None,
-                           orders: None,
-                           balances: None,
-                           positions: None,
-                           closed_positions: None }
+                         config: None,
+                         orders: None,
+                         balances: None,
+                         positions: None,
+                         closed_positions: None }
     }
 
     pub fn account_event_tx(mut self, value: UnboundedSender<AccountEvent>) -> Self

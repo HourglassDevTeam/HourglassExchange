@@ -41,7 +41,8 @@ impl PerpetualPosition
 pub struct PerpetualPositionConfig
 {
     pub(crate) pos_margin_mode: PositionMarginMode,
-    pub(crate) leverage: f64, /// 杠杆率, 大于1.0
+    pub(crate) leverage: f64,
+    /// 杠杆率, 大于1.0
     pub(crate) position_direction_mode: PositionDirectionMode,
 }
 
