@@ -948,7 +948,6 @@ impl PositionHandler for SandboxAccount
                 let position = {
                     let mut long_positions = self.positions.perpetual_pos_long.write().await;
                     long_positions.get_mut(&trade.instrument).map(|p| p.clone())
-                    // Clone the position out of the lock
                 };
 
                 if let Some(mut position) = position {
