@@ -1,7 +1,7 @@
 
 # ⏳ HourGlass
 
-A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs/barter).
+A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs/barter-rs).
 
 ## ⚠️ Warning
 
