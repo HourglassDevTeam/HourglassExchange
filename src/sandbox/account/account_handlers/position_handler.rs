@@ -476,7 +476,7 @@ impl PositionHandler for SandboxAccount
         let (isolated_margin, liquidation_price) = match perpetual_config.pos_margin_mode {
             PositionMarginMode::Cross => {
                 // 使用 fetch_add 更新 account_margin
-                let margin_to_add = trade.size * trade.price * perpetual_config.leverage;
+                let margin_to_add = trade.size * trade.price / perpetual_config.leverage;
                 self.account_margin.fetch_add(margin_to_add, Ordering::SeqCst);
 
                 // 计算 liquidation_price
@@ -488,7 +488,7 @@ impl PositionHandler for SandboxAccount
                 (None, liquidation_price)
             }
             PositionMarginMode::Isolated => {
-                let isolated_margin = Some(trade.price * perpetual_config.leverage * trade.size);
+                let isolated_margin = Some(trade.price / perpetual_config.leverage * trade.size);
 
                 // 计算 liquidation_price
                 // 清算价格公式：liquidation_price = liquidation_threshold * isolated_margin / trade.size
@@ -822,7 +822,7 @@ impl PositionHandler for SandboxAccount
                     match position.pos_config.pos_margin_mode {
                         PositionMarginMode::Cross => {
                             // 更新 Cross 模式下的保证金
-                            let margin_to_add = trade.size * trade.price * position.pos_config.leverage;
+                            let margin_to_add = trade.size * trade.price / position.pos_config.leverage;
                             self.account_margin.fetch_add(margin_to_add, Ordering::SeqCst);
 
                             // 更新清算价格
@@ -855,7 +855,7 @@ impl PositionHandler for SandboxAccount
                     // 根据仓位模式更新保证金和清算价格
                     match position.pos_config.pos_margin_mode {
                         PositionMarginMode::Cross => {
-                            let margin_to_add = trade.size * trade.price * position.pos_config.leverage;
+                            let margin_to_add = trade.size * trade.price / position.pos_config.leverage;
                             self.account_margin.fetch_add(margin_to_add, Ordering::SeqCst);
                             position.liquidation_price = Some(self.config.liquidation_threshold * self.account_margin.load(Ordering::SeqCst) / (position.meta.current_size + trade.size));
                         }
@@ -887,7 +887,7 @@ impl PositionHandler for SandboxAccount
                     match position.pos_config.pos_margin_mode {
                         PositionMarginMode::Cross => {
                             // 减去对应的保证金
-                            let margin_to_subtract = position.meta.current_size * position.pos_config.leverage;
+                            let margin_to_subtract = position.meta.current_size / position.pos_config.leverage;
                             self.account_margin.fetch_sub(margin_to_subtract, Ordering::SeqCst);
                             self.exit_position_and_dump(&position.meta, side,None).await?;
                         }
@@ -912,7 +912,7 @@ impl PositionHandler for SandboxAccount
                     match position.pos_config.pos_margin_mode {
                         PositionMarginMode::Cross => {
                             // 减去对应的保证金
-                            let margin_to_subtract = position.meta.current_size * position.pos_config.leverage;
+                            let margin_to_subtract = position.meta.current_size / position.pos_config.leverage;
                             self.account_margin.fetch_sub(margin_to_subtract, Ordering::SeqCst);
                         }
                         PositionMarginMode::Isolated => {
@@ -993,10 +993,10 @@ impl PositionHandler for SandboxAccount
     {
         if let PositionMarginMode::Isolated = position.pos_config.pos_margin_mode {
             if let Some(ref mut margin) = position.isolated_margin {
-                *margin += trade.price * trade.size * position.pos_config.leverage;
+                *margin += trade.price * trade.size / position.pos_config.leverage;
             }
             else {
-                position.isolated_margin = Some(trade.price * trade.size * position.pos_config.leverage);
+                position.isolated_margin = Some(trade.price * trade.size / position.pos_config.leverage);
             }
         }
     }
