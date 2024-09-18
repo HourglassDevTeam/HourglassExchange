@@ -306,66 +306,72 @@ impl PositionHandler for SandboxAccount
     }
 
     /// 注意 目前只支持匹配单一InstrumentKind，是临时的解决方案。
-    async fn check_and_handle_liquidation(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>
-    {
-        let instrument = trade.parse_instrument().unwrap().clone();
-        let instrument_clone_for_close = instrument.clone(); // Clone the instrument here
+    async fn check_and_handle_liquidation(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError> {
+        // 解析仪器
+        let instrument = match trade.parse_instrument() {
+            Some(instr) => instr,
+            None => return Err(ExchangeError::InvalidInstrument("Instrument parsing failed".to_string())),
+        };
 
         // 获取多头和空头仓位
         let (long_position, short_position) = self.get_position_both_ways(&instrument).await?;
 
-        // 用于存储平仓的 `ClientTrade`
-        let mut liquidation_trade: Option<ClientTrade> = None;
+        // 生成新的交易 ID
         let trade_id_value = self.client_trade_counter.fetch_add(1, Ordering::SeqCst);
         let trade_id = ClientTradeId(trade_id_value);
 
-        // 检查多头仓位是否爆仓
+        // 检查并处理多头仓位
         if let Some(Position::Perpetual(long_pos)) = long_position {
             if let Some(liquidation_price) = long_pos.liquidation_price {
                 if trade.price <= liquidation_price {
-                    // 多头仓位爆仓，生成平仓的 `ClientTrade`
-                    liquidation_trade = Some(ClientTrade { exchange: Exchange::SandBox,
-                                                           timestamp: trade.timestamp, // 使用当前时间戳
-                                                           trade_id,                   // 生成新的 trade_id
-                                                           order_id: None,             // 使用仓位的ID作为order_id
-                                                           cid: None,
-                                                           instrument: instrument.clone(),   // Use the original `instrument`
-                                                           side: Side::Sell,                 // 平仓方向为卖出
-                                                           price: trade.price,               // 平仓时的价格
-                                                           size: long_pos.meta.current_size, // 全部平仓
-                                                           fees: 0.0                         /* 可以根据实际情况计算费用 */ });
+                    // 生成平仓的 `ClientTrade`
+                    let liquidation_trade = ClientTrade {
+                        exchange: Exchange::SandBox,
+                        timestamp: trade.timestamp,
+                        trade_id,
+                        order_id: None,
+                        cid: None,
+                        instrument: instrument.clone(),
+                        side: Side::Sell,
+                        price: trade.price,
+                        size: long_pos.meta.current_size,
+                        fees: 0.0,
+                    };
 
                     // 处理平仓
-                    self.close_position(instrument_clone_for_close.clone(), Side::Buy).await?;
+                    self.close_position(instrument.clone(), Side::Buy).await?;
+                    self.process_trade(liquidation_trade).await?;
+                    return Ok(());
                 }
             }
         }
 
-        // 检查空头仓位是否爆仓
+        // 检查并处理空头仓位
         if let Some(Position::Perpetual(short_pos)) = short_position {
             if let Some(liquidation_price) = short_pos.liquidation_price {
                 if trade.price >= liquidation_price {
-                    // 空头仓位爆仓，生成平仓的 `ClientTrade`
-                    liquidation_trade = Some(ClientTrade { exchange: Exchange::SandBox,
-                                                           timestamp: trade.timestamp, // 使用当前时间戳
-                                                           trade_id,                   // 生成新的 trade_id
-                                                           order_id: None,             // 使用仓位的ID作为order_id
-                                                           cid: None,
-                                                           instrument,                        // Use the original `instrument`
-                                                           side: Side::Buy,                   // 平仓方向为买入
-                                                           price: trade.price,                // 平仓时的价格
-                                                           size: short_pos.meta.current_size, // 全部平仓
-                                                           fees: 0.0                          /* 可以根据实际情况计算费用 */ });
+                    // 生成平仓的 `ClientTrade`
+                    let liquidation_trade = ClientTrade {
+                        exchange: Exchange::SandBox,
+                        timestamp: trade.timestamp,
+                        trade_id,
+                        order_id: None,
+                        cid: None,
+                        instrument: instrument.clone(),
+                        side: Side::Buy,
+                        price: trade.price,
+                        size: short_pos.meta.current_size,
+                        fees: 0.0,
+                    };
 
                     // 处理平仓
-                    self.close_position(instrument_clone_for_close, Side::Sell).await?;
+                    self.close_position(instrument.clone(), Side::Sell).await?;
+                    self.process_trade(liquidation_trade).await?;
+                    return Ok(());
                 }
             }
         }
 
-        if let Some(trade) = liquidation_trade {
-            self.process_trade(trade).await?;
-        }
         Ok(())
     }
 
