@@ -46,16 +46,16 @@
 //                                 println!("[{}]: {:?}", date_str_clone, trade);
 //
 //                                 if tx.send(trade).is_err() {
-//                                     eprintln!("[UniLinkEx] : Failed to send trade, receiver might be closed.");
+//                                     eprintln!("Failed to send trade, receiver might be closed.");
 //                                     break;
 //                                 }
 //                             }
 //                             Ok(None) => {
-//                                 println!("[UniLinkEx] : Cursor data processing for date {} is complete.", date_str_clone);
+//                                 println!("Cursor data processing for date {} is complete.", date_str_clone);
 //                                 break;
 //                             }
 //                             Err(_e) => {
-//                                 eprintln!("[UniLinkEx] : No data available for date {}. Skipping to next date.", date_str_clone);
+//                                 eprintln!("No data available for date {}. Skipping to next date.", date_str_clone);
 //                                 break;
 //                             }
 //                         }
@@ -67,22 +67,22 @@
 //                     while let Some(trade) = _rx.recv().await {
 //                         let mut account_locked = account_clone.lock().await;
 //                         if let Err(e) = account_locked.handle_trade_data(trade).await {
-//                             eprintln!("[UniLinkEx] : Error handling trade data: {:?}", e);
+//                             eprintln!("Error handling trade data: {:?}", e);
 //                         }
 //                     }
 //                 });
 //
 //                 // 等待任务完成
 //                 if let Err(e) = cursor_task.await {
-//                     eprintln!("[UniLinkEx] : Cursor task for {} was aborted: {:?}", date_str, e);
+//                     eprintln!("Cursor task for {} was aborted: {:?}", date_str, e);
 //                 }
 //
 //                 if let Err(e) = receiver_task.await {
-//                     eprintln!("[UniLinkEx] : Receiver task was aborted: {:?}", e);
+//                     eprintln!("Receiver task was aborted: {:?}", e);
 //                 }
 //             }
 //             Err(e) => {
-//                 eprintln!("[UniLinkEx] : Error fetching trades for {}: {:?}", date_str, e);
+//                 eprintln!("Error fetching trades for {}: {:?}", date_str, e);
 //             }
 //         }
 //

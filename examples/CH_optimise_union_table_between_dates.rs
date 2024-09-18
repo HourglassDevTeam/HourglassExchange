@@ -14,10 +14,10 @@ async fn main()
 {
     // 检测是否为 release 模式
     #[cfg(debug_assertions)]
-    println!("[UniLinkEx] : Running in debug mode");
+    println!("Running in debug mode");
 
     #[cfg(not(debug_assertions))]
-    println!("[UniLinkEx] : Running in release mode");
+    println!("Running in release mode");
 
     // 创建 ClickHouse 客户端实例
     let client = ClickHouseClient::new();
@@ -62,8 +62,8 @@ async fn main()
 
         // 如果有表需要优化，汇报开始优化
         if total_tables > 0 {
-            let message = MessageText::new(format!("[UniLinkEx] : Starting optimization for {} tables.", total_tables).as_str());
-            println!("[UniLinkEx] : Starting optimization for {} tables.", total_tables);
+            let message = MessageText::new(format!("Starting optimization for {} tables.", total_tables).as_str());
+            println!("Starting optimization for {} tables.", total_tables);
             bot.send_message(message).await.unwrap();
         }
 
@@ -80,7 +80,7 @@ async fn main()
 
                 // 执行优化操作
                 if let Err(e) = client.optimize_table(&table_path).await {
-                    eprintln!("[UniLinkEx] : Error optimizing table {}: {}", table_path, e);
+                    eprintln!("Error optimizing table {}: {}", table_path, e);
                 }
 
                 // 更新已处理的表数
@@ -91,7 +91,7 @@ async fn main()
 
                 // 打印当前总进度
                 let progress = (processed_tables as f64 / total_tables as f64) * 100.0;
-                println!("[UniLinkEx] : Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)",
+                println!("Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)",
                          date_str, processed_tables, total_tables, progress);
             }
 
@@ -100,7 +100,7 @@ async fn main()
         }
 
         // 汇报最终结果
-        let final_message = format!("[UniLinkEx] : Clickhouse Database Optimization is complete for {} tables across {} days.", total_tables, total_days);
+        let final_message = format!("Clickhouse Database Optimization is complete for {} tables across {} days.", total_tables, total_days);
 
         let message = MessageText::new(final_message.as_str());
         bot.send_message(message).await.unwrap();
@@ -121,7 +121,7 @@ async fn main()
 
                 // 执行优化操作
                 if let Err(e) = client.optimize_table(&table_path).await {
-                    eprintln!("[UniLinkEx] : Error optimizing table {}: {}", table_path, e);
+                    eprintln!("Error optimizing table {}: {}", table_path, e);
                 }
 
                 // 更新已处理的表数
@@ -132,7 +132,7 @@ async fn main()
 
                 // 打印当前总进度
                 let progress = (processed_tables as f64 / total_tables as f64) * 100.0;
-                println!("[UniLinkEx] : Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)",
+                println!("Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)",
                          date_str, processed_tables, total_tables, progress);
             }
 
@@ -141,7 +141,7 @@ async fn main()
         }
 
         // 汇报最终结果
-        let final_message = format!("[UniLinkEx] : Clickhouse Database Optimization is complete for {} tables across {} days.", total_tables, total_days);
+        let final_message = format!("Clickhouse Database Optimization is complete for {} tables across {} days.", total_tables, total_days);
 
         println!("{}", final_message);
     }

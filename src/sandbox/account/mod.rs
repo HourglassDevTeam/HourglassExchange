@@ -671,12 +671,12 @@ impl SandboxAccount
             | Ok(results) => {
                 let cancelled_orders: Vec<_> = results.into_iter().collect::<Result<Vec<_>, _>>().expect("Failed to collect cancel results");
                 response_tx.send(Ok(cancelled_orders)).unwrap_or_else(|_| {
-                                                          eprintln!("[UniLinkEx] : Failed to send cancel_orders_all response");
+                                                          eprintln!("Failed to send cancel_orders_all response");
                                                       });
             }
             | Err(_) => {
                 response_tx.send(Err(ExchangeError::InternalError("Failed to receive cancel results".to_string()))).unwrap_or_else(|_| {
-                                                                                                                       eprintln!("[UniLinkEx] : Failed to send cancel_orders_all error response");
+                                                                                                                       eprintln!("Failed to send cancel_orders_all error response");
                                                                                                                    });
             }
         }
@@ -727,7 +727,7 @@ impl SandboxAccount
 pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
     where Response: Debug + Send + 'static
 {
-    tokio::spawn(async move { response_tx.send(response).expect("[UniLinkEx] : SandBoxExchange failed to send oneshot response to execution request") });
+    tokio::spawn(async move { response_tx.send(response).expect("SandBoxExchange failed to send oneshot response to execution request") });
 }
 
 #[cfg(test)]

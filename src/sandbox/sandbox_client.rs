@@ -77,9 +77,9 @@ impl ClientExecution for SandBoxClient
         // 向模拟交易所发送获取开放订单的请求。
         self.request_tx
             .send(FetchOrdersOpen(response_tx))
-            .expect("[UniLinkEx] : Sandbox exchange is currently offline - Failed to send FetchOrdersOpen request");
+            .expect("Sandbox exchange is currently offline - Failed to send FetchOrdersOpen request");
         // 从模拟交易所接收开放订单的响应。
-        response_rx.await.expect("[UniLinkEx] : Sandbox exchange is currently offline - Failed to receive FetchOrdersOpen response")
+        response_rx.await.expect("Sandbox exchange is currently offline - Failed to receive FetchOrdersOpen response")
     }
 
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExchangeError>
@@ -88,9 +88,9 @@ impl ClientExecution for SandBoxClient
         // 向模拟交易所发送获取账户余额的请求。
         self.request_tx
             .send(FetchTokenBalances(response_tx))
-            .expect("[UniLinkEx] : Sandbox exchange is currently offline - Failed to send FetchBalances request");
+            .expect("Sandbox exchange is currently offline - Failed to send FetchBalances request");
         // 从模拟交易所接收账户余额的响应。
-        response_rx.await.expect("[UniLinkEx] : Sandbox exchange is currently offline - Failed to receive FetchBalances response")
+        response_rx.await.expect("Sandbox exchange is currently offline - Failed to receive FetchBalances response")
     }
 
     //  FetchAllPositions 的实现
@@ -129,9 +129,9 @@ impl ClientExecution for SandBoxClient
         // 向模拟交易所发送开启订单的请求。
         self.request_tx
             .send(OpenOrders((open_requests, response_tx)))
-            .expect("[UniLinkEx] : Sandbox exchange is currently offline - Failed to send OpenOrders request");
+            .expect("Sandbox exchange is currently offline - Failed to send OpenOrders request");
         // 从模拟交易所接收开启订单的响应。
-        response_rx.await.expect("[UniLinkEx] : Sandbox exchange is currently offline - Failed to receive OpenOrders response")
+        response_rx.await.expect("Sandbox exchange is currently offline - Failed to receive OpenOrders response")
     }
 
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExchangeError>>
@@ -140,9 +140,9 @@ impl ClientExecution for SandBoxClient
         // 向模拟交易所发送取消订单的请求。
         self.request_tx
             .send(CancelOrders((cancel_requests, response_tx)))
-            .expect("[UniLinkEx] : Sandbox exchange is currently offline - Failed to send CancelOrders request");
+            .expect("Sandbox exchange is currently offline - Failed to send CancelOrders request");
         // 从模拟交易所接收取消订单的响应。
-        response_rx.await.expect("[UniLinkEx] : Sandbox exchange is currently offline - Failed to receive CancelOrders response")
+        response_rx.await.expect("Sandbox exchange is currently offline - Failed to receive CancelOrders response")
     }
 
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExchangeError>
@@ -152,9 +152,9 @@ impl ClientExecution for SandBoxClient
         // 向模拟交易所发送取消所有订单的请求。
         self.request_tx
             .send(CancelOrdersAll(response_tx))
-            .expect("[UniLinkEx] : Sandbox exchange is currently offline - Failed to send CancelOrdersAll request");
+            .expect("Sandbox exchange is currently offline - Failed to send CancelOrdersAll request");
         // 从模拟交易所接收取消所有订单的响应。
-        response_rx.await.expect("[UniLinkEx] : Sandbox exchange is currently offline - Failed to receive CancelOrdersAll response")
+        response_rx.await.expect("Sandbox exchange is currently offline - Failed to receive CancelOrdersAll response")
     }
 
     // 实现 DepositTokens 的处理逻辑

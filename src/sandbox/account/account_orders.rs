@@ -716,7 +716,7 @@ mod tests
 
         // 失败场景：Post-Only 买单，挂单价格高于市场价格，违反条件，应该返回错误
         let reject_result = account_orders.determine_post_only_order_role(&order, 34999.0);
-        assert_eq!(reject_result.unwrap_err().to_string(), "[UniLinkEx] : PostOnlyViolation");
+        assert_eq!(reject_result.unwrap_err().to_string(), "PostOnlyViolation");
     }
 
     #[tokio::test]

@@ -252,12 +252,12 @@ impl TradeHandler for SandboxAccount
                                                                     exchange: Exchange::SandBox,
                                                                     kind: AccountEventKind::Trade(trade.clone()) /* 发送交易事件 */ })
         {
-            warn!("[UniLinkEx] : Client offline - Failed to send AccountEvent::Trade: {:?}", err);
+            warn!("Client offline - Failed to send AccountEvent::Trade: {:?}", err);
         }
 
         // 发送余额更新事件
         if let Err(err) = self.account_event_tx.send(balance_event) {
-            warn!("[UniLinkEx] : Client offline - Failed to send AccountEvent::Balance: {:?}", err);
+            warn!("Client offline - Failed to send AccountEvent::Balance: {:?}", err);
         }
 
         Ok(())

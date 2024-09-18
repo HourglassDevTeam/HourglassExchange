@@ -96,7 +96,7 @@ impl BalanceHandler for SandboxAccount
                 self.apply_balance_delta(&open.instrument.quote, delta)
             }
             | _ => {
-                return Err(ExchangeError::SandBox(format!("[UniLinkEx] : Unsupported InstrumentKind or PositionMarginMode for open order: {:?}", open.instrument.kind)));
+                return Err(ExchangeError::SandBox(format!("Unsupported InstrumentKind or PositionMarginMode for open order: {:?}", open.instrument.kind)));
             }
         };
 
@@ -117,12 +117,12 @@ impl BalanceHandler for SandboxAccount
     {
         let updated_balance = match cancelled.side {
             | Side::Buy => {
-                let mut balance = self.get_balance_mut(&cancelled.instrument.quote).expect("[UniLinkEx] : Balance existence checked when opening Order");
+                let mut balance = self.get_balance_mut(&cancelled.instrument.quote).expect("Balance existence checked when opening Order");
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
                 *balance
             }
             | Side::Sell => {
-                let mut balance = self.get_balance_mut(&cancelled.instrument.base).expect("[UniLinkEx] : Balance existence checked when opening Order");
+                let mut balance = self.get_balance_mut(&cancelled.instrument.base).expect("Balance existence checked when opening Order");
                 balance.available += cancelled.state.remaining_quantity();
                 *balance
             }
@@ -175,7 +175,7 @@ impl BalanceHandler for SandboxAccount
                 let base_balance = self.apply_balance_delta(base, base_delta);
                 let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
-                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().expect("[UniLinkEx] : Failed to get exchange timestamp"),
+                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().expect("Failed to get exchange timestamp"),
                                   exchange: Exchange::SandBox,
                                   kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) })
             }
@@ -208,7 +208,7 @@ impl BalanceHandler for SandboxAccount
                 let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
                 // 生成账户事件，只涉及 quote
-                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().expect("[UniLinkEx] : Failed to get exchange timestamp"),
+                Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().expect("Failed to get exchange timestamp"),
                                   exchange: Exchange::SandBox,
                                   kind: AccountEventKind::Balances(vec![TokenBalance::new(quote.clone(), quote_balance),]) })
             }
@@ -445,7 +445,7 @@ mod tests
             }
             | Err(e) => {
                 // 订单应该因价格过低而被拒绝
-                assert_eq!(e.to_string(), "[UniLinkEx] : Order rejected: Buy order price is too low compared to the market");
+                assert_eq!(e.to_string(), "Order rejected: Buy order price is too low compared to the market");
             }
         }
     }

@@ -52,7 +52,7 @@ impl Balance
     {
         // 确保应用 BalanceDelta 后不会使 total 或 available 余额为负数。
         if self.total + delta.total < 0.0 || self.available + delta.available < 0.0 {
-            return Err("[UniLinkEx] : Insufficient balance to apply the delta.");
+            return Err("Insufficient balance to apply the delta.");
         }
         self.total += delta.total;
         self.available += delta.available;

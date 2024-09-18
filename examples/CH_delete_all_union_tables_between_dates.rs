@@ -57,7 +57,7 @@ async fn main()
         // 如果找到对应的表，则删除表
         for table in tables_to_delete {
             let drop_query = format!("DROP TABLE {}.{}", database, table);
-            println!("[UniLinkEx] : Executing query: {}", drop_query);
+            println!("Executing query: {}", drop_query);
 
             match client.client.read().await.query(&drop_query).execute().await {
                 | Ok(_) => println!("Successfully dropped table: {}.{}", database, table),

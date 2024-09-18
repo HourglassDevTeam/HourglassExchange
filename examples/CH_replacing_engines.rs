@@ -42,7 +42,7 @@ async fn main()
 
         if union_tables.is_empty() {
             // 没有找到当日的 union 表，发送通知
-            println!("[UniLinkEx] : No union tables found for date: {}", date_str);
+            println!("No union tables found for date: {}", date_str);
         }
         else {
             for table_name in union_tables {
@@ -59,23 +59,23 @@ async fn main()
 
                 match client.client.read().await.query(&alter_query).execute().await {
                     | Ok(_) => {
-                        println!("[UniLinkEx] : Successfully created new table with ReplacingMergeTree: {}.{}", database, new_table_name);
+                        println!("Successfully created new table with ReplacingMergeTree: {}.{}", database, new_table_name);
 
                         // 删除旧表
                         match client.client.read().await.query(&drop_old_table_query).execute().await {
                             | Ok(_) => {
-                                println!("[UniLinkEx] : Successfully dropped old table: {}.{}", database, table_name);
+                                println!("Successfully dropped old table: {}.{}", database, table_name);
 
                                 // 重命名新表为原来的表名
                                 match client.client.read().await.query(&rename_query).execute().await {
-                                    | Ok(_) => println!("[UniLinkEx] : Successfully renamed table: {}.{} to {}.{}", database, new_table_name, database, table_name),
-                                    | Err(e) => eprintln!("[UniLinkEx] : Error renaming table: {}", e),
+                                    | Ok(_) => println!("Successfully renamed table: {}.{} to {}.{}", database, new_table_name, database, table_name),
+                                    | Err(e) => eprintln!("Error renaming table: {}", e),
                                 }
                             }
-                            | Err(e) => eprintln!("[UniLinkEx] : Error dropping old table: {}", e),
+                            | Err(e) => eprintln!("Error dropping old table: {}", e),
                         }
                     }
-                    | Err(e) => eprintln!("[UniLinkEx] : Error creating new table: {}", e),
+                    | Err(e) => eprintln!("Error creating new table: {}", e),
                 };
             }
         }
@@ -84,5 +84,5 @@ async fn main()
         current_date += Duration::days(1);
     }
 
-    println!("[UniLinkEx] : All union tables within the date range have been converted to ReplacingMergeTree with the specified sort key.");
+    println!("All union tables within the date range have been converted to ReplacingMergeTree with the specified sort key.");
 }

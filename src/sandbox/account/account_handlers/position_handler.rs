@@ -176,7 +176,7 @@ impl PositionHandler for SandboxAccount
         }
 
         response_tx.send(results).unwrap_or_else(|_| {
-                                     eprintln!("[UniLinkEx] : Failed to send preconfigure_positions response");
+                                     eprintln!("Failed to send preconfigure_positions response");
                                  });
 
         Ok(position_configs)
@@ -527,14 +527,14 @@ impl PositionHandler for SandboxAccount
     /// 更新 OptionPosition 的方法（占位符）
     async fn create_option_position(&mut self, _trade: ClientTrade) -> Result<OptionPosition, ExchangeError>
     {
-        todo!("[UniLinkEx] : Updating Option positions is not yet implemented")
+        todo!("Updating Option positions is not yet implemented")
     }
 
     #[allow(dead_code)]
     /// 更新 LeveragedTokenPosition 的方法（占位符）
     async fn create_leveraged_token_position(&mut self, _trade: ClientTrade) -> Result<LeveragedTokenPosition, ExchangeError>
     {
-        todo!("[UniLinkEx] : Updating Leveraged Token positions is not yet implemented")
+        todo!("Updating Leveraged Token positions is not yet implemented")
     }
 
     /// 当且仅当 `PositionDirectionMode` 是 `Net` 的时候, 允许在处理新的trade的时候继承反向仓位的configuration.并且返回.

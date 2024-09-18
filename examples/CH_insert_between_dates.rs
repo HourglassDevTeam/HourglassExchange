@@ -54,7 +54,7 @@ async fn main()
             current_date += Duration::days(1);
         }
         else {
-            println!("[UniLinkEx] : No tables found for the date: {}", current_date);
+            println!("No tables found for the date: {}", current_date);
             current_date += Duration::days(1);
         }
     }

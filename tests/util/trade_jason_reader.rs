@@ -59,7 +59,7 @@ mod tests
         // 如果两个向量的长度不一致，zip将会停在较短的向量结束时。以下是修改后的打印部分代码：
         // 打印实际加载的数据和预期数据
         println!("{:-<159}", ""); // 输出长度为30的分隔线
-        println!("{:<<50}  [UniLinkEx] : Testing load_json_market_trade()  {:>>52}", "<", ">");
+        println!("{:<<50}  Testing load_json_market_trade()  {:>>52}", "<", ">");
         for (actual_trade, expected_trade) in actual_trades.iter().zip(expected_trades.iter()) {
             println!("{:->159}", ""); // 输出长度为30的分隔线
             println!("| 实际交易 : {:?} |", actual_trade);
