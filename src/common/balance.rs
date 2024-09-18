@@ -17,7 +17,11 @@ impl TokenBalance
         Self { token: token.into(), balance }
     }
 
-
+    // update balance price's current price on a MarketEvent's new price
+    pub fn update_current_price(&mut self, price: f64)
+    {
+        self.balance.current_price = Some(price);
+    }
 }
 
 /// 总余额和可用余额。
@@ -94,6 +98,15 @@ mod tests
         assert_eq!(token_balance.balance, balance);
     }
 
+    #[test]
+    fn token_balance_update_current_price_should_update_price()
+    {
+        let token = Token::from("BTC");
+        let balance = Balance::new(100.0, 50.0, Some(20000.0));
+        let mut token_balance = TokenBalance::new(token, balance);
+        token_balance.update_current_price(21000.0);
+        assert_eq!(token_balance.balance.current_price, Some(21000.0));
+    }
 
     #[test]
     fn balance_new_should_create_balance()

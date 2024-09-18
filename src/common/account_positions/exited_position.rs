@@ -25,7 +25,6 @@ pub struct PositionExit
     pub exit_value_gross: f64,     // abs(数量) * exit_avg_price_gross。
     pub realised_pnl: f64,         // 退出后实现的盈亏。
     pub liquidation_price: f64,    // 退出平仓时的价格
-    pub exit_isolated_margin:Option<f64>,            // 平仓时的保证金
 }
 
 #[allow(dead_code)]
@@ -41,7 +40,7 @@ impl PositionExit
     ///
     /// # 返回值
     /// 返回一个新的 `PositionExit`，其中包含从 `PositionMeta` 中提取的静态数据和退出时的相关信息。
-    pub fn from_position_meta(position_meta: &PositionMeta, exit_isolated_margin:Option<f64>) -> Self
+    pub fn from_position_meta(position_meta: &PositionMeta) -> Self
     {
         // 计算退出时的总价值（不考虑费用）
         let exit_quantity = position_meta.current_size;
@@ -61,8 +60,6 @@ impl PositionExit
                        exit_avg_price_gross: position_meta.current_avg_price_gross,                     // 平仓时的价格
                        exit_value_gross,                                                                // 平仓时的总价值
                        realised_pnl,
-                       liquidation_price: position_meta.current_symbol_price,
-                       exit_isolated_margin
-        }
+                       liquidation_price: position_meta.current_symbol_price }
     }
 }
