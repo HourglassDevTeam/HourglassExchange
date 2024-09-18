@@ -240,16 +240,16 @@ impl PositionHandler for SandboxAccount
                 }
             }
             | InstrumentKind::Future => {
-                todo!()
+                return Err(ExchangeError::UnsupportedInstrumentKind);
             }
             | InstrumentKind::CryptoOption => {
-                todo!()
+                return Err(ExchangeError::UnsupportedInstrumentKind);
             }
             | InstrumentKind::CryptoLeveragedToken => {
-                todo!()
+                return Err(ExchangeError::UnsupportedInstrumentKind);
             }
             | InstrumentKind::CommodityOption | InstrumentKind::CommodityFuture => {
-                todo!("Commodity positions are not yet implemented");
+                return Err(ExchangeError::UnsupportedInstrumentKind);
             }
         }
 
@@ -878,11 +878,11 @@ impl PositionHandler for SandboxAccount
     /// 关闭仓位
     async fn close_position(&mut self, instrument: Instrument, side: Side) -> Result<(), ExchangeError>
     {
+
         match side {
             Side::Buy => {
                 // 处理多头仓位关闭
-                let position = self.get_position_long(&instrument).await?;
-
+                let position = self.get_position_short(&instrument).await?;
                 if let Some(Position::Perpetual(position)) = position {
                     match position.pos_config.pos_margin_mode {
                         PositionMarginMode::Cross => {
@@ -906,8 +906,7 @@ impl PositionHandler for SandboxAccount
             }
             Side::Sell => {
                 // 处理空头仓位关闭
-                let position = self.get_position_short(&instrument).await?;
-
+                let position = self.get_position_long(&instrument).await?;
                 if let Some(Position::Perpetual(mut position)) = position {
                     match position.pos_config.pos_margin_mode {
                         PositionMarginMode::Cross => {
