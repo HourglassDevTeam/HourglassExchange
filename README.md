@@ -1,5 +1,5 @@
 
-# ⏳ HourGlass: A Sandbox Crypto Exchange
+# ⏳ HourGlass
 
 A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs/barter).
 
