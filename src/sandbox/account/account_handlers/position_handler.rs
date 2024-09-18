@@ -305,7 +305,12 @@ impl PositionHandler for SandboxAccount
         respond(response_tx, Ok(position));
     }
 
-    /// 注意 目前只支持匹配单一InstrumentKind，是临时的解决方案。
+    /// NOTE 进一步优化建议
+    ///
+    ///     1. **引入杠杆和维持保证金的逻辑**：确保在计算爆仓价格时，考虑到账户的杠杆和维持保证金比例。
+    ///     2. **异常处理**：考虑添加更多的异常处理逻辑，确保在不同情况下（如网络故障、价格异常等）能够优雅地处理。
+    //
+    /// NOTE 目前只支持匹配单一InstrumentKind，是临时的解决方案。
     async fn check_and_handle_liquidation(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError> {
         // 解析仪器
         let instrument = match trade.parse_instrument() {
