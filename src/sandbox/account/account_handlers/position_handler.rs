@@ -92,7 +92,7 @@ pub trait PositionHandler
     async fn remove_option_position(&self, instrument: Instrument, side: Side) -> Option<OptionPosition>;
 
     /// NOTE this is currently omitted and should be applied appropriately.
-    async fn exit_position_and_dump(&self, meta: &PositionMeta, side: Side,exit_margin:Option<f64>) -> Result<(), ExchangeError>;
+    async fn register_exit_position(&self, meta: &PositionMeta, side: Side, exit_margin:Option<f64>) -> Result<(), ExchangeError>;
 
     async fn get_position_long_config(&self, instrument: &Instrument) -> Result<Option<PerpetualPositionConfig>, ExchangeError>;
     async fn get_position_short_config(&self, instrument: &Instrument) -> Result<Option<PerpetualPositionConfig>, ExchangeError>;
@@ -767,7 +767,7 @@ impl PositionHandler for SandboxAccount
         }
     }
 
-    async fn exit_position_and_dump(&self, meta: &PositionMeta, side: Side,exit_margin:Option<f64>) -> Result<(), ExchangeError>
+    async fn register_exit_position(&self, meta: &PositionMeta, side: Side, exit_margin:Option<f64>) -> Result<(), ExchangeError>
     {
         // Convert `PositionMeta` into `PositionExit`
         let exited = PositionExit::from_position_meta(meta,exit_margin);
@@ -889,11 +889,11 @@ impl PositionHandler for SandboxAccount
                             // 减去对应的保证金
                             let margin_to_subtract = position.meta.current_size / position.pos_config.leverage;
                             self.account_margin.fetch_sub(margin_to_subtract, Ordering::SeqCst);
-                            self.exit_position_and_dump(&position.meta, side,None).await?;
+                            self.register_exit_position(&position.meta, side, None).await?;
                         }
                         PositionMarginMode::Isolated => {
                             // 并不清空 isolated 保证金，只需要 dump
-                            self.exit_position_and_dump(&position.meta, side, position.isolated_margin).await?;
+                            self.register_exit_position(&position.meta, side, position.isolated_margin).await?;
                         }
                     };
                 } else {
