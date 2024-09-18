@@ -881,7 +881,7 @@ impl PositionHandler for SandboxAccount
 
         match side {
             Side::Buy => {
-                // 处理多头仓位关闭
+                // 处理空头仓位关闭
                 let position = self.get_position_short(&instrument).await?;
                 if let Some(Position::Perpetual(position)) = position {
                     match position.pos_config.pos_margin_mode {
@@ -905,7 +905,7 @@ impl PositionHandler for SandboxAccount
                 self.remove_position(instrument, Side::Sell).await.ok_or(ExchangeError::AttemptToRemoveNonExistingPosition)?;
             }
             Side::Sell => {
-                // 处理空头仓位关闭
+                // 处理多头仓位关闭
                 let position = self.get_position_long(&instrument).await?;
                 if let Some(Position::Perpetual(mut position)) = position {
                     match position.pos_config.pos_margin_mode {
