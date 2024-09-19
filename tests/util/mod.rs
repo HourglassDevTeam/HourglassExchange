@@ -105,19 +105,6 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
     println!("[run_default_exchange] : Hourglass exchange run successfully on local mode.");
 }
 
-/// 设置延迟为50ms
-#[allow(dead_code)]
-pub fn latency_50ms() -> Duration
-{
-    Duration::from_millis(50)
-}
-
-/// 设置交易手续费为0.5%
-#[allow(dead_code)]
-pub fn fees_50_percent() -> f64
-{
-    0.5
-}
 
 /// 定义沙箱交易所支持的Instrument
 #[allow(dead_code)]
