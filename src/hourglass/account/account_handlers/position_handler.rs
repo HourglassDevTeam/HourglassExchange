@@ -76,23 +76,29 @@ pub trait PositionHandler
     async fn create_option_position(&mut self, trade: ClientTrade) -> Result<OptionPosition, ExchangeError>;
 
     async fn create_leveraged_token_position(&mut self, trade: ClientTrade) -> Result<LeveragedTokenPosition, ExchangeError>;
+
     async fn handle_config_inheritance(&self, trade: &ClientTrade) -> Result<PerpetualPositionConfig, ExchangeError>;
 
     async fn determine_handling_type(&self, trade: ClientTrade) -> Result<PositionHandling, ExchangeError>;
+
     async fn update_position_from_client_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>;
     /// 在 create_position 过程中确保仓位的杠杆率不超过账户的最大杠杆率。  [TODO] : TO BE CHECKED & APPLIED
     fn enforce_leverage_limits(&self, new_position: &PerpetualPosition) -> Result<(), ExchangeError>;
 
     async fn remove_position(&self, instrument: Instrument, side: Side) -> Option<Position>;
+
     async fn remove_perpetual_position(&self, instrument: Instrument, side: Side) -> Option<PerpetualPosition>;
+
     async fn remove_future_position(&self, instrument: Instrument, side: Side) -> Option<FuturePosition>;
+
     async fn remove_leveraged_token_position(&self, instrument: Instrument, side: Side) -> Option<LeveragedTokenPosition>;
+
     async fn remove_option_position(&self, instrument: Instrument, side: Side) -> Option<OptionPosition>;
 
-    /// NOTE this is currently omitted and should be applied appropriately.
     async fn register_exit_position(&self, meta: &PositionMeta, side: Side, exit_margin: Option<f64>) -> Result<(), ExchangeError>;
 
     async fn get_position_long_config(&self, instrument: &Instrument) -> Result<Option<PerpetualPositionConfig>, ExchangeError>;
+
     async fn get_position_short_config(&self, instrument: &Instrument) -> Result<Option<PerpetualPositionConfig>, ExchangeError>;
     // 更新已有仓位
     async fn update_existing_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>;
@@ -101,6 +107,7 @@ pub trait PositionHandler
     // 关闭并反向开仓
 
     async fn check_and_handle_liquidation(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>;
+
     async fn close_and_reverse_position(&mut self, trade: ClientTrade, remaining: f64) -> Result<(), ExchangeError>;
     // 爆仓提醒 / Margin Call, return a Option<f64>
     async fn margin_call(&mut self, instrument: Instrument) -> Result<Option<f64>, ExchangeError>;
@@ -397,7 +404,11 @@ impl PositionHandler for HourglassAccount
     /// # 返回值
     /// 返回一个 `Result`，如果成功则包含一个新的 `PerpetualPosition`，
     /// 如果发生错误则返回 `ExchangeError`。
-    async fn create_perpetual_position(&mut self, trade: ClientTrade, handle_type: PositionHandling) -> Result<PerpetualPosition, ExchangeError>
+    async fn create_perpetual_position(
+        &mut self,
+        trade: ClientTrade,
+        handle_type: PositionHandling
+    ) -> Result<PerpetualPosition, ExchangeError>
     {
         let liquidation_threshold = self.config.liquidation_threshold;
 
@@ -406,53 +417,54 @@ impl PositionHandler for HourglassAccount
 
         // 创建 PositionMeta 和新的 PerpetualPosition
         let meta = match handle_type {
-            | PositionHandling::OpenBrandNewPosition => PositionMeta::create_from_trade(&trade),
-            | CloseCompleteAndReverse { reverse_size } => PositionMeta::create_from_trade_with_remaining(&trade, reverse_size),
-            | _ => return Err(ExchangeError::Hourglass("Not supposed to create any position here.".into())),
+            PositionHandling::OpenBrandNewPosition => PositionMeta::create_from_trade(&trade),
+            CloseCompleteAndReverse { reverse_size } => PositionMeta::create_from_trade_with_remaining(&trade, reverse_size),
+            _ => return Err(ExchangeError::Hourglass("Not supposed to create any position here.".into())),
         };
 
-        // 创建新的 PerpetualPosition 变量
         let (isolated_margin, liquidation_price) = match perpetual_config.pos_margin_mode {
-            | PositionMarginMode::Cross => {
-                // 使用 fetch_add 更新 account_margin
+            // Cross Mode: Use account-wide margin, no isolated margin.
+            PositionMarginMode::Cross => {
+                // Calculate margin to add to the global margin (account_margin).
                 let margin_to_add = trade.size * trade.price / perpetual_config.leverage;
                 self.account_margin.fetch_add(margin_to_add, Ordering::SeqCst);
 
-                // 计算 liquidation_price
-                // 清算价格公式：liquidation_price = liquidation_threshold * margin / trade.size
-                // 这里的 margin 是账户的全局保证金
-                let margin = self.account_margin.load(Ordering::SeqCst);
-                let liquidation_price = liquidation_threshold * margin / trade.size;
+                // Calculate liquidation price in Cross Mode (it depends on account-wide margin and liquidation threshold).
+                let liquidation_price = trade.price * (1.0 - liquidation_threshold / perpetual_config.leverage);
 
+                // No isolated margin in Cross mode.
                 (None, liquidation_price)
             }
-            | PositionMarginMode::Isolated => {
+
+            // Isolated Mode: Calculate isolated margin and liquidation price separately.
+            PositionMarginMode::Isolated => {
+                // Calculate isolated margin.
                 let isolated_margin = Some(trade.price / perpetual_config.leverage * trade.size);
 
-                // 计算 liquidation_price
-                // 清算价格公式：liquidation_price = liquidation_threshold * isolated_margin / trade.size
-                // 这里的 isolated_margin 是特定仓位的保证金
-                let liquidation_price = liquidation_threshold * isolated_margin.unwrap() / trade.size;
+                // Calculate liquidation price for isolated positions.
+                let liquidation_price = trade.price * (1.0 - liquidation_threshold / perpetual_config.leverage);
 
                 (isolated_margin, liquidation_price)
             }
         };
 
-        // FIXME 单独处理 Cross mode的新仓构建
         // 创建新的 PerpetualPosition，包括 liquidation_price
-        let new_position = PerpetualPosition { meta,
-                                               pos_config: perpetual_config.clone(),
-                                               isolated_margin,
-                                               liquidation_price: Some(liquidation_price) /* 直接赋值 */ };
+        let new_position = PerpetualPosition {
+            meta,
+            pos_config: perpetual_config.clone(),
+            isolated_margin,  // This will be None for Cross mode.
+            liquidation_price: Some(liquidation_price),
+        };
 
         // 根据买卖方向将仓位插入相应的仓位列表
         match trade.side {
-            | Side::Buy => self.positions.perpetual_pos_long.write().await.insert(trade.instrument, new_position.clone()),
-            | Side::Sell => self.positions.perpetual_pos_short.write().await.insert(trade.instrument, new_position.clone()),
+            Side::Buy => self.positions.perpetual_pos_long.write().await.insert(trade.instrument, new_position.clone()),
+            Side::Sell => self.positions.perpetual_pos_short.write().await.insert(trade.instrument, new_position.clone()),
         };
 
         Ok(new_position)
     }
+
 
     #[allow(dead_code)]
     /// 更新 FuturePosition 的方法（占位符）
@@ -743,12 +755,10 @@ impl PositionHandler for HourglassAccount
         // 查找并返回相应的空头仓位配置
         short_configs.get(instrument).cloned().map_or(Ok(None), |config| Ok(Some(config)))
     }
-
     /// 更新已有仓位
-    async fn update_existing_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>
-    {
+    async fn update_existing_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
         match trade.side {
-            | Side::Buy => {
+            Side::Buy => {
                 let position = {
                     let mut long_positions = self.positions.perpetual_pos_long.write().await;
                     long_positions.get_mut(&trade.instrument).map(|p| p.clone())
@@ -759,21 +769,20 @@ impl PositionHandler for HourglassAccount
 
                     // 根据仓位模式更新保证金和清算价格
                     match position.pos_config.pos_margin_mode {
-                        | PositionMarginMode::Cross => {
+                        PositionMarginMode::Cross => {
                             // 更新 Cross 模式下的保证金
                             let margin_to_add = trade.size * trade.price / position.pos_config.leverage;
                             self.account_margin.fetch_add(margin_to_add, Ordering::SeqCst);
 
                             // 更新清算价格
-                            position.liquidation_price = Some(self.config.liquidation_threshold * self.account_margin.load(Ordering::SeqCst) / (position.meta.current_size + trade.size));
+                            position.liquidation_price = Some(trade.price * (1.0 - self.config.liquidation_threshold / position.pos_config.leverage));
                         }
-                        | PositionMarginMode::Isolated => {
+                        PositionMarginMode::Isolated => {
                             // 更新 Isolated 模式下的保证金
                             self.update_isolated_margin(&mut position, &trade).await;
 
                             // 更新清算价格
-                            let isolated_margin = position.isolated_margin.unwrap_or(0.0);
-                            position.liquidation_price = Some(self.config.liquidation_threshold * isolated_margin / (position.meta.current_size + trade.size));
+                            position.liquidation_price = Some(trade.price * (1.0 - self.config.liquidation_threshold / position.pos_config.leverage));
                         }
                     }
 
@@ -782,7 +791,7 @@ impl PositionHandler for HourglassAccount
                     long_positions.insert(trade.instrument.clone(), position);
                 }
             }
-            | Side::Sell => {
+            Side::Sell => {
                 let position = {
                     let mut short_positions = self.positions.perpetual_pos_short.write().await;
                     short_positions.get_mut(&trade.instrument).map(|p| p.clone())
@@ -793,15 +802,18 @@ impl PositionHandler for HourglassAccount
 
                     // 根据仓位模式更新保证金和清算价格
                     match position.pos_config.pos_margin_mode {
-                        | PositionMarginMode::Cross => {
+                        PositionMarginMode::Cross => {
                             let margin_to_add = trade.size * trade.price / position.pos_config.leverage;
                             self.account_margin.fetch_add(margin_to_add, Ordering::SeqCst);
-                            position.liquidation_price = Some(self.config.liquidation_threshold * self.account_margin.load(Ordering::SeqCst) / (position.meta.current_size + trade.size));
+
+                            // 更新清算价格
+                            position.liquidation_price = Some(trade.price * (1.0 + self.config.liquidation_threshold / position.pos_config.leverage));
                         }
-                        | PositionMarginMode::Isolated => {
+                        PositionMarginMode::Isolated => {
                             self.update_isolated_margin(&mut position, &trade).await;
-                            let isolated_margin = position.isolated_margin.unwrap_or(0.0);
-                            position.liquidation_price = Some(self.config.liquidation_threshold * isolated_margin / (position.meta.current_size + trade.size));
+
+                            // 更新清算价格
+                            position.liquidation_price = Some(trade.price * (1.0 + self.config.liquidation_threshold / position.pos_config.leverage));
                         }
                     }
 
@@ -813,6 +825,7 @@ impl PositionHandler for HourglassAccount
         }
         Ok(())
     }
+
 
     /// FIXME 支持的金融工具太少了。
     /// 关闭仓位
@@ -1769,8 +1782,7 @@ mod tests
         let new_position = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await.unwrap();
 
         // 验证清算价格
-        let expected_liquidation_price = account.config.liquidation_threshold * account.account_margin.load(Ordering::SeqCst) / trade.size;
-        assert_eq!(new_position.liquidation_price.unwrap(), expected_liquidation_price);
+        assert_eq!(new_position.liquidation_price.unwrap(), 91.);
     }
 
     #[tokio::test]
@@ -1800,12 +1812,8 @@ mod tests
         // 创建多头仓位
         let new_position = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await.unwrap();
 
-        // 计算期望的清算价格
-        let isolated_margin = trade.price * trade.size / preconfig.leverage;
-        let expected_liquidation_price = account.config.liquidation_threshold * isolated_margin / trade.size;
-
         // 验证清算价格
-        assert_eq!(new_position.liquidation_price.unwrap(), expected_liquidation_price);
+        assert_eq!(new_position.liquidation_price.unwrap(), 82.);
     }
 
     #[tokio::test]
@@ -1903,4 +1911,200 @@ mod tests
         assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
         assert_eq!(pos.isolated_margin.unwrap(), 100.0); // 剩余保证金为100
     }
+
+    #[tokio::test]
+    async fn test_partial_close_short_position() {
+        let mut account = create_test_account().await;
+
+        // 创建初始的空头仓位
+        let trade = ClientTrade {
+            exchange: Exchange::Hourglass,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(1),
+            order_id: Some(OrderId(1)),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Sell,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1,
+        };
+
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig {
+            pos_margin_mode: PositionMarginMode::Isolated,
+            leverage: 5.0,
+            position_direction_mode: PositionDirectionMode::Net,
+        };
+        account
+            .positions
+            .perpetual_pos_short_config
+            .write()
+            .await
+            .insert(instrument.clone(), preconfig);
+
+        let _ = account
+            .create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition)
+            .await;
+
+        // 部分平仓
+        let closing_trade = ClientTrade {
+            exchange: Exchange::Hourglass,
+            timestamp: 1690000200,
+            trade_id: ClientTradeId(2),
+            order_id: Some(OrderId(2)),
+            cid: None,
+            instrument: instrument.clone(),
+            side: Side::Buy,
+            price: 100.0,
+            size: 5.0,
+            fees: 0.05,
+        };
+
+        account
+            .update_position_from_client_trade(closing_trade.clone())
+            .await
+            .unwrap();
+
+        // 检查仓位是否正确更新
+        let positions = account.positions.perpetual_pos_short.read().await;
+        let pos = positions.get(&instrument).unwrap();
+        assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
+    }
+
+
+    #[tokio::test]
+    async fn test_close_short_position_completely() {
+        let mut account = create_test_account().await;
+
+        // 创建空头仓位
+        let trade = ClientTrade {
+            exchange: Exchange::Hourglass,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(3),
+            order_id: Some(OrderId(3)),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Sell,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1,
+        };
+
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig {
+            pos_margin_mode: PositionMarginMode::Isolated,
+            leverage: 5.0,
+            position_direction_mode: PositionDirectionMode::Net,
+        };
+        account
+            .positions
+            .perpetual_pos_short_config
+            .write()
+            .await
+            .insert(instrument.clone(), preconfig);
+
+        let _ = account
+            .create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition)
+            .await;
+
+        // 完全平仓
+        let closing_trade = ClientTrade {
+            exchange: Exchange::Hourglass,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(4),
+            order_id: Some(OrderId(4)),
+            cid: None,
+            instrument: instrument.clone(),
+            side: Side::Buy,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1,
+        };
+
+        account
+            .update_position_from_client_trade(closing_trade.clone())
+            .await
+            .unwrap();
+
+        // 检查仓位是否已被完全移除
+        let positions = account.positions.perpetual_pos_short.read().await;
+        assert!(!positions.contains_key(&instrument));
+    }
+
+
+
+    #[tokio::test]
+    async fn test_high_leverage_liquidation_in_cross_mode() {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade {
+            exchange: Exchange::Hourglass,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: Some(OrderId(5)),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Buy,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1,
+        };
+
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig {
+            pos_margin_mode: PositionMarginMode::Cross,
+            leverage: 20.0, // 高杠杆测试
+            position_direction_mode: PositionDirectionMode::Net,
+        };
+        account
+            .positions
+            .perpetual_pos_long_config
+            .write()
+            .await
+            .insert(instrument.clone(), preconfig);
+
+        // 创建多头仓位
+        let pos = account
+            .create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition)
+            .await.unwrap();
+
+        let current_margin = account.account_margin.clone();
+        println!("current margin is {:?}", current_margin);
+        let liquidation_price = pos.liquidation_price;
+        println!("current liquidation_price is {:?}", liquidation_price);
+
+        // 市场触发爆仓
+        let liquidation_trade = MarketTrade {
+            timestamp: 1690000100,
+            price: 5.0, // 低于清算价格
+            exchange: "binance-futures".to_string(),
+            symbol: "BTC_USDT".to_string(),
+            amount: 10.0,
+            side: "Sell".to_string(),
+        };
+
+        account
+            .check_and_handle_liquidation(&liquidation_trade)
+            .await
+            .unwrap();
+
+        // 检查多头仓位是否已被完全移除
+        let positions = account.positions.perpetual_pos_long.read().await;
+        assert!(!positions.contains_key(&trade.instrument));
+    }
+
+
 }

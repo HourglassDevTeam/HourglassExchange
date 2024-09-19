@@ -113,7 +113,7 @@ impl HourglassExchange
                     let _ = self.account.lock().await.preconfigure_positions(position_configs, response_tx).await;
                 }
                 | HourglassClientEvent::LetItRoll => {
-                    println!("Received NoOp event, no action taken.");
+                    println!("Received NoOp event, no action's taken.");
                 }
             }
         }
