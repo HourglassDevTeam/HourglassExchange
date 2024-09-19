@@ -28,7 +28,7 @@ use hourglass::{
         account::{
             account_latency::{AccountLatency, FluctuationMode},
             account_orders::AccountOrders,
-            Account,
+            HourglassAccount,
         },
         hourglass_client::HourglassClientEvent,
         HourglassExchange,
@@ -77,26 +77,28 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
         orders_write.bids.push(test_order);
     }
 
-    // Wrap the AccountOrders in Arc<RwLock> as required by Account struct
+    // Wrap the AccountOrders in Arc<RwLock> as required by HourglassAccount struct
     let orders_arc = Arc::new(RwLock::new(account_orders));
 
-    // Instantiate Account and wrap in Arc<Mutex> for shared access
-    let account_arc = Arc::new(Mutex::new(Account { current_session: Uuid::new_v4(),
-                                                    machine_id: 0,
-                                                    exchange_timestamp: AtomicI64::new(1234567),
-                                                    config: create_test_account_config(),
-                                                    orders: orders_arc,
-                                                    single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
-                                                    balances,
-                                                    positions,
-                                                    exited_positions: closed_positions,
-                                                    account_event_tx: event_account_tx }));
+    // Instantiate HourglassAccount and wrap in Arc<Mutex> for shared access
+    let account_arc = Arc::new(Mutex::new(HourglassAccount { current_session: Uuid::new_v4(),
+                                                             machine_id: 0,
+                                                             client_trade_counter: 0.into(),
+                                                             exchange_timestamp: AtomicI64::new(1234567),
+                                                             config: create_test_account_config(),
+                                                             orders: orders_arc,
+                                                             single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
+                                                             balances,
+                                                             positions,
+                                                             exited_positions: closed_positions,
+                                                             account_event_tx: event_account_tx,
+                                                             account_margin: Arc::new(Default::default()) }));
 
     // Initialize and configure HourglassExchange
-    let hourglass_exchange = HourglassExchange::initiator().event_hourglass_rx(event_hourglass_rx)
-                                                       .account(account_arc)
-                                                       .initiate()
-                                                       .expect("Failed to build HourglassExchange");
+    let hourglass_exchange = HourglassExchange::builder().event_hourglass_rx(event_hourglass_rx)
+                                                         .account(account_arc)
+                                                         .initiate()
+                                                         .expect("Failed to build HourglassExchange");
 
     // Running the exchange in local mode
     hourglass_exchange.run_local().await;

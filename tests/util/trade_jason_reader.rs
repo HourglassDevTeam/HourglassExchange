@@ -1,5 +1,5 @@
-use std::fs;
 use hourglass::hourglass::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
+use std::fs;
 
 // 定义JSON文件的路径
 const DATA_HISTORIC_TRADES: &str = "tests/util/sample_trades.json";
