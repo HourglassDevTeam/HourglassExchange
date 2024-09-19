@@ -58,9 +58,9 @@ pub enum HourglassClientEvent
 #[async_trait]
 impl ClientExecution for HourglassClient
 {
-    const CLIENT_KIND: Exchange = Exchange::Hourglass;
-
     type Config = UnboundedSender<HourglassClientEvent>;
+
+    const CLIENT_KIND: Exchange = Exchange::Hourglass;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {
