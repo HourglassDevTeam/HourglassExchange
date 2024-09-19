@@ -889,7 +889,7 @@ impl PositionHandler for SandboxAccount
         // 检查并处理多头仓位
         if let Some(Position::Perpetual(long_pos)) = long_position {
             if let Some(liquidation_price) = long_pos.liquidation_price {
-                if trade.price <= liquidation_price {
+                if trade.price <= liquidation_price && trade.parse_side() == Side::Sell {
                     // 生成平仓的 `ClientTrade`
                     let liquidation_trade = ClientTrade {
                         exchange: Exchange::SandBox,
@@ -914,7 +914,7 @@ impl PositionHandler for SandboxAccount
         // 检查并处理空头仓位
         if let Some(Position::Perpetual(short_pos)) = short_position {
             if let Some(liquidation_price) = short_pos.liquidation_price {
-                if trade.price >= liquidation_price {
+                if trade.price >= liquidation_price && trade.parse_side() == Side::Buy {
                     // 生成平仓的 `ClientTrade`
                     let liquidation_trade = ClientTrade {
                         exchange: Exchange::SandBox,
@@ -978,12 +978,12 @@ impl PositionHandler for SandboxAccount
                     // 根据仓位的方向移除仓位
                     match side {
                         Side::Buy => {
-                            self.remove_position(perpetual_pos.meta.instrument.clone(), Side::Sell)
+                            self.remove_position(perpetual_pos.meta.instrument.clone(), Side::Buy)
                                 .await
                                 .ok_or(ExchangeError::AttemptToRemoveNonExistingPosition)?;
                         }
                         Side::Sell => {
-                            self.remove_position(perpetual_pos.meta.instrument.clone(), Side::Buy)
+                            self.remove_position(perpetual_pos.meta.instrument.clone(), Side::Sell)
                                 .await
                                 .ok_or(ExchangeError::AttemptToRemoveNonExistingPosition)?;
                         }
@@ -1866,7 +1866,7 @@ mod tests
             exchange: "binance-futures".to_string(),
             symbol:"BTC_USDT".to_string(),
             amount:10.0,
-            side: "Buy".to_string(),
+            side: "Sell".to_string(),
         };
 
         // 运行清算检查
