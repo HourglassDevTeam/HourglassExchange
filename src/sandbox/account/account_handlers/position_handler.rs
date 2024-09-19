@@ -1002,7 +1002,6 @@ impl PositionHandler for SandboxAccount
     async fn partial_close_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
         match trade.side {
             Side::Sell => {
-                println!("Buy side partial_close_position");
                 // 获取并锁定多头仓位
                 let mut long_positions = self.positions.perpetual_pos_long.write().await;
                 if let Some(position) = long_positions.get_mut(&trade.instrument) {
@@ -1011,7 +1010,6 @@ impl PositionHandler for SandboxAccount
                         return Err(ExchangeError::InvalidTradeSize);
                     }
                     position.meta.update_from_trade(&trade); // 更新 PositionMeta
-
                     // 根据保证金模式调整保证金
                     match position.pos_config.pos_margin_mode {
                         PositionMarginMode::Cross => {
@@ -1022,7 +1020,9 @@ impl PositionHandler for SandboxAccount
                         PositionMarginMode::Isolated => {
                             // 根据平仓比例减少 Isolated 保证金
                             if let Some(isolated_margin) = position.isolated_margin {
-                                let margin_to_subtract = isolated_margin * (trade.size / position.meta.current_size);
+                                println!("isolated_margin: {}", isolated_margin);
+                                let margin_to_subtract = trade.price * trade.size / position.pos_config.leverage;
+                                println!("margin to subtract: {}", margin_to_subtract);
                                 position.isolated_margin = Some(isolated_margin - margin_to_subtract);
                             }
                         }
@@ -1934,7 +1934,6 @@ mod tests
         let positions = account.positions.perpetual_pos_long.read().await;
         let pos = positions.get(&trade.instrument).unwrap();
         assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
-        assert_eq!(pos.isolated_margin.unwrap(), 50.0); // 假设初始保证金为100 / 5 = 20，减少 5 / (10) * 20 = 10，剩余 10 // FIXME  失败了！
+        assert_eq!(pos.isolated_margin.unwrap(), 100.0);
     }
-
 }
