@@ -1,5 +1,5 @@
 use rayon::{iter::IntoParallelRefIterator, prelude::ParallelIterator};
-use unilink_execution::sandbox::clickhouse_api::queries_operations::ClickHouseClient;
+use unilink_execution::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
 
 #[tokio::main]
 async fn main()

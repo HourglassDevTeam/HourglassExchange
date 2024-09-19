@@ -8,7 +8,7 @@ use crate::{
         },
         instrument::{kind::InstrumentKind, Instrument},
     },
-    sandbox::config_request::ConfigurationRequest,
+    hourglass::config_request::ConfigurationRequest,
 };
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 use std::{collections::HashMap, hash::Hash, sync::Arc};

@@ -1,6 +1,6 @@
 use crate::{
     common::Side,
-    sandbox::clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, queries_operations::Row},
+    hourglass::clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, queries_operations::Row},
 };
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;

@@ -3,7 +3,7 @@ use mpsc::UnboundedSender;
 use oneshot::Sender;
 use tokio::sync::{mpsc, oneshot};
 
-use SandBoxClientEvent::{CancelOrders, CancelOrdersAll, FetchOrdersOpen, FetchTokenBalances, OpenOrders};
+use HourglassClientEvent::{CancelOrders, CancelOrdersAll, FetchOrdersOpen, FetchTokenBalances, OpenOrders};
 
 use crate::{
     common::{
@@ -16,14 +16,14 @@ use crate::{
         },
         token::Token,
     },
-    sandbox::config_request::ConfigurationRequest,
+    hourglass::config_request::ConfigurationRequest,
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
 
 #[derive(Debug)]
-pub struct SandBoxClient
+pub struct HourglassClient
 {
-    pub request_tx: UnboundedSender<SandBoxClientEvent>, /* NOTE 这是向模拟交易所端发送信号的发射器。注意指令格式是SandBoxClientEvent
+    pub request_tx: UnboundedSender<HourglassClientEvent>, /* NOTE 这是向模拟交易所端发送信号的发射器。注意指令格式是HourglassClientEvent
                                                           * pub market_event_rx: UnboundedReceiver<MarketEvent<MarketTrade>>, */
 }
 
@@ -39,7 +39,7 @@ pub type DepositRequest = (Vec<(Token, f64)>, Sender<DepositResults>);
 
 // 模拟交易所客户端可向模拟交易所发送的命令
 #[derive(Debug)]
-pub enum SandBoxClientEvent
+pub enum HourglassClientEvent
 {
     DepositTokens(DepositRequest),
     FetchOrdersOpen(Sender<Result<Vec<Order<Open>>, ExchangeError>>),
@@ -56,18 +56,18 @@ pub enum SandBoxClientEvent
 }
 
 #[async_trait]
-impl ClientExecution for SandBoxClient
+impl ClientExecution for HourglassClient
 {
-    type Config = UnboundedSender<SandBoxClientEvent>;
+    type Config = UnboundedSender<HourglassClientEvent>;
 
-    const CLIENT_KIND: Exchange = Exchange::SandBox;
+    const CLIENT_KIND: Exchange = Exchange::Hourglass;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {
         // 从 config 元组中解构出 request_tx 和 market_event_rx
         let request_tx = config;
 
-        // 使用 request_tx 和 market_event_rx 初始化 SandBoxClient
+        // 使用 request_tx 和 market_event_rx 初始化 HourglassClient
         Self { request_tx /* market_event_rx, */ }
     }
 
@@ -77,9 +77,9 @@ impl ClientExecution for SandBoxClient
         // 向模拟交易所发送获取开放订单的请求。
         self.request_tx
             .send(FetchOrdersOpen(response_tx))
-            .expect("Sandbox exchange is currently offline - Failed to send FetchOrdersOpen request");
+            .expect("Hourglass exchange is currently offline - Failed to send FetchOrdersOpen request");
         // 从模拟交易所接收开放订单的响应。
-        response_rx.await.expect("Sandbox exchange is currently offline - Failed to receive FetchOrdersOpen response")
+        response_rx.await.expect("Hourglass exchange is currently offline - Failed to receive FetchOrdersOpen response")
     }
 
     async fn fetch_balances(&self) -> Result<Vec<TokenBalance>, ExchangeError>
@@ -88,9 +88,9 @@ impl ClientExecution for SandBoxClient
         // 向模拟交易所发送获取账户余额的请求。
         self.request_tx
             .send(FetchTokenBalances(response_tx))
-            .expect("Sandbox exchange is currently offline - Failed to send FetchBalances request");
+            .expect("Hourglass exchange is currently offline - Failed to send FetchBalances request");
         // 从模拟交易所接收账户余额的响应。
-        response_rx.await.expect("Sandbox exchange is currently offline - Failed to receive FetchBalances response")
+        response_rx.await.expect("Hourglass exchange is currently offline - Failed to receive FetchBalances response")
     }
 
     //  FetchAllPositions 的实现
@@ -98,9 +98,9 @@ impl ClientExecution for SandBoxClient
     {
         let (response_tx, response_rx) = oneshot::channel();
         self.request_tx
-            .send(SandBoxClientEvent::FetchAllPositions(response_tx))
-            .expect("[SandBoxClient] : Failed to send FetchAllPositions request");
-        response_rx.await.expect("[SandBoxClient] : Failed to receive FetchAllPositions response")
+            .send(HourglassClientEvent::FetchAllPositions(response_tx))
+            .expect("[HourglassClient] : Failed to send FetchAllPositions request");
+        response_rx.await.expect("[HourglassClient] : Failed to receive FetchAllPositions response")
     }
 
     //  FetchLongPosition 的实现
@@ -108,9 +108,9 @@ impl ClientExecution for SandBoxClient
     {
         let (response_tx, response_rx) = oneshot::channel();
         self.request_tx
-            .send(SandBoxClientEvent::FetchLongPosition(instrument, response_tx))
-            .expect("[SandBoxClient] : Failed to send FetchLongPosition request");
-        response_rx.await.expect("[SandBoxClient] : Failed to receive FetchLongPosition response")
+            .send(HourglassClientEvent::FetchLongPosition(instrument, response_tx))
+            .expect("[HourglassClient] : Failed to send FetchLongPosition request");
+        response_rx.await.expect("[HourglassClient] : Failed to receive FetchLongPosition response")
     }
 
     //  FetchShortPosition 的实现
@@ -118,9 +118,9 @@ impl ClientExecution for SandBoxClient
     {
         let (response_tx, response_rx) = oneshot::channel();
         self.request_tx
-            .send(SandBoxClientEvent::FetchShortPosition(instrument, response_tx))
-            .expect("[SandBoxClient] : Failed to send FetchShortPosition request");
-        response_rx.await.expect("[SandBoxClient] : Failed to receive FetchShortPosition response")
+            .send(HourglassClientEvent::FetchShortPosition(instrument, response_tx))
+            .expect("[HourglassClient] : Failed to send FetchShortPosition request");
+        response_rx.await.expect("[HourglassClient] : Failed to receive FetchShortPosition response")
     }
 
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExchangeError>>
@@ -129,9 +129,9 @@ impl ClientExecution for SandBoxClient
         // 向模拟交易所发送开启订单的请求。
         self.request_tx
             .send(OpenOrders((open_requests, response_tx)))
-            .expect("Sandbox exchange is currently offline - Failed to send OpenOrders request");
+            .expect("Hourglass exchange is currently offline - Failed to send OpenOrders request");
         // 从模拟交易所接收开启订单的响应。
-        response_rx.await.expect("Sandbox exchange is currently offline - Failed to receive OpenOrders response")
+        response_rx.await.expect("Hourglass exchange is currently offline - Failed to receive OpenOrders response")
     }
 
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExchangeError>>
@@ -140,9 +140,9 @@ impl ClientExecution for SandBoxClient
         // 向模拟交易所发送取消订单的请求。
         self.request_tx
             .send(CancelOrders((cancel_requests, response_tx)))
-            .expect("Sandbox exchange is currently offline - Failed to send CancelOrders request");
+            .expect("Hourglass exchange is currently offline - Failed to send CancelOrders request");
         // 从模拟交易所接收取消订单的响应。
-        response_rx.await.expect("Sandbox exchange is currently offline - Failed to receive CancelOrders response")
+        response_rx.await.expect("Hourglass exchange is currently offline - Failed to receive CancelOrders response")
     }
 
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExchangeError>
@@ -152,9 +152,9 @@ impl ClientExecution for SandBoxClient
         // 向模拟交易所发送取消所有订单的请求。
         self.request_tx
             .send(CancelOrdersAll(response_tx))
-            .expect("Sandbox exchange is currently offline - Failed to send CancelOrdersAll request");
+            .expect("Hourglass exchange is currently offline - Failed to send CancelOrdersAll request");
         // 从模拟交易所接收取消所有订单的响应。
-        response_rx.await.expect("Sandbox exchange is currently offline - Failed to receive CancelOrdersAll response")
+        response_rx.await.expect("Hourglass exchange is currently offline - Failed to receive CancelOrdersAll response")
     }
 
     // 实现 DepositTokens 的处理逻辑
@@ -162,7 +162,7 @@ impl ClientExecution for SandBoxClient
     {
         let (response_tx, response_rx) = oneshot::channel();
         self.request_tx
-            .send(SandBoxClientEvent::DepositTokens((deposits, response_tx)))
+            .send(HourglassClientEvent::DepositTokens((deposits, response_tx)))
             .expect("Failed to send DepositTokens request");
         response_rx.await.expect("Failed to receive DepositTokens response")
     }
@@ -181,7 +181,7 @@ mod tests
         // 创建通道，用于请求和响应通信
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
 
-        let client = SandBoxClient { request_tx: request_tx.clone() };
+        let client = HourglassClient { request_tx: request_tx.clone() };
 
         // 启动一个异步任务来调用客户端的 fetch_orders_open 方法
         let client_task = tokio::spawn(async move {
@@ -213,13 +213,13 @@ mod tests
     #[tokio::test]
     async fn test_cancel_orders_all()
     {
-        // 创建一个模拟的 SandBoxClientEvent 发射器和接收器
+        // 创建一个模拟的 HourglassClientEvent 发射器和接收器
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
         // let (_market_event_tx, market_event_rx) = mpsc::unbounded_channel();
         let (_response_tx, _response_rx) = oneshot::channel::<Result<Vec<Order<Cancelled>>, ExchangeError>>();
 
-        // 初始化 SandBoxClient
-        let client = SandBoxClient { request_tx: request_tx.clone() };
+        // 初始化 HourglassClient
+        let client = HourglassClient { request_tx: request_tx.clone() };
 
         // 启动一个异步任务来调用客户端的 cancel_orders_all 方法
         let client_task = tokio::spawn(async move {
@@ -229,7 +229,7 @@ mod tests
             assert!(result.unwrap().is_empty(), "Expected an empty list of cancelled orders");
         });
 
-        // 模拟从 SandBoxClientEvent 接收器获取 CancelOrdersAll 事件
+        // 模拟从 HourglassClientEvent 接收器获取 CancelOrdersAll 事件
         if let Some(CancelOrdersAll(tx)) = request_rx.recv().await {
             // println!("Received CancelOrdersAll event");
 

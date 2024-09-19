@@ -12,7 +12,7 @@ use crate::{
         Side,
     },
     error::ExchangeError,
-    sandbox::account::{respond, DashMapRefMut, SandboxAccount},
+    hourglass::account::{respond, DashMapRefMut, HourglassAccount},
     Exchange,
 };
 use async_trait::async_trait;
@@ -46,7 +46,7 @@ pub trait BalanceHandler
 }
 
 #[async_trait]
-impl BalanceHandler for SandboxAccount
+impl BalanceHandler for HourglassAccount
 {
     async fn get_balances(&self) -> Vec<TokenBalance>
     {
@@ -58,7 +58,7 @@ impl BalanceHandler for SandboxAccount
     {
         self.balances
             .get(token)
-            .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for Token: {:?}", token)))
+            .ok_or_else(|| ExchangeError::Hourglass(format!("HourglassExchange is not configured for Token: {:?}", token)))
     }
 
     /// 返回指定[`Token`]的[`Balance`]的可变引用。
@@ -66,7 +66,7 @@ impl BalanceHandler for SandboxAccount
     {
         self.balances
             .get_mut(token)
-            .ok_or_else(|| ExchangeError::SandBox(format!("SandBoxExchange is not configured for Token: {:?}", token)))
+            .ok_or_else(|| ExchangeError::Hourglass(format!("HourglassExchange is not configured for Token: {:?}", token)))
     }
 
     async fn fetch_token_balances_and_respond(&self, response_tx: Sender<Result<Vec<TokenBalance>, ExchangeError>>)
@@ -96,7 +96,7 @@ impl BalanceHandler for SandboxAccount
                 self.apply_balance_delta(&open.instrument.quote, delta)
             }
             | _ => {
-                return Err(ExchangeError::SandBox(format!("Unsupported InstrumentKind or PositionMarginMode for open order: {:?}", open.instrument.kind)));
+                return Err(ExchangeError::Hourglass(format!("Unsupported InstrumentKind or PositionMarginMode for open order: {:?}", open.instrument.kind)));
             }
         };
 
@@ -107,7 +107,7 @@ impl BalanceHandler for SandboxAccount
         };
 
         Ok(AccountEvent { exchange_timestamp: self.exchange_timestamp.load(Ordering::SeqCst),
-                          exchange: Exchange::SandBox,
+                          exchange: Exchange::Hourglass,
                           kind: AccountEventKind::Balance(TokenBalance::new(open.instrument.quote.clone(), updated_balance)) })
     }
 
@@ -135,7 +135,7 @@ impl BalanceHandler for SandboxAccount
         };
 
         Ok(AccountEvent { exchange_timestamp: self.exchange_timestamp.load(Ordering::SeqCst),
-                          exchange: Exchange::SandBox,
+                          exchange: Exchange::Hourglass,
                           kind: AccountEventKind::Balance(TokenBalance::new(token, updated_balance)) })
     }
 
@@ -176,7 +176,7 @@ impl BalanceHandler for SandboxAccount
                 let quote_balance = self.apply_balance_delta(quote, quote_delta);
 
                 Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().expect("Failed to get exchange timestamp"),
-                                  exchange: Exchange::SandBox,
+                                  exchange: Exchange::Hourglass,
                                   kind: AccountEventKind::Balances(vec![TokenBalance::new(base.clone(), base_balance), TokenBalance::new(quote.clone(), quote_balance),]) })
             }
             | InstrumentKind::CryptoOption => {
@@ -209,7 +209,7 @@ impl BalanceHandler for SandboxAccount
 
                 // 生成账户事件，只涉及 quote
                 Ok(AccountEvent { exchange_timestamp: self.get_exchange_ts().expect("Failed to get exchange timestamp"),
-                                  exchange: Exchange::SandBox,
+                                  exchange: Exchange::Hourglass,
                                   kind: AccountEventKind::Balances(vec![TokenBalance::new(quote.clone(), quote_balance),]) })
             }
         }
@@ -337,7 +337,7 @@ mod tests
             states::request_open::RequestOpen,
             OrderRole,
         },
-        sandbox::account::account_handlers::{position_handler::PositionHandler, trade_handler::TradeHandler},
+        hourglass::account::account_handlers::{position_handler::PositionHandler, trade_handler::TradeHandler},
         test_utils::create_test_account,
     };
 
@@ -377,7 +377,7 @@ mod tests
         let mut account = create_test_account().await;
 
         let order = Order { instruction: OrderInstruction::Limit,
-                            exchange: Exchange::SandBox,
+                            exchange: Exchange::Hourglass,
                             instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
                             timestamp: 1625247600000,
                             cid: Some(ClientOrderId("validCID123".into())),
@@ -429,7 +429,7 @@ mod tests
         let account = create_test_account().await;
 
         let order = Order { instruction: OrderInstruction::Limit,
-                            exchange: Exchange::SandBox,
+                            exchange: Exchange::Hourglass,
                             instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
                             timestamp: 1625247600000,
                             cid: Some(ClientOrderId("validCID123".into())),
@@ -456,7 +456,7 @@ mod tests
         let account = create_test_account().await;
 
         let order = Order { instruction: OrderInstruction::Limit,
-                            exchange: Exchange::SandBox,
+                            exchange: Exchange::Hourglass,
                             instrument: Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
                             timestamp: 1625247600000,
                             cid: Some(ClientOrderId("validCID123".into())),
@@ -511,7 +511,7 @@ mod tests
 
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
         let open_order_request = Order { instruction: OrderInstruction::Limit,
-                                         exchange: Exchange::SandBox,
+                                         exchange: Exchange::Hourglass,
                                          instrument: instrument.clone(),
                                          timestamp: 1625247600000,
                                          cid: Some(ClientOrderId("validCID123".into())),
@@ -550,7 +550,7 @@ mod tests
 
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
         let open_order_request = Order { instruction: OrderInstruction::Limit,
-                                         exchange: Exchange::SandBox,
+                                         exchange: Exchange::Hourglass,
                                          instrument: instrument.clone(),
                                          timestamp: 1625247600000,
                                          cid: Some(ClientOrderId("validCID123".into())),

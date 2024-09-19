@@ -10,7 +10,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
-use unilink_execution::sandbox::{clickhouse_api::queries_operations::ClickHouseClient, utils::chrono_operations::extract_date};
+use unilink_execution::hourglass::{clickhouse_api::queries_operations::ClickHouseClient, utils::chrono_operations::extract_date};
 
 #[tokio::main]
 async fn main()

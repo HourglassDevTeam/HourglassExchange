@@ -4,7 +4,7 @@ use crate::{
         instrument::Instrument,
     },
     error::ExchangeError,
-    sandbox::{config_request::ConfigurationRequest, sandbox_client::ConfigureInstrumentsResults},
+    hourglass::{config_request::ConfigurationRequest, hourglass_client::ConfigureInstrumentsResults},
     Exchange,
 };
 use async_trait::async_trait;
@@ -25,10 +25,10 @@ use crate::{
         trade::{ClientTrade, ClientTradeId},
         Side,
     },
-    sandbox::{
+    hourglass::{
         account::{
             account_handlers::{position_handler::PositionHandling::CloseCompleteAndReverse, trade_handler::TradeHandler},
-            respond, SandboxAccount,
+            respond, HourglassAccount,
         },
         clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
     },
@@ -113,7 +113,7 @@ pub trait PositionHandler
 }
 
 #[async_trait]
-impl PositionHandler for SandboxAccount
+impl PositionHandler for HourglassAccount
 {
     /// 预先设置控制仓位的字段。
     async fn preconfigure_position(&mut self, config_request: ConfigurationRequest) -> Result<PositionConfig, ExchangeError>
@@ -408,7 +408,7 @@ impl PositionHandler for SandboxAccount
         let meta = match handle_type {
             | PositionHandling::OpenBrandNewPosition => PositionMeta::create_from_trade(&trade),
             | CloseCompleteAndReverse { reverse_size } => PositionMeta::create_from_trade_with_remaining(&trade, reverse_size),
-            | _ => return Err(ExchangeError::SandBox("Not supposed to create any position here.".into())),
+            | _ => return Err(ExchangeError::Hourglass("Not supposed to create any position here.".into())),
         };
 
         // 创建新的 PerpetualPosition 变量
@@ -892,7 +892,7 @@ impl PositionHandler for SandboxAccount
                 if trade.price <= liquidation_price && trade.parse_side() == Side::Sell {
                     // 生成平仓的 `ClientTrade`
                     let liquidation_trade = ClientTrade {
-                        exchange: Exchange::SandBox,
+                        exchange: Exchange::Hourglass,
                         timestamp: trade.timestamp,
                         trade_id,
                         order_id: None,
@@ -917,7 +917,7 @@ impl PositionHandler for SandboxAccount
                 if trade.price >= liquidation_price && trade.parse_side() == Side::Buy {
                     // 生成平仓的 `ClientTrade`
                     let liquidation_trade = ClientTrade {
-                        exchange: Exchange::SandBox,
+                        exchange: Exchange::Hourglass,
                         timestamp: trade.timestamp,
                         trade_id,
                         order_id: None,
@@ -1097,7 +1097,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(1),
                                   order_id: Some(OrderId(1)),
@@ -1137,7 +1137,7 @@ mod tests
         let mut account = create_test_account().await;
 
         // 创建一个 trade
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(2),
                                   order_id: Some(OrderId(2)),
@@ -1177,7 +1177,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(3),
                                   order_id: Some(OrderId(3)),
@@ -1201,7 +1201,7 @@ mod tests
         let _ = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await;
 
         // 再次买入增加仓位
-        let additional_trade = ClientTrade { exchange: Exchange::SandBox,
+        let additional_trade = ClientTrade { exchange: Exchange::Hourglass,
                                              timestamp: 1690000100,
                                              trade_id: ClientTradeId(4),
                                              order_id: Some(OrderId(4)),
@@ -1228,7 +1228,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(3),
                                   order_id: Some(OrderId(3)),
@@ -1252,7 +1252,7 @@ mod tests
         let _ = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await;
 
         // 再次买入增加仓位
-        let additional_trade = ClientTrade { exchange: Exchange::SandBox,
+        let additional_trade = ClientTrade { exchange: Exchange::Hourglass,
                                              timestamp: 1690000100,
                                              trade_id: ClientTradeId(4),
                                              order_id: Some(OrderId(4)),
@@ -1279,7 +1279,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(3),
                                   order_id: Some(OrderId(3)),
@@ -1303,7 +1303,7 @@ mod tests
         let _ = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await;
 
         // 再次买入增加仓位
-        let additional_trade = ClientTrade { exchange: Exchange::SandBox,
+        let additional_trade = ClientTrade { exchange: Exchange::Hourglass,
                                              timestamp: 1690000100,
                                              trade_id: ClientTradeId(4),
                                              order_id: Some(OrderId(4)),
@@ -1330,7 +1330,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(3),
                                   order_id: Some(OrderId(3)),
@@ -1354,7 +1354,7 @@ mod tests
         let _ = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await;
 
         // 再次买入增加仓位
-        let additional_trade = ClientTrade { exchange: Exchange::SandBox,
+        let additional_trade = ClientTrade { exchange: Exchange::Hourglass,
                                              timestamp: 1690000100,
                                              trade_id: ClientTradeId(4),
                                              order_id: Some(OrderId(4)),
@@ -1381,7 +1381,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
                                   order_id: Some(OrderId(5)),
@@ -1406,7 +1406,7 @@ mod tests
         println!("the result is {:#?}", result);
 
         // 部分平仓
-        let closing_trade = ClientTrade { exchange: Exchange::SandBox,
+        let closing_trade = ClientTrade { exchange: Exchange::Hourglass,
                                           timestamp: 1690000200,
                                           trade_id: ClientTradeId(6),
                                           order_id: Some(OrderId(6)),
@@ -1431,7 +1431,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
                                   order_id: Some(OrderId(5)),
@@ -1454,7 +1454,7 @@ mod tests
         // 创建一个多头仓位
         let _ = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await;
         // 部分平仓
-        let closing_trade = ClientTrade { exchange: Exchange::SandBox,
+        let closing_trade = ClientTrade { exchange: Exchange::Hourglass,
                                           timestamp: 1690000200,
                                           trade_id: ClientTradeId(6),
                                           order_id: Some(OrderId(6)),
@@ -1479,7 +1479,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
                                   order_id: Some(OrderId(5)),
@@ -1503,7 +1503,7 @@ mod tests
         let _ = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await;
 
         // 部分平仓
-        let closing_trade = ClientTrade { exchange: Exchange::SandBox,
+        let closing_trade = ClientTrade { exchange: Exchange::Hourglass,
                                           timestamp: 1690000200,
                                           trade_id: ClientTradeId(6),
                                           order_id: Some(OrderId(6)),
@@ -1528,7 +1528,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
                                   order_id: Some(OrderId(5)),
@@ -1550,7 +1550,7 @@ mod tests
         let _ = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await;
 
         // 完全平仓
-        let closing_trade = ClientTrade { exchange: Exchange::SandBox,
+        let closing_trade = ClientTrade { exchange: Exchange::Hourglass,
                                           timestamp: 1690000000,
                                           trade_id: ClientTradeId(5),
                                           order_id: Some(OrderId(5)),
@@ -1575,7 +1575,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
                                   order_id: Some(OrderId(5)),
@@ -1597,7 +1597,7 @@ mod tests
         let _ = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await;
 
         // 反向平仓并开立新的空头仓位
-        let reverse_trade = ClientTrade { exchange: Exchange::SandBox,
+        let reverse_trade = ClientTrade { exchange: Exchange::Hourglass,
                                           timestamp: 1690000100,
                                           trade_id: ClientTradeId(6),
                                           order_id: Some(OrderId(6)),
@@ -1629,7 +1629,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
                                   order_id: Some(OrderId(5)),
@@ -1651,7 +1651,7 @@ mod tests
         let _ = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await;
 
         // 反向平仓并开立新的空头仓位
-        let reverse_trade = ClientTrade { exchange: Exchange::SandBox,
+        let reverse_trade = ClientTrade { exchange: Exchange::Hourglass,
                                           timestamp: 1690000100,
                                           trade_id: ClientTradeId(6),
                                           order_id: Some(OrderId(6)),
@@ -1683,7 +1683,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
                                   order_id: Some(OrderId(5)),
@@ -1705,7 +1705,7 @@ mod tests
         let _ = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await;
 
         // 反向平仓并开立新的空头仓位
-        let reverse_trade = ClientTrade { exchange: Exchange::SandBox,
+        let reverse_trade = ClientTrade { exchange: Exchange::Hourglass,
                                           timestamp: 1690000100,
                                           trade_id: ClientTradeId(6),
                                           order_id: Some(OrderId(6)),
@@ -1727,7 +1727,7 @@ mod tests
     {
         let mut account = create_test_account().await;
 
-        let trade = ClientTrade { exchange: Exchange::SandBox,
+        let trade = ClientTrade { exchange: Exchange::Hourglass,
                                   timestamp: 1690000000,
                                   trade_id: ClientTradeId(5),
                                   order_id: Some(OrderId(5)),
@@ -1751,7 +1751,7 @@ mod tests
         let mut account = create_test_account().await;
 
         let trade = ClientTrade {
-            exchange: Exchange::SandBox,
+            exchange: Exchange::Hourglass,
             timestamp: 1690000000,
             trade_id: ClientTradeId(5),
             order_id: Some(OrderId(5)),
@@ -1789,7 +1789,7 @@ mod tests
         let mut account = create_test_account().await;
 
         let trade = ClientTrade {
-            exchange: Exchange::SandBox,
+            exchange: Exchange::Hourglass,
             timestamp: 1690000000,
             trade_id: ClientTradeId(5),
             order_id: Some(OrderId(5)),
@@ -1830,7 +1830,7 @@ mod tests
         let mut account = create_test_account().await;
 
         let trade = ClientTrade {
-            exchange: Exchange::SandBox,
+            exchange: Exchange::Hourglass,
             timestamp: 1690000000,
             trade_id: ClientTradeId(5),
             order_id: Some(OrderId(5)),
@@ -1883,7 +1883,7 @@ mod tests
         let mut account = create_test_account().await;
 
         let trade = ClientTrade {
-            exchange: Exchange::SandBox,
+            exchange: Exchange::Hourglass,
             timestamp: 1690000000,
             trade_id: ClientTradeId(5),
             order_id: Some(OrderId(5)),
@@ -1912,7 +1912,7 @@ mod tests
 
         // 部分平仓
         let closing_trade = ClientTrade {
-            exchange: Exchange::SandBox,
+            exchange: Exchange::Hourglass,
             timestamp: 1690000200,
             trade_id: ClientTradeId(6),
             order_id: Some(OrderId(6)),

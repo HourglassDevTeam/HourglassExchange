@@ -4,7 +4,7 @@ use crate::{
         instrument::kind::InstrumentKind,
     },
     error::ExchangeError,
-    sandbox::utils::config_parser::read_config_file,
+    hourglass::utils::config_parser::read_config_file,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -19,14 +19,14 @@ pub struct AccountConfig
     pub funding_rate: f64,                                     // 资金费率，用于合约交易中计算资金费用
     pub global_leverage_rate: f64,                             // 账户杠杆率，决定账户在杠杆交易中的放大倍数
     pub fees_book: HashMap<InstrumentKind, CommissionRates>,   // 手续费表，存储每种合约类型的手续费率
-    pub execution_mode: SandboxMode,                           // 执行模式，定义账户是在沙盒模式（模拟交易）还是在真实环境中运行
+    pub execution_mode: HourglassMode,                           // 执行模式，定义账户是在沙盒模式（模拟交易）还是在真实环境中运行
     pub max_price_deviation: f64,                              // 最大价格偏差，用于限制订单价格与市场价格的偏离范围
     pub lazy_account_positions: bool,                          // 是否惰性更新以节约性能
     pub liquidation_threshold: f64,                            // 平仓的门槛，通常为一个0.9~1的系数
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub enum SandboxMode
+pub enum HourglassMode
 {
     Backtest,
     Online,
@@ -114,7 +114,7 @@ impl FeesQuerier for AccountConfig
         self.fees_book
             .get(instrument_kind)
             .map(|rates| rates.maker_fees)
-            .ok_or_else(|| ExchangeError::SandBox(format!("Open fee rate for {:?} not found", instrument_kind)))
+            .ok_or_else(|| ExchangeError::Hourglass(format!("Open fee rate for {:?} not found", instrument_kind)))
     }
 
     fn get_taker_fee_rate(&self, instrument_kind: &InstrumentKind) -> Result<f64, ExchangeError>
@@ -122,7 +122,7 @@ impl FeesQuerier for AccountConfig
         self.fees_book
             .get(instrument_kind)
             .map(|rates| rates.taker_fees)
-            .ok_or_else(|| ExchangeError::SandBox(format!("Close fee rate for {:?} not found", instrument_kind)))
+            .ok_or_else(|| ExchangeError::Hourglass(format!("Close fee rate for {:?} not found", instrument_kind)))
     }
 }
 
@@ -153,7 +153,7 @@ pub struct AccountConfigBuilder
     fund_fee_rate: Option<f64>,
     global_leverage_rate: Option<f64>,
     fees_book: Option<HashMap<InstrumentKind, CommissionRates>>,
-    execution_mode: Option<SandboxMode>,
+    execution_mode: Option<HourglassMode>,
     max_price_deviation: Option<f64>,
     lazy_account_positions: Option<bool>,
     liquidation_threshold: Option<f64>,
@@ -216,7 +216,7 @@ impl AccountConfigBuilder
             Ok(self)
         }
         else {
-            Err(ExchangeError::SandBox("Invalid funding rate".into()))
+            Err(ExchangeError::Hourglass("Invalid funding rate".into()))
         }
     }
 
@@ -229,7 +229,7 @@ impl AccountConfigBuilder
             Ok(self)
         }
         else {
-            Err(ExchangeError::SandBox("Invalid global leverage rate".into()))
+            Err(ExchangeError::Hourglass("Invalid global leverage rate".into()))
         }
     }
 
@@ -239,7 +239,7 @@ impl AccountConfigBuilder
         self
     }
 
-    pub fn execution_mode(mut self, execution_mode: SandboxMode) -> Self
+    pub fn execution_mode(mut self, execution_mode: HourglassMode) -> Self
     {
         self.execution_mode = Some(execution_mode);
         self
@@ -259,7 +259,7 @@ impl AccountConfigBuilder
             Ok(self)
         }
         else {
-            Err(ExchangeError::SandBox("input liquidation threshold invalid.".into()))
+            Err(ExchangeError::Hourglass("input liquidation threshold invalid.".into()))
         }
     }
 
@@ -272,7 +272,7 @@ impl AccountConfigBuilder
                            funding_rate: self.fund_fee_rate.ok_or("fund_fee_rate is required")?,
                            global_leverage_rate: Default::default(),
                            fees_book: Default::default(),
-                           execution_mode: SandboxMode::Backtest,
+                           execution_mode: HourglassMode::Backtest,
                            max_price_deviation: self.max_price_deviation.ok_or("max price deviation is required")?,
                            lazy_account_positions: self.lazy_account_positions.ok_or("lazy_account_positions switch is required")?,
                            liquidation_threshold: self.liquidation_threshold.ok_or("liquidation threshold is required")? })

@@ -313,7 +313,7 @@ mod tests
     /// Helper function to create a ClientTrade for testing
     fn create_test_trade() -> ClientTrade
     {
-        ClientTrade { exchange: Exchange::SandBox,
+        ClientTrade { exchange: Exchange::Hourglass,
                       timestamp: 1625247600,
                       trade_id: ClientTradeId::from(1),               // This works fine
                       order_id: Some(OrderId::new(1625247600, 1, 1)), // Use the constructor for OrderId
@@ -363,7 +363,7 @@ mod tests
     fn test_update_from_trade()
     {
         let mut meta = PositionMeta::create_from_trade(&create_test_trade());
-        let new_trade = ClientTrade { exchange: Exchange::SandBox,
+        let new_trade = ClientTrade { exchange: Exchange::Hourglass,
                                       timestamp: 1625248600,
                                       trade_id: ClientTradeId::from(1),               // This works fine
                                       order_id: Some(OrderId::new(1625247600, 1, 1)), // Use the constructor for OrderId

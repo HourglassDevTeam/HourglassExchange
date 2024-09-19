@@ -1,6 +1,6 @@
 use crate::{
     common::instrument::{kind::InstrumentKind, Instrument},
-    sandbox::clickhouse_api::queries_operations::Row,
+    hourglass::clickhouse_api::queries_operations::Row,
     Token,
 };
 use serde::{Deserialize, Serialize};

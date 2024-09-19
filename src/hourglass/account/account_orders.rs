@@ -10,7 +10,7 @@ use crate::{
         Side,
     },
     error::ExchangeError,
-    sandbox::{
+    hourglass::{
         account::account_latency::{fluctuate_latency, AccountLatency},
         clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook,
         instrument_orders::InstrumentOrders,
@@ -58,7 +58,7 @@ impl AccountOrders
     /// ```rust
     /// use unilink_execution::{
     ///     common::instrument::{kind::InstrumentKind, Instrument},
-    ///     sandbox::account::{
+    ///     hourglass::account::{
     ///         account_latency::{AccountLatency, FluctuationMode},
     ///         account_orders::AccountOrders,
     ///     },
@@ -91,7 +91,7 @@ impl AccountOrders
     {
         self.instrument_orders_map
             .get_mut(instrument)
-            .ok_or_else(|| ExchangeError::SandBox(format!("Sandbox exchange is not configured for Instrument: {instrument}")))
+            .ok_or_else(|| ExchangeError::Hourglass(format!("Hourglass exchange is not configured for Instrument: {instrument}")))
     }
 
     /// 为每个 [`Instrument`] 获取出价和要价 [`Order<Open>`]。
@@ -523,7 +523,7 @@ mod tests
             instrument::{kind::InstrumentKind, Instrument},
             order::identification,
         },
-        sandbox::account::{
+        hourglass::account::{
             account_latency::{AccountLatency, FluctuationMode},
             account_orders::{LatencySimulator, OrderRoleClassifier},
         },

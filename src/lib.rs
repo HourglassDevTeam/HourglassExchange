@@ -24,7 +24,7 @@ pub mod common;
 pub mod dashboard;
 pub mod error;
 pub mod network;
-pub mod sandbox;
+pub mod hourglass;
 pub mod test_utils;
 pub mod vault;
 
@@ -55,7 +55,7 @@ pub trait ClientExecution
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub enum Exchange
 {
-    SandBox,
+    Hourglass,
     Binance,
     Okex,
 }
@@ -73,7 +73,7 @@ impl Exchange
     pub fn as_str(&self) -> &'static str
     {
         match self {
-            | Exchange::SandBox => "sandbox",
+            | Exchange::Hourglass => "hourglass",
             | Exchange::Okex => "okex",
             | Exchange::Binance => "binance",
         }
@@ -95,7 +95,7 @@ mod tests
     #[test]
     fn test_exchange_variant_as_str()
     {
-        assert_eq!(Exchange::SandBox.as_str(), "sandbox");
+        assert_eq!(Exchange::Hourglass.as_str(), "hourglass");
         assert_eq!(Exchange::Binance.as_str(), "binance");
         assert_eq!(Exchange::Okex.as_str(), "okex");
     }

@@ -18,8 +18,8 @@ pub enum ExchangeError
     BuilderIncomplete(String),
 
     /// 模拟交易所出错。
-    #[error("Sandbox error: {0}")]
-    SandBox(String),
+    #[error("Hourglass error: {0}")]
+    Hourglass(String),
 
     /// 余额不足，无法开单。
     #[error("Insufficient balance for symbol {0}, unable to place order")]

@@ -75,7 +75,7 @@
 use crate::common::order::Order;
 use crate::{
     common::order::states::{request_cancel::RequestCancel, request_open::RequestOpen},
-    sandbox::sandbox_client::SandBoxClientEvent,
+    hourglass::hourglass_client::HourglassClientEvent,
 };
 use serde::Deserialize;
 use tokio::sync::oneshot;
@@ -96,32 +96,32 @@ pub struct NetworkEvent
 #[allow(dead_code)]
 impl NetworkEvent
 {
-    pub(crate) fn parse_payload(&self) -> Result<SandBoxClientEvent, String>
+    pub(crate) fn parse_payload(&self) -> Result<HourglassClientEvent, String>
     {
         match self.event_type.as_str() {
             | "FetchOrdersOpen" => {
                 let (response_tx, _response_rx) = oneshot::channel();
-                Ok(SandBoxClientEvent::FetchOrdersOpen(response_tx))
+                Ok(HourglassClientEvent::FetchOrdersOpen(response_tx))
             }
             | "FetchBalances" => {
                 let (response_tx, _response_rx) = oneshot::channel();
-                Ok(SandBoxClientEvent::FetchTokenBalances(response_tx))
+                Ok(HourglassClientEvent::FetchTokenBalances(response_tx))
             }
             | "OpenOrders" => {
                 // 解析 payload 为 Vec<Order<RequestOpen>> 类型
                 let orders: Vec<Order<RequestOpen>> = serde_json::from_str(&self.payload).map_err(|e| format!("Failed to parse OpenOrders payload: {}", e))?;
                 let (response_tx, _response_rx) = oneshot::channel();
-                Ok(SandBoxClientEvent::OpenOrders((orders, response_tx)))
+                Ok(HourglassClientEvent::OpenOrders((orders, response_tx)))
             }
             | "CancelOrders" => {
                 // 解析 payload 为 Vec<Order<RequestCancel>> 类型
                 let orders: Vec<Order<RequestCancel>> = serde_json::from_str(&self.payload).map_err(|e| format!("Failed to parse CancelOrders payload: {}", e))?;
                 let (response_tx, _response_rx) = oneshot::channel();
-                Ok(SandBoxClientEvent::CancelOrders((orders, response_tx)))
+                Ok(HourglassClientEvent::CancelOrders((orders, response_tx)))
             }
             | "CancelOrdersAll" => {
                 let (response_tx, _response_rx) = oneshot::channel();
-                Ok(SandBoxClientEvent::CancelOrdersAll(response_tx))
+                Ok(HourglassClientEvent::CancelOrdersAll(response_tx))
             }
             | _ => Err("Unknown event type".to_string()),
         }
@@ -185,7 +185,7 @@ mod tests
         let parsed_event = network_event.parse_payload();
         assert!(parsed_event.is_ok());
 
-        if let Ok(SandBoxClientEvent::OpenOrders((parsed_orders, _))) = parsed_event {
+        if let Ok(HourglassClientEvent::OpenOrders((parsed_orders, _))) = parsed_event {
             assert_eq!(parsed_orders.len(), 1);
             assert_eq!(parsed_orders[0].instruction, OrderInstruction::Limit);
             assert_eq!(parsed_orders[0].exchange, Exchange::Binance);

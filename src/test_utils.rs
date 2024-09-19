@@ -24,12 +24,12 @@ use crate::{
         token::Token,
         Side,
     },
-    sandbox::{
+    hourglass::{
         account::{
-            account_config::{AccountConfig, CommissionLevel, CommissionRates, MarginMode, SandboxMode},
+            account_config::{AccountConfig, CommissionLevel, CommissionRates, MarginMode, HourglassMode},
             account_latency::{AccountLatency, FluctuationMode},
             account_orders::AccountOrders,
-            SandboxAccount,
+            HourglassAccount,
         },
         clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook,
     },
@@ -65,7 +65,7 @@ pub fn create_test_account_config() -> AccountConfig
                     funding_rate: 0.0,
                     global_leverage_rate: leverage_rate,
                     fees_book: HashMap::new(),
-                    execution_mode: SandboxMode::Backtest,
+                    execution_mode: HourglassMode::Backtest,
                     max_price_deviation: 0.05,
                     lazy_account_positions: false,
                     liquidation_threshold: 0.9 }
@@ -82,7 +82,7 @@ pub async fn create_test_account_orders() -> AccountOrders
 pub fn create_test_order_open(side: Side, price: f64, size: f64) -> Order<Open>
 {
     Order { instruction: OrderInstruction::Limit, // 假设测试订单使用限价订单类型
-            exchange: Exchange::SandBox,          // 假设测试环境使用 SandBox 交易所
+            exchange: Exchange::Hourglass,          // 假设测试环境使用 Hourglass 交易所
             instrument: Instrument { base: Token::from("ETH"),        // 测试用基础货币
                                      quote: Token::from("USDT"),      // 测试用报价货币
                                      kind: InstrumentKind::Perpetual  /* 测试用永续合约 */ },
@@ -106,7 +106,7 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen>
 
     let order_id = OrderId::new(now_ts, machine_id, counter);
     Order { instruction: OrderInstruction::Market,
-            exchange: Exchange::SandBox,
+            exchange: Exchange::Hourglass,
             instrument: Instrument { base: Token::from(base),
                                      quote: Token::from(quote),
                                      kind: InstrumentKind::Spot },
@@ -118,7 +118,7 @@ pub fn create_test_request_open(base: &str, quote: &str) -> Order<RequestOpen>
                                  reduce_only: false } }
 }
 
-pub async fn create_test_account() -> SandboxAccount
+pub async fn create_test_account() -> HourglassAccount
 {
     let leverage_rate = 1.0;
     let balances = DashMap::new();
@@ -135,7 +135,7 @@ pub async fn create_test_account() -> SandboxAccount
                                              max_price_deviation: 0.05,
                                              global_leverage_rate: leverage_rate,
                                              fees_book: HashMap::new(),
-                                             execution_mode: SandboxMode::Backtest,
+                                             execution_mode: HourglassMode::Backtest,
                                              lazy_account_positions: false,
                                              liquidation_threshold: 0.9 };
 
@@ -155,7 +155,7 @@ pub async fn create_test_account() -> SandboxAccount
                                                            latest_price: 0.0 });
 
     // 创建 Account 实例，并将其包裹在 Arc<Account> 中
-    SandboxAccount { current_session: Uuid::new_v4(),
+    HourglassAccount { current_session: Uuid::new_v4(),
                      machine_id,
                      client_trade_counter: 0.into(),
                      exchange_timestamp: AtomicI64::new(1234567),
@@ -181,7 +181,7 @@ pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPositi
                                              update_ts: 0,
                                              exit_balance: TokenBalance { token: instrument.base.clone(),
                                                                           balance: Balance::new(0.0, 0.0, Some(1.0)) },
-                                             exchange: Exchange::SandBox,
+                                             exchange: Exchange::Hourglass,
                                              instrument,
                                              side: Side::Buy,
                                              current_size: 1.0,
@@ -206,7 +206,7 @@ pub fn create_test_future_position_with_side(instrument: Instrument, side: Side)
                                           update_ts: 0,
                                           exit_balance: TokenBalance { token: instrument.base.clone(),
                                                                        balance: Balance::new(0.0, 0.0, Some(1.0)) },
-                                          exchange: Exchange::SandBox,
+                                          exchange: Exchange::Hourglass,
                                           instrument,
                                           side,
                                           current_size: 0.0,

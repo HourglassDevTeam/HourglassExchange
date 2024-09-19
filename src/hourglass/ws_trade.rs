@@ -10,7 +10,7 @@ use crate::{
         },
         token::Token,
     },
-    sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
+    hourglass::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
     Exchange,
 };
 
@@ -43,7 +43,7 @@ impl MarketEvent<WsTrade>
 
         MarketEvent { exchange_ts: exchange_time,
                       received_ts: received_time,
-                      exchange: Exchange::SandBox,
+                      exchange: Exchange::Hourglass,
 
                       instrument,
                       kind: ws_trade }
@@ -64,7 +64,7 @@ impl MarketEvent<MarketTrade>
 
         MarketEvent { exchange_ts: exchange_time,
                       received_ts: received_time,
-                      exchange: Exchange::SandBox,
+                      exchange: Exchange::Hourglass,
                       instrument,
                       kind: trade }
     }

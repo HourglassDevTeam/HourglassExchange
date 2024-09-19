@@ -1,4 +1,4 @@
-use crate::sandbox::clickhouse_api::queries_operations::Row;
+use crate::hourglass::clickhouse_api::queries_operations::Row;
 use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]

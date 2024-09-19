@@ -14,7 +14,7 @@
 /// `PhantomData<Statistic>` 用于标记 `RedisVault` 和 `RedisVaultBuilder` 结构体中的 `Statistic` 泛型参数。
 /// 这意味着即使 `Statistic` 在运行时没有被直接使用，Rust 的类型系统仍然会确保在编译时检查这个泛型参数的类型安全性。
 use crate::error::ExchangeError;
-use crate::{error::ExchangeError::RedisInitialisationError, sandbox::account::account_config::SandboxMode, vault::summariser::PositionSummariser};
+use crate::{error::ExchangeError::RedisInitialisationError, hourglass::account::account_config::HourglassMode, vault::summariser::PositionSummariser};
 use redis::Connection;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::marker::PhantomData;
@@ -33,7 +33,7 @@ pub struct Config
 pub struct RedisVault<Statistic>
     where Statistic: PositionSummariser + Serialize + DeserializeOwned
 {
-    sandbox_mode: SandboxMode,                 // 仓库的配置，存储在仓库中
+    hourglass_mode: HourglassMode,                 // 仓库的配置，存储在仓库中
     _statistic_marker: PhantomData<Statistic>, // 用于类型标记的幻象数据
     #[allow(dead_code)]
     conn: Connection,
@@ -45,13 +45,13 @@ impl<Statistic> RedisVault<Statistic> where Statistic: PositionSummariser + Seri
     ///
     /// # 参数
     /// - `conn`: 与 Redis 数据库的连接。
-    /// - `config`: 用于配置仓库的 `SandboxMode` 对象。
+    /// - `config`: 用于配置仓库的 `HourglassMode` 对象。
     ///
     /// # 返回
     /// 返回一个新的 `RedisVault` 实例，该实例可以用于与 Redis 数据库交互。
-    pub fn new(conn: Connection, config: SandboxMode) -> Self
+    pub fn new(conn: Connection, config: HourglassMode) -> Self
     {
-        Self { sandbox_mode: config, // 存储提供的配置
+        Self { hourglass_mode: config, // 存储提供的配置
                _statistic_marker: PhantomData,
                conn }
     }
@@ -83,11 +83,11 @@ impl<Statistic> RedisVault<Statistic> where Statistic: PositionSummariser + Seri
     /// 该方法检查当前配置的执行模式，并基于此执行不同的操作。
     pub fn perform_action_based_on_mode(&self)
     {
-        match self.sandbox_mode {
-            | SandboxMode::Backtest => {
+        match self.hourglass_mode {
+            | HourglassMode::Backtest => {
                 todo!()
             }
-            | SandboxMode::Online => {
+            | HourglassMode::Online => {
                 todo!()
             }
         }
@@ -100,7 +100,7 @@ pub struct RedisVaultBuilder<Statistic>
     where Statistic: PositionSummariser + Serialize + DeserializeOwned
 {
     conn: Option<Connection>,                  // Redis 连接的可选值
-    config: Option<SandboxMode>,               // 添加配置选项
+    config: Option<HourglassMode>,               // 添加配置选项
     _statistic_marker: PhantomData<Statistic>, // 用于类型标记的幻象数据
 }
 impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser + Serialize + DeserializeOwned
@@ -121,7 +121,7 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
     }
 
     /// 设置配置。
-    pub fn config(mut self, value: SandboxMode) -> Self
+    pub fn config(mut self, value: HourglassMode) -> Self
     {
         self.config = Some(value);
         self
@@ -130,7 +130,7 @@ impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser
     /// 构建 RedisVault 实例。
     pub fn build(self) -> Result<RedisVault<Statistic>, ExchangeError>
     {
-        Ok(RedisVault { sandbox_mode: self.config.ok_or(RedisInitialisationError("config".to_string()))?, // 处理配置
+        Ok(RedisVault { hourglass_mode: self.config.ok_or(RedisInitialisationError("config".to_string()))?, // 处理配置
                         _statistic_marker: PhantomData,
                         conn: self.conn.ok_or(RedisInitialisationError("connection".to_string()))? /* 处理连接 */ })
     }

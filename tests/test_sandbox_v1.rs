@@ -7,9 +7,9 @@
 //         order::identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id, OrderId},
 //         Side,
 //     },
-//     sandbox::{
+//     hourglass::{
 //         clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
-//         sandbox_client::{SandBoxClient, SandBoxClientEvent},
+//         hourglass_client::{HourglassClient, HourglassClientEvent},
 //     },
 //     ClientExecution,
 // };
@@ -39,7 +39,7 @@
 // {
 //     #[allow(warnings)]
 //     // 创建通道用于发送和接收事件
-//     let (event_sandbox_tx, mut event_sandbox_rx) = mpsc::unbounded_channel();
+//     let (event_hourglass_tx, mut event_hourglass_rx) = mpsc::unbounded_channel();
 //     let (mut request_tx, request_rx) = mpsc::unbounded_channel();
 //
 //     // 给定测试用的timestamp和machine_id和IDs
@@ -48,30 +48,30 @@
 //     let test_3_ids = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
 //
 //     // 创建并运行 SimulatedExchange
-//     tokio::spawn(run_sample_exchange(event_sandbox_tx, request_rx));
+//     tokio::spawn(run_sample_exchange(event_hourglass_tx, request_rx));
 //
-//     // 初始化 SandBoxClient，用于与交易所进行交互
-//     let client = SandBoxClient { request_tx: request_tx.clone() };
+//     // 初始化 HourglassClient，用于与交易所进行交互
+//     let client = HourglassClient { request_tx: request_tx.clone() };
 //     // // 1. 获取初始的未成交订单列表，检查当前没有未成交订单
 //     test_1_fetch_initial_orders_and_check_empty(&client).await;
 //     // // 2. 获取初始的余额信息，检查当前没有发生任何余额变化事件
 //     test_2_fetch_balances_and_check_same_as_initial(&client).await;
 //     // // 3. 下达限价买单，并检查是否为报价货币（USDT）发送了 AccountEvent 余额事件
-//     test_3_open_limit_buy_order(&client, test_3_ids.clone(), &mut event_sandbox_rx).await;
+//     test_3_open_limit_buy_order(&client, test_3_ids.clone(), &mut event_hourglass_rx).await;
 //     // // 4. 发送一个不匹配任何未成交订单的市场事件，并检查是否没有发送 AccountEvent
-//     test_4_send_market_trade_that_does_not_match_any_open_order(&mut request_tx, &mut event_sandbox_rx);
+//     test_4_send_market_trade_that_does_not_match_any_open_order(&mut request_tx, &mut event_hourglass_rx);
 //     // // // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent
-//     test_5_cancel_buy_order(&client, test_3_ids, &mut event_sandbox_rx).await;
+//     test_5_cancel_buy_order(&client, test_3_ids, &mut event_hourglass_rx).await;
 //     // //
 //     // // // 6. Open 2x LIMIT Buy Orders & assert on received AccountEvents
 //     let test_6_ids_1 = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
 //     let test_6_ids_2 = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
-//     test_6_open_2x_limit_buy_orders(&client, test_6_ids_1.clone(), test_6_ids_2, &mut event_sandbox_rx).await;
+//     test_6_open_2x_limit_buy_orders(&client, test_6_ids_1.clone(), test_6_ids_2, &mut event_hourglass_rx).await;
 //
 //     // // 7. Send MarketEvent that exactly full matches 1x open Order (trade) and check AccountEvents
 //     // //    for balances and trades
 //     // test_7_send_market_trade_that_exact_full_matches_order(
-//     //     &mut event_sandbox_tx,
+//     //     &mut event_hourglass_tx,
 //     //     &mut request_rx,
 //     // )
 //     // .await;
@@ -86,7 +86,7 @@
 //     //     &client,
 //     //     test_9_ids_1,
 //     //     test_9_ids_2.clone(),
-//     //     &mut event_sandbox_rx,
+//     //     &mut event_hourglass_rx,
 //     // )
 //     // .await;
 //     //
@@ -94,13 +94,13 @@
 //     // //     sell Order (trade). Check AccountEvents for balances and trades of both matches are sent.
 //     // test_10_send_market_trade_that_full_and_partial_matches_orders(
 //     //     &mut event_simulated_tx,
-//     //     &mut event_sandbox_rx,
+//     //     &mut event_hourglass_rx,
 //     // )
 //     // .await;
 //     //
 //     // // 11. Cancel all open orders. Includes a partially filled sell order, and non-filled buy order.
 //     // //    NOTE 只允许单独测试。
-//     // test_11_cancel_all_orders(&client, test_6_ids_1, &mut event_sandbox_rx).await;
+//     // test_11_cancel_all_orders(&client, test_6_ids_1, &mut event_hourglass_rx).await;
 //     //
 //     // // 12. Fetch open orders (now that we've called cancel_all) and check it is empty
 //     // test_12_fetch_open_orders_and_check_empty(&client).await;
@@ -112,7 +112,7 @@
 //     //     &client,
 //     //     test_13_ids_1,
 //     //     test_13_ids_2,
-//     //     &mut event_sandbox_rx,
+//     //     &mut event_hourglass_rx,
 //     // )
 //     // .await;
 //     //
@@ -121,7 +121,7 @@
 // }
 // #[allow(warnings)]
 // // 1. Fetch initial OpenOrders when we have no open Orders.
-// async fn test_1_fetch_initial_orders_and_check_empty(client: &SandBoxClient)
+// async fn test_1_fetch_initial_orders_and_check_empty(client: &HourglassClient)
 // {
 //     let initial_orders_result = client.fetch_orders_open().await;
 //
@@ -147,7 +147,7 @@
 // }
 //
 // #[allow(warnings)]
-// async fn test_2_fetch_balances_and_check_same_as_initial(client: &SandBoxClient)
+// async fn test_2_fetch_balances_and_check_same_as_initial(client: &HourglassClient)
 // {
 //     let actual_balances = client.fetch_balances().await.unwrap();
 //     println!("[test_2] : actual balances: {:?}", actual_balances);
@@ -167,13 +167,13 @@
 // }
 //
 // #[allow(warnings)]
-// async fn test_3_open_limit_buy_order(client: &SandBoxClient, test_3_ids: Ids, event_sandbox_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
+// async fn test_3_open_limit_buy_order(client: &HourglassClient, test_3_ids: Ids, event_hourglass_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
 // {
 //     let actual_balances = client.fetch_balances().await.unwrap();
 //     println!("[test_3] : actual balances: {:?}", actual_balances);
 //     let open_request = order_request_limit(Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)), test_3_ids.cid.clone(), Side::Buy, 100.0, 1.0);
 //
-//     println!("[test_3] : Sending order request via SandBoxClient : {:?}", open_request);
+//     println!("[test_3] : Sending order request via HourglassClient : {:?}", open_request);
 //
 //     let new_orders = client.open_orders(vec![open_request]).await;
 //     println!("[test_3] : {:?}", new_orders);
@@ -190,7 +190,7 @@
 //     // //
 //     // // 使用实际的价格来确保一致性
 //     let current_px = 1.0; // 与订单中的价格匹配
-//     match event_sandbox_rx.recv().await {
+//     match event_hourglass_rx.recv().await {
 //         | Some(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
 //                               .. }) => {
 //             let expected = TokenBalance::new("USDT", Balance::new(200.0, 149.0, Some(current_px)));
@@ -201,7 +201,7 @@
 //         }
 //     }
 //
-//     match event_sandbox_rx.recv().await {
+//     match event_hourglass_rx.recv().await {
 //         | Some(AccountEvent { kind: AccountEventKind::OrdersOpen(new_orders),
 //                               .. }) => {
 //             println!("[test_3] : Orders new event received.");
@@ -213,7 +213,7 @@
 //         }
 //     }
 //
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Err(mpsc::error::TryRecvError::Empty) => {
 //             println!("[test_3] : No additional account events, as expected.");
 //         }
@@ -226,8 +226,8 @@
 // #[allow(warnings)]
 // // 4. 发送一个不匹配任何未完成订单的 MarketTrade，并检查是否没有发送 AccountEvents。注意，这一部分可能存在问题，因为它没有使用`new_market_trade`。
 // // NOTE 其次还要检查一下available的数值处理是否正确。
-// fn test_4_send_market_trade_that_does_not_match_any_open_order(event_simulated_tx: &mut UnboundedSender<SandBoxClientEvent>,
-//                                                                event_sandbox_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
+// fn test_4_send_market_trade_that_does_not_match_any_open_order(event_simulated_tx: &mut UnboundedSender<HourglassClientEvent>,
+//                                                                event_hourglass_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
 // {
 //     let new_market_trade = MarketTrade { exchange: "binance-futures".into(),
 //                                          symbol: "1000RATSUSDT".into(),
@@ -237,7 +237,7 @@
 //                                          amount: 744.0 };
 //
 //     // 检查是否没有生成更多的 AccountEvents
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Err(mpsc::error::TryRecvError::Empty) => {}
 //         | other => {
 //             panic!("try_recv() 消耗了意外的结果: {:?}", other);
@@ -248,7 +248,7 @@
 // #[allow(warnings)]
 //
 // // // 5. Cancel the open buy order and check AccountEvents for cancelled order and balance are sent.
-// async fn test_5_cancel_buy_order(client: &SandBoxClient, test_3_ids: Ids, event_sandbox_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
+// async fn test_5_cancel_buy_order(client: &HourglassClient, test_3_ids: Ids, event_hourglass_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
 // {
 //     let cancelled = client.cancel_orders(vec![order_cancel_request(Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
 //                                                                    test_3_ids.cid.clone(), // 使用 clone()
@@ -266,7 +266,7 @@
 //     assert_eq!(cancelled[0].clone().unwrap(), expected_cancelled);
 //
 //     // 先接收订单取消事件
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Ok(AccountEvent { kind: AccountEventKind::OrdersCancelled(cancelled),
 //                             .. }) => {
 //             println!("[test_5] : Orders cancelled event received.");
@@ -279,7 +279,7 @@
 //     }
 //     let current_px = 1.0; // 与订单中的价格匹配
 //                           // Check AccountEvent Balance for quote currency (USDT) has available balance increase
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
 //                             .. }) => {
 //             let expected = TokenBalance::new("USDT", Balance::new(200.0, 249.0, Some(current_px)));
@@ -293,7 +293,7 @@
 //     }
 //
 //     // Check no more AccountEvents generated
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Err(mpsc::error::TryRecvError::Empty) => {}
 //         | other => {
 //             panic!("try_recv() consumed unexpected: {:?}", other);
@@ -306,7 +306,7 @@
 // // NOTE 数值是否对的上？
 // // NOTE 真的要开杠杆怎么处理？杠杆率怎么设置？
 //
-// async fn test_6_open_2x_limit_buy_orders(client: &SandBoxClient, test_6_ids_1: Ids, test_6_ids_2: Ids, event_sandbox_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
+// async fn test_6_open_2x_limit_buy_orders(client: &HourglassClient, test_6_ids_1: Ids, test_6_ids_2: Ids, event_hourglass_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
 // {
 //     let opened_orders = client.open_orders(vec![order_request_limit(Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
 //                                                                     test_6_ids_1.cid.clone(),
@@ -345,7 +345,7 @@
 //
 //     let current_px = 1.0; // 与订单中的价格匹配
 //                           // Check AccountEvent Balance for first order - quote currency has available balance decrease
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
 //                             .. }) => {
 //             let expected = TokenBalance::new("USDT", Balance::new(200.0, 148.0, Some(current_px)));
@@ -358,7 +358,7 @@
 //     }
 //
 //     // Check AccountEvent OrdersOpen for first order
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Ok(AccountEvent { kind: AccountEventKind::OrdersOpen(new_orders),
 //                             .. }) => {
 //             assert_eq!(new_orders.len(), 1);
@@ -370,7 +370,7 @@
 //     }
 //
 //     // Check AccountEvent Balance for second order - quote currency has available balance decrease
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
 //                             .. }) => {
 //             // Expected USDT Balance.available = 9_900 - (200.0 * 1.0)
@@ -384,7 +384,7 @@
 //     }
 //
 //     // Check AccountEvent OrdersOpen for second order
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Ok(AccountEvent { kind: AccountEventKind::OrdersOpen(new_orders),
 //                             .. }) => {
 //             assert_eq!(new_orders.len(), 1);
@@ -396,7 +396,7 @@
 //     }
 //
 //     // Check no more AccountEvents generated
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Err(mpsc::error::TryRecvError::Empty) => {}
 //         | other => {
 //             panic!("try_recv() consumed unexpected: {:?}", other);
@@ -405,7 +405,7 @@
 // }
 //
 // #[allow(warnings)]
-// async fn test_11_cancel_all_orders(client: &SandBoxClient, test_6_ids_1: Ids, event_sandbox_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
+// async fn test_11_cancel_all_orders(client: &HourglassClient, test_6_ids_1: Ids, event_hourglass_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
 // {
 //     let initial_base_balance = client.fetch_balances().await.unwrap();
 //     println!("[test_11] : Initial balances: {:?}", initial_base_balance);
@@ -432,7 +432,7 @@
 //     }
 //
 //     // Check AccountEvents for order cancellations
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Ok(AccountEvent { kind: AccountEventKind::OrdersCancelled(cancelled),
 //                             .. }) => {
 //             println!("[test_11] : Orders cancelled event received.");
@@ -450,7 +450,7 @@
 //
 //     // Check AccountEvents for balance updates
 //     let current_px = 1.0;
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
 //                             .. }) => {
 //             let expected_balance = TokenBalance::new("USDT", Balance::new(200.0, 250.0, Some(current_px)));
@@ -464,7 +464,7 @@
 //     }
 //
 //     // Ensure no more unexpected events
-//     match event_sandbox_rx.try_recv() {
+//     match event_hourglass_rx.try_recv() {
 //         | Err(mpsc::error::TryRecvError::Empty) => {
 //             println!("[test_11] : No additional events, as expected.");
 //         }

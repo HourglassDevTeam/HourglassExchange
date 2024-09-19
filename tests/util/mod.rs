@@ -24,21 +24,21 @@ use unilink_execution::{
         token::Token,
         Side,
     },
-    sandbox::{
+    hourglass::{
         account::{
             account_latency::{AccountLatency, FluctuationMode},
             account_orders::AccountOrders,
             Account,
         },
-        sandbox_client::SandBoxClientEvent,
-        SandBoxExchange,
+        hourglass_client::HourglassClientEvent,
+        HourglassExchange,
     },
     test_utils::create_test_account_config,
     Exchange,
 };
 
 /// Initializes and runs a sample exchange with predefined settings and a test order.
-pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<AccountEvent>, event_sandbox_rx: mpsc::UnboundedReceiver<SandBoxClientEvent>)
+pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<AccountEvent>, event_hourglass_rx: mpsc::UnboundedReceiver<HourglassClientEvent>)
 {
     // Creating initial balances
     let balances = DashMap::new();
@@ -59,7 +59,7 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
 
     // Create and insert a test order
     let test_order = Order { instruction: OrderInstruction::Limit,
-                             exchange: Exchange::SandBox,
+                             exchange: Exchange::Hourglass,
                              instrument: instrument.clone(),
                              timestamp: 1234124124124123, // Assumes a function to get current timestamp
                              cid: Some(ClientOrderId("test_cid".into())),
@@ -92,15 +92,15 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
                                                     exited_positions: closed_positions,
                                                     account_event_tx: event_account_tx }));
 
-    // Initialize and configure SandBoxExchange
-    let sandbox_exchange = SandBoxExchange::initiator().event_sandbox_rx(event_sandbox_rx)
+    // Initialize and configure HourglassExchange
+    let hourglass_exchange = HourglassExchange::initiator().event_hourglass_rx(event_hourglass_rx)
                                                        .account(account_arc)
                                                        .initiate()
-                                                       .expect("Failed to build SandBoxExchange");
+                                                       .expect("Failed to build HourglassExchange");
 
     // Running the exchange in local mode
-    sandbox_exchange.run_local().await;
-    println!("[run_default_exchange] : Sandbox exchange run successfully on local mode.");
+    hourglass_exchange.run_local().await;
+    println!("[run_default_exchange] : Hourglass exchange run successfully on local mode.");
 }
 
 /// 设置延迟为50ms
@@ -135,7 +135,7 @@ pub fn order_request_limit<I>(instrument: I, cid: ClientOrderId, side: Side, pri
     where I: Into<Instrument>
 {
     Order { instruction: OrderInstruction::Limit,
-            exchange: Exchange::SandBox,
+            exchange: Exchange::Hourglass,
             instrument: instrument.into(),
             timestamp: 1233312345124, // 使用当前时间戳
             cid: Some(cid.clone()),
@@ -150,7 +150,7 @@ pub fn open_order<I>(instrument: I, cid: ClientOrderId, id: OrderId, side: Side,
     where I: Into<Instrument>
 {
     Order { instruction: OrderInstruction::Limit,
-            exchange: Exchange::SandBox,
+            exchange: Exchange::Hourglass,
             instrument: instrument.into(),
             timestamp: 1233312345124, // 使用当前时间戳
             cid: Some(cid.clone()),
@@ -169,7 +169,7 @@ pub fn order_cancel_request<I, Id>(instrument: I, cid: ClientOrderId, side: Side
           Id: Into<OrderId>
 {
     Order { instruction: OrderInstruction::Cancel,
-            exchange: Exchange::SandBox,
+            exchange: Exchange::Hourglass,
             instrument: instrument.into(),
             timestamp: 1234124124124123u64 as i64, // 使用当前时间戳
             cid: Some(cid),
@@ -184,7 +184,7 @@ pub fn order_limit_cancelled<I, Id>(instrument: I, cid: ClientOrderId, side: Sid
           Id: Into<OrderId>
 {
     Order { instruction: OrderInstruction::Limit,
-            exchange: Exchange::SandBox,
+            exchange: Exchange::Hourglass,
             instrument: instrument.into(),
             timestamp: 1234124124124123u64 as i64, // 使用当前时间戳
             cid: Some(cid),

@@ -1,6 +1,6 @@
 use crate::{
     common::account_positions::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode},
-    sandbox::config_request::ConfigurationRequest,
+    hourglass::config_request::ConfigurationRequest,
 };
 use serde::{Deserialize, Serialize};
 
@@ -143,7 +143,7 @@ mod tests
                                                                  enter_ts: 1625247600,
                                                                  update_ts: 1625247601,
                                                                  exit_balance: TokenBalance::new(Token::from("BTC"), Balance::new(0.0, 0.0, Some(0.0))),
-                                                                 exchange: Exchange::SandBox,
+                                                                 exchange: Exchange::Hourglass,
                                                                  instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
                                                                  side: Side::Buy,
                                                                  current_size: 1.0,

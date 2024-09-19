@@ -14,9 +14,9 @@ use crate::{
         Side,
     },
     error::ExchangeError,
-    sandbox::{
+    hourglass::{
         account::{
-            account_config::{ConfigLoader, FeesQuerier, SandboxMode},
+            account_config::{ConfigLoader, FeesQuerier, HourglassMode},
             account_handlers::{balance_handler::BalanceHandler, position_handler::PositionHandler, trade_handler::TradeHandler},
             account_orders::{LatencySimulator, OrderRoleClassifier},
         },
@@ -52,8 +52,8 @@ pub mod account_market_feed;
 pub mod account_orders;
 
 #[derive(Debug)]
-pub struct SandboxAccount
-    where SandboxAccount: PositionHandler + BalanceHandler + TradeHandler,
+pub struct HourglassAccount
+    where HourglassAccount: PositionHandler + BalanceHandler + TradeHandler,
           AccountConfig: FeesQuerier + ConfigLoader,
           SingleLevelOrderBook: OrderBookUpdater,
           AccountOrders: LatencySimulator + OrderRoleClassifier
@@ -73,11 +73,11 @@ pub struct SandboxAccount
 }
 
 // 手动实现 Clone trait
-impl Clone for SandboxAccount
+impl Clone for HourglassAccount
 {
     fn clone(&self) -> Self
     {
-        SandboxAccount { current_session: Uuid::new_v4(),
+        HourglassAccount { current_session: Uuid::new_v4(),
                          machine_id: self.machine_id,
                          client_trade_counter: 0.into(),
                          exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
@@ -152,9 +152,9 @@ impl AccountBuilder
         self
     }
 
-    pub fn build(self) -> Result<SandboxAccount, String>
+    pub fn build(self) -> Result<HourglassAccount, String>
     {
-        Ok(SandboxAccount { current_session: Uuid::new_v4(),
+        Ok(HourglassAccount { current_session: Uuid::new_v4(),
                             machine_id: generate_machine_id()?,
                             client_trade_counter: 0.into(),
                             exchange_timestamp: 0.into(),
@@ -169,7 +169,7 @@ impl AccountBuilder
     }
 }
 
-impl SandboxAccount
+impl HourglassAccount
 {
     /// [PART 1] - [账户初始化与配置]
     pub fn initiate() -> AccountBuilder
@@ -363,7 +363,7 @@ impl SandboxAccount
 
             // 处理订单请求，根据模式（回测或实时）选择处理方式
             let processed_request = match self.config.execution_mode {
-                | SandboxMode::Backtest => self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await,
+                | HourglassMode::Backtest => self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await,
                 | _ => request, // 实时模式下直接使用原始请求
             };
 
@@ -374,7 +374,7 @@ impl SandboxAccount
 
         // 发送处理结果
         if let Err(e) = response_tx.send(open_results) {
-            return Err(ExchangeError::SandBox(format!("Failed to send open order results: {:?}", e)));
+            return Err(ExchangeError::Hourglass(format!("Failed to send open order results: {:?}", e)));
         }
 
         Ok(())
@@ -468,7 +468,7 @@ impl SandboxAccount
         // 使用 `send_account_event` 发送余额和订单事件
         self.send_account_event(balance_event)?;
         let order_event = AccountEvent { exchange_timestamp,
-                                         exchange: Exchange::SandBox,
+                                         exchange: Exchange::Hourglass,
                                          kind: AccountEventKind::OrdersOpen(vec![open_order.clone()]) };
 
         self.send_account_event(order_event)?;
@@ -504,7 +504,7 @@ impl SandboxAccount
             }
         }
         // 检查订单类型是否合法
-        SandboxAccount::validate_order_instruction(order.instruction)?;
+        HourglassAccount::validate_order_instruction(order.instruction)?;
 
         // 检查价格是否合法（应为正数）
         if order.state.price <= 0.0 {
@@ -633,7 +633,7 @@ impl SandboxAccount
 
         // 发送订单取消事件
         let orders_cancelled_event = AccountEvent { exchange_timestamp,
-                                                    exchange: Exchange::SandBox,
+                                                    exchange: Exchange::Hourglass,
                                                     kind: AccountEventKind::OrdersCancelled(vec![cancelled_order.clone()]) };
 
         // 发送账户事件
@@ -658,7 +658,7 @@ impl SandboxAccount
                                                                                               side: order.side,
                                                                                               instruction: order.instruction,
                                                                                               cid: order.cid,
-                                                                                              exchange: Exchange::SandBox,
+                                                                                              exchange: Exchange::Hourglass,
                                                                                               timestamp: self.exchange_timestamp.load(Ordering::SeqCst) })
                                                                          .collect();
 
@@ -727,7 +727,7 @@ impl SandboxAccount
 pub fn respond<Response>(response_tx: Sender<Response>, response: Response)
     where Response: Debug + Send + 'static
 {
-    tokio::spawn(async move { response_tx.send(response).expect("SandBoxExchange failed to send oneshot response to execution request") });
+    tokio::spawn(async move { response_tx.send(response).expect("HourglassExchange failed to send oneshot response to execution request") });
 }
 
 #[cfg(test)]
@@ -743,7 +743,7 @@ mod tests
     async fn test_validate_order_request_open()
     {
         let order = Order { instruction: OrderInstruction::Market,
-                            exchange: Exchange::SandBox,
+                            exchange: Exchange::Hourglass,
                             instrument: Instrument { base: Token::from("BTC"),
                                                      quote: Token::from("USD"),
                                                      kind: InstrumentKind::Spot },
@@ -754,18 +754,18 @@ mod tests
                                                  size: 1.0,
                                                  reduce_only: false } };
 
-        assert!(SandboxAccount::validate_order_request_open(&order).is_ok());
+        assert!(HourglassAccount::validate_order_request_open(&order).is_ok());
 
         let invalid_order = Order { cid: Some(ClientOrderId("ars3214321431234rafsftdarstdars".into())), // Invalid ClientOrderId
                                     ..order.clone() };
-        assert!(SandboxAccount::validate_order_request_open(&invalid_order).is_err());
+        assert!(HourglassAccount::validate_order_request_open(&invalid_order).is_err());
     }
 
     #[tokio::test]
     async fn test_validate_order_request_cancel()
     {
         let cancel_order = Order { instruction: OrderInstruction::Market,
-                                   exchange: Exchange::SandBox,
+                                   exchange: Exchange::Hourglass,
                                    instrument: Instrument { base: Token::from("BTC"),
                                                             quote: Token::from("USD"),
                                                             kind: InstrumentKind::Spot },
@@ -774,11 +774,11 @@ mod tests
                                    side: Side::Buy,
                                    state: RequestCancel { id: Some(OrderId::new(17213412341233948, generate_machine_id().unwrap(), 23)) } };
 
-        assert!(SandboxAccount::validate_order_request_cancel(&cancel_order).is_ok());
+        assert!(HourglassAccount::validate_order_request_cancel(&cancel_order).is_ok());
 
         let invalid_cancel_order = Order { state: RequestCancel { id: Some(OrderId(0)) }, // Invalid OrderId
                                            ..cancel_order.clone() };
-        assert!(SandboxAccount::validate_order_request_cancel(&invalid_cancel_order).is_err());
+        assert!(HourglassAccount::validate_order_request_cancel(&invalid_cancel_order).is_err());
     }
 
     #[tokio::test]

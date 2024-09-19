@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common::account_positions::{position_meta::PositionMeta, PositionDirectionMode, PositionMarginMode},
-    sandbox::config_request::ConfigurationRequest,
+    hourglass::config_request::ConfigurationRequest,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

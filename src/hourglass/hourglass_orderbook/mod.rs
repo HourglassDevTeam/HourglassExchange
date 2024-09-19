@@ -74,7 +74,7 @@ impl PriceLevel
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SandBoxOrderBook
+pub struct HourglassOrderBook
 {
     pub bid_levels: Vec<PriceLevel>,                // 买单簿
     pub ask_levels: Vec<PriceLevel>,                // 卖单簿
@@ -82,7 +82,7 @@ pub struct SandBoxOrderBook
     pub expiration_registry: HashMap<OrderId, i64>, // 订单ID与过期时间的映射
 }
 
-impl SandBoxOrderBook
+impl HourglassOrderBook
 {
     pub fn new(max_levels: usize) -> Self
     {

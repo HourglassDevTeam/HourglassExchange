@@ -8,11 +8,11 @@ use crate::{
         Side,
     },
     error::ExchangeError,
-    sandbox::{
+    hourglass::{
         account::{
-            account_config::{FeesQuerier, SandboxMode},
+            account_config::{FeesQuerier, HourglassMode},
             account_handlers::{balance_handler::BalanceHandler, position_handler::PositionHandler},
-            SandboxAccount,
+            HourglassAccount,
         },
         clickhouse_api::datatype::{
             clickhouse_trade_data::MarketTrade,
@@ -64,7 +64,7 @@ pub trait TradeHandler
 }
 
 #[async_trait]
-impl TradeHandler for SandboxAccount
+impl TradeHandler for HourglassAccount
 {
     /// 创建或更新一个单级别的订单簿（SingleLevelOrderBook），基于传入的市场交易（MarketTrade）。
     ///
@@ -133,8 +133,8 @@ impl TradeHandler for SandboxAccount
         let mut trades = Vec::new();
 
         // 从市场交易事件的符号中解析基础货币和报价货币，并确定金融工具种类
-        let base = Token::from(market_trade.parse_base().ok_or_else(|| ExchangeError::SandBox("Unknown base.".to_string()))?);
-        let quote = Token::from(market_trade.parse_quote().ok_or_else(|| ExchangeError::SandBox("Unknown quote.".to_string()))?);
+        let base = Token::from(market_trade.parse_base().ok_or_else(|| ExchangeError::Hourglass("Unknown base.".to_string()))?);
+        let quote = Token::from(market_trade.parse_quote().ok_or_else(|| ExchangeError::Hourglass("Unknown quote.".to_string()))?);
         let kind = market_trade.parse_kind();
         // println!("[match_orders]: kind is {}", kind);
         let instrument = Instrument { base, quote, kind };
@@ -151,7 +151,7 @@ impl TradeHandler for SandboxAccount
                         if let Some(best_bid) = instrument_orders.bids.last() {
                             let order_role = best_bid.state.order_role;
                             // println!("[match_orders]: order_role: {:?}", order_role);
-                            let fees_percent = self.fees_percent(&kind, order_role).await.map_err(|_| ExchangeError::SandBox("Missing fees.".to_string()))?;
+                            let fees_percent = self.fees_percent(&kind, order_role).await.map_err(|_| ExchangeError::Hourglass("Missing fees.".to_string()))?;
 
                             // 使用计算出的手续费比例匹配买单
                             trades.append(&mut instrument_orders.match_bids(market_trade, fees_percent, &self.client_trade_counter));
@@ -162,7 +162,7 @@ impl TradeHandler for SandboxAccount
                         if let Some(best_ask) = instrument_orders.asks.last() {
                             let order_role = best_ask.state.order_role;
                             // println!("[match_orders]: order_role: {:?}", order_role);
-                            let fees_percent = self.fees_percent(&kind, order_role).await.map_err(|_| ExchangeError::SandBox("Missing fees.".to_string()))?;
+                            let fees_percent = self.fees_percent(&kind, order_role).await.map_err(|_| ExchangeError::Hourglass("Missing fees.".to_string()))?;
 
                             // 使用计算出的手续费比例匹配卖单
                             trades.append(&mut instrument_orders.match_asks(market_trade, fees_percent, &self.client_trade_counter));
@@ -249,7 +249,7 @@ impl TradeHandler for SandboxAccount
 
         // 发送交易事件
         if let Err(err) = self.account_event_tx.send(AccountEvent { exchange_timestamp,
-                                                                    exchange: Exchange::SandBox,
+                                                                    exchange: Exchange::Hourglass,
                                                                     kind: AccountEventKind::Trade(trade.clone()) /* 发送交易事件 */ })
         {
             warn!("Client offline - Failed to send AccountEvent::Trade: {:?}", err);
@@ -278,8 +278,8 @@ impl TradeHandler for SandboxAccount
     fn update_exchange_ts(&self, timestamp: i64)
     {
         let adjusted_timestamp = match self.config.execution_mode {
-            | SandboxMode::Backtest => timestamp,                                                            // 在回测模式下使用传入的时间戳
-            | SandboxMode::Online => SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64, // 在实时模式下使用当前时间
+            | HourglassMode::Backtest => timestamp,                                                            // 在回测模式下使用传入的时间戳
+            | HourglassMode::Online => SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64, // 在实时模式下使用当前时间
         };
         self.exchange_timestamp.store(adjusted_timestamp, Ordering::SeqCst);
     }
@@ -296,7 +296,7 @@ mod tests
             states::{open::Open, request_cancel::RequestCancel, request_open::RequestOpen},
             Order,
         },
-        sandbox::account::account_handlers::trade_handler::TradeHandler,
+        hourglass::account::account_handlers::trade_handler::TradeHandler,
         test_utils::create_test_account,
     };
 
@@ -308,7 +308,7 @@ mod tests
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
 
         let invalid_cancel_request = Order { instruction: OrderInstruction::Cancel,
-                                             exchange: Exchange::SandBox,
+                                             exchange: Exchange::Hourglass,
                                              instrument: instrument.clone(),
                                              timestamp: 1625247600000,
                                              cid: Some(ClientOrderId("validCID123".into())),
@@ -338,7 +338,7 @@ mod tests
 
         // 创建一个待开卖单订单
         let open_order = Order { instruction: OrderInstruction::Limit,
-                                 exchange: Exchange::SandBox,
+                                 exchange: Exchange::Hourglass,
                                  instrument: instrument.clone(),
                                  timestamp: 1625247600000,
                                  cid: Some(ClientOrderId("validCID456".into())),
@@ -386,7 +386,7 @@ mod tests
 
         // 创建一个待开卖单订单
         let open_order = Order { instruction: OrderInstruction::Limit,
-                                 exchange: Exchange::SandBox,
+                                 exchange: Exchange::Hourglass,
                                  instrument: instrument.clone(),
                                  timestamp: 1625247600000,
                                  cid: Some(ClientOrderId("validCID456".into())),
@@ -430,7 +430,7 @@ mod tests
 
         // 创建并添加订单
         let open_order = Order { instruction: OrderInstruction::Limit,
-                                 exchange: Exchange::SandBox,
+                                 exchange: Exchange::Hourglass,
                                  instrument: instrument.clone(),
                                  timestamp: 1625247600000,
                                  cid: Some(ClientOrderId("validCID123".into())),
@@ -472,7 +472,7 @@ mod tests
 
         // 创建一个待开买单订单
         let open_order_request = Order { instruction: OrderInstruction::Limit,
-                                         exchange: Exchange::SandBox,
+                                         exchange: Exchange::Hourglass,
                                          instrument: instrument.clone(),
                                          timestamp: 1625247600000,
                                          cid: Some(ClientOrderId("validCID123".into())),

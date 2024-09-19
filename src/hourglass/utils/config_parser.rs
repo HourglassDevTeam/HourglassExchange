@@ -1,4 +1,4 @@
-use crate::{error::ExchangeError, sandbox::account::account_config::AccountConfig};
+use crate::{error::ExchangeError, hourglass::account::account_config::AccountConfig};
 use std::{fs, path::Path};
 
 /// 读取配置文件，并返回`AccountConfig`结构体实例。
@@ -53,7 +53,7 @@ mod tests
     use super::*;
     use crate::{
         common::{account_positions::PositionDirectionMode, instrument::kind::InstrumentKind},
-        sandbox::account::account_config::{CommissionLevel, CommissionRates, MarginMode},
+        hourglass::account::account_config::{CommissionLevel, CommissionRates, MarginMode},
     };
     use std::{fs, io::Write};
     use tempfile::tempdir;

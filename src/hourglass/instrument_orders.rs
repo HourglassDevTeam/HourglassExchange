@@ -7,7 +7,7 @@ use crate::{
         Side,
     },
     error::ExchangeError,
-    sandbox::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
+    hourglass::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
     Exchange,
 };
 use rayon::prelude::ParallelSliceMut;
@@ -204,7 +204,7 @@ impl InstrumentOrders
         // Fetch the current value from the AtomicI64
         let trade_id = counter.load(Ordering::SeqCst); // Get the current value as an `i64`
 
-        Ok(ClientTrade { exchange: Exchange::SandBox,
+        Ok(ClientTrade { exchange: Exchange::Hourglass,
                          timestamp,
                          trade_id: trade_id.into(), // Use the fetched trade ID
                          order_id: Some(order.state.id.clone()),
