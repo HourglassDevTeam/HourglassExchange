@@ -20,6 +20,7 @@ pub mod hourglass_orderbook;
 pub mod instrument_orders;
 pub mod utils;
 pub mod ws_trade;
+pub mod risk_reserve;
 // pub enum TradeEventSource {
 //     RealTime(UnboundedReceiver<MarketEvent<MarketTrade>>),
 //     Backtest(RowCursor<MarketTrade>),
