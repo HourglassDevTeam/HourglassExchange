@@ -1,8 +1,8 @@
 // use chrono::{Duration as ChronoDuration, NaiveDate};
 // use std::sync::Arc;
 // use tokio::sync::{mpsc, Mutex};
-// use unilink_execution::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
-// use unilink_execution::test_utils::create_test_account;
+// use hourglass::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
+// use hourglass::test_utils::create_test_account;
 //
 // #[tokio::main]
 // async fn main() {
