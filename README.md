@@ -1,8 +1,8 @@
-# ⏳ Hourglass 
+# ⏳ Hourglass
 
-A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs/barter-rs).   [**中文用户请移步此处**](https://github.com/arthur19q3/Hourglass/blob/master/README_CN.md)
+A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs/barter-rs).
 
-
+[**中文版 README**](https://github.com/arthur19q3/Hourglass/blob/master/README_CN.md)
 
 ## ⚠️ Warning
 
@@ -21,8 +21,4 @@ A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs
 - **Position Closure Repository**: Supports a repository for managing and storing position closure data.
 - **Multiple Stablecoins**: Supports multiple stablecoins, providing users with a variety of stable currency options.
 - **Trade Data Backtesting**: Allows backtesting using only trade data, with future support planned for order book data.
-- **Configuration Parsing**: Hourglass can now parse account settings directly from the `config.toml` file, streamlining the setup process.
-- **Feishu Reporting**: Introduces the capability to report activities and metrics to Feishu, enhancing communication and monitoring (currently with use cases and partially implemented).
-- **Position Closure Repository**: Implements a repository system to manage and store data related to the closure of positions.
-- **Multiple Stablecoins**: Expands support to include various stablecoins, offering users more choices for their trading activities.
-- **Trade Data Backtesting**: Enables backtesting using only trade data, with plans to incorporate order book data support in the future for more comprehensive strategy testing.
+- **Liquidation Mechanism**: Supports a liquidation mechanism with configurable liquidation thresholds, enabling automated risk management and position liquidation when certain conditions are met.
