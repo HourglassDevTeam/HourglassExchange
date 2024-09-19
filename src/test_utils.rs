@@ -26,7 +26,7 @@ use crate::{
     },
     hourglass::{
         account::{
-            account_config::{AccountConfig, CommissionLevel, CommissionRates, MarginMode, HourglassMode},
+            account_config::{AccountConfig, CommissionLevel, CommissionRates, HourglassMode, MarginMode},
             account_latency::{AccountLatency, FluctuationMode},
             account_orders::AccountOrders,
             HourglassAccount,
@@ -82,7 +82,7 @@ pub async fn create_test_account_orders() -> AccountOrders
 pub fn create_test_order_open(side: Side, price: f64, size: f64) -> Order<Open>
 {
     Order { instruction: OrderInstruction::Limit, // 假设测试订单使用限价订单类型
-            exchange: Exchange::Hourglass,          // 假设测试环境使用 Hourglass 交易所
+            exchange: Exchange::Hourglass,        // 假设测试环境使用 Hourglass 交易所
             instrument: Instrument { base: Token::from("ETH"),        // 测试用基础货币
                                      quote: Token::from("USDT"),      // 测试用报价货币
                                      kind: InstrumentKind::Perpetual  /* 测试用永续合约 */ },
@@ -156,21 +156,21 @@ pub async fn create_test_account() -> HourglassAccount
 
     // 创建 Account 实例，并将其包裹在 Arc<Account> 中
     HourglassAccount { current_session: Uuid::new_v4(),
-                     machine_id,
-                     client_trade_counter: 0.into(),
-                     exchange_timestamp: AtomicI64::new(1234567),
-                     account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
-                     config: account_config,
-                     balances,
-                     positions,
-                     exited_positions: closed_positions,
-                     orders: Arc::new(RwLock::new(AccountOrders::new(machine_id, vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))], AccountLatency { fluctuation_mode:
-                                                                                                                                                                          FluctuationMode::Sine,
-                                                                                                                                                                      maximum: 300,
-                                                                                                                                                                      minimum: 0,
-                                                                                                                                                                      current_value: 0 }).await)),
-                     single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
-                     account_margin: Arc::new(0.0.into()) }
+                       machine_id,
+                       client_trade_counter: 0.into(),
+                       exchange_timestamp: AtomicI64::new(1234567),
+                       account_event_tx: tokio::sync::mpsc::unbounded_channel().0,
+                       config: account_config,
+                       balances,
+                       positions,
+                       exited_positions: closed_positions,
+                       orders: Arc::new(RwLock::new(AccountOrders::new(machine_id, vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))], AccountLatency { fluctuation_mode:
+                                                                                                                                                                            FluctuationMode::Sine,
+                                                                                                                                                                        maximum: 300,
+                                                                                                                                                                        minimum: 0,
+                                                                                                                                                                        current_value: 0 }).await)),
+                       single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
+                       account_margin: Arc::new(0.0.into()) }
 }
 
 /// 创建一个测试用的 `PerpetualPosition` 实例。

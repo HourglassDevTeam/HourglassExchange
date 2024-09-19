@@ -1,10 +1,10 @@
 use crate::{
     error::ExchangeError,
-    network::{event::NetworkEvent, is_port_in_use},
     hourglass::{
         account::account_handlers::{balance_handler::BalanceHandler, position_handler::PositionHandler, trade_handler::TradeHandler},
         hourglass_client::HourglassClientEvent,
     },
+    network::{event::NetworkEvent, is_port_in_use},
 };
 use account::HourglassAccount;
 use mpsc::UnboundedReceiver;
@@ -15,9 +15,9 @@ use warp::Filter;
 pub mod account;
 pub mod clickhouse_api;
 pub mod config_request;
-pub mod instrument_orders;
 pub mod hourglass_client;
 pub mod hourglass_orderbook;
+pub mod instrument_orders;
 pub mod utils;
 pub mod ws_trade;
 // pub enum TradeEventSource {
@@ -149,7 +149,8 @@ impl ExchangeBuilder
 
     pub fn event_hourglass_rx(self, value: UnboundedReceiver<HourglassClientEvent>) -> Self
     {
-        Self { event_hourglass_rx: Some(value), ..self }
+        Self { event_hourglass_rx: Some(value),
+               ..self }
     }
 
     pub fn account(self, value: Arc<Mutex<HourglassAccount>>) -> Self
@@ -160,8 +161,8 @@ impl ExchangeBuilder
     pub fn initiate(self) -> Result<HourglassExchange, ExchangeError>
     {
         Ok(HourglassExchange { event_hourglass_rx: self.event_hourglass_rx.ok_or_else(|| ExchangeError::BuilderIncomplete("event_hourglass_rx".to_string()))?,
-                             // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::BuilderIncomplete("market_event_tx".to_string()))?,
-                             account: self.account.ok_or_else(|| ExchangeError::BuilderIncomplete("account".to_string()))? })
+                               // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::BuilderIncomplete("market_event_tx".to_string()))?,
+                               account: self.account.ok_or_else(|| ExchangeError::BuilderIncomplete("account".to_string()))? })
     }
 
     // pub fn trade_event_source(self, value: TradeEventSource) -> Self

@@ -24,7 +24,7 @@ use crate::{
 pub struct HourglassClient
 {
     pub request_tx: UnboundedSender<HourglassClientEvent>, /* NOTE 这是向模拟交易所端发送信号的发射器。注意指令格式是HourglassClientEvent
-                                                          * pub market_event_rx: UnboundedReceiver<MarketEvent<MarketTrade>>, */
+                                                            * pub market_event_rx: UnboundedReceiver<MarketEvent<MarketTrade>>, */
 }
 
 // NOTE 模拟交易所客户端可向模拟交易所发送的命令

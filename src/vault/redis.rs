@@ -33,7 +33,7 @@ pub struct Config
 pub struct RedisVault<Statistic>
     where Statistic: PositionSummariser + Serialize + DeserializeOwned
 {
-    hourglass_mode: HourglassMode,                 // 仓库的配置，存储在仓库中
+    hourglass_mode: HourglassMode,             // 仓库的配置，存储在仓库中
     _statistic_marker: PhantomData<Statistic>, // 用于类型标记的幻象数据
     #[allow(dead_code)]
     conn: Connection,
@@ -100,7 +100,7 @@ pub struct RedisVaultBuilder<Statistic>
     where Statistic: PositionSummariser + Serialize + DeserializeOwned
 {
     conn: Option<Connection>,                  // Redis 连接的可选值
-    config: Option<HourglassMode>,               // 添加配置选项
+    config: Option<HourglassMode>,             // 添加配置选项
     _statistic_marker: PhantomData<Statistic>, // 用于类型标记的幻象数据
 }
 impl<Statistic> RedisVaultBuilder<Statistic> where Statistic: PositionSummariser + Serialize + DeserializeOwned

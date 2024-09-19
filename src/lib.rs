@@ -23,8 +23,8 @@ use tokio::sync::mpsc;
 pub mod common;
 pub mod dashboard;
 pub mod error;
-pub mod network;
 pub mod hourglass;
+pub mod network;
 pub mod test_utils;
 pub mod vault;
 

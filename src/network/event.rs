@@ -8,9 +8,7 @@
 /// 下面是一个创建并发送 `"OpenOrders"` 事件的示例：
 ///
 /// ```rust
-/// use serde_json::json;
-/// use std::net::Ipv4Addr;
-/// use unilink_execution::{
+/// use hourglass::{
 ///     common::{
 ///         instrument::{kind::InstrumentKind, Instrument},
 ///         order::{order_instructions::OrderInstruction, Order},
@@ -19,11 +17,13 @@
 ///     network::event::NetworkEvent,
 ///     Exchange,
 /// };
+/// use serde_json::json;
+/// use std::net::Ipv4Addr;
 /// use uuid::Uuid;
 ///
 /// ///
-/// use unilink_execution::common::order::identification::client_order_id::ClientOrderId;
-/// use unilink_execution::common::order::states::request_open::RequestOpen;
+/// use hourglass::common::order::identification::client_order_id::ClientOrderId;
+/// use hourglass::common::order::states::request_open::RequestOpen;
 ///
 /// fn create_open_orders_event() -> NetworkEvent
 /// {

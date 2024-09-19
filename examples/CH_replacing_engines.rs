@@ -1,7 +1,7 @@
 use chrono::{Duration, NaiveDate};
+use hourglass::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::sync::Arc;
-use unilink_execution::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
 
 #[tokio::main]
 async fn main()
@@ -29,7 +29,7 @@ async fn main()
         let union_tables: Vec<String> = table_names.par_iter()
                                                    .filter(|table_name| {
                                                        if table_name.contains("union") {
-                                                           if let Some(table_date) = unilink_execution::hourglass::utils::chrono_operations::extract_date(table_name) {
+                                                           if let Some(table_date) = hourglass::hourglass::utils::chrono_operations::extract_date(table_name) {
                                                                if let Ok(parsed_date) = NaiveDate::parse_from_str(&table_date, "%Y_%m_%d") {
                                                                    return parsed_date == current_date;
                                                                }

@@ -19,7 +19,7 @@ pub struct AccountConfig
     pub funding_rate: f64,                                     // 资金费率，用于合约交易中计算资金费用
     pub global_leverage_rate: f64,                             // 账户杠杆率，决定账户在杠杆交易中的放大倍数
     pub fees_book: HashMap<InstrumentKind, CommissionRates>,   // 手续费表，存储每种合约类型的手续费率
-    pub execution_mode: HourglassMode,                           // 执行模式，定义账户是在沙盒模式（模拟交易）还是在真实环境中运行
+    pub execution_mode: HourglassMode,                         // 执行模式，定义账户是在沙盒模式（模拟交易）还是在真实环境中运行
     pub max_price_deviation: f64,                              // 最大价格偏差，用于限制订单价格与市场价格的偏离范围
     pub lazy_account_positions: bool,                          // 是否惰性更新以节约性能
     pub liquidation_threshold: f64,                            // 平仓的门槛，通常为一个0.9~1的系数

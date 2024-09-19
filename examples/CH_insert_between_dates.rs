@@ -1,7 +1,7 @@
 use chrono::{Duration, NaiveDate};
+use hourglass::hourglass::{clickhouse_api::queries_operations::ClickHouseClient, utils::chrono_operations::extract_date};
 use rayon::prelude::*;
 use std::sync::Arc;
-use unilink_execution::hourglass::{clickhouse_api::queries_operations::ClickHouseClient, utils::chrono_operations::extract_date};
 
 #[tokio::main]
 async fn main()

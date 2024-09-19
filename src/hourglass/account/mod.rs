@@ -78,17 +78,17 @@ impl Clone for HourglassAccount
     fn clone(&self) -> Self
     {
         HourglassAccount { current_session: Uuid::new_v4(),
-                         machine_id: self.machine_id,
-                         client_trade_counter: 0.into(),
-                         exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
-                         account_event_tx: self.account_event_tx.clone(),
-                         config: self.config.clone(),
-                         orders: Arc::clone(&self.orders),
-                         single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
-                         balances: self.balances.clone(),
-                         positions: self.positions.clone(),
-                         exited_positions: self.exited_positions.clone(),
-                         account_margin: self.account_margin.clone() }
+                           machine_id: self.machine_id,
+                           client_trade_counter: 0.into(),
+                           exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
+                           account_event_tx: self.account_event_tx.clone(),
+                           config: self.config.clone(),
+                           orders: Arc::clone(&self.orders),
+                           single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
+                           balances: self.balances.clone(),
+                           positions: self.positions.clone(),
+                           exited_positions: self.exited_positions.clone(),
+                           account_margin: self.account_margin.clone() }
     }
 }
 #[derive(Debug)]
@@ -155,17 +155,17 @@ impl AccountBuilder
     pub fn build(self) -> Result<HourglassAccount, String>
     {
         Ok(HourglassAccount { current_session: Uuid::new_v4(),
-                            machine_id: generate_machine_id()?,
-                            client_trade_counter: 0.into(),
-                            exchange_timestamp: 0.into(),
-                            account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?,
-                            config: self.config.ok_or("config is required")?,
-                            orders: self.orders.ok_or("orders are required")?,
-                            balances: self.balances.ok_or("balances are required")?,
-                            positions: self.positions.ok_or("positions are required")?,
-                            single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
-                            exited_positions: self.closed_positions.ok_or("closed_positions sink are required")?,
-                            account_margin: Arc::new(0.0.into()) })
+                              machine_id: generate_machine_id()?,
+                              client_trade_counter: 0.into(),
+                              exchange_timestamp: 0.into(),
+                              account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?,
+                              config: self.config.ok_or("config is required")?,
+                              orders: self.orders.ok_or("orders are required")?,
+                              balances: self.balances.ok_or("balances are required")?,
+                              positions: self.positions.ok_or("positions are required")?,
+                              single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
+                              exited_positions: self.closed_positions.ok_or("closed_positions sink are required")?,
+                              account_margin: Arc::new(0.0.into()) })
     }
 }
 

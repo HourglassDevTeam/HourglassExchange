@@ -1,4 +1,4 @@
-use unilink_execution::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
+use hourglass::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
 
 #[tokio::main]
 async fn main()
