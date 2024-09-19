@@ -67,7 +67,6 @@ pub trait PositionHandler
 
     async fn fetch_short_position_and_respond(&self, instrument: &Instrument, response_tx: Sender<Result<Option<Position>, ExchangeError>>);
 
-    async fn check_and_handle_liquidation(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>;
     async fn check_position_direction_conflict(&self, instrument: &Instrument, new_order_side: Side, is_reduce_only: bool) -> Result<(), ExchangeError>;
 
     async fn create_perpetual_position(&mut self, trade: ClientTrade, handle_type: PositionHandling) -> Result<PerpetualPosition, ExchangeError>;
@@ -100,7 +99,13 @@ pub trait PositionHandler
     // 关闭仓位
     async fn close_position(&mut self, instrument: Instrument, side: Side) -> Result<(), ExchangeError>;
     // 关闭并反向开仓
+
+    async fn check_and_handle_liquidation(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>;
     async fn close_and_reverse_position(&mut self, trade: ClientTrade, remaining: f64) -> Result<(), ExchangeError>;
+    // 爆仓提醒 / Margin Call, return a Option<f64>
+    async fn margin_call(&mut self, instrument: Instrument) -> Result<Option<f64>, ExchangeError>;
+    // 爆仓处理 / Liquidation
+    async fn liquidate_position_by_trade(&mut self, pos: &mut Position, side: Side) -> Result<(), ExchangeError>;
     // 部分平仓
     async fn partial_close_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>;
     // 更新隔离保证金 /// NOTE this is currently problematic and should be checked very carefully.
@@ -305,78 +310,6 @@ impl PositionHandler for SandboxAccount
         respond(response_tx, Ok(position));
     }
 
-    /// NOTE 目前只支持匹配单一InstrumentKind，是临时的解决方案。
-    async fn check_and_handle_liquidation(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError> {
-        // 解析仪器
-        let instrument = match trade.parse_instrument() {
-            Some(instr) => instr,
-            None => return Err(ExchangeError::InvalidInstrument("Instrument parsing failed".to_string())),
-        };
-
-        // 获取多头和空头仓位
-        let (long_position, short_position) = self.get_position_both_ways(&instrument).await?;
-        println!("long position: {:?}", long_position);
-        println!("short position: {:?}", short_position);
-
-        // 生成新的交易 ID
-        let trade_id_value = self.client_trade_counter.fetch_add(1, Ordering::SeqCst);
-        let trade_id = ClientTradeId(trade_id_value);
-
-        // 检查并处理多头仓位
-        // 这里建议使用 当前的交易价格 (trade.price) 来进行平仓，因为平仓操作是以实际成交价格为准的。如果你按照清算价格来平仓，可能会导致实际成交价格与预期不一致，这在市场波动时尤其重要。
-        if let Some(Position::Perpetual(long_pos)) = long_position {
-            if let Some(liquidation_price) = long_pos.liquidation_price {
-                if trade.price <= liquidation_price {
-                    // 生成平仓的 `ClientTrade`
-                    let liquidation_trade = ClientTrade {
-                        exchange: Exchange::SandBox,
-                        timestamp: trade.timestamp,
-                        trade_id,
-                        order_id: None,
-                        cid: None,
-                        instrument: instrument.clone(),
-                        side: Side::Sell,
-                        price: trade.price,
-                        size: long_pos.meta.current_size,
-                        fees: 0.0,
-                    };
-                    // 处理平仓
-                    self.close_position(instrument.clone(), Side::Buy).await?;
-                    self.process_trade(liquidation_trade).await?;
-                    return Ok(());
-                }
-            }
-        }
-
-        // 检查并处理空头仓位
-        if let Some(Position::Perpetual(short_pos)) = short_position {
-            if let Some(liquidation_price) = short_pos.liquidation_price {
-                if trade.price >= liquidation_price {
-                    // 生成平仓的 `ClientTrade`
-                    let liquidation_trade = ClientTrade {
-                        exchange: Exchange::SandBox,
-                        timestamp: trade.timestamp,
-                        trade_id,
-                        order_id: None,
-                        cid: None,
-                        instrument: instrument.clone(),
-                        side: Side::Buy,
-                        price: trade.price,
-                        size: short_pos.meta.current_size,
-                        fees: 0.0,
-                    };
-
-                    // 处理平仓
-                    self.close_position(instrument.clone(), Side::Sell).await?;
-                    self.process_trade(liquidation_trade).await?;
-                    return Ok(());
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     /// 检查给定的 `new_order_side` 是否与现有仓位方向冲突，并根据 `is_reduce_only` 标志做出相应处理。
     ///
     /// ### 参数:
@@ -542,41 +475,41 @@ impl PositionHandler for SandboxAccount
         todo!("Updating Leveraged Token positions is not yet implemented")
     }
 
-     /// FIXME 查看是否仅在 `Net` 的时候 才会继承
-     /// 当且仅当 `PositionDirectionMode` 是 `Net` 的时候, 允许在处理新的trade的时候继承反向仓位的configuration.并且返回.
-     async fn handle_config_inheritance(&self, trade: &ClientTrade) -> Result<PerpetualPositionConfig, ExchangeError>
-    {
-        // 尝试获取同向仓位配置
-        let same_side_config = match trade.side {
-            | Side::Buy => self.get_position_long_config(&trade.instrument).await?,
-            | Side::Sell => self.get_position_short_config(&trade.instrument).await?,
-        };
+    /// FIXME 查看是否仅在 `Net` 的时候 才会继承
+    /// 当且仅当 `PositionDirectionMode` 是 `Net` 的时候, 允许在处理新的trade的时候继承反向仓位的configuration.并且返回.
+    async fn handle_config_inheritance(&self, trade: &ClientTrade) -> Result<PerpetualPositionConfig, ExchangeError>
+   {
+       // 尝试获取同向仓位配置
+       let same_side_config = match trade.side {
+           | Side::Buy => self.get_position_long_config(&trade.instrument).await?,
+           | Side::Sell => self.get_position_short_config(&trade.instrument).await?,
+       };
 
-        // 检查是否找到了同向配置
-        if let Some(config) = same_side_config {
-            return Ok(config);
-        }
+       // 检查是否找到了同向配置
+       if let Some(config) = same_side_config {
+           return Ok(config);
+       }
 
-        // 如果没有找到同向配置，尝试获取反向仓位配置
-        let opposite_side_config = match trade.side {
-            | Side::Buy => self.get_position_short_config(&trade.instrument).await?,
-            | Side::Sell => self.get_position_long_config(&trade.instrument).await?,
-        };
+       // 如果没有找到同向配置，尝试获取反向仓位配置
+       let opposite_side_config = match trade.side {
+           | Side::Buy => self.get_position_short_config(&trade.instrument).await?,
+           | Side::Sell => self.get_position_long_config(&trade.instrument).await?,
+       };
 
-        // 检查是否找到了反向配置
-        if let Some(config) = opposite_side_config {
-            // 检查配置的模式是否允许继承
-            return if config.position_direction_mode == PositionDirectionMode::Net {
-                Ok(config)
-            }
-            else {
-                Err(ExchangeError::ConfigInheritanceNotAllowed)
-            }
-        }
+       // 检查是否找到了反向配置
+       if let Some(config) = opposite_side_config {
+           // 检查配置的模式是否允许继承
+           return if config.position_direction_mode == PositionDirectionMode::Net {
+               Ok(config)
+           }
+           else {
+               Err(ExchangeError::ConfigInheritanceNotAllowed)
+           }
+       }
 
-        // 如果两个方向的配置都不存在，报错
-        Err(ExchangeError::ConfigMissing)
-    }
+       // 如果两个方向的配置都不存在，报错
+       Err(ExchangeError::ConfigMissing)
+   }
 
     async fn determine_handling_type(&self, trade: ClientTrade) -> Result<PositionHandling, ExchangeError>
     {
@@ -938,6 +871,75 @@ impl PositionHandler for SandboxAccount
         Ok(())
     }
 
+    async fn check_and_handle_liquidation(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError> {
+        // 解析仪器
+        let instrument = trade
+            .parse_instrument()
+            .ok_or_else(|| ExchangeError::InvalidInstrument("Instrument parsing failed".to_string()))?;
+
+        // 获取多头和空头仓位
+        let (long_position, short_position) = self.get_position_both_ways(&instrument).await?;
+        println!("long position: {:?}", long_position);
+        println!("short position: {:?}", short_position);
+
+        // 生成新的交易 ID
+        let trade_id_value = self.client_trade_counter.fetch_add(1, Ordering::SeqCst);
+        let trade_id = ClientTradeId(trade_id_value);
+
+        // 检查并处理多头仓位
+        if let Some(Position::Perpetual(long_pos)) = long_position {
+            if let Some(liquidation_price) = long_pos.liquidation_price {
+                if trade.price <= liquidation_price {
+                    // 生成平仓的 `ClientTrade`
+                    let liquidation_trade = ClientTrade {
+                        exchange: Exchange::SandBox,
+                        timestamp: trade.timestamp,
+                        trade_id,
+                        order_id: None,
+                        cid: None,
+                        instrument: instrument.clone(),
+                        side: Side::Sell,
+                        price: trade.price,
+                        size: long_pos.meta.current_size,
+                        fees: 0.0,
+                    };
+                    // 处理平仓
+                    self.liquidate_position_by_trade(&mut Position::Perpetual(long_pos), Side::Buy).await?;
+                    self.process_trade(liquidation_trade).await?;
+                    return Ok(());
+                }
+            }
+        }
+
+        // 检查并处理空头仓位
+        if let Some(Position::Perpetual(short_pos)) = short_position {
+            if let Some(liquidation_price) = short_pos.liquidation_price {
+                if trade.price >= liquidation_price {
+                    // 生成平仓的 `ClientTrade`
+                    let liquidation_trade = ClientTrade {
+                        exchange: Exchange::SandBox,
+                        timestamp: trade.timestamp,
+                        trade_id,
+                        order_id: None,
+                        cid: None,
+                        instrument: instrument.clone(),
+                        side: Side::Buy,
+                        price: trade.price,
+                        size: short_pos.meta.current_size,
+                        fees: 0.0,
+                    };
+
+                    // 处理平仓
+                    self.liquidate_position_by_trade(&mut Position::Perpetual(short_pos), Side::Sell).await?;
+                    self.process_trade(liquidation_trade).await?;
+                    return Ok(());
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     // 关闭并反向开仓
     async fn close_and_reverse_position(&mut self, trade: ClientTrade, remaining: f64) -> Result<(), ExchangeError>
     {
@@ -946,6 +948,55 @@ impl PositionHandler for SandboxAccount
         let _ = self.create_perpetual_position(trade.clone(), CloseCompleteAndReverse { reverse_size: remaining }).await?;
         Ok(())
     }
+
+    /// 根据收到的trade来决定是否提醒增加保证金 如果不增加的就会爆仓。
+    #[allow(unused)]
+    async fn margin_call(&mut self, instrument: Instrument) -> Result<Option<f64>, ExchangeError> {
+        todo!()
+    }
+
+    /// 根据收到的爆仓MarketTrade来处理爆仓。
+    #[allow(unused)]
+    async fn liquidate_position_by_trade(&mut self, pos: &mut Position, side: Side) -> Result<(), ExchangeError> {
+        match pos {
+            Position::Perpetual(perpetual_pos) => {
+                // 获取当前仓位的大小
+                let position_size = perpetual_pos.meta.current_size;
+                if position_size > 0.0 {
+                    match perpetual_pos.pos_config.pos_margin_mode {
+                        PositionMarginMode::Cross => {
+                            // 减去对应的保证金
+                            let margin_to_subtract = position_size / perpetual_pos.pos_config.leverage;
+                            self.account_margin.fetch_sub(margin_to_subtract, Ordering::SeqCst);
+                        }
+                        PositionMarginMode::Isolated => {
+                            // 清空 isolated 保证金
+                            perpetual_pos.isolated_margin = Some(0.0);
+                        }
+                    }
+
+                    // 根据仓位的方向移除仓位
+                    match side {
+                        Side::Buy => {
+                            self.remove_position(perpetual_pos.meta.instrument.clone(), Side::Sell)
+                                .await
+                                .ok_or(ExchangeError::AttemptToRemoveNonExistingPosition)?;
+                        }
+                        Side::Sell => {
+                            self.remove_position(perpetual_pos.meta.instrument.clone(), Side::Buy)
+                                .await
+                                .ok_or(ExchangeError::AttemptToRemoveNonExistingPosition)?;
+                        }
+                    }
+                }
+            }
+            // 你可以为其他类型的 Position 添加类似的处理逻辑，例如 Future、Option 等
+            _ => return Err(ExchangeError::UnsupportedInstrumentKind),
+        }
+
+        Ok(())
+    }
+
 
     // 部分平仓 FIXME 要检查一下逻辑是否正确
     async fn partial_close_position(&mut self, trade: ClientTrade) -> Result<(), ExchangeError> {
