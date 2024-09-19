@@ -82,8 +82,6 @@ pub trait PositionHandler
     async fn determine_handling_type(&self, trade: ClientTrade) -> Result<PositionHandling, ExchangeError>;
 
     async fn update_position_from_client_trade(&mut self, trade: ClientTrade) -> Result<(), ExchangeError>;
-    /// 在 create_position 过程中确保仓位的杠杆率不超过账户的最大杠杆率。  [TODO] : TO BE CHECKED & APPLIED
-    fn enforce_leverage_limits(&self, new_position: &PerpetualPosition) -> Result<(), ExchangeError>;
 
     async fn remove_position(&self, instrument: Instrument, side: Side) -> Option<Position>;
 
@@ -122,76 +120,136 @@ pub trait PositionHandler
 #[async_trait]
 impl PositionHandler for HourglassAccount
 {
-    /// 预先设置控制仓位的字段。
-    async fn preconfigure_position(&mut self, config_request: ConfigurationRequest) -> Result<PositionConfig, ExchangeError>
-    {
+    /// Preconfigure a position by setting control fields.
+    /// Ensures that the leverage does not exceed the account's maximum leverage.
+    async fn preconfigure_position(&mut self, config_request: ConfigurationRequest) -> Result<PositionConfig, ExchangeError> {
         let side = config_request.side;
+
         match config_request.instrument.kind {
-            | InstrumentKind::Spot => Err(ExchangeError::UnsupportedInstrumentKind),
-            | InstrumentKind::Perpetual => {
+            InstrumentKind::Spot => Err(ExchangeError::UnsupportedInstrumentKind),
+            InstrumentKind::Perpetual => {
                 let perpetual_config = PerpetualPositionConfig::from(config_request.clone());
+
+                // Enforce leverage limits
+                if perpetual_config.leverage > self.config.global_leverage_rate {
+                    return Err(ExchangeError::InvalidLeverage(format!(
+                        "Requested leverage {} exceeds account's maximum leverage {}",
+                        perpetual_config.leverage, self.config.global_leverage_rate
+                    )));
+                }
+
+                // Insert the configuration into the appropriate position config map
                 match side {
-                    | Side::Buy => {
-                        self.positions.perpetual_pos_long_config.write().await.insert(config_request.instrument, perpetual_config.clone());
+                    Side::Buy => {
+                        self.positions
+                            .perpetual_pos_long_config
+                            .write()
+                            .await
+                            .insert(config_request.instrument.clone(), perpetual_config.clone());
                     }
-                    | Side::Sell => {
-                        self.positions.perpetual_pos_short_config.write().await.insert(config_request.instrument, perpetual_config.clone());
+                    Side::Sell => {
+                        self.positions
+                            .perpetual_pos_short_config
+                            .write()
+                            .await
+                            .insert(config_request.instrument.clone(), perpetual_config.clone());
                     }
                 }
                 Ok(PositionConfig::Perpetual(perpetual_config))
             }
-            | InstrumentKind::Future => {
+            InstrumentKind::Future => {
+                // Similar implementation for futures, including leverage checks if applicable
                 let future_config = FuturePositionConfig::from(config_request.clone());
+
+                // Enforce leverage limits for futures if applicable
+                // (Assuming futures also have leverage limits in your system)
+                if future_config.leverage > self.config.global_leverage_rate {
+                    return Err(ExchangeError::InvalidLeverage(format!(
+                        "Requested leverage {} exceeds account's maximum leverage {}",
+                        future_config.leverage, self.config.global_leverage_rate
+                    )));
+                }
+
                 match side {
-                    | Side::Buy => {
-                        self.positions.futures_pos_long_config.write().await.insert(config_request.instrument.clone(), future_config.clone());
+                    Side::Buy => {
+                        self.positions
+                            .futures_pos_long_config
+                            .write()
+                            .await
+                            .insert(config_request.instrument.clone(), future_config.clone());
                     }
-                    | Side::Sell => {
-                        self.positions.futures_pos_short_config.write().await.insert(config_request.instrument.clone(), future_config.clone());
+                    Side::Sell => {
+                        self.positions
+                            .futures_pos_short_config
+                            .write()
+                            .await
+                            .insert(config_request.instrument.clone(), future_config.clone());
                     }
                 }
                 Ok(PositionConfig::Future(future_config))
             }
-            | InstrumentKind::CryptoLeveragedToken => {
+            InstrumentKind::CryptoLeveragedToken => {
                 let leveraged_token_config = LeveragedTokenPositionConfig::from(config_request.clone());
+
+                // Enforce leverage limits for leveraged tokens if applicable
+                // (Assuming leveraged tokens also have leverage limits in your system)
+                if leveraged_token_config.leverage > self.config.global_leverage_rate {
+                    return Err(ExchangeError::InvalidLeverage(format!(
+                        "Requested leverage {} exceeds account's maximum leverage {}",
+                        leveraged_token_config.leverage, self.config.global_leverage_rate
+                    )));
+                }
+
                 match side {
-                    | Side::Buy => {
-                        self.positions.margin_pos_long_config.write().await.insert(config_request.instrument.clone(), leveraged_token_config.clone());
+                    Side::Buy => {
+                        self.positions
+                            .margin_pos_long_config
+                            .write()
+                            .await
+                            .insert(config_request.instrument.clone(), leveraged_token_config.clone());
                     }
-                    | Side::Sell => {
-                        self.positions.margin_pos_short_config.write().await.insert(config_request.instrument.clone(), leveraged_token_config.clone());
+                    Side::Sell => {
+                        self.positions
+                            .margin_pos_short_config
+                            .write()
+                            .await
+                            .insert(config_request.instrument.clone(), leveraged_token_config.clone());
                     }
                 }
                 Ok(PositionConfig::LeveragedToken(leveraged_token_config))
             }
-            | InstrumentKind::CryptoOption => Err(ExchangeError::UnsupportedInstrumentKind),
-            | _ => Err(ExchangeError::UnsupportedInstrumentKind),
+            InstrumentKind::CryptoOption => Err(ExchangeError::UnsupportedInstrumentKind),
+            _ => Err(ExchangeError::UnsupportedInstrumentKind),
         }
     }
 
-    async fn preconfigure_positions(&mut self, config_requests: Vec<ConfigurationRequest>, response_tx: Sender<ConfigureInstrumentsResults>) -> Result<Vec<PositionConfig>, ExchangeError>
-    {
+    async fn preconfigure_positions(
+        &mut self,
+        config_requests: Vec<ConfigurationRequest>,
+        response_tx: Sender<ConfigureInstrumentsResults>,
+    ) -> Result<Vec<PositionConfig>, ExchangeError> {
         let mut position_configs = Vec::new();
         let mut results = Vec::new();
 
         for config_request in config_requests {
             match self.preconfigure_position(config_request).await {
-                | Ok(config) => {
+                Ok(config) => {
                     results.push(Ok(config.clone()));
                     position_configs.push(config);
                 }
-                | Err(e) => {
+                Err(e) => {
                     results.push(Err(e));
                 }
             }
         }
 
         response_tx.send(results).unwrap_or_else(|_| {
-                                     eprintln!("Failed to send preconfigure_positions response");
-                                 });
+            eprintln!("Failed to send preconfigure_positions response");
+        });
 
         Ok(position_configs)
     }
+
 
     /// 获取指定 `Instrument` 的多头仓位
     async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>
@@ -629,16 +687,6 @@ impl PositionHandler for HourglassAccount
         Ok(())
     }
 
-    /// 在 create_position 过程中确保仓位的杠杆率不超过账户的最大杠杆率。  [TODO] : TO BE CHECKED & APPLIED
-    fn enforce_leverage_limits(&self, new_position: &PerpetualPosition) -> Result<(), ExchangeError>
-    {
-        if new_position.pos_config.leverage > self.config.global_leverage_rate {
-            Err(ExchangeError::InvalidLeverage(format!("Leverage is beyond leverage rate: {}", new_position.pos_config.leverage)))
-        }
-        else {
-            Ok(())
-        }
-    }
 
     async fn remove_position(&self, instrument: Instrument, side: Side) -> Option<Position>
     {
@@ -1093,6 +1141,28 @@ mod tests
         test_utils::create_test_account,
         Exchange,
     };
+    // #[tokio::test]
+    // async fn test_preconfigure_position_with_excessive_leverage() {
+    //     let mut account = create_test_account().await;
+    //
+    //     // Set the account's maximum leverage to 10
+    //     account.config.global_leverage_rate = 10.0;
+    //
+    //     let config_request = ConfigurationRequest {
+    //         instrument: Instrument {
+    //             base: Token("BTC".to_string()),
+    //             quote: Token("USDT".to_string()),
+    //             kind: InstrumentKind::Perpetual,
+    //         },
+    //         side: Side::Buy,
+    //         leverage: 20.0, // Request leverage higher than the account's maximum
+    //         // ... other fields ...
+    //     };
+    //
+    //     let result = account.preconfigure_position(config_request).await;
+    //
+    //     assert!(matches!(result, Err(ExchangeError::InvalidLeverage(_))));
+    // }
 
     #[tokio::test]
     async fn test_create_new_long_position()
