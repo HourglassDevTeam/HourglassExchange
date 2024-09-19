@@ -33,7 +33,7 @@ use hourglass::{
         hourglass_client::HourglassClientEvent,
         HourglassExchange,
     },
-    test_utils::create_test_account_config,
+    test_utils::create_test_account_configuration,
     Exchange,
 };
 
@@ -85,8 +85,8 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
                                                              machine_id: 0,
                                                              client_trade_counter: 0.into(),
                                                              exchange_timestamp: AtomicI64::new(1234567),
-                                                             config: create_test_account_config(),
-                                                             orders: orders_arc,
+                                                             config: create_test_account_configuration(),
+                                                             account_open_book: orders_arc,
                                                              single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
                                                              balances,
                                                              positions,

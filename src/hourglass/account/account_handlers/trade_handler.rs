@@ -141,7 +141,7 @@ impl TradeHandler for HourglassAccount
         // println!("[match_orders]: instrument is {}", instrument);
 
         // 查找与指定金融工具相关的挂单
-        if let Ok(mut instrument_orders) = self.orders.read().await.get_ins_orders_mut(&instrument) {
+        if let Ok(mut instrument_orders) = self.account_open_book.read().await.get_ins_orders_mut(&instrument) {
             // 确定市场事件匹配的挂单方向（买或卖）
             if let Some(matching_side) = instrument_orders.determine_matching_side(market_trade) {
                 // println!("[match_orders]: matching side is {}, will look up in corresponding open orders", matching_side);
@@ -441,7 +441,7 @@ mod tests
                                                size: 2.0,
                                                filled_quantity: 0.0,
                                                order_role: OrderRole::Maker } };
-        account.orders.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
+        account.account_open_book.write().await.get_ins_orders_mut(&instrument).unwrap().add_order_open(open_order.clone());
 
         // 匹配一个完全匹配的市场事件
         let market_event = MarketTrade { exchange: "binance-futures".to_string(),
@@ -453,7 +453,7 @@ mod tests
         let _ = account.match_orders(&market_event).await;
 
         // 获取未完成的订单
-        let orders = account.orders.read().await.fetch_all();
+        let orders = account.account_open_book.read().await.fetch_all();
         assert!(orders.is_empty(), "Expected no open orders after full match, but found some.");
     }
 

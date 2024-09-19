@@ -54,7 +54,7 @@ pub fn create_test_instrument(kind: InstrumentKind) -> Instrument
 }
 
 /// 创建一个测试用的 `AccountConfig` 实例。
-pub fn create_test_account_config() -> AccountConfig
+pub fn create_test_account_configuration() -> AccountConfig
 {
     let leverage_rate = 1.0;
 
@@ -164,7 +164,7 @@ pub async fn create_test_account() -> HourglassAccount
                        balances,
                        positions,
                        exited_positions: closed_positions,
-                       orders: Arc::new(RwLock::new(AccountOrders::new(machine_id, vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))], AccountLatency { fluctuation_mode:
+                       account_open_book: Arc::new(RwLock::new(AccountOrders::new(machine_id, vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))], AccountLatency { fluctuation_mode:
                                                                                                                                                                             FluctuationMode::Sine,
                                                                                                                                                                         maximum: 300,
                                                                                                                                                                         minimum: 0,

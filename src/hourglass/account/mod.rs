@@ -64,7 +64,7 @@ pub struct HourglassAccount
     pub exchange_timestamp: AtomicI64,                                                  // 交易所时间戳
     pub account_event_tx: UnboundedSender<AccountEvent>,                                // 帐户事件发送器
     pub config: AccountConfig,                                                          // 帐户配置
-    pub orders: Arc<RwLock<AccountOrders>>,                                             // 帐户订单集合
+    pub account_open_book: Arc<RwLock<AccountOrders>>,                                             // 帐户订单集合
     pub single_level_order_book: Arc<Mutex<HashMap<Instrument, SingleLevelOrderBook>>>, // 将最新的价格存到订单簿里面去
     pub balances: DashMap<Token, Balance>,                                              // 每个币种的细分余额
     pub positions: AccountPositions,                                                    // 帐户持仓
@@ -83,7 +83,7 @@ impl Clone for HourglassAccount
                            exchange_timestamp: AtomicI64::new(self.exchange_timestamp.load(Ordering::SeqCst)),
                            account_event_tx: self.account_event_tx.clone(),
                            config: self.config.clone(),
-                           orders: Arc::clone(&self.orders),
+                           account_open_book: Arc::clone(&self.account_open_book),
                            single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
                            balances: self.balances.clone(),
                            positions: self.positions.clone(),
@@ -160,7 +160,7 @@ impl AccountBuilder
                               exchange_timestamp: 0.into(),
                               account_event_tx: self.account_event_tx.ok_or("account_event_tx is required")?,
                               config: self.config.ok_or("config is required")?,
-                              orders: self.orders.ok_or("orders are required")?,
+                              account_open_book: self.orders.ok_or("orders are required")?,
                               balances: self.balances.ok_or("balances are required")?,
                               positions: self.positions.ok_or("positions are required")?,
                               single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
@@ -319,7 +319,7 @@ impl HourglassAccount
     /// [PART 2] - [订单管理].
     pub async fn fetch_orders_open_and_respond(&self, response_tx: Sender<Result<Vec<Order<Open>>, ExchangeError>>)
     {
-        let orders = self.orders.read().await.fetch_all();
+        let orders = self.account_open_book.read().await.fetch_all();
         respond(response_tx, Ok(orders));
     }
 
@@ -363,7 +363,7 @@ impl HourglassAccount
 
             // 处理订单请求，根据模式（回测或实时）选择处理方式
             let processed_request = match self.config.execution_mode {
-                | HourglassMode::Backtest => self.orders.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await,
+                | HourglassMode::Backtest => self.account_open_book.write().await.process_backtest_requestopen_with_a_simulated_latency(request).await,
                 | _ => request, // 实时模式下直接使用原始请求
             };
 
@@ -445,7 +445,7 @@ impl HourglassAccount
             let mut order_books_lock = self.single_level_order_book.lock().await;
             let order_book = order_books_lock.get_mut(&order.instrument).unwrap(); // 引用的生命周期延长
 
-            let orders_guard = self.orders.read().await;
+            let orders_guard = self.account_open_book.read().await;
             // 将订单簿传递给 determine_maker_taker
             orders_guard.determine_maker_taker(&order, order_book)?
         };
@@ -456,7 +456,7 @@ impl HourglassAccount
         self.has_sufficient_available_balance(token, required_balance)?;
 
         let open_order = {
-            let mut orders_guard = self.orders.write().await;
+            let mut orders_guard = self.account_open_book.write().await;
             let open_order = orders_guard.build_order_open(order, order_role).await;
             orders_guard.get_ins_orders_mut(&open_order.instrument)?.add_order_open(open_order.clone());
             open_order
@@ -603,7 +603,7 @@ impl HourglassAccount
 
         // 使用读锁来获取订单，减少锁的持有时间
         let removed_order = {
-            let orders_guard = self.orders.read().await;
+            let orders_guard = self.account_open_book.read().await;
             let mut orders = orders_guard.get_ins_orders_mut(&request.instrument)?;
 
             // 根据订单方向（买/卖）处理相应的订单集
@@ -647,7 +647,7 @@ impl HourglassAccount
     {
         // 获取所有打开的订单
         let orders_to_cancel = {
-            let orders_guard = self.orders.read().await;
+            let orders_guard = self.account_open_book.read().await;
             orders_guard.fetch_all() // 假设已经有 fetch_all 方法返回所有打开的订单
         };
 
