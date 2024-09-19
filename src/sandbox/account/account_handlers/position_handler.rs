@@ -315,6 +315,8 @@ impl PositionHandler for SandboxAccount
 
         // 获取多头和空头仓位
         let (long_position, short_position) = self.get_position_both_ways(&instrument).await?;
+        println!("long position: {:?}", long_position);
+        println!("short position: {:?}", short_position);
 
         // 生成新的交易 ID
         let trade_id_value = self.client_trade_counter.fetch_add(1, Ordering::SeqCst);
@@ -338,7 +340,6 @@ impl PositionHandler for SandboxAccount
                         size: long_pos.meta.current_size,
                         fees: 0.0,
                     };
-
                     // 处理平仓
                     self.close_position(instrument.clone(), Side::Buy).await?;
                     self.process_trade(liquidation_trade).await?;
@@ -880,6 +881,7 @@ impl PositionHandler for SandboxAccount
         Ok(())
     }
 
+    /// FIXME 支持的金融工具太少了。
     /// 关闭仓位
     async fn close_position(&mut self, instrument: Instrument, side: Side) -> Result<(), ExchangeError>
     {
@@ -1771,53 +1773,59 @@ mod tests
         assert_eq!(new_position.liquidation_price.unwrap(), expected_liquidation_price);
     }
 
-    //
-    // #[tokio::test]
-    // async fn test_liquidation_trigger() {
-    //     let mut account = create_test_account().await;
-    //
-    //     let trade = ClientTrade {
-    //         exchange: Exchange::SandBox,
-    //         timestamp: 1690000000,
-    //         trade_id: ClientTradeId(5),
-    //         order_id: Some(OrderId(5)),
-    //         cid: None,
-    //         instrument: Instrument {
-    //             base: Token("BTC".to_string()),
-    //             quote: Token("USDT".to_string()),
-    //             kind: InstrumentKind::Perpetual,
-    //         },
-    //         side: Side::Buy,
-    //         price: 100.0,
-    //         size: 10.0,
-    //         fees: 0.1,
-    //     };
-    //
-    //     let instrument = trade.instrument.clone();
-    //     let preconfig = PerpetualPositionConfig {
-    //         pos_margin_mode: PositionMarginMode::Isolated,
-    //         leverage: 5.0,
-    //         position_direction_mode: PositionDirectionMode::Net,
-    //     };
-    //     account.positions.perpetual_pos_long_config.write().await.insert(instrument.clone(), preconfig);
-    //
-    //     // 创建多头仓位
-    //     account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await.unwrap();
-    //
-    //     // 触发清算的市场价格
-    //     let liquidation_trade = MarketTrade {
-    //         timestamp: 1690000100,
-    //         price: 50.0, // 设置为低于清算价格
-    //         ..Default::default() // 假设其他字段不重要
-    //     };
-    //
-    //     // 运行清算检查
-    //     account.check_and_handle_liquidation(&liquidation_trade).await.unwrap();
-    //
-    //     // 检查多头仓位是否已被完全移除
-    //     let long_positions = account.positions.perpetual_pos_long.read().await;
-    //     assert!(!long_positions.contains_key(&trade.instrument));
-    // }
+
+    #[tokio::test]
+    async fn test_liquidation_trigger() {
+        let mut account = create_test_account().await;
+
+        let trade = ClientTrade {
+            exchange: Exchange::SandBox,
+            timestamp: 1690000000,
+            trade_id: ClientTradeId(5),
+            order_id: Some(OrderId(5)),
+            cid: None,
+            instrument: Instrument {
+                base: Token("BTC".to_string()),
+                quote: Token("USDT".to_string()),
+                kind: InstrumentKind::Perpetual,
+            },
+            side: Side::Buy,
+            price: 100.0,
+            size: 10.0,
+            fees: 0.1,
+        };
+
+        let instrument = trade.instrument.clone();
+        let preconfig = PerpetualPositionConfig {
+            pos_margin_mode: PositionMarginMode::Isolated,
+            leverage: 5.0,
+            position_direction_mode: PositionDirectionMode::Net,
+        };
+        account.positions.perpetual_pos_long_config.write().await.insert(instrument.clone(), preconfig);
+
+        // 创建多头仓位
+        let pos = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await.unwrap();
+
+        println!("liquidation price is {}",pos.liquidation_price.unwrap());
+
+        // 触发清算的市场价格
+        let liquidation_triggering_trade = MarketTrade {
+            timestamp: 1690000100,
+            price: 11.0, // 设置为低于清算价格
+            exchange: "binance-futures".to_string(),
+            symbol:"BTC_USDT".to_string(),
+            amount:10.0,
+            side: "Buy".to_string(),
+        };
+
+        // 运行清算检查
+        account.check_and_handle_liquidation(&liquidation_triggering_trade).await.unwrap();
+
+        // 检查多头仓位是否已被完全移除
+        let long_positions = account.positions.perpetual_pos_long.read().await;
+        println!("long positions: {:?}", long_positions);
+        assert!(!long_positions.contains_key(&trade.instrument));
+    }
 
     #[tokio::test]
     async fn test_partial_close_with_margin_update() {

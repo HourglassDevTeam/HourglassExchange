@@ -34,8 +34,8 @@ impl MarketTrade
             }
         }
         else if parts.len() > 2 {
-            // 假设以 `future` 结尾的为期货
-            if parts.last().unwrap().to_lowercase().ends_with("future") {
+            // 假设以 `futures` 结尾的为期货
+            if parts.last().unwrap().to_lowercase().ends_with("futures") {
                 InstrumentKind::Future
             }
             else {
