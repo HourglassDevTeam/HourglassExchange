@@ -122,134 +122,99 @@ impl PositionHandler for HourglassAccount
 {
     /// Preconfigure a position by setting control fields.
     /// Ensures that the leverage does not exceed the account's maximum leverage.
-    async fn preconfigure_position(&mut self, config_request: ConfigurationRequest) -> Result<PositionConfig, ExchangeError> {
+    async fn preconfigure_position(&mut self, config_request: ConfigurationRequest) -> Result<PositionConfig, ExchangeError>
+    {
         let side = config_request.side;
 
         match config_request.instrument.kind {
-            InstrumentKind::Spot => Err(ExchangeError::UnsupportedInstrumentKind),
-            InstrumentKind::Perpetual => {
+            | InstrumentKind::Spot => Err(ExchangeError::UnsupportedInstrumentKind),
+            | InstrumentKind::Perpetual => {
                 let perpetual_config = PerpetualPositionConfig::from(config_request.clone());
 
                 // Enforce leverage limits
                 if perpetual_config.leverage > self.config.global_leverage_rate {
-                    return Err(ExchangeError::InvalidLeverage(format!(
-                        "Requested leverage {} exceeds account's maximum leverage {}",
-                        perpetual_config.leverage, self.config.global_leverage_rate
-                    )));
+                    return Err(ExchangeError::InvalidLeverage(format!("Requested leverage {} exceeds account's maximum leverage {}", perpetual_config.leverage, self.config.global_leverage_rate)));
                 }
 
                 // Insert the configuration into the appropriate position config map
                 match side {
-                    Side::Buy => {
-                        self.positions
-                            .perpetual_pos_long_config
-                            .write()
-                            .await
-                            .insert(config_request.instrument.clone(), perpetual_config.clone());
+                    | Side::Buy => {
+                        self.positions.perpetual_pos_long_config.write().await.insert(config_request.instrument.clone(), perpetual_config.clone());
                     }
-                    Side::Sell => {
-                        self.positions
-                            .perpetual_pos_short_config
-                            .write()
-                            .await
-                            .insert(config_request.instrument.clone(), perpetual_config.clone());
+                    | Side::Sell => {
+                        self.positions.perpetual_pos_short_config.write().await.insert(config_request.instrument.clone(), perpetual_config.clone());
                     }
                 }
                 Ok(PositionConfig::Perpetual(perpetual_config))
             }
-            InstrumentKind::Future => {
+            | InstrumentKind::Future => {
                 // Similar implementation for futures, including leverage checks if applicable
                 let future_config = FuturePositionConfig::from(config_request.clone());
 
                 // Enforce leverage limits for futures if applicable
                 // (Assuming futures also have leverage limits in your system)
                 if future_config.leverage > self.config.global_leverage_rate {
-                    return Err(ExchangeError::InvalidLeverage(format!(
-                        "Requested leverage {} exceeds account's maximum leverage {}",
-                        future_config.leverage, self.config.global_leverage_rate
-                    )));
+                    return Err(ExchangeError::InvalidLeverage(format!("Requested leverage {} exceeds account's maximum leverage {}", future_config.leverage, self.config.global_leverage_rate)));
                 }
 
                 match side {
-                    Side::Buy => {
-                        self.positions
-                            .futures_pos_long_config
-                            .write()
-                            .await
-                            .insert(config_request.instrument.clone(), future_config.clone());
+                    | Side::Buy => {
+                        self.positions.futures_pos_long_config.write().await.insert(config_request.instrument.clone(), future_config.clone());
                     }
-                    Side::Sell => {
-                        self.positions
-                            .futures_pos_short_config
-                            .write()
-                            .await
-                            .insert(config_request.instrument.clone(), future_config.clone());
+                    | Side::Sell => {
+                        self.positions.futures_pos_short_config.write().await.insert(config_request.instrument.clone(), future_config.clone());
                     }
                 }
                 Ok(PositionConfig::Future(future_config))
             }
-            InstrumentKind::CryptoLeveragedToken => {
+            | InstrumentKind::CryptoLeveragedToken => {
                 let leveraged_token_config = LeveragedTokenPositionConfig::from(config_request.clone());
 
                 // Enforce leverage limits for leveraged tokens if applicable
                 // (Assuming leveraged tokens also have leverage limits in your system)
                 if leveraged_token_config.leverage > self.config.global_leverage_rate {
-                    return Err(ExchangeError::InvalidLeverage(format!(
-                        "Requested leverage {} exceeds account's maximum leverage {}",
-                        leveraged_token_config.leverage, self.config.global_leverage_rate
-                    )));
+                    return Err(ExchangeError::InvalidLeverage(format!("Requested leverage {} exceeds account's maximum leverage {}",
+                                                                      leveraged_token_config.leverage, self.config.global_leverage_rate)));
                 }
 
                 match side {
-                    Side::Buy => {
-                        self.positions
-                            .margin_pos_long_config
-                            .write()
-                            .await
-                            .insert(config_request.instrument.clone(), leveraged_token_config.clone());
+                    | Side::Buy => {
+                        self.positions.margin_pos_long_config.write().await.insert(config_request.instrument.clone(), leveraged_token_config.clone());
                     }
-                    Side::Sell => {
-                        self.positions
-                            .margin_pos_short_config
-                            .write()
-                            .await
-                            .insert(config_request.instrument.clone(), leveraged_token_config.clone());
+                    | Side::Sell => {
+                        self.positions.margin_pos_short_config.write().await.insert(config_request.instrument.clone(), leveraged_token_config.clone());
                     }
                 }
                 Ok(PositionConfig::LeveragedToken(leveraged_token_config))
             }
-            InstrumentKind::CryptoOption => Err(ExchangeError::UnsupportedInstrumentKind),
-            _ => Err(ExchangeError::UnsupportedInstrumentKind),
+            | InstrumentKind::CryptoOption => Err(ExchangeError::UnsupportedInstrumentKind),
+            | _ => Err(ExchangeError::UnsupportedInstrumentKind),
         }
     }
 
-    async fn preconfigure_positions(
-        &mut self,
-        config_requests: Vec<ConfigurationRequest>,
-        response_tx: Sender<ConfigureInstrumentsResults>,
-    ) -> Result<Vec<PositionConfig>, ExchangeError> {
+    async fn preconfigure_positions(&mut self, config_requests: Vec<ConfigurationRequest>, response_tx: Sender<ConfigureInstrumentsResults>) -> Result<Vec<PositionConfig>, ExchangeError>
+    {
         let mut position_configs = Vec::new();
         let mut results = Vec::new();
 
         for config_request in config_requests {
             match self.preconfigure_position(config_request).await {
-                Ok(config) => {
+                | Ok(config) => {
                     results.push(Ok(config.clone()));
                     position_configs.push(config);
                 }
-                Err(e) => {
+                | Err(e) => {
                     results.push(Err(e));
                 }
             }
         }
 
         response_tx.send(results).unwrap_or_else(|_| {
-            eprintln!("Failed to send preconfigure_positions response");
-        });
+                                     eprintln!("Failed to send preconfigure_positions response");
+                                 });
 
         Ok(position_configs)
     }
-
 
     /// 获取指定 `Instrument` 的多头仓位
     async fn get_position_long(&self, instrument: &Instrument) -> Result<Option<Position>, ExchangeError>
@@ -686,7 +651,6 @@ impl PositionHandler for HourglassAccount
 
         Ok(())
     }
-
 
     async fn remove_position(&self, instrument: Instrument, side: Side) -> Option<Position>
     {
