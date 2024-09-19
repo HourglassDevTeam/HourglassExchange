@@ -1,4 +1,4 @@
-# ⏳ Hourglass [**中文用户点此**](https://github.com/arthur19q3/Hourglass/blob/master/README_CN.md)
+# ⏳ Hourglass [**中文用户移步**](https://github.com/arthur19q3/Hourglass/blob/master/README_CN.md)
 
 A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs/barter-rs).
 
