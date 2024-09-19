@@ -224,7 +224,7 @@ impl AccountConfigBuilder
     pub fn global_leverage_rate(mut self, global_leverage_rate: f64) -> Result<Self, ExchangeError>
     {
         // 假设杠杆率的合理范围是 1 到 100
-        if global_leverage_rate >= 1.0 && global_leverage_rate <= 100.0 {
+        if global_leverage_rate >= 1.0 && global_leverage_rate <= 125.0 {
             self.global_leverage_rate = Some(global_leverage_rate);
             Ok(self)
         }
@@ -254,7 +254,7 @@ impl AccountConfigBuilder
     /// NOTE 这里可以设置合法的`liquidation_threshold`限制
     pub fn liquidation_threshold(mut self, liquidation_threshold: f64) -> Result<Self, ExchangeError>
     {
-        if liquidation_threshold >= 0.8 && liquidation_threshold <= 0.999 {
+        if liquidation_threshold >= 0.75 && liquidation_threshold <= 0.999 {
             self.liquidation_threshold = Some(liquidation_threshold);
             Ok(self)
         }
