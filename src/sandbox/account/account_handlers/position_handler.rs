@@ -1934,6 +1934,6 @@ mod tests
         let positions = account.positions.perpetual_pos_long.read().await;
         let pos = positions.get(&trade.instrument).unwrap();
         assert_eq!(pos.meta.current_size, 5.0); // 剩余仓位为5
-        assert_eq!(pos.isolated_margin.unwrap(), 100.0);
+        assert_eq!(pos.isolated_margin.unwrap(), 100.0);  // 剩余保证金为100
     }
 }
