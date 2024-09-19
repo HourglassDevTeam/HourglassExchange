@@ -1,4 +1,3 @@
-
 # ⏳ Hourglass
 
 A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs/barter-rs).
@@ -15,3 +14,9 @@ A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs
 - **Crypto Futures and Options**: Trade futures and options on various cryptocurrencies, allowing for more complex trading strategies.
 - **Backtesting**: Supports both local and remote server-based backtesting, enabling users to test strategies with historical data.
 - **High Performance**: Optimized for high-frequency trading scenarios with low-latency operations.
+- **Configuration Parsing**: Supports parsing account settings from the `config.toml` file, allowing for flexible and easy configuration management.
+- **Feishu Reporting**: Includes features for reporting to Feishu (with use cases available, though not fully implemented yet).
+- **Position Closure Repository**: Supports a repository for managing and storing position closure data.
+- **Multiple Stablecoins**: Supports multiple stablecoins, providing users with a variety of stable currency options.
+- **Trade Data Backtesting**: Allows backtesting using only trade data, with future support planned for order book data.
+

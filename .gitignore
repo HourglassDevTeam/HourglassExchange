@@ -3,3 +3,4 @@
 /builds
 Cargo.lock
 /exportToHTML/
+.gitlab-ci.yml
