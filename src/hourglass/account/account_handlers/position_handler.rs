@@ -120,15 +120,25 @@ pub trait PositionHandler
 #[async_trait]
 impl PositionHandler for HourglassAccount
 {
-    /// Preconfigure a position by setting control fields.
-    /// Ensures that the leverage does not exceed the account's maximum leverage.
-    async fn preconfigure_position(&mut self, config_request: ConfigurationRequest) -> Result<PositionConfig, ExchangeError>
+    /// Before a `Position` is opened, ideally it is advised to pre-configure a position by setting control fields.
+    /// Ensures that the `leverage` the pre-config possesses does not exceed the account's global maximum leverage limit.
+    async fn preconfigure_position(&mut self, mut config_request: ConfigurationRequest) -> Result<PositionConfig, ExchangeError>
     {
         let side = config_request.side;
 
         match config_request.instrument.kind {
             | InstrumentKind::Spot => Err(ExchangeError::UnsupportedInstrumentKind),
             | InstrumentKind::Perpetual => {
+
+                // 如果没有提供position_margin_mode则使用系统默认设置
+                config_request.position_margin_mode
+                    .get_or_insert(self.config.global_position_margin_mode.clone());
+
+                // 如果没有提供position_direction_mode则使用系统默认设置
+                config_request.position_direction_mode
+                    .get_or_insert(self.config.global_position_direction_mode.clone());
+
+
                 let perpetual_config = PerpetualPositionConfig::from(config_request.clone());
 
                 // Enforce leverage limits
@@ -148,6 +158,16 @@ impl PositionHandler for HourglassAccount
                 Ok(PositionConfig::Perpetual(perpetual_config))
             }
             | InstrumentKind::Future => {
+
+
+                // 如果没有提供position_margin_mode则使用系统默认设置
+                config_request.position_margin_mode
+                    .get_or_insert(self.config.global_position_margin_mode.clone());
+
+                // 如果没有提供position_direction_mode则使用系统默认设置
+                config_request.position_direction_mode
+                    .get_or_insert(self.config.global_position_direction_mode.clone());
+
                 // Similar implementation for futures, including leverage checks if applicable
                 let future_config = FuturePositionConfig::from(config_request.clone());
 
@@ -168,6 +188,16 @@ impl PositionHandler for HourglassAccount
                 Ok(PositionConfig::Future(future_config))
             }
             | InstrumentKind::CryptoLeveragedToken => {
+
+
+                // 如果没有提供position_margin_mode则使用系统默认设置
+                config_request.position_margin_mode
+                    .get_or_insert(self.config.global_position_margin_mode.clone());
+
+                // 如果没有提供position_direction_mode则使用系统默认设置
+                config_request.position_direction_mode
+                    .get_or_insert(self.config.global_position_direction_mode.clone());
+
                 let leveraged_token_config = LeveragedTokenPositionConfig::from(config_request.clone());
 
                 // Enforce leverage limits for leveraged tokens if applicable

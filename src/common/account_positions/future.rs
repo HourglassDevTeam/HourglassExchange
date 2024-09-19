@@ -53,9 +53,9 @@ impl From<ConfigurationRequest> for FuturePositionConfig
 {
     fn from(config_request: ConfigurationRequest) -> Self
     {
-        FuturePositionConfig { pos_margin_mode: config_request.position_margin_mode,
+        FuturePositionConfig { pos_margin_mode: config_request.position_margin_mode.unwrap(),
                                leverage: config_request.leverage_rate,
-                               position_direction_mode: config_request.position_direction_mode }
+                               position_direction_mode: config_request.position_direction_mode.unwrap() }
     }
 }
 

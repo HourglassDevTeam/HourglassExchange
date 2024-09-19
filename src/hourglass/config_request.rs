@@ -18,6 +18,6 @@ pub struct ConfigurationRequest
     pub cid: Option<ClientOrderId>,
     pub leverage_rate: f64,
     pub side: Side,
-    pub position_margin_mode: PositionMarginMode,
-    pub position_direction_mode: PositionDirectionMode,
+    pub position_margin_mode: Option<PositionMarginMode>,
+    pub position_direction_mode: Option<PositionDirectionMode>,
 }

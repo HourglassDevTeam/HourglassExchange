@@ -207,7 +207,6 @@ impl AccountConfigBuilder
         self
     }
 
-    /// NOTE 这里可以设置合法的`funding_rate`限制
     pub fn funding_rate(mut self, funding_rate: f64) -> Result<Self, ExchangeError>
     {
         // 假设资金费率的合理范围是 -0.003 到 0.003
@@ -220,7 +219,6 @@ impl AccountConfigBuilder
         }
     }
 
-    /// NOTE 这里可以设置合法的`global_leverage_rate`限制
     pub fn global_leverage_rate(mut self, global_leverage_rate: f64) -> Result<Self, ExchangeError>
     {
         // 假设杠杆率的合理范围是 1 到 100
@@ -251,7 +249,6 @@ impl AccountConfigBuilder
         self
     }
 
-    /// NOTE 这里可以设置合法的`liquidation_threshold`限制
     pub fn liquidation_threshold(mut self, liquidation_threshold: f64) -> Result<Self, ExchangeError>
     {
         if liquidation_threshold >= 0.75 && liquidation_threshold <= 0.999 {
