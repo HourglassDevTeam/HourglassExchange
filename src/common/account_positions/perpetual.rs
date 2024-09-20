@@ -52,7 +52,7 @@ impl From<ConfigurationRequest> for PerpetualPositionConfig
     fn from(config_request: ConfigurationRequest) -> Self
     {
         PerpetualPositionConfig { pos_margin_mode: config_request.position_margin_mode.unwrap(),
-                                  leverage: config_request.leverage_rate,
+                                  leverage: config_request.leverage_rate.unwrap(),
                                   position_direction_mode: config_request.position_direction_mode.unwrap()   }
     }
 }

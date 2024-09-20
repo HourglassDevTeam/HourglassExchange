@@ -25,7 +25,7 @@ impl From<ConfigurationRequest> for LeveragedTokenPositionConfig
     fn from(config_request: ConfigurationRequest) -> Self
     {
         LeveragedTokenPositionConfig { pos_margin_mode: config_request.position_margin_mode.unwrap(),  // 提供默认值或根据需求处理 None
-                                       leverage: config_request.leverage_rate,                // 提供默认杠杆值，或根据需求处理 None
+                                       leverage: config_request.leverage_rate.unwrap(),                // 提供默认杠杆值，或根据需求处理 None
                                        position_mode: config_request.position_direction_mode.unwrap()  /* 提供默认值或根据需求处理 None */ }
     }
 }

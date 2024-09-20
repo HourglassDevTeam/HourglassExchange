@@ -138,6 +138,9 @@ impl PositionHandler for HourglassAccount
                 config_request.position_direction_mode
                     .get_or_insert(self.config.global_position_direction_mode.clone());
 
+                // 如果没有提供leverage_rate则使用系统默认设置
+                config_request.leverage_rate
+                    .get_or_insert(self.config.global_leverage_rate.clone());
 
                 let perpetual_config = PerpetualPositionConfig::from(config_request.clone());
 
@@ -168,6 +171,10 @@ impl PositionHandler for HourglassAccount
                 config_request.position_direction_mode
                     .get_or_insert(self.config.global_position_direction_mode.clone());
 
+                // 如果没有提供leverage_rate则使用系统默认设置
+                config_request.leverage_rate
+                    .get_or_insert(self.config.global_leverage_rate.clone());
+
                 // Similar implementation for futures, including leverage checks if applicable
                 let future_config = FuturePositionConfig::from(config_request.clone());
 
@@ -197,6 +204,10 @@ impl PositionHandler for HourglassAccount
                 // 如果没有提供position_direction_mode则使用系统默认设置
                 config_request.position_direction_mode
                     .get_or_insert(self.config.global_position_direction_mode.clone());
+
+                // 如果没有提供leverage_rate则使用系统默认设置
+                config_request.leverage_rate
+                    .get_or_insert(self.config.global_leverage_rate.clone());
 
                 let leveraged_token_config = LeveragedTokenPositionConfig::from(config_request.clone());
 
