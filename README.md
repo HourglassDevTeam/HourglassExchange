@@ -6,7 +6,7 @@ A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs
 
 ## ⚠️ Warning
 
-**HourGlass is under active development.** Please use with caution in production environments. Currently, only perpetual contracts and net positions are supported.
+**HourGlass is under active development.** Please use with caution in production environments. Currently, only perpetual contracts are supported.
 
 ## ✨ Features
 
