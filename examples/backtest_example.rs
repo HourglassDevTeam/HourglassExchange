@@ -75,8 +75,6 @@ async fn main()
     // Running the exchange in local mode in tokio runtime
     tokio::spawn(hourglass_exchange.run_local());
 
-    println!("[run_default_exchange] : Hourglass exchange run successfully on local mode.");
-
     let clickhouse_client = ClickHouseClient::new();
     let exchange = "binance";
     let instrument = "futures";
