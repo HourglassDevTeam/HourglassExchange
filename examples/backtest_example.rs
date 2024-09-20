@@ -17,17 +17,18 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{mpsc, Mutex, RwLock};
 use uuid::Uuid;
+use hourglass::hourglass::hourglass_client::HourglassClient;
 
 #[tokio::main]
 async fn main()
 {
 
     #[allow(unused)]
-    // create the channel
+    // create the channels
     let (event_hourglass_tx, mut event_hourglass_rx) = mpsc::unbounded_channel();
-    #[allow(unused)]
     let (mut request_tx, request_rx) = mpsc::unbounded_channel();
 
+    let hourglass_client = HourglassClient { request_tx: request_tx.clone() };
 
     // Creating initial positions with the updated structure
     let positions = AccountPositions::init();
@@ -68,8 +69,9 @@ async fn main()
         .expect("Failed to build HourglassExchange");
 
     println!(" HourglassExchange Initialized");
-    // Running the exchange in local mode
-    hourglass_exchange.run_local().await;
+
+    // Running the exchange in local mode in tokio runtime
+    tokio::spawn(hourglass_exchange.run_local());
 
     println!("[run_default_exchange] : Hourglass exchange run successfully on local mode.");
 
@@ -77,7 +79,8 @@ async fn main()
     let exchange = "binance";
     let instrument = "futures";
     let date = "2024_05_05";
-    // 建立数据循环
+
+    // build the data distributing loop
     let mut cursor = clickhouse_client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
     let start_time = Instant::now();
     while let Ok(Some(row)) = cursor.next().await {
