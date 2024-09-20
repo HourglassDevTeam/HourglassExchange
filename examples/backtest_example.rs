@@ -82,9 +82,10 @@ async fn main()
     tokio::spawn(hourglass_exchange.run_local());
 
     // build the data distributing loop
-    while let Ok(Some(row)) = cursor.clone().next().await {
-        let mut account = account_handle.lock().await;
-        let _ = account.handle_trade_data(&row);
-        println!("{:?}", row)
-    }
+    // NOTE 本循环应该建立在run_local中。在从client接受到LetItRoll后才会调用next方法。
+    // while let Ok(Some(row)) = cursor.next().await {
+    //     let mut account = account_handle.lock().await;
+    //     let _ = account.handle_trade_data(&row);
+    //     println!("{:?}", row)
+    // }
 }
