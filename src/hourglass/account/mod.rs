@@ -559,10 +559,15 @@ impl HourglassAccount
 
     pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExchangeError>>>)
     {
+        let self_arc = Arc::new(Mutex::new(self));
+
         let cancel_futures = cancel_requests.into_iter().map(|request| {
-                                                            let mut this = self.clone();
-                                                            async move { this.atomic_cancel(request).await }
-                                                        });
+            let self_clone = Arc::clone(&self_arc);
+            async move {
+                let mut guard = self_clone.lock().await;
+                guard.atomic_cancel(request).await
+            }
+        });
 
         // 等待所有的取消操作完成
         let cancel_results = join_all(cancel_futures).await;
@@ -627,6 +632,10 @@ impl HourglassAccount
             | Ok(event) => event,
             | Err(e) => return Err(e), // 如果更新余额时发生错误，返回错误
         };
+
+
+        // 未从account_open_book中删除对应的open订单.
+
 
         // 将订单从 `Order<Open>` 转换为 `Order<Cancelled>`
         let cancelled_order = Order::from(removed_order);

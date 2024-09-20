@@ -17,9 +17,9 @@ use std::{
     sync::atomic::{AtomicI64, Ordering},
 };
 
-/// 客户端针对一个 [`Instrument`] 的 [`InstrumentOrders`]。模拟客户端订单簿。
+/// 客户端针对一个 [`Instrument`] 的 [`OpenOrders`]。模拟客户端订单簿。
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
-pub struct InstrumentOrders
+pub struct OpenOrders
 {
     /// 在当前的代码设计中，batch_id 的递增仅在成功匹配订单并生成交易事件时发生
     // pub batch_id: i64,
@@ -58,7 +58,7 @@ pub fn calculate_fees(order: &Order<Open>, trade_quantity: f64, fees_percent: f6
 }
 
 /// 添加一个 [`Order<Open>`] 到买单或卖单中，取决于它的 [`Side`]。
-impl InstrumentOrders
+impl OpenOrders
 {
     pub fn add_order_open(&mut self, new_open_order: Order<Open>)
     {

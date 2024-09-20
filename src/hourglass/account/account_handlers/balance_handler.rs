@@ -319,10 +319,7 @@ impl BalanceHandler for HourglassAccount
     /// 判断client是否有足够的可用[`Balance`]来执行[`Order<RequestOpen>`]。
     fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExchangeError>
     {
-        println!("required_balance is {}",required_balance);
-
         let available = self.get_balance(token)?.available;
-        println!("available is {}",available);
         if available >= required_balance {
             println!("[has_sufficient_available_balance] : account has sufficient balance");
             Ok(())

@@ -13,7 +13,7 @@ use crate::{
     hourglass::{
         account::account_latency::{fluctuate_latency, AccountLatency},
         clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook,
-        instrument_orders::InstrumentOrders,
+        instrument_orders::OpenOrders,
     },
 };
 use async_trait::async_trait;
@@ -32,7 +32,7 @@ pub struct AccountOrders
     pub selectable_latencies: [i64; 20],
     pub request_counter: AtomicU64,
     pub order_counter: AtomicU64,
-    pub instrument_orders_map: DashMap<Instrument, InstrumentOrders>,
+    pub instrument_orders_map: DashMap<Instrument, OpenOrders>,
 }
 
 impl AccountOrders
@@ -80,14 +80,14 @@ impl AccountOrders
         Self { machine_id,
                order_counter: AtomicU64::new(0),
                request_counter: AtomicU64::new(0),
-               instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, InstrumentOrders::default())).collect(),
+               instrument_orders_map: instruments.into_iter().map(|instrument| (instrument, OpenOrders::default())).collect(),
                latency_generator: account_latency,
                selectable_latencies }
     }
 
-    /// 返回指定 [`Instrument`] 的 [`InstrumentOrders`] 的可变引用。
+    /// 返回指定 [`Instrument`] 的 [`OpenOrders`] 的可变引用。
 
-    pub fn get_ins_orders_mut(&self, instrument: &Instrument) -> Result<RefMut<Instrument, InstrumentOrders>, ExchangeError>
+    pub fn get_ins_orders_mut(&self, instrument: &Instrument) -> Result<RefMut<Instrument, OpenOrders>, ExchangeError>
     {
         self.instrument_orders_map
             .get_mut(instrument)
