@@ -29,7 +29,6 @@ use account_orders::AccountOrders;
 use atomic_float::AtomicF64;
 use chrono::Utc;
 use dashmap::{mapref::one::RefMut as DashMapRefMut, DashMap};
-use futures::future::join_all;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
@@ -168,6 +167,7 @@ impl AccountBuilder
                               account_margin: Arc::new(0.0.into()) })
     }
 }
+
 
 impl HourglassAccount
 {
@@ -559,19 +559,14 @@ impl HourglassAccount
 
     pub async fn cancel_orders(&mut self, cancel_requests: Vec<Order<RequestCancel>>, response_tx: Sender<Vec<Result<Order<Cancelled>, ExchangeError>>>)
     {
-        let self_arc = Arc::new(Mutex::new(self));
+        let mut results = Vec::with_capacity(cancel_requests.len());
 
-        let cancel_futures = cancel_requests.into_iter().map(|request| {
-            let self_clone = Arc::clone(&self_arc);
-            async move {
-                let mut guard = self_clone.lock().await;
-                guard.atomic_cancel(request).await
-            }
-        });
+        for request in cancel_requests {
+            let result = self.atomic_cancel(request).await;
+            results.push(result);
+        }
 
-        // 等待所有的取消操作完成
-        let cancel_results = join_all(cancel_futures).await;
-        response_tx.send(cancel_results).unwrap_or(());
+        response_tx.send(results).unwrap_or(());
     }
 
     /// 原子性取消订单并更新相关的账户状态。
@@ -604,24 +599,30 @@ impl HourglassAccount
     /// # 锁机制
     ///
     /// * 在查找和移除订单时，使用读锁以减少写锁的持有时间，避免阻塞其他操作。
-    pub async fn atomic_cancel(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExchangeError>
-    {
-        // 首先验证取消请求的合法性
+    pub async fn atomic_cancel(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExchangeError> {
+        // 验证取消请求的合法性
         Self::validate_order_request_cancel(&request)?;
 
-        // 使用读锁来获取订单，减少锁的持有时间
+        println!("Attempting to cancel order: {:?}", request);
+
+        // 使用写锁获取订单簿，以允许修改
         let removed_order = {
-            let orders_guard = self.account_open_book.read().await;
+            let orders_guard = self.account_open_book.write().await;
             let mut orders = orders_guard.get_ins_orders_mut(&request.instrument)?;
 
-            // 根据订单方向（买/卖）处理相应的订单集
+            // 打印当前订单簿状态
+            println!("Current orders before cancellation: {:?}", *orders);
+
+            // 使用 find_matching_order 查找并移除订单
             match request.side {
-                | Side::Buy => {
+                Side::Buy => {
                     let index = Self::find_matching_order(&orders.bids, &request)?;
+                    println!("Removing Buy Order at index: {}", index);
                     orders.bids.remove(index)
                 }
-                | Side::Sell => {
+                Side::Sell => {
                     let index = Self::find_matching_order(&orders.asks, &request)?;
+                    println!("Removing Sell Order at index: {}", index);
                     orders.asks.remove(index)
                 }
             }
@@ -629,13 +630,12 @@ impl HourglassAccount
 
         // 处理取消订单后的余额更新
         let balance_event = match self.apply_cancel_order_changes(&removed_order) {
-            | Ok(event) => event,
-            | Err(e) => return Err(e), // 如果更新余额时发生错误，返回错误
+            Ok(event) => event,
+            Err(e) => {
+                println!("Failed to apply balance changes: {:?}", e);
+                return Err(e); // 如果更新余额时发生错误，返回错误
+            },
         };
-
-
-        // 未从account_open_book中删除对应的open订单.
-
 
         // 将订单从 `Order<Open>` 转换为 `Order<Cancelled>`
         let cancelled_order = Order::from(removed_order);
@@ -644,16 +644,26 @@ impl HourglassAccount
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
         // 发送订单取消事件
-        let orders_cancelled_event = AccountEvent { exchange_timestamp,
-                                                    exchange: Exchange::Hourglass,
-                                                    kind: AccountEventKind::OrdersCancelled(vec![cancelled_order.clone()]) };
+        let orders_cancelled_event = AccountEvent {
+            exchange_timestamp,
+            exchange: Exchange::Hourglass,
+            kind: AccountEventKind::OrdersCancelled(vec![cancelled_order.clone()]),
+        };
 
         // 发送账户事件
         self.send_account_event(orders_cancelled_event)?;
         self.send_account_event(balance_event)?;
 
+        println!("Order successfully cancelled: {:?}", cancelled_order);
+
+        // 打印取消后的订单簿状态
+        let orders_guard = self.account_open_book.read().await;
+        let orders = orders_guard.get_ins_orders_mut(&cancelled_order.instrument)?;
+        println!("Current orders after cancellation: {:?}", *orders);
+
         Ok(cancelled_order)
     }
+
 
     pub async fn cancel_orders_all(&mut self, response_tx: Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>)
     {
@@ -704,28 +714,32 @@ impl HourglassAccount
     }
 
     /// 查找匹配的订单，根据 `OrderId` 和 `ClientOrderId` 匹配。
-    fn find_matching_order(orders: &[Order<Open>], request: &Order<RequestCancel>) -> Result<usize, ExchangeError>
-    {
-        orders.par_iter()
-              .position_any(|order| Self::order_ids_check(order, request))
-              .ok_or_else(|| ExchangeError::OrderNotFound { client_order_id: request.cid.clone(),
-                                                            order_id: request.state.id.clone() })
+    fn find_matching_order(orders: &[Order<Open>], request: &Order<RequestCancel>) -> Result<usize, ExchangeError> {
+        orders
+            .par_iter()
+            .position_any(|order| Self::order_ids_check(order, request))
+            .ok_or_else(|| ExchangeError::OrderNotFound {
+                client_order_id: request.cid.clone(),
+                order_id: request.state.id.clone(),
+            })
     }
 
+
     /// 判断订单是否匹配，根据 `OrderId` 或 `ClientOrderId` 进行匹配。
-    fn order_ids_check(order: &Order<Open>, request: &Order<RequestCancel>) -> bool
-    {
+    fn order_ids_check(order: &Order<Open>, request: &Order<RequestCancel>) -> bool {
+        // 处理 OrderId 的匹配
         let id_match = match &request.state.id {
-            | Some(req_id) => &order.state.id == req_id, // 直接比较 `OrderId`
-            | None => false,
+            Some(req_id) => &order.state.id == req_id, // 比较 `OrderId`
+            None => false,
         };
 
+        // 处理 ClientOrderId 的匹配
         let cid_match = match (&order.cid, &request.cid) {
-            | (Some(order_cid), Some(req_cid)) => order_cid == req_cid, // 比较 `ClientOrderId`
-            | _ => false,
+            (Some(order_cid), Some(req_cid)) => order_cid == req_cid, // 比较 `ClientOrderId`
+            _ => false,
         };
 
-        // 如果有 `OrderId` 或 `ClientOrderId` 匹配，说明订单匹配
+        // 如果 `OrderId` 或 `ClientOrderId` 匹配，则认为订单匹配
         id_match || cid_match
     }
 

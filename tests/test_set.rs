@@ -293,6 +293,9 @@ async fn test_5_cancel_buy_order(client: &HourglassClient, test_3_ids: Ids, even
             panic!("try_recv() consumed unexpected: {:?}", other);
         }
     }
+
+    let current_opens = client.fetch_orders_open().await;
+    println!("[test_5] : {:?}",current_opens);
 }
 #[allow(warnings)]
 
