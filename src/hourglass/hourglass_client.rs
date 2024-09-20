@@ -160,6 +160,7 @@ impl ClientExecution for HourglassClient
     // 实现 DepositTokens 的处理逻辑
     async fn deposit_tokens(&self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError>
     {
+        println!("begin to deposit tokens: {:?}", deposits);
         let (response_tx, response_rx) = oneshot::channel();
         self.request_tx
             .send(HourglassClientEvent::DepositTokens((deposits, response_tx)))

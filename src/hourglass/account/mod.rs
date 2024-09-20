@@ -789,7 +789,7 @@ mod tests
     async fn test_deposit_b_base()
     {
         let mut account = create_test_account().await;
-        let btc_amount = 0.5;
+        let btc_amount = 0.51;
 
         let balance = account.deposit_bitcoin(btc_amount).unwrap();
 

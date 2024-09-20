@@ -13,7 +13,7 @@ use hourglass::{
     },
     ClientExecution,
 };
-
+use hourglass::common::token::Token;
 use crate::util::{initial_balances, open_order, order_cancel_request, order_limit_cancelled, order_request_limit, run_sample_exchange};
 
 pub mod util;
@@ -298,20 +298,31 @@ async fn test_5_cancel_buy_order(client: &HourglassClient, test_3_ids: Ids, even
 #[allow(warnings)]
 
 // 6. 开两个限价买单，并检查是否发送了关于余额和新订单的 AccountEvents
-// NOTE 数值是否对的上？
-// NOTE 真的要开杠杆怎么处理？杠杆率怎么设置？
-
 async fn test_6_open_2x_limit_buy_orders(client: &HourglassClient, test_6_ids_1: Ids, test_6_ids_2: Ids, event_hourglass_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
 {
+    // Initialize the vector with the correct type
+    let mut tokens_to_be_deposited: Vec<(Token, f64)> = Vec::new();
+
+    // Create the Token instance
+    let usdt_token = Token::from("USDT");
+
+    // Push the tuple (Token, f64) into the vector
+    tokens_to_be_deposited.push((usdt_token, 70000.0));
+
+    // deposit 70000 USDT
+    let result = client.deposit_tokens(tokens_to_be_deposited).await;
+    println!("[test_6] : {:?}", result);
+    let balance = client.fetch_balances().await.unwrap();
+    println!("[test_6] : {:?}", balance);
     let opened_orders = client.open_orders(vec![order_request_limit(Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
                                                                     test_6_ids_1.cid.clone(),
                                                                     Side::Buy,
-                                                                    100.0,
+                                                                    16599.0,
                                                                     1.0),
                                                 order_request_limit(Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
                                                                     test_6_ids_2.cid.clone(),
                                                                     Side::Buy,
-                                                                    200.0,
+                                                                    16699.0,
                                                                     1.0),])
                               .await;
     println!("[test_6] : {:?}", opened_orders);
@@ -320,7 +331,7 @@ async fn test_6_open_2x_limit_buy_orders(client: &HourglassClient, test_6_ids_1:
                                           test_6_ids_1.cid.clone(),
                                           test_6_ids_1.id.clone(),
                                           Side::Buy,
-                                          100.0,
+                                          16599.0,
                                           1.0,
                                           0.0);
 
@@ -328,7 +339,7 @@ async fn test_6_open_2x_limit_buy_orders(client: &HourglassClient, test_6_ids_1:
                                           test_6_ids_2.cid.clone(),
                                           test_6_ids_2.id.clone(),
                                           Side::Buy,
-                                          200.0,
+                                          16699.0,
                                           1.0,
                                           0.0);
     println!("[test_6] : expected_order_new_1: {:?}", expected_order_new_1);
@@ -338,12 +349,10 @@ async fn test_6_open_2x_limit_buy_orders(client: &HourglassClient, test_6_ids_1:
     assert_eq!(opened_orders[0].clone().unwrap().cid, expected_order_new_1.cid);
     assert_eq!(opened_orders[1].clone().unwrap().cid, expected_order_new_2.cid);
 
-    let current_px = 1.0; // 与订单中的价格匹配
-                          // Check AccountEvent Balance for first order - quote currency has available balance decrease
     match event_hourglass_rx.try_recv() {
         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
                             .. }) => {
-            let expected = TokenBalance::new("USDT", Balance::new(200.0, 148.0));
+            let expected = TokenBalance::new("USDT", Balance::new(90000.0, 54902.0));
             assert_eq!(USDT_balance.balance.total, expected.balance.total);
             assert_eq!(USDT_balance.balance.available, expected.balance.available);
         }
@@ -368,8 +377,7 @@ async fn test_6_open_2x_limit_buy_orders(client: &HourglassClient, test_6_ids_1:
     match event_hourglass_rx.try_recv() {
         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
                             .. }) => {
-            // Expected USDT Balance.available = 9_900 - (200.0 * 1.0)
-            let expected = TokenBalance::new("USDT", Balance::new(200.0, 147.0));
+            let expected = TokenBalance::new("USDT", Balance::new(90000.0, 38203.0));
             assert_eq!(USDT_balance.balance.total, expected.balance.total);
             assert_eq!(USDT_balance.balance.available, expected.balance.available);
         }
