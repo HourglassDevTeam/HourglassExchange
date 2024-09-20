@@ -65,7 +65,7 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
                              cid: Some(ClientOrderId("test_cid".into())),
                              side: Side::Buy,
                              state: Open { id: OrderId(1234124124124123),
-                                           price: 100.0,
+                                           price: 16499.0,
                                            size: 1.0,
                                            filled_quantity: 0.0,
                                            order_role: OrderRole::Maker } };

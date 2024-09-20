@@ -64,9 +64,9 @@ async fn main()
     test_5_cancel_buy_order(&client, test_3_ids, &mut event_hourglass_rx).await;
     // //
     // // // 6. Open 2x LIMIT Buy Orders & assert on received AccountEvents
-    // let test_6_ids_1 = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
-    // let test_6_ids_2 = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
-    // test_6_open_2x_limit_buy_orders(&client, test_6_ids_1.clone(), test_6_ids_2, &mut event_hourglass_rx).await;
+    let test_6_ids_1 = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
+    let test_6_ids_2 = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
+    test_6_open_2x_limit_buy_orders(&client, test_6_ids_1.clone(), test_6_ids_2, &mut event_hourglass_rx).await;
 
     // 7. Send MarketEvent that exactly full matches 1x open Order (trade) and check AccountEvents
     //    for balances and trades
@@ -277,7 +277,7 @@ async fn test_5_cancel_buy_order(client: &HourglassClient, test_3_ids: Ids, even
     match event_hourglass_rx.try_recv() {
         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
                             .. }) => {
-            let expected = TokenBalance::new("USDT", Balance::new(20000.0, 1601.0)); // 这里没有正常返还之前花掉的钱。
+            let expected = TokenBalance::new("USDT", Balance::new(20000.0, 18000.0)); // 这里没有正常返还之前花掉的钱。
             println!("[test_5] : Balance event received.");
             assert_eq!(USDT_balance.balance.total, expected.balance.total);
             assert_eq!(USDT_balance.balance.available, expected.balance.available);

@@ -117,13 +117,17 @@ impl BalanceHandler for HourglassAccount
     {
         let updated_balance = match cancelled.side {
             | Side::Buy => {
+                println!("[apply_cancel_order_changes] : applying cancelled balance");
                 let mut balance = self.get_balance_mut(&cancelled.instrument.quote).expect("Balance existence checked when opening Order");
+                println!("[apply_cancel_order_changes] : balance before application of change: {:?}", *balance);
+                println!("[apply_cancel_order_changes] : cancelled order's price is : {:?}", cancelled.state.price);
                 balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
+                println!("[apply_cancel_order_changes] : balance after application of change: {:?}", *balance);
                 *balance
             }
             | Side::Sell => {
                 let mut balance = self.get_balance_mut(&cancelled.instrument.base).expect("Balance existence checked when opening Order");
-                balance.available += cancelled.state.remaining_quantity();
+                balance.available += cancelled.state.price * cancelled.state.remaining_quantity();
                 *balance
             }
         };
