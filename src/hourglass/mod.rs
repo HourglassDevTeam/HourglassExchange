@@ -44,6 +44,11 @@ impl HourglassExchange
         ExchangeBuilder::new()
     }
 
+
+    pub fn get_account(&self) -> Arc<Mutex<HourglassAccount>> {
+        Arc::clone(&self.account)
+    }
+
     /// 本地运行 [`HourglassExchange`] 并响应各种 [`HourglassClientEvent`]。
     pub async fn run_local(mut self)
     {

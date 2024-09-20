@@ -17,6 +17,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{mpsc, Mutex, RwLock};
 use uuid::Uuid;
+use hourglass::hourglass::account::account_handlers::trade_handler::TradeHandler;
 use hourglass::hourglass::hourglass_client::HourglassClient;
 
 #[tokio::main]
@@ -64,11 +65,12 @@ async fn main()
 
     // Initialize and configure HourglassExchange
     let hourglass_exchange = HourglassExchange::builder().event_hourglass_rx(request_rx)
-        .account(account_arc)
+        .account(account_arc.clone())
         .initiate()
         .expect("Failed to build HourglassExchange");
 
-    println!(" HourglassExchange Initialized");
+    // 通过 hourglass_exchange 访问 `account`
+    let account_handle = hourglass_exchange.get_account();
 
     // Running the exchange in local mode in tokio runtime
     tokio::spawn(hourglass_exchange.run_local());
@@ -84,6 +86,8 @@ async fn main()
     let mut cursor = clickhouse_client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
     let start_time = Instant::now();
     while let Ok(Some(row)) = cursor.next().await {
+        let mut account = account_handle.lock().await;
+        let _ = account.handle_trade_data(&row);
         println!("{:?}", row)
     }
     let duration = start_time.elapsed();
