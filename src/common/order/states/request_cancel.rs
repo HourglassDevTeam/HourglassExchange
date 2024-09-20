@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 
 /// `RequestCancel` 结构体表示一个取消订单的请求。
 ///
-/// 在 `RequestCancel` 结构体中只记录了 `OrderId`，原因是取消订单操作通常只需要知道
-/// 哪个订单需要被取消，无需其他额外信息。
+/// 在 `RequestCancel` 结构体中只记录了 `OrderId`，原因是取消订单操作通常只需要知道哪个订单需要被取消，无需其他额外信息。
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub struct RequestCancel
 {

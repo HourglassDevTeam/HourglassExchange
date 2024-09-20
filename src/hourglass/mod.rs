@@ -17,7 +17,7 @@ pub mod clickhouse_api;
 pub mod config_request;
 pub mod hourglass_client;
 pub mod hourglass_orderbook;
-pub mod open_orders;
+pub mod open_orders_book;
 pub mod risk_reserve;
 pub mod utils;
 pub mod ws_trade;
