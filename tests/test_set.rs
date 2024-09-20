@@ -43,7 +43,7 @@ async fn main()
     let (mut request_tx, request_rx) = mpsc::unbounded_channel();
 
     // 给定测试用的timestamp和machine_id和IDs
-    let timestamp = 1234124124124123u64;
+    let timestamp = 1233312345124u64;
     let machine_id = generate_machine_id().unwrap();
     let test_3_ids = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
 
@@ -99,8 +99,7 @@ async fn main()
     // .await;
     //
     // // 11. Cancel all open orders. Includes a partially filled sell order, and non-filled buy order.
-    // //    NOTE 只允许单独测试。
-    // test_11_cancel_all_orders(&client, test_6_ids_1, &mut event_hourglass_rx).await;
+    test_11_cancel_all_orders(&client, test_6_ids_1, &mut event_hourglass_rx).await;
     //
     // // 12. Fetch open orders (now that we've called cancel_all) and check it is empty
     // test_12_fetch_open_orders_and_check_empty(&client).await;
@@ -406,76 +405,25 @@ async fn test_6_open_2x_limit_buy_orders(client: &HourglassClient, test_6_ids_1:
         }
     }
 }
-//
-// #[allow(warnings)]
-// async fn test_11_cancel_all_orders(client: &HourglassClient, test_6_ids_1: Ids, event_hourglass_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
-// {
-//     let initial_base_balance = client.fetch_balances().await.unwrap();
-//     println!("[test_11] : Initial balances: {:?}", initial_base_balance);
-//     let open_orders = client.fetch_orders_open().await;
-//     println!("[test_11] : Current open orders: {:?}", open_orders);
-//
-//     // Cancel all orders (both the buy and sell orders)
-//     let cancelled_orders = client.cancel_orders(vec![order_cancel_request(Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
-//                                                                           test_6_ids_1.cid.clone(),
-//                                                                           Side::Buy,
-//                                                                           OrderId(1234124124124123)),])
-//                                  .await;
-//
-//     println!("[test_11] : {:?}", cancelled_orders);
-//
-//     // Check if the orders were properly cancelled
-//     for (cancelled, expected) in cancelled_orders.iter()
-//                                                  .zip(vec![order_limit_cancelled(Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
-//                                                                                  test_6_ids_1.cid.clone(),
-//                                                                                  Side::Buy,
-//                                                                                  test_6_ids_1.id.clone()),])
-//     {
-//         assert_eq!(cancelled.as_ref().unwrap(), &expected);
-//     }
-//
-//     // Check AccountEvents for order cancellations
-//     match event_hourglass_rx.try_recv() {
-//         | Ok(AccountEvent { kind: AccountEventKind::OrdersCancelled(cancelled),
-//                             .. }) => {
-//             println!("[test_11] : Orders cancelled event received.");
-//             assert_eq!(cancelled.len(), 1);
-//             assert_eq!(cancelled[0],
-//                        order_limit_cancelled(Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual)),
-//                                              test_6_ids_1.cid.clone(),
-//                                              Side::Buy,
-//                                              test_6_ids_1.id.clone(),));
-//         }
-//         | other => {
-//             panic!("[test_11] : Unexpected event: {:?}", other);
-//         }
-//     }
-//
-//     // Check AccountEvents for balance updates
-//     let current_px = 1.0;
-//     match event_hourglass_rx.try_recv() {
-//         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
-//                             .. }) => {
-//             let expected_balance = TokenBalance::new("USDT", Balance::new(200.0, 250.0, Some(current_px)));
-//             println!("[test_11] : Balance event received.");
-//             assert_eq!(USDT_balance.balance.total, expected_balance.balance.total);
-//             assert_eq!(USDT_balance.balance.available, expected_balance.balance.available);
-//         }
-//         | other => {
-//             panic!("[test_11] : Unexpected event for balance update: {:?}", other);
-//         }
-//     }
-//
-//     // Ensure no more unexpected events
-//     match event_hourglass_rx.try_recv() {
-//         | Err(mpsc::error::TryRecvError::Empty) => {
-//             println!("[test_11] : No additional events, as expected.");
-//         }
-//         | other => {
-//             panic!("[test_11] : Unexpected additional event: {:?}", other);
-//         }
-//     }
-// }
+
+
+#[allow(warnings)]
+async fn test_11_cancel_all_orders(client: &HourglassClient, test_6_ids_1: Ids, event_hourglass_rx: &mut mpsc::UnboundedReceiver<AccountEvent>) {
+    let initial_token_balances = client.fetch_balances().await.unwrap();
+    println!("[test_11] : Initial balances: {:?}", initial_token_balances);
+
+    let open_orders = client.fetch_orders_open().await;
+    println!("[test_11] : Current open orders: {:#?}", open_orders);
+
+    // Cancel all orders (both buy and sell orders)
+    let cancelled_orders = client.cancel_orders_all().await;
+    println!("[test_11] : Cancel all {:?}", cancelled_orders);
+
+    let actual_balances = client.fetch_balances().await.unwrap();
+    println!("[test_11] : actual balances: {:?}", actual_balances);
+
+
+}
 //
 // // 7. 发送 MarketEvent，该事件与 1x 开放订单（交易）完全匹配，并检查 AccountEvents 是否发送了余额和ClientTrade信息。
 // // 8. 获取未完成的订单并检查是否只剩下一个来自 test_6_order_cid_1 的限价买单。

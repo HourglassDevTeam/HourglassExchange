@@ -61,7 +61,7 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
     let test_order = Order { instruction: OrderInstruction::Limit,
                              exchange: Exchange::Hourglass,
                              instrument: instrument.clone(),
-                             timestamp: 1234124124124123, // Assumes a function to get current timestamp
+                             timestamp: 1233312345124, // Assumes a function to get current timestamp
                              cid: Some(ClientOrderId("test_cid".into())),
                              side: Side::Buy,
                              state: Open { id: OrderId(1234124124124123),
@@ -167,7 +167,7 @@ pub fn order_cancel_request<I, Id>(instrument: I, cid: ClientOrderId, side: Side
     Order { instruction: OrderInstruction::Cancel,
             exchange: Exchange::Hourglass,
             instrument: instrument.into(),
-            timestamp: 1234124124124123u64 as i64, // 使用当前时间戳
+            timestamp: 1233312345124u64 as i64, // 使用当前时间戳
             cid: Some(cid),
             side,
             state: RequestCancel::from(id) }
@@ -182,7 +182,7 @@ pub fn order_limit_cancelled<I, Id>(instrument: I, cid: ClientOrderId, side: Sid
     Order { instruction: OrderInstruction::Limit,
             exchange: Exchange::Hourglass,
             instrument: instrument.into(),
-            timestamp: 1234124124124123u64 as i64, // 使用当前时间戳
+            timestamp: 1233312345124u64 as i64, // 使用当前时间戳
             cid: Some(cid),
             side,
             state: Cancelled::from(id) }
