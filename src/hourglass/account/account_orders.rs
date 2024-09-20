@@ -13,7 +13,7 @@ use crate::{
     hourglass::{
         account::account_latency::{fluctuate_latency, AccountLatency},
         clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook,
-        instrument_orders::OpenOrders,
+        open_orders::OpenOrders,
     },
 };
 use async_trait::async_trait;
