@@ -194,7 +194,7 @@ pub fn create_test_perpetual_position(instrument: Instrument) -> PerpetualPositi
                                                               leverage: 1.0,
                                                               position_direction_mode: PositionDirectionMode::LongShort },
                         isolated_margin: None,
-                        liquidation_price: Some(0.0) }
+                        liquidation_price: 0.0 }
 }
 
 /// 创建一个测试用的 `FuturePosition` 实例，指定 `Side`。

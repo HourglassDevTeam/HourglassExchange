@@ -12,7 +12,7 @@ pub struct PerpetualPosition
     pub meta: PositionMeta,                  // 复合类型，包含静态数据、实时更新数据和静态更新数据
     pub pos_config: PerpetualPositionConfig, // 静态数据
     pub isolated_margin: Option<f64>,
-    pub liquidation_price: Option<f64>, // 实时更新 NOTE : 需要持续更新吗
+    pub liquidation_price: f64, // 实时更新 NOTE : 需要持续更新吗
 }
 
 impl PerpetualPosition
@@ -20,7 +20,7 @@ impl PerpetualPosition
     /// 更新平仓价格
     pub fn update_liquidation_price(&mut self, new_price: f64)
     {
-        self.liquidation_price = Some(new_price);
+        self.liquidation_price = new_price;
     }
 
     /// 更新静态数据部分
@@ -108,7 +108,7 @@ impl PerpetualPositionBuilder
         Some(PerpetualPosition { meta: self.meta?,
                                  pos_config: self.pos_config?,
                                  isolated_margin: None,
-                                 liquidation_price: Some(self.liquidation_price?) })
+                                 liquidation_price: self.liquidation_price? })
     }
 }
 
@@ -148,8 +148,8 @@ mod tests
                                                                                      leverage: 1.0,
                                                                                      position_direction_mode: PositionDirectionMode::LongShort },
                                                isolated_margin: None,
-                                               liquidation_price: Some(100.0) };
+                                               liquidation_price: 100.0 };
         position.update_liquidation_price(150.0);
-        assert_eq!(position.liquidation_price, Some(150.0));
+        assert_eq!(position.liquidation_price, 150.0);
     }
 }

@@ -512,7 +512,8 @@ impl PositionHandler for HourglassAccount
         let new_position = PerpetualPosition { meta,
                                                pos_config: perpetual_config.clone(),
                                                isolated_margin, // This will be None for Cross mode.
-                                               liquidation_price: Some(liquidation_price) };
+                                               liquidation_price
+        };
 
         // 根据买卖方向将仓位插入相应的仓位列表
         match trade.side {
@@ -823,14 +824,14 @@ impl PositionHandler for HourglassAccount
                             self.account_margin.fetch_add(margin_to_add, Ordering::SeqCst);
 
                             // 更新清算价格
-                            position.liquidation_price = Some(trade.price * (1.0 - self.config.liquidation_threshold / position.pos_config.leverage));
+                            position.liquidation_price = trade.price * (1.0 - self.config.liquidation_threshold / position.pos_config.leverage);
                         }
                         | PositionMarginMode::Isolated => {
                             // 更新 Isolated 模式下的保证金
                             self.update_isolated_margin(&mut position, &trade).await;
 
                             // 更新清算价格
-                            position.liquidation_price = Some(trade.price * (1.0 - self.config.liquidation_threshold / position.pos_config.leverage));
+                            position.liquidation_price = trade.price * (1.0 - self.config.liquidation_threshold / position.pos_config.leverage);
                         }
                     }
 
@@ -855,13 +856,13 @@ impl PositionHandler for HourglassAccount
                             self.account_margin.fetch_add(margin_to_add, Ordering::SeqCst);
 
                             // 更新清算价格
-                            position.liquidation_price = Some(trade.price * (1.0 + self.config.liquidation_threshold / position.pos_config.leverage));
+                            position.liquidation_price = trade.price * (1.0 + self.config.liquidation_threshold / position.pos_config.leverage);
                         }
                         | PositionMarginMode::Isolated => {
                             self.update_isolated_margin(&mut position, &trade).await;
 
                             // 更新清算价格
-                            position.liquidation_price = Some(trade.price * (1.0 + self.config.liquidation_threshold / position.pos_config.leverage));
+                            position.liquidation_price = trade.price * (1.0 + self.config.liquidation_threshold / position.pos_config.leverage);
                         }
                     }
 
@@ -944,53 +945,54 @@ impl PositionHandler for HourglassAccount
         // 生成新的交易 ID
         let trade_id_value = self.client_trade_counter.fetch_add(1, Ordering::SeqCst);
         let trade_id = ClientTradeId(trade_id_value);
-
         // 检查并处理多头仓位
         if let Some(Position::Perpetual(long_pos)) = long_position {
-            if let Some(liquidation_price) = long_pos.liquidation_price {
-                if trade.price <= liquidation_price && trade.parse_side() == Side::Sell {
-                    // 生成平仓的 `ClientTrade`
-                    let liquidation_trade = ClientTrade { exchange: Exchange::Hourglass,
-                                                          timestamp: trade.timestamp,
-                                                          trade_id,
-                                                          order_id: None,
-                                                          cid: None,
-                                                          instrument: instrument.clone(),
-                                                          side: Side::Sell,
-                                                          price: trade.price,
-                                                          size: long_pos.meta.current_size,
-                                                          fees: 0.0 };
-                    // 处理平仓
-                    self.liquidate_position_by_trade(&mut Position::Perpetual(long_pos), Side::Buy).await?;
-                    self.process_trade(liquidation_trade).await?;
-                    return Ok(());
-                }
+            if trade.price <= long_pos.liquidation_price && trade.parse_side() == Side::Sell {
+                // 生成平仓的 `ClientTrade`
+                let liquidation_trade = ClientTrade {
+                    exchange: Exchange::Hourglass,
+                    timestamp: trade.timestamp,
+                    trade_id,
+                    order_id: None,
+                    cid: None,
+                    instrument: instrument.clone(),
+                    side: Side::Sell,
+                    price: trade.price,
+                    size: long_pos.meta.current_size,
+                    fees: 0.0
+                };
+
+                // 处理平仓
+                self.liquidate_position_by_trade(&mut Position::Perpetual(long_pos), Side::Buy).await?;
+                self.process_trade(liquidation_trade).await?;
+                return Ok(());
             }
         }
 
         // 检查并处理空头仓位
         if let Some(Position::Perpetual(short_pos)) = short_position {
-            if let Some(liquidation_price) = short_pos.liquidation_price {
-                if trade.price >= liquidation_price && trade.parse_side() == Side::Buy {
-                    // 生成平仓的 `ClientTrade`
-                    let liquidation_trade = ClientTrade { exchange: Exchange::Hourglass,
-                                                          timestamp: trade.timestamp,
-                                                          trade_id,
-                                                          order_id: None,
-                                                          cid: None,
-                                                          instrument: instrument.clone(),
-                                                          side: Side::Buy,
-                                                          price: trade.price,
-                                                          size: short_pos.meta.current_size,
-                                                          fees: 0.0 };
+            if trade.price >= short_pos.liquidation_price && trade.parse_side() == Side::Buy {
+                // 生成平仓的 `ClientTrade`
+                let liquidation_trade = ClientTrade {
+                    exchange: Exchange::Hourglass,
+                    timestamp: trade.timestamp,
+                    trade_id,
+                    order_id: None,
+                    cid: None,
+                    instrument: instrument.clone(),
+                    side: Side::Buy,
+                    price: trade.price,
+                    size: short_pos.meta.current_size,
+                    fees: 0.0
+                };
 
-                    // 处理平仓
-                    self.liquidate_position_by_trade(&mut Position::Perpetual(short_pos), Side::Sell).await?;
-                    self.process_trade(liquidation_trade).await?;
-                    return Ok(());
-                }
+                // 处理平仓
+                self.liquidate_position_by_trade(&mut Position::Perpetual(short_pos), Side::Sell).await?;
+                self.process_trade(liquidation_trade).await?;
+                return Ok(());
             }
         }
+
 
         Ok(())
     }
@@ -1850,7 +1852,7 @@ mod tests
         let new_position = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await.unwrap();
 
         // 验证清算价格
-        assert_eq!(new_position.liquidation_price.unwrap(), 91.);
+        assert_eq!(new_position.liquidation_price, 91.);
     }
 
     #[tokio::test]
@@ -1881,7 +1883,7 @@ mod tests
         let new_position = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await.unwrap();
 
         // 验证清算价格
-        assert_eq!(new_position.liquidation_price.unwrap(), 82.);
+        assert_eq!(new_position.liquidation_price, 82.);
     }
 
     #[tokio::test]
@@ -1911,7 +1913,7 @@ mod tests
         // 创建多头仓位
         let pos = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await.unwrap();
 
-        println!("liquidation price is {}", pos.liquidation_price.unwrap());
+        println!("liquidation price is {}", pos.liquidation_price);
 
         // 触发清算的市场价格
         let liquidation_triggering_trade = MarketTrade { timestamp: 1690000100,
