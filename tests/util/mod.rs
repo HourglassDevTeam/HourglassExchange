@@ -121,8 +121,8 @@ pub async fn initial_balances() -> HashMap<Token, Balance>
     let mut balances = HashMap::new();
     let token1 = Token::from("ETH");
     let token2 = Token::from("USDT");
-    balances.insert(token1.clone(), Balance::new(100.0, 50.0));
-    balances.insert(token2.clone(), Balance::new(200.0, 150.0));
+    balances.insert(token1.clone(), Balance::new(10000.0, 5000.0));
+    balances.insert(token2.clone(), Balance::new(20000.0, 18000.0));
     balances
 }
 
