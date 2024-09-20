@@ -43,8 +43,8 @@ pub enum PositionHandling
     CloseComplete,
     CloseCompleteAndReverse
     {
-        reverse_size: f64,
-    }, // 使用命名字段来说明 Option<f64> 的含义
+        remaining_size: f64,
+    },
     UpdateExisting,
 }
 
@@ -478,7 +478,7 @@ impl PositionHandler for HourglassAccount
         // 创建 PositionMeta 和新的 PerpetualPosition
         let meta = match handle_type {
             | PositionHandling::OpenBrandNewPosition => PositionMeta::create_from_trade(&trade),
-            | CloseCompleteAndReverse { reverse_size } => PositionMeta::create_from_trade_with_remaining(&trade, reverse_size),
+            | CloseCompleteAndReverse { remaining_size: reverse_size } => PositionMeta::create_from_trade_with_remaining(&trade, reverse_size),
             | _ => return Err(ExchangeError::Hourglass("Not supposed to create any position here.".into())),
         };
 
@@ -631,7 +631,7 @@ impl PositionHandler for HourglassAccount
                         Ok(PositionHandling::CloseComplete)
                     }
                     else if current_size < trade.size {
-                        Ok(CloseCompleteAndReverse { reverse_size: trade.size - current_size })
+                        Ok(CloseCompleteAndReverse { remaining_size: trade.size - current_size })
                     }
                     else {
                         Ok(PositionHandling::ClosePartial)
@@ -680,7 +680,7 @@ impl PositionHandler for HourglassAccount
                 println!("executing PositionHandling::CloseComplete");
                 self.close_position(trade.instrument.clone(), trade.side).await?;
             }
-            | PositionHandling::CloseCompleteAndReverse { reverse_size } => {
+            | PositionHandling::CloseCompleteAndReverse { remaining_size: reverse_size } => {
                 println!("executing PositionHandling::CloseCompleteAndReverse");
                 self.close_and_reverse_position(trade, reverse_size).await?;
             }
@@ -1000,7 +1000,7 @@ impl PositionHandler for HourglassAccount
     {
         self.close_position(trade.instrument.clone(), trade.side).await?;
         // Ignore the returned `PerpetualPosition`
-        let _ = self.create_perpetual_position(trade.clone(), CloseCompleteAndReverse { reverse_size: remaining }).await?;
+        let _ = self.create_perpetual_position(trade.clone(), CloseCompleteAndReverse { remaining_size: remaining }).await?;
         Ok(())
     }
 
