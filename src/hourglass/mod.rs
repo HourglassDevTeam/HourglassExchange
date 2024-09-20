@@ -9,8 +9,11 @@ use crate::{
 use account::HourglassAccount;
 use mpsc::UnboundedReceiver;
 use std::sync::Arc;
+use clickhouse::query::RowCursor;
 use tokio::sync::{mpsc, Mutex};
 use warp::Filter;
+use crate::common::datafeed::market_event::MarketEvent;
+use crate::hourglass::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 
 pub mod account;
 pub mod clickhouse_api;
@@ -21,20 +24,18 @@ pub mod open_orders_book;
 pub mod risk_reserve;
 pub mod utils;
 pub mod ws_trade;
-// pub enum TradeEventSource {
-//     RealTime(UnboundedReceiver<MarketEvent<MarketTrade>>),
-//     Backtest(RowCursor<MarketTrade>),
-// }
+
+pub enum DataSource {
+    RealTime(UnboundedReceiver<MarketEvent<MarketTrade>>),
+    Backtest(RowCursor<MarketTrade>),
+}
 
 pub struct HourglassExchange
     where HourglassAccount: PositionHandler + TradeHandler + BalanceHandler
 {
-    /// data_source could be added here as a daughter struct with variants.
-    // #[allow(dead_code)]
-    // pub data_source: TradeEventSource,
     pub event_hourglass_rx: UnboundedReceiver<HourglassClientEvent>,
-    // pub market_event_tx: UnboundedReceiver<MarketEvent<MarketTrade>>,
     pub account: Arc<Mutex<HourglassAccount>>,
+    pub data_source: DataSource,
 }
 
 impl HourglassExchange
@@ -132,8 +133,9 @@ impl Default for ExchangeBuilder
     {
         let (_tx, rx) = mpsc::unbounded_channel();
         Self { event_hourglass_rx: Some(rx),
-               account: None /* market_event_tx: None,
-                              * data_source: None, */ }
+               account: None,
+            data_source: None,
+        }
     }
 }
 pub struct ExchangeBuilder
@@ -141,7 +143,7 @@ pub struct ExchangeBuilder
     pub(crate) event_hourglass_rx: Option<UnboundedReceiver<HourglassClientEvent>>,
     pub(crate) account: Option<Arc<Mutex<HourglassAccount>>>,
     // pub(crate) market_event_tx: Option<UnboundedReceiver<MarketEvent<MarketTrade>>>,
-    // pub(crate) data_source: Option<TradeEventSource>,
+    pub(crate) data_source: Option<DataSource>,
 }
 
 impl ExchangeBuilder
@@ -149,14 +151,20 @@ impl ExchangeBuilder
     pub fn new() -> Self
     {
         Self { event_hourglass_rx: None,
-               account: None /* market_event_tx: None,
-                              * data_source: None, */ }
+               account: None,
+            data_source: None,}
     }
 
     pub fn event_hourglass_rx(self, value: UnboundedReceiver<HourglassClientEvent>) -> Self
     {
         Self { event_hourglass_rx: Some(value),
                ..self }
+    }
+
+    pub fn data_source(self, value: DataSource) -> Self
+    {
+        Self { data_source: Some(value),
+            ..self }
     }
 
     pub fn account(self, value: Arc<Mutex<HourglassAccount>>) -> Self
@@ -168,7 +176,9 @@ impl ExchangeBuilder
     {
         Ok(HourglassExchange { event_hourglass_rx: self.event_hourglass_rx.ok_or_else(|| ExchangeError::BuilderIncomplete("event_hourglass_rx".to_string()))?,
                                // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::BuilderIncomplete("market_event_tx".to_string()))?,
-                               account: self.account.ok_or_else(|| ExchangeError::BuilderIncomplete("account".to_string()))? })
+                               account: self.account.ok_or_else(|| ExchangeError::BuilderIncomplete("account".to_string()))?,
+            data_source: self.data_source.ok_or_else(|| ExchangeError::BuilderIncomplete("data_source".to_string()))?,
+        })
     }
 
     // pub fn trade_event_source(self, value: TradeEventSource) -> Self

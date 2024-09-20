@@ -9,7 +9,7 @@ use hourglass::hourglass::account::account_orders::AccountOrders;
 use hourglass::hourglass::account::HourglassAccount;
 use hourglass::hourglass::clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook;
 use hourglass::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
-use hourglass::hourglass::HourglassExchange;
+use hourglass::hourglass::{HourglassExchange, DataSource};
 use hourglass::test_utils::create_test_account_configuration;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicI64;
@@ -63,31 +63,28 @@ async fn main()
         account_event_tx: event_hourglass_tx,
         account_margin: Arc::new(Default::default()) }));
 
+    let clickhouse_client = ClickHouseClient::new();
+    let exchange = "binance";
+    let instrument = "futures";
+    let date = "2024_05_05";
+    let mut cursor = clickhouse_client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
+
     // Initialize and configure HourglassExchange
     let hourglass_exchange = HourglassExchange::builder().event_hourglass_rx(request_rx)
         .account(account_arc.clone())
+        .data_source(DataSource::Backtest(cursor))
         .initiate()
         .expect("Failed to build HourglassExchange");
 
     // 通过 hourglass_exchange 访问 `account`
     let account_handle = hourglass_exchange.get_account();
-
     // Running the exchange in local mode in tokio runtime
     tokio::spawn(hourglass_exchange.run_local());
 
-    let clickhouse_client = ClickHouseClient::new();
-    let exchange = "binance";
-    let instrument = "futures";
-    let date = "2024_05_05";
-
     // build the data distributing loop
-    let mut cursor = clickhouse_client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
-    let start_time = Instant::now();
-    while let Ok(Some(row)) = cursor.next().await {
+    while let Ok(Some(row)) = cursor.clone().next().await {
         let mut account = account_handle.lock().await;
         let _ = account.handle_trade_data(&row);
         println!("{:?}", row)
     }
-    let duration = start_time.elapsed();
-    println!("ClickhousePublicTrade data fetched in: {:?}", duration);
 }

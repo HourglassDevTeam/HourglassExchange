@@ -7,7 +7,7 @@ async fn main()
     let client = ClickHouseClient::new();
     let exchange = "binance";
     let instrument = "futures";
-    let date = "2024_05_05";
+    let date = "2024_08_22";
 
     // EXAMPLE 1 MANUALLY BUILD THE QUERY
     // let database_name = client.construct_database_name(exchange, instrument, "trades");
