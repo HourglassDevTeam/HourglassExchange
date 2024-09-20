@@ -128,9 +128,7 @@ mod tests
     use crate::{
         common::{
             account_positions::{position_id::PositionId, PositionDirectionMode, PositionMarginMode},
-            balance::{Balance, TokenBalance},
             instrument::{kind::InstrumentKind, Instrument},
-            token::Token,
             Side,
         },
         Exchange,
@@ -142,7 +140,7 @@ mod tests
         let mut position = FuturePosition { meta: PositionMeta { position_id: PositionId(123124124124124),
                                                                  enter_ts: 1625247600,
                                                                  update_ts: 1625247601,
-                                                                 exit_balance: TokenBalance::new(Token::from("BTC"), Balance::new(0.0, 0.0, Some(0.0))),
+                                                                 // exit_balance: TokenBalance::new(Token::from("BTC"), Balance::new(0.0, 0.0, Some(0.0))),
                                                                  exchange: Exchange::Hourglass,
                                                                  instrument: Instrument::new("BTC", "USDT", InstrumentKind::Spot),
                                                                  side: Side::Buy,

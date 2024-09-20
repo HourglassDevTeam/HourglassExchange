@@ -35,6 +35,7 @@ use hourglass::{
     test_utils::create_test_account_configuration,
     Exchange,
 };
+use hourglass::hourglass::clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook;
 
 /// Initializes and runs a sample exchange with predefined settings and a test order.
 pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<AccountEvent>, event_hourglass_rx: mpsc::UnboundedReceiver<HourglassClientEvent>)
@@ -43,8 +44,8 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
     let balances = DashMap::new();
     let token1 = Token::from("ETH");
     let token2 = Token::from("USDT");
-    balances.insert(token1.clone(), Balance::new(100.0, 50.0, Some(1.0)));
-    balances.insert(token2.clone(), Balance::new(200.0, 150.0, Some(1.0)));
+    balances.insert(token1.clone(), Balance::new(10000.0, 5000.0));
+    balances.insert(token2.clone(), Balance::new(20000.0, 18000.0));
 
     // Creating initial positions with the updated structure
     let positions = AccountPositions::init();
@@ -78,6 +79,13 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
 
     // Wrap the AccountOrders in Arc<RwLock> as required by HourglassAccount struct
     let orders_arc = Arc::new(RwLock::new(account_orders));
+    let mut single_level_order_books = HashMap::new();
+    single_level_order_books.insert(Instrument { base: Token::new("ETH".to_string()),
+        quote: Token::new("USDT".to_string()),
+        kind: InstrumentKind::Perpetual },
+                                    SingleLevelOrderBook { latest_bid: 16305.0,
+                                        latest_ask: 16499.0,
+                                        latest_price: 0.0 });
 
     // Instantiate HourglassAccount and wrap in Arc<Mutex> for shared access
     let account_arc = Arc::new(Mutex::new(HourglassAccount { current_session: Uuid::new_v4(),
@@ -86,7 +94,7 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
                                                              exchange_timestamp: AtomicI64::new(1234567),
                                                              config: create_test_account_configuration(),
                                                              account_open_book: orders_arc,
-                                                             single_level_order_book: Arc::new(Mutex::new(HashMap::new())),
+        single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
                                                              balances,
                                                              positions,
                                                              exited_positions: closed_positions,
@@ -113,8 +121,8 @@ pub async fn initial_balances() -> HashMap<Token, Balance>
     let mut balances = HashMap::new();
     let token1 = Token::from("ETH");
     let token2 = Token::from("USDT");
-    balances.insert(token1.clone(), Balance::new(100.0, 50.0, Some(1.0)));
-    balances.insert(token2.clone(), Balance::new(200.0, 150.0, Some(1.0)));
+    balances.insert(token1.clone(), Balance::new(100.0, 50.0));
+    balances.insert(token2.clone(), Balance::new(200.0, 150.0));
     balances
 }
 

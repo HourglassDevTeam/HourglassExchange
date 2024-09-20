@@ -23,7 +23,7 @@ impl TokenBalance
 pub struct Balance
 {
     pub time: DateTime<Utc>,
-    pub current_price: Option<f64>, // NOTE 当前价格 newly added on 1st Aug 2024
+    // pub current_price: Option<f64>, // NOTE 当前价格 newly added on 1st Aug 2024
     pub total: f64,                 // 总额
     pub available: f64,             // 可用余额
 }
@@ -31,12 +31,12 @@ pub struct Balance
 impl Balance
 {
     /// 构造一个新的[`Balance`]。
-    pub fn new(total: f64, available: f64, current_price: Option<f64>) -> Self
+    pub fn new(total: f64, available: f64) -> Self
     {
         Self { time: Utc::now(),
                total,
-               available,
-               current_price }
+               available
+                }
     }
 
     /// 计算使用过的余额（`total` - `available`）。
@@ -86,7 +86,7 @@ mod tests
     fn token_balance_new_should_create_token_balance()
     {
         let token = Token::from("BTC");
-        let balance = Balance::new(100.0, 50.0, Some(20000.0));
+        let balance = Balance::new(100.0, 50.0);
         let token_balance = TokenBalance::new(token.clone(), balance);
         assert_eq!(token_balance.token, token);
         assert_eq!(token_balance.balance, balance);
@@ -95,23 +95,22 @@ mod tests
     #[test]
     fn balance_new_should_create_balance()
     {
-        let balance = Balance::new(100.0, 50.0, Some(20000.0));
+        let balance = Balance::new(100.0, 50.0);
         assert_eq!(balance.total, 100.0);
         assert_eq!(balance.available, 50.0);
-        assert_eq!(balance.current_price, Some(20000.0));
     }
 
     #[test]
     fn balance_used_should_return_used_balance()
     {
-        let balance = Balance::new(100.0, 50.0, Some(20000.0));
+        let balance = Balance::new(100.0, 50.0);
         assert_eq!(balance.used(), 50.0);
     }
 
     #[test]
     fn balance_apply_should_apply_balance_delta()
     {
-        let mut balance = Balance::new(100.0, 50.0, Some(20000.0));
+        let mut balance = Balance::new(100.0, 50.0);
         let delta = BalanceDelta::new(10.0, 5.0);
         let _ = balance.apply(delta);
         assert_eq!(balance.total, 110.0);

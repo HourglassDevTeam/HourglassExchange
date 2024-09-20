@@ -1,4 +1,3 @@
-use crate::common::balance::Balance;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -12,7 +11,7 @@ pub struct PositionMeta
     pub position_id: PositionId,      // 静态数据
     pub enter_ts: i64,                // 静态数据
     pub update_ts: i64,               // 实时更新
-    pub exit_balance: TokenBalance,   // 静态更新（退出时更新）当一个仓位被平仓（即完全退出）时，该仓位所涉及的资产或资金的最终状态。 CONSIDER  do we retrieve it from the TokenBalance or simply calculate it?
+    // pub exit_balance: TokenBalance,   // 静态更新（退出时更新）当一个仓位被平仓（即完全退出）时，该仓位所涉及的资产或资金的最终状态。 CONSIDER  do we retrieve it from the TokenBalance or simply calculate it?
     pub exchange: Exchange,           // 静态数据
     pub instrument: Instrument,       // 静态数据
     pub side: Side,                   // 静态数据
@@ -64,7 +63,7 @@ impl PositionMeta
         PositionMeta { position_id: PositionId::new(&trade.instrument, trade.timestamp),
                        enter_ts: trade.timestamp,
                        update_ts: trade.timestamp,
-                       exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, Some(0.0))),
+                       // exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, Some(0.0))),
                        exchange: trade.exchange,
                        instrument: trade.instrument.clone(),
                        side: trade.side,
@@ -82,7 +81,7 @@ impl PositionMeta
         PositionMeta { position_id: PositionId::new(&trade.instrument, trade.timestamp),
                        enter_ts: trade.timestamp,
                        update_ts: trade.timestamp,
-                       exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, Some(0.0))),
+                       // exit_balance: TokenBalance::new(trade.instrument.base.clone(), Balance::new(0.0, 0.0, Some(0.0))),
                        exchange: trade.exchange.clone(),
                        instrument: trade.instrument.clone(),
                        side: trade.side,                 // 直接使用传入的side
@@ -277,7 +276,7 @@ impl PositionMetaBuilder
         Ok(PositionMeta { position_id: self.position_id.ok_or("position_id is required")?,
                           enter_ts: self.enter_ts.ok_or("enter_ts is required")?,
                           update_ts: self.update_ts.ok_or("update_ts is required")?,
-                          exit_balance: self.exit_balance.ok_or("exit_balance is required")?,
+                          // exit_balance: self.exit_balance.ok_or("exit_balance is required")?,
                           exchange: self.exchange.ok_or("exchange is required")?,
                           instrument: self.instrument.ok_or("instrument is required")?,
                           side: self.side.ok_or("side is required")?,

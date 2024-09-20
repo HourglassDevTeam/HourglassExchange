@@ -9,9 +9,9 @@ use std::str::FromStr;
 #[derive(Debug, Serialize, Deserialize, Row)]
 pub struct SingleLevelOrderBook
 {
-    pub(crate) latest_bid: f64,
-    pub(crate) latest_ask: f64,
-    pub(crate) latest_price: f64, // 记录最新的交易价格
+    pub latest_bid: f64,
+    pub latest_ask: f64,
+    pub latest_price: f64, // 记录最新的交易价格
 }
 
 pub trait OrderBookUpdater

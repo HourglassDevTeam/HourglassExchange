@@ -3,7 +3,7 @@ use crate::{
         account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode},
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
-        instrument::{kind::InstrumentKind, Instrument},
+        instrument::{ Instrument},
         order::{
             identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id},
             order_instructions::OrderInstruction,
@@ -187,7 +187,7 @@ impl HourglassAccount
         for token_str in tokens {
             let token = Token(token_str);
             self.balances.entry(token.clone()).or_insert_with(|| Balance { time: Utc::now(),
-                                                                           current_price: Some(1.0), // 假设初始价格为 1.0，具体根据实际情况调整
+                                                                           // current_price: Some(1.0), // 假设初始价格为 1.0，具体根据实际情况调整
                                                                            total: 0.0,
                                                                            available: 0.0 });
         }
@@ -210,7 +210,7 @@ impl HourglassAccount
     {
         let mut balance = self.balances.entry(token.clone()).or_insert_with(|| {
                                                                 Balance { time: Utc::now(),
-                                                                          current_price: Some(1.0), // 假设稳定币价格为1.0
+                                                                          // current_price: Some(1.0), // 假设稳定币价格为1.0
                                                                           total: 0.0,
                                                                           available: 0.0 }
                                                             });
@@ -409,29 +409,29 @@ impl HourglassAccount
         Ok(())
     }
 
-    #[allow(dead_code)]
-    // 辅助函数，用于获取当前市场价格 // NOTE 要处理不同的InstrumentKind,现在是不对的
-    async fn get_current_price(&self, order: &Order<RequestOpen>) -> Result<f64, ExchangeError>
-    {
-        match order.instrument.kind {
-            | InstrumentKind::Spot => match order.side {
-                | Side::Buy => {
-                    let token = &order.instrument.base;
-                    let balance = self.get_balance(token)?;
-                    Ok(balance.current_price.expect("Price for Spot Buy is missing"))
-                }
-                | Side::Sell => {
-                    let token = &order.instrument.quote;
-                    let balance = self.get_balance(token)?;
-                    Ok(balance.current_price.expect("Price for Spot Sell is missing"))
-                }
-            },
-            // 对于其他种类的 instrument，暂时未处理
-            | _ => {
-                todo!("Handling for other InstrumentKind is not yet implemented.");
-            }
-        }
-    }
+    // #[allow(dead_code)]
+    // // 辅助函数，用于获取当前市场价格 // NOTE 要处理不同的InstrumentKind,现在是不对的
+    // async fn get_current_price(&self, order: &Order<RequestOpen>) -> Result<f64, ExchangeError>
+    // {
+    //     match order.instrument.kind {
+    //         | InstrumentKind::Spot => match order.side {
+    //             | Side::Buy => {
+    //                 let token = &order.instrument.base;
+    //                 let balance = self.get_balance(token)?;
+    //                 Ok(balance.current_price.expect("Price for Spot Buy is missing"))
+    //             }
+    //             | Side::Sell => {
+    //                 let token = &order.instrument.quote;
+    //                 let balance = self.get_balance(token)?;
+    //                 Ok(balance.current_price.expect("Price for Spot Sell is missing"))
+    //             }
+    //         },
+    //         // 对于其他种类的 instrument，暂时未处理
+    //         | _ => {
+    //             todo!("Handling for other InstrumentKind is not yet implemented.");
+    //         }
+    //     }
+    // }
 
     pub async fn atomic_open(&mut self, order: Order<RequestOpen>) -> Result<Order<Open>, ExchangeError>
     {
@@ -443,6 +443,9 @@ impl HourglassAccount
         // 将锁的作用域限制在这个块内， 通过和订单簿比较价格来判断是潜在的 Taker 还是 Maker。
         let order_role = {
             let mut order_books_lock = self.single_level_order_book.lock().await;
+            println!("[attempt_atomic_open] order_books_lock: {:?}", order_books_lock);
+            println!("instrument is {:#?}",order.instrument);
+
             let order_book = order_books_lock.get_mut(&order.instrument).unwrap(); // 引用的生命周期延长
 
             let orders_guard = self.account_open_book.read().await;
@@ -738,6 +741,7 @@ mod tests
         common::order::{identification::OrderId, states::request_open::RequestOpen},
         test_utils::create_test_account,
     };
+    use crate::common::instrument::kind::InstrumentKind;
 
     #[tokio::test]
     async fn test_validate_order_request_open()

@@ -1,7 +1,6 @@
 use crate::{
     common::{
         account_positions::{position_id::PositionId, position_meta::PositionMeta},
-        balance::Balance,
         instrument::Instrument,
         Side,
     },
@@ -18,7 +17,7 @@ pub struct PositionExit
     pub side: Side,              // 静态数据
     pub position_id: PositionId, // 仓位的唯一标识符，由交易工具和进入时间戳生成。
     pub exit_ts: i64,            // 触发 仓位平仓的 [`Order`] 的时间戳。
-    pub exit_balance: Balance,   // 在退出仓位时计算的投资组合 [`Balance`]。
+    // pub exit_balance: Balance,   // 在退出仓位时计算的投资组合 [`Balance`]。
     pub exit_fees: f64,          // 退出仓位时产生的所有费用类型及其关联的费用。
     pub exit_fees_total: f64,
     pub exit_avg_price_gross: f64,         // 不包含 exit_fees_total 的退出平均价格。
@@ -55,7 +54,7 @@ impl PositionExit
                        side: position_meta.side,                                                        // 从 PositionMeta 获取静态数据
                        position_id: position_meta.position_id.clone(),                                  // 获取仓位的唯一标识符
                        exit_ts: position_meta.update_ts,                                                // 应该使用推出时候的交易时间辍
-                       exit_balance: Balance::new(exit_quantity, exit_value_gross, Some(realised_pnl)), // 计算平仓时的余额信息 NOTE 不前不确定。
+                       // exit_balance: Balance::new(exit_quantity, exit_value_gross, Some(realised_pnl)), // 计算平仓时的余额信息 NOTE 不前不确定。
                        exit_fees: position_meta.current_fees_total,                                     // 使用 PositionMeta 中累计的费用
                        exit_fees_total: position_meta.current_fees_total,                               // 平仓时的总费用
                        exit_avg_price_gross: position_meta.current_avg_price_gross,                     // 平仓时的价格
