@@ -66,6 +66,7 @@ impl HourglassExchange
                     match event {
                         HourglassClientEvent::LetItRoll => {
                             if let Some(row) = self.process_next_data().await {
+                                println!("processing LetItRoll");
                                 let mut account = self.account.lock().await;
                                 let _ = account.handle_trade_data(&row);
                             } else {
