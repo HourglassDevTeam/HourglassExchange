@@ -151,6 +151,7 @@ async fn main()
                                                              account_event_tx: event_hourglass_tx,
                                                              account_margin: Arc::new(Default::default()) }));
 
+    // Sample cursor building
     let clickhouse_client = ClickHouseClient::new();
     let exchange = "binance";
     let instrument = "futures";

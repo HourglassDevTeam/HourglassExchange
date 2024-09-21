@@ -22,3 +22,59 @@ A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs
 - **Multiple Stablecoins**: Supports multiple stablecoins, providing users with a variety of stable currency options.
 - **Trade Data Backtesting**: Allows backtesting using only trade data, with future support planned for order book data.
 - **Liquidation Mechanism**: Supports a liquidation mechanism with configurable liquidation thresholds, enabling automated risk management and position liquidation when certain conditions are met.
+
+
+
+## 📜 Code Example
+
+以下是 Hourglass 的代码示例：
+
+```rust
+use dashmap::DashMap;
+use hourglass::{
+    common::{
+        account_positions::{exited_positions::AccountExitedPositions, AccountPositions},
+        instrument::{kind::InstrumentKind, Instrument},
+        token::Token,
+    },
+    hourglass::{
+        account::{
+            account_latency::{AccountLatency, FluctuationMode},
+            account_orders::AccountOrders,
+            HourglassAccount,
+        },
+        clickhouse_api::{datatype::single_level_order_book::SingleLevelOrderBook, queries_operations::ClickHouseClient},
+        hourglass_client::HourglassClient,
+        DataSource, HourglassExchange,
+    },
+    test_utils::create_test_account_configuration,
+    ClientExecution,
+};
+use std::{
+    collections::HashMap,
+    sync::{atomic::AtomicI64, Arc},
+    time::Duration,
+};
+use tokio::{
+    sync::{mpsc, Mutex, RwLock},
+    time,
+};
+use uuid::Uuid;
+
+#[tokio::main]
+async fn main()
+{
+    let (event_hourglass_tx, event_hourglass_rx) = mpsc::unbounded_channel();
+    let (request_tx, request_rx) = mpsc::unbounded_channel();
+    let (market_tx, market_rx) = mpsc::unbounded_channel();
+
+    let mut hourglass_client = HourglassClient { request_tx: request_tx.clone(), market_event_rx: market_rx };
+
+    let positions = AccountPositions::init();
+    let closed_positions = AccountExitedPositions::init();
+
+    let mut single_level_order_books = HashMap::new();
+    single_level_order_books.insert(Instrument { base: Token::new("ETH".to_string()), quote: Token::new("USDT".to_string()), kind: InstrumentKind::Perpetual }, SingleLevelOrderBook { latest_bid: 16305.0, latest_ask: 16499.0, latest_price: 0.0 });
+
+    let account_arc = Arc::new(Mutex::new(HourglassAccount { current_session: Uuid::new_v4(), machine_id: 0, client_trade_counter: AtomicI64::new(0), ... }));
+}
