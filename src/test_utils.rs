@@ -1,4 +1,3 @@
-
 use crate::{
     common::{
         account_positions::{
@@ -9,7 +8,7 @@ use crate::{
             position_meta::PositionMeta,
             AccountPositions, PositionDirectionMode, PositionMarginMode,
         },
-        balance::{Balance},
+        balance::Balance,
         instrument::{
             kind::{InstrumentKind, InstrumentKind::Perpetual},
             Instrument,
@@ -164,10 +163,10 @@ pub async fn create_test_account() -> HourglassAccount
                        positions,
                        exited_positions: closed_positions,
                        account_open_book: Arc::new(RwLock::new(AccountOrders::new(machine_id, vec![Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual))], AccountLatency { fluctuation_mode:
-                                                                                                                                                                            FluctuationMode::Sine,
-                                                                                                                                                                        maximum: 300,
-                                                                                                                                                                        minimum: 0,
-                                                                                                                                                                        current_value: 0 }).await)),
+                                                                                                                                                                                       FluctuationMode::Sine,
+                                                                                                                                                                                   maximum: 300,
+                                                                                                                                                                                   minimum: 0,
+                                                                                                                                                                                   current_value: 0 }).await)),
                        single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
                        account_margin: Arc::new(0.0.into()) }
 }

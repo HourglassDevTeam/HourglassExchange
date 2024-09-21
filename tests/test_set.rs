@@ -1,10 +1,11 @@
-use tokio::sync::{mpsc, mpsc::UnboundedSender};
+use crate::util::{initial_balances, open_order, order_cancel_request, order_limit_cancelled, order_request_limit, run_sample_exchange};
 use hourglass::{
     common::{
         balance::{Balance, TokenBalance},
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
         order::identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id, OrderId},
+        token::Token,
         Side,
     },
     hourglass::{
@@ -13,8 +14,7 @@ use hourglass::{
     },
     ClientExecution,
 };
-use hourglass::common::token::Token;
-use crate::util::{initial_balances, open_order, order_cancel_request, order_limit_cancelled, order_request_limit, run_sample_exchange};
+use tokio::sync::{mpsc, mpsc::UnboundedSender};
 
 pub mod util;
 
@@ -49,10 +49,11 @@ async fn main()
     let test_3_ids = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
 
     // 创建并运行 SimulatedExchange
-    tokio::spawn(run_sample_exchange(event_hourglass_tx, request_rx,market_tx));
+    tokio::spawn(run_sample_exchange(event_hourglass_tx, request_rx, market_tx));
 
     // 初始化 HourglassClient，用于与交易所进行交互
-    let client = HourglassClient { request_tx: request_tx.clone(), market_event_rx: market_rx};
+    let client = HourglassClient { request_tx: request_tx.clone(),
+                                   market_event_rx: market_rx };
     // // 1. 获取初始的未成交订单列表，检查当前没有未成交订单
     test_1_fetch_initial_orders_and_check_empty(&client).await;
     // // 2. 获取初始的余额信息，检查当前没有发生任何余额变化事件
@@ -101,7 +102,6 @@ async fn main()
     //
     // // 11. Cancel all open orders. Includes a partially filled sell order, and non-filled buy order.
     test_11_cancel_all_orders(&client, test_6_ids_1, &mut event_hourglass_rx).await;
-    //
     // // 12. Fetch open orders (now that we've called cancel_all) and check it is empty
     // test_12_fetch_open_orders_and_check_empty(&client).await;
     //
@@ -191,7 +191,7 @@ async fn test_3_open_limit_buy_order(client: &HourglassClient, test_3_ids: Ids, 
     match event_hourglass_rx.recv().await {
         | Some(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
                               .. }) => {
-            let expected = TokenBalance::new("USDT", Balance::new(20000.0, 18000.0 -16499.0));
+            let expected = TokenBalance::new("USDT", Balance::new(20000.0, 18000.0 - 16499.0));
             assert_balance_equal_ignore_time(&USDT_balance.balance, &expected.balance);
         }
         | other => {
@@ -224,8 +224,7 @@ async fn test_3_open_limit_buy_order(client: &HourglassClient, test_3_ids: Ids, 
 #[allow(warnings)]
 // 4. 发送一个不匹配任何未完成订单的 MarketTrade，并检查是否没有发送 AccountEvents。注意，这一部分可能存在问题，因为它没有使用`new_market_trade`。
 // NOTE 其次还要检查一下available的数值处理是否正确。
-fn test_4_send_market_trade_that_does_not_match_any_open_order(event_simulated_tx: &mut UnboundedSender<HourglassClientEvent>,
-                                                               event_hourglass_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
+fn test_4_send_market_trade_that_does_not_match_any_open_order(event_simulated_tx: &mut UnboundedSender<HourglassClientEvent>, event_hourglass_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
 {
     let new_market_trade = MarketTrade { exchange: "binance-futures".into(),
                                          symbol: "1000RATSUSDT".into(),
@@ -296,7 +295,7 @@ async fn test_5_cancel_buy_order(client: &HourglassClient, test_3_ids: Ids, even
     }
 
     let current_opens = client.fetch_orders_open().await;
-    println!("[test_5] : {:?}",current_opens);
+    println!("[test_5] : {:?}", current_opens);
 }
 #[allow(warnings)]
 
@@ -409,9 +408,9 @@ async fn test_6_open_2x_limit_buy_orders(client: &HourglassClient, test_6_ids_1:
     }
 }
 
-
 #[allow(warnings)]
-async fn test_11_cancel_all_orders(client: &HourglassClient, test_6_ids_1: Ids, event_hourglass_rx: &mut mpsc::UnboundedReceiver<AccountEvent>) {
+async fn test_11_cancel_all_orders(client: &HourglassClient, test_6_ids_1: Ids, event_hourglass_rx: &mut mpsc::UnboundedReceiver<AccountEvent>)
+{
     let initial_token_balances = client.fetch_balances().await.unwrap();
     println!("[test_11] : Initial balances: {:?}", initial_token_balances);
 
@@ -424,10 +423,7 @@ async fn test_11_cancel_all_orders(client: &HourglassClient, test_6_ids_1: Ids, 
 
     let actual_balances = client.fetch_balances().await.unwrap();
     println!("[test_11] : actual balances: {:?}", actual_balances);
-
-
 }
-//
 // // 7. 发送 MarketEvent，该事件与 1x 开放订单（交易）完全匹配，并检查 AccountEvents 是否发送了余额和ClientTrade信息。
 // // 8. 获取未完成的订单并检查是否只剩下一个来自 test_6_order_cid_1 的限价买单。
 // // 9. 开启 2 个限价卖单，并检查 AccountEvents 是否发送了余额和订单更新信息。
@@ -435,4 +431,3 @@ async fn test_11_cancel_all_orders(client: &HourglassClient, test_6_ids_1: Ids, 
 // // 12. 获取未完成的订单（既然我们已经调用了取消所有订单），并检查它是否为空。
 // // 13. 尝试用资金不足的情况失败地开设限价买单。
 // // 14. 使用不正确的订单ID尝试取消限价订单时，订单未找到失败。
-

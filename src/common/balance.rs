@@ -24,8 +24,8 @@ pub struct Balance
 {
     pub time: DateTime<Utc>,
     // pub current_price: Option<f64>, // NOTE 当前价格 newly added on 1st Aug 2024
-    pub total: f64,                 // 总额
-    pub available: f64,             // 可用余额
+    pub total: f64,     // 总额
+    pub available: f64, // 可用余额
 }
 
 impl Balance
@@ -33,10 +33,7 @@ impl Balance
     /// 构造一个新的[`Balance`]。
     pub fn new(total: f64, available: f64) -> Self
     {
-        Self { time: Utc::now(),
-               total,
-               available
-                }
+        Self { time: Utc::now(), total, available }
     }
 
     /// 计算使用过的余额（`total` - `available`）。

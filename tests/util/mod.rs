@@ -29,19 +29,19 @@ use hourglass::{
             account_orders::AccountOrders,
             HourglassAccount,
         },
+        clickhouse_api::{
+            datatype::{clickhouse_trade_data::MarketTrade, single_level_order_book::SingleLevelOrderBook},
+            queries_operations::ClickHouseClient,
+        },
         hourglass_client::HourglassClientEvent,
-        HourglassExchange,
+        DataSource, HourglassExchange,
     },
     test_utils::create_test_account_configuration,
     Exchange,
 };
-use hourglass::hourglass::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
-use hourglass::hourglass::clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook;
-use hourglass::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
-use hourglass::hourglass::DataSource;
 
 /// Initializes and runs a sample exchange with predefined settings and a test order.
-pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<AccountEvent>, event_hourglass_rx: mpsc::UnboundedReceiver<HourglassClientEvent>,market_event_tx: mpsc::UnboundedSender<MarketTrade>)
+pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<AccountEvent>, event_hourglass_rx: mpsc::UnboundedReceiver<HourglassClientEvent>, market_event_tx: mpsc::UnboundedSender<MarketTrade>)
 {
     // Creating initial balances
     let balances = DashMap::new();
@@ -84,11 +84,11 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
     let orders_arc = Arc::new(RwLock::new(account_orders));
     let mut single_level_order_books = HashMap::new();
     single_level_order_books.insert(Instrument { base: Token::new("ETH".to_string()),
-        quote: Token::new("USDT".to_string()),
-        kind: InstrumentKind::Perpetual },
+                                                 quote: Token::new("USDT".to_string()),
+                                                 kind: InstrumentKind::Perpetual },
                                     SingleLevelOrderBook { latest_bid: 16305.0,
-                                        latest_ask: 16499.0,
-                                        latest_price: 0.0 });
+                                                           latest_ask: 16499.0,
+                                                           latest_price: 0.0 });
 
     // Instantiate HourglassAccount and wrap in Arc<Mutex> for shared access
     let account_arc = Arc::new(Mutex::new(HourglassAccount { current_session: Uuid::new_v4(),
@@ -97,7 +97,7 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
                                                              exchange_timestamp: AtomicI64::new(1234567),
                                                              config: create_test_account_configuration(),
                                                              account_open_book: orders_arc,
-        single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
+                                                             single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
                                                              balances,
                                                              positions,
                                                              exited_positions: closed_positions,
@@ -111,7 +111,9 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
 
     // Initialize and configure HourglassExchange
     let hourglass_exchange = HourglassExchange::builder().event_hourglass_rx(event_hourglass_rx)
-                                                         .account(account_arc).market_event_tx(market_event_tx).data_source(DataSource::Backtest(cursor))
+                                                         .account(account_arc)
+                                                         .market_event_tx(market_event_tx)
+                                                         .data_source(DataSource::Backtest(cursor))
                                                          .initiate()
                                                          .expect("Failed to build HourglassExchange");
 
@@ -119,7 +121,6 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
     hourglass_exchange.start().await;
     println!("[run_default_exchange] : Hourglass exchange run successfully on local mode.");
 }
-
 
 /// 定义沙箱交易所支持的Instrument
 #[allow(dead_code)]

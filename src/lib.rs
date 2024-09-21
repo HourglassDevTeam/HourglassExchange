@@ -1,4 +1,3 @@
-use std::fmt::{Debug, Display, Formatter};
 use crate::{
     common::{
         account_positions::{AccountPositions, Position},
@@ -17,6 +16,7 @@ use async_trait::async_trait;
 use common::order::states::open::Open;
 use mpsc::UnboundedSender;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Debug, Display, Formatter};
 use tokio::sync::mpsc;
 
 pub mod common;

@@ -129,18 +129,14 @@ impl PositionHandler for HourglassAccount
         match config_request.instrument.kind {
             | InstrumentKind::Spot => Err(ExchangeError::UnsupportedInstrumentKind),
             | InstrumentKind::Perpetual => {
-
                 // 如果没有提供position_margin_mode则使用系统默认设置
-                config_request.position_margin_mode
-                    .get_or_insert(self.config.global_position_margin_mode.clone());
+                config_request.position_margin_mode.get_or_insert(self.config.global_position_margin_mode.clone());
 
                 // 如果没有提供position_direction_mode则使用系统默认设置
-                config_request.position_direction_mode
-                    .get_or_insert(self.config.global_position_direction_mode.clone());
+                config_request.position_direction_mode.get_or_insert(self.config.global_position_direction_mode.clone());
 
                 // 如果没有提供leverage_rate则使用系统默认设置
-                config_request.leverage_rate
-                    .get_or_insert(self.config.global_leverage_rate.clone());
+                config_request.leverage_rate.get_or_insert(self.config.global_leverage_rate.clone());
 
                 let perpetual_config = PerpetualPositionConfig::from(config_request.clone());
 
@@ -161,19 +157,14 @@ impl PositionHandler for HourglassAccount
                 Ok(PositionConfig::Perpetual(perpetual_config))
             }
             | InstrumentKind::Future => {
-
-
                 // 如果没有提供position_margin_mode则使用系统默认设置
-                config_request.position_margin_mode
-                    .get_or_insert(self.config.global_position_margin_mode.clone());
+                config_request.position_margin_mode.get_or_insert(self.config.global_position_margin_mode.clone());
 
                 // 如果没有提供position_direction_mode则使用系统默认设置
-                config_request.position_direction_mode
-                    .get_or_insert(self.config.global_position_direction_mode.clone());
+                config_request.position_direction_mode.get_or_insert(self.config.global_position_direction_mode.clone());
 
                 // 如果没有提供leverage_rate则使用系统默认设置
-                config_request.leverage_rate
-                    .get_or_insert(self.config.global_leverage_rate.clone());
+                config_request.leverage_rate.get_or_insert(self.config.global_leverage_rate.clone());
 
                 // Similar implementation for futures, including leverage checks if applicable
                 let future_config = FuturePositionConfig::from(config_request.clone());
@@ -195,19 +186,14 @@ impl PositionHandler for HourglassAccount
                 Ok(PositionConfig::Future(future_config))
             }
             | InstrumentKind::CryptoLeveragedToken => {
-
-
                 // 如果没有提供position_margin_mode则使用系统默认设置
-                config_request.position_margin_mode
-                    .get_or_insert(self.config.global_position_margin_mode.clone());
+                config_request.position_margin_mode.get_or_insert(self.config.global_position_margin_mode.clone());
 
                 // 如果没有提供position_direction_mode则使用系统默认设置
-                config_request.position_direction_mode
-                    .get_or_insert(self.config.global_position_direction_mode.clone());
+                config_request.position_direction_mode.get_or_insert(self.config.global_position_direction_mode.clone());
 
                 // 如果没有提供leverage_rate则使用系统默认设置
-                config_request.leverage_rate
-                    .get_or_insert(self.config.global_leverage_rate.clone());
+                config_request.leverage_rate.get_or_insert(self.config.global_leverage_rate.clone());
 
                 let leveraged_token_config = LeveragedTokenPositionConfig::from(config_request.clone());
 
@@ -512,8 +498,7 @@ impl PositionHandler for HourglassAccount
         let new_position = PerpetualPosition { meta,
                                                pos_config: perpetual_config.clone(),
                                                isolated_margin, // This will be None for Cross mode.
-                                               liquidation_price
-        };
+                                               liquidation_price };
 
         // 根据买卖方向将仓位插入相应的仓位列表
         match trade.side {
@@ -949,18 +934,16 @@ impl PositionHandler for HourglassAccount
         if let Some(Position::Perpetual(long_pos)) = long_position {
             if trade.price <= long_pos.liquidation_price && trade.parse_side() == Side::Sell {
                 // 生成平仓的 `ClientTrade`
-                let liquidation_trade = ClientTrade {
-                    exchange: Exchange::Hourglass,
-                    timestamp: trade.timestamp,
-                    trade_id,
-                    order_id: None,
-                    cid: None,
-                    instrument: instrument.clone(),
-                    side: Side::Sell,
-                    price: trade.price,
-                    size: long_pos.meta.current_size,
-                    fees: 0.0
-                };
+                let liquidation_trade = ClientTrade { exchange: Exchange::Hourglass,
+                                                      timestamp: trade.timestamp,
+                                                      trade_id,
+                                                      order_id: None,
+                                                      cid: None,
+                                                      instrument: instrument.clone(),
+                                                      side: Side::Sell,
+                                                      price: trade.price,
+                                                      size: long_pos.meta.current_size,
+                                                      fees: 0.0 };
 
                 // 处理平仓
                 self.liquidate_position_by_trade(&mut Position::Perpetual(long_pos), Side::Buy).await?;
@@ -973,18 +956,16 @@ impl PositionHandler for HourglassAccount
         if let Some(Position::Perpetual(short_pos)) = short_position {
             if trade.price >= short_pos.liquidation_price && trade.parse_side() == Side::Buy {
                 // 生成平仓的 `ClientTrade`
-                let liquidation_trade = ClientTrade {
-                    exchange: Exchange::Hourglass,
-                    timestamp: trade.timestamp,
-                    trade_id,
-                    order_id: None,
-                    cid: None,
-                    instrument: instrument.clone(),
-                    side: Side::Buy,
-                    price: trade.price,
-                    size: short_pos.meta.current_size,
-                    fees: 0.0
-                };
+                let liquidation_trade = ClientTrade { exchange: Exchange::Hourglass,
+                                                      timestamp: trade.timestamp,
+                                                      trade_id,
+                                                      order_id: None,
+                                                      cid: None,
+                                                      instrument: instrument.clone(),
+                                                      side: Side::Buy,
+                                                      price: trade.price,
+                                                      size: short_pos.meta.current_size,
+                                                      fees: 0.0 };
 
                 // 处理平仓
                 self.liquidate_position_by_trade(&mut Position::Perpetual(short_pos), Side::Sell).await?;
@@ -992,7 +973,6 @@ impl PositionHandler for HourglassAccount
                 return Ok(());
             }
         }
-
 
         Ok(())
     }

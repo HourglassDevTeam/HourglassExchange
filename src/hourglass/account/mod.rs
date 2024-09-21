@@ -3,7 +3,7 @@ use crate::{
         account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode},
         balance::{Balance, BalanceDelta, TokenBalance},
         event::{AccountEvent, AccountEventKind},
-        instrument::{ Instrument},
+        instrument::Instrument,
         order::{
             identification::{client_order_id::ClientOrderId, machine_id::generate_machine_id},
             order_instructions::OrderInstruction,
@@ -63,7 +63,7 @@ pub struct HourglassAccount
     pub exchange_timestamp: AtomicI64,                                                  // 交易所时间戳
     pub account_event_tx: UnboundedSender<AccountEvent>,                                // 帐户事件发送器
     pub config: AccountConfig,                                                          // 帐户配置
-    pub account_open_book: Arc<RwLock<AccountOrders>>,                                             // 帐户订单集合
+    pub account_open_book: Arc<RwLock<AccountOrders>>,                                  // 帐户订单集合
     pub single_level_order_book: Arc<Mutex<HashMap<Instrument, SingleLevelOrderBook>>>, // 将最新的价格存到订单簿里面去
     pub balances: DashMap<Token, Balance>,                                              // 每个币种的细分余额
     pub positions: AccountPositions,                                                    // 帐户持仓
@@ -167,7 +167,6 @@ impl AccountBuilder
                               account_margin: Arc::new(0.0.into()) })
     }
 }
-
 
 impl HourglassAccount
 {
@@ -444,7 +443,7 @@ impl HourglassAccount
         let order_role = {
             let mut order_books_lock = self.single_level_order_book.lock().await;
             println!("[attempt_atomic_open] order_books_lock: {:?}", order_books_lock);
-            println!("instrument is {:#?}",order.instrument);
+            println!("instrument is {:#?}", order.instrument);
 
             let order_book = order_books_lock.get_mut(&order.instrument).unwrap(); // 引用的生命周期延长
 
@@ -599,7 +598,8 @@ impl HourglassAccount
     /// # 锁机制
     ///
     /// * 在查找和移除订单时，使用读锁以减少写锁的持有时间，避免阻塞其他操作。
-    pub async fn atomic_cancel(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExchangeError> {
+    pub async fn atomic_cancel(&mut self, request: Order<RequestCancel>) -> Result<Order<Cancelled>, ExchangeError>
+    {
         // 验证取消请求的合法性
         Self::validate_order_request_cancel(&request)?;
 
@@ -615,12 +615,12 @@ impl HourglassAccount
 
             // 使用 find_matching_order 查找并移除订单
             match request.side {
-                Side::Buy => {
+                | Side::Buy => {
                     let index = Self::find_matching_order(&orders.bids, &request)?;
                     println!("Removing Buy Order at index: {}", index);
                     orders.bids.remove(index)
                 }
-                Side::Sell => {
+                | Side::Sell => {
                     let index = Self::find_matching_order(&orders.asks, &request)?;
                     println!("Removing Sell Order at index: {}", index);
                     orders.asks.remove(index)
@@ -630,11 +630,11 @@ impl HourglassAccount
 
         // 处理取消订单后的余额更新
         let balance_event = match self.apply_cancel_order_changes(&removed_order) {
-            Ok(event) => event,
-            Err(e) => {
+            | Ok(event) => event,
+            | Err(e) => {
                 println!("Failed to apply balance changes: {:?}", e);
                 return Err(e); // 如果更新余额时发生错误，返回错误
-            },
+            }
         };
 
         // 将订单从 `Order<Open>` 转换为 `Order<Cancelled>`
@@ -644,11 +644,9 @@ impl HourglassAccount
         let exchange_timestamp = self.exchange_timestamp.load(Ordering::SeqCst);
 
         // 发送订单取消事件
-        let orders_cancelled_event = AccountEvent {
-            exchange_timestamp,
-            exchange: Exchange::Hourglass,
-            kind: AccountEventKind::OrdersCancelled(vec![cancelled_order.clone()]),
-        };
+        let orders_cancelled_event = AccountEvent { exchange_timestamp,
+                                                    exchange: Exchange::Hourglass,
+                                                    kind: AccountEventKind::OrdersCancelled(vec![cancelled_order.clone()]) };
 
         // 发送账户事件
         self.send_account_event(orders_cancelled_event)?;
@@ -663,7 +661,6 @@ impl HourglassAccount
 
         Ok(cancelled_order)
     }
-
 
     pub async fn cancel_orders_all(&mut self, response_tx: Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>)
     {
@@ -714,29 +711,27 @@ impl HourglassAccount
     }
 
     /// 查找匹配的订单，根据 `OrderId` 和 `ClientOrderId` 匹配。
-    fn find_matching_order(orders: &[Order<Open>], request: &Order<RequestCancel>) -> Result<usize, ExchangeError> {
-        orders
-            .par_iter()
-            .position_any(|order| Self::order_ids_check(order, request))
-            .ok_or_else(|| ExchangeError::OrderNotFound {
-                client_order_id: request.cid.clone(),
-                order_id: request.state.id.clone(),
-            })
+    fn find_matching_order(orders: &[Order<Open>], request: &Order<RequestCancel>) -> Result<usize, ExchangeError>
+    {
+        orders.par_iter()
+              .position_any(|order| Self::order_ids_check(order, request))
+              .ok_or_else(|| ExchangeError::OrderNotFound { client_order_id: request.cid.clone(),
+                                                            order_id: request.state.id.clone() })
     }
 
-
     /// 判断订单是否匹配，根据 `OrderId` 或 `ClientOrderId` 进行匹配。
-    fn order_ids_check(order: &Order<Open>, request: &Order<RequestCancel>) -> bool {
+    fn order_ids_check(order: &Order<Open>, request: &Order<RequestCancel>) -> bool
+    {
         // 处理 OrderId 的匹配
         let id_match = match &request.state.id {
-            Some(req_id) => &order.state.id == req_id, // 比较 `OrderId`
-            None => false,
+            | Some(req_id) => &order.state.id == req_id, // 比较 `OrderId`
+            | None => false,
         };
 
         // 处理 ClientOrderId 的匹配
         let cid_match = match (&order.cid, &request.cid) {
-            (Some(order_cid), Some(req_cid)) => order_cid == req_cid, // 比较 `ClientOrderId`
-            _ => false,
+            | (Some(order_cid), Some(req_cid)) => order_cid == req_cid, // 比较 `ClientOrderId`
+            | _ => false,
         };
 
         // 如果 `OrderId` 或 `ClientOrderId` 匹配，则认为订单匹配
@@ -761,10 +756,12 @@ mod tests
 {
     use super::*;
     use crate::{
-        common::order::{identification::OrderId, states::request_open::RequestOpen},
+        common::{
+            instrument::kind::InstrumentKind,
+            order::{identification::OrderId, states::request_open::RequestOpen},
+        },
         test_utils::create_test_account,
     };
-    use crate::common::instrument::kind::InstrumentKind;
 
     #[tokio::test]
     async fn test_validate_order_request_open()

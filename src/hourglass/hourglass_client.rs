@@ -1,8 +1,7 @@
 use async_trait::async_trait;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
-use tokio::sync::{mpsc, oneshot};
-use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::{mpsc, mpsc::UnboundedReceiver, oneshot};
 use HourglassClientEvent::{CancelOrders, CancelOrdersAll, FetchOrdersOpen, FetchTokenBalances, OpenOrders};
 
 use crate::{
@@ -16,10 +15,9 @@ use crate::{
         },
         token::Token,
     },
-    hourglass::config_request::ConfigurationRequest,
+    hourglass::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, config_request::ConfigurationRequest},
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
-use crate::hourglass::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 
 #[derive(Debug)]
 pub struct HourglassClient
@@ -59,9 +57,9 @@ pub enum HourglassClientEvent
 #[async_trait]
 impl ClientExecution for HourglassClient
 {
-    const CLIENT_KIND: Exchange = Exchange::Hourglass;
-
     type Config = (UnboundedSender<HourglassClientEvent>, UnboundedReceiver<MarketTrade>);
+
+    const CLIENT_KIND: Exchange = Exchange::Hourglass;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {
@@ -69,10 +67,7 @@ impl ClientExecution for HourglassClient
         let (request_tx, market_event_rx) = config;
 
         // 使用 request_tx 和 market_event_rx 初始化 HourglassClient
-        Self {
-            request_tx,
-            market_event_rx,
-        }
+        Self { request_tx, market_event_rx }
     }
 
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExchangeError>
@@ -173,7 +168,8 @@ impl ClientExecution for HourglassClient
     }
 
     // 发送 LetItRoll 命令的函数
-    async fn let_it_roll(&self) -> Result<(), ExchangeError> {
+    async fn let_it_roll(&self) -> Result<(), ExchangeError>
+    {
         // 向模拟交易所发送 LetItRoll 请求
         self.request_tx
             .send(HourglassClientEvent::LetItRoll)
@@ -184,11 +180,22 @@ impl ClientExecution for HourglassClient
     }
 }
 
+impl HourglassClient
+{
+    pub async fn listen_for_market_data(&mut self)
+    {
+        while let Some(market_event) = self.market_event_rx.recv().await {
+            // 处理接收到的市场数据事件
+            println!("Received market event: {:?}", market_event);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
-    use tokio::sync::mpsc;
     use super::*;
+    use tokio::sync::mpsc;
 
     #[tokio::test]
     async fn test_fetch_orders_open()
@@ -197,7 +204,8 @@ mod tests
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
         let (_market_tx, market_rx) = mpsc::unbounded_channel();
 
-        let client = HourglassClient { request_tx: request_tx.clone(), market_event_rx: market_rx};
+        let client = HourglassClient { request_tx: request_tx.clone(),
+                                       market_event_rx: market_rx };
 
         // 启动一个异步任务来调用客户端的 fetch_orders_open 方法
         let client_task = tokio::spawn(async move {
@@ -235,9 +243,9 @@ mod tests
         let (_response_tx, _response_rx) = oneshot::channel::<Result<Vec<Order<Cancelled>>, ExchangeError>>();
         let (_market_tx, market_rx) = mpsc::unbounded_channel();
 
-
         // 初始化 HourglassClient
-        let client = HourglassClient { request_tx: request_tx.clone(), market_event_rx: market_rx };
+        let client = HourglassClient { request_tx: request_tx.clone(),
+                                       market_event_rx: market_rx };
 
         // 启动一个异步任务来调用客户端的 cancel_orders_all 方法
         let client_task = tokio::spawn(async move {
