@@ -111,15 +111,15 @@ use hourglass::hourglass::account::account_config::{AccountConfig, CommissionLev
 #[tokio::main]
 async fn main()
 {
-    #[allow(unused)]
     // create the channels
-    let (event_hourglass_tx, event_hourglass_rx) = mpsc::unbounded_channel();
-    let (request_tx, request_rx) = mpsc::unbounded_channel();
-    let (market_tx, market_rx) = mpsc::unbounded_channel();
+    let (account_event_tx, _account_event_rx) = mpsc::unbounded_channel();
+    let (client_event_tx, client_event_rx) = mpsc::unbounded_channel();
+    let (market_event_tx, market_event_rx) = mpsc::unbounded_channel();
 
     #[allow(unused)]
-    let mut hourglass_client = HourglassClient { request_tx: request_tx.clone(),
-                                                 market_event_rx: market_rx };
+    let mut hourglass_client = HourglassClient { client_event_tx: client_event_tx.clone(),
+                                                 market_event_rx
+    };
 
     // Creating initial positions with the updated structure
     let positions = AccountPositions::init();
@@ -160,7 +160,7 @@ async fn main()
                                                              balances: DashMap::new(),
                                                              positions,
                                                              exited_positions: closed_positions,
-                                                             account_event_tx: event_hourglass_tx,
+                                                             account_event_tx,
                                                              account_margin: Arc::new(Default::default()) }));
 
     // Sample cursor building
@@ -171,10 +171,10 @@ async fn main()
     let cursor = clickhouse_client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
 
     // Initialize and configure HourglassExchange
-    let hourglass_exchange = HourglassExchange::builder().event_hourglass_rx(request_rx)
+    let hourglass_exchange = HourglassExchange::builder().event_hourglass_rx(client_event_rx)
                                                          .account(account_arc.clone())
                                                          .data_source(DataSource::Backtest(cursor))
-                                                         .market_event_tx(market_tx)
+                                                         .market_event_tx(market_event_tx)
                                                          .initiate()
                                                          .expect("Failed to build HourglassExchange");
 
@@ -192,8 +192,7 @@ async fn main()
         // Listen for market data
         if let Some(market_data) = hourglass_client.listen_for_market_data().await {
             // Process the market data
-            // Your logic for handling market_data & customised trading strategy goes here
-
+            // Your logic for handling market_data & customised trading strategy goes here?
             println!("Processed market data: {:?}", market_data);
         }
     }

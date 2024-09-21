@@ -52,7 +52,7 @@ async fn main()
     tokio::spawn(run_sample_exchange(event_hourglass_tx, request_rx, market_tx));
 
     // 初始化 HourglassClient，用于与交易所进行交互
-    let client = HourglassClient { request_tx: request_tx.clone(),
+    let client = HourglassClient { client_event_tx: request_tx.clone(),
                                    market_event_rx: market_rx };
     // // 1. 获取初始的未成交订单列表，检查当前没有未成交订单
     test_1_fetch_initial_orders_and_check_empty(&client).await;

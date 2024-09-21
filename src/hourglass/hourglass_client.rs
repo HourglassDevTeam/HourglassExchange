@@ -22,8 +22,9 @@ use crate::{
 #[derive(Debug)]
 pub struct HourglassClient
 {
-    pub request_tx: UnboundedSender<HourglassClientEvent>,
+    pub client_event_tx: UnboundedSender<HourglassClientEvent>,
     pub market_event_rx: UnboundedReceiver<MarketTrade>,
+    // pub account_event_rx: UnboundedReceiver<AccountEvent>,
 }
 
 // NOTE 模拟交易所客户端可向模拟交易所发送的命令
@@ -67,14 +68,14 @@ impl ClientExecution for HourglassClient
         let (request_tx, market_event_rx) = config;
 
         // 使用 request_tx 和 market_event_rx 初始化 HourglassClient
-        Self { request_tx, market_event_rx }
+        Self { client_event_tx: request_tx, market_event_rx }
     }
 
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExchangeError>
     {
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送获取开放订单的请求。
-        self.request_tx
+        self.client_event_tx
             .send(FetchOrdersOpen(response_tx))
             .expect("Hourglass exchange is currently offline - Failed to send FetchOrdersOpen request");
         // 从模拟交易所接收开放订单的响应。
@@ -85,7 +86,7 @@ impl ClientExecution for HourglassClient
     {
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送获取账户余额的请求。
-        self.request_tx
+        self.client_event_tx
             .send(FetchTokenBalances(response_tx))
             .expect("Hourglass exchange is currently offline - Failed to send FetchBalances request");
         // 从模拟交易所接收账户余额的响应。
@@ -96,7 +97,7 @@ impl ClientExecution for HourglassClient
     async fn fetch_all_positions(&self) -> Result<AccountPositions, ExchangeError>
     {
         let (response_tx, response_rx) = oneshot::channel();
-        self.request_tx
+        self.client_event_tx
             .send(HourglassClientEvent::FetchAllPositions(response_tx))
             .expect("[HourglassClient] : Failed to send FetchAllPositions request");
         response_rx.await.expect("[HourglassClient] : Failed to receive FetchAllPositions response")
@@ -106,7 +107,7 @@ impl ClientExecution for HourglassClient
     async fn fetch_long_position(&self, instrument: Instrument) -> Result<Option<Position>, ExchangeError>
     {
         let (response_tx, response_rx) = oneshot::channel();
-        self.request_tx
+        self.client_event_tx
             .send(HourglassClientEvent::FetchLongPosition(instrument, response_tx))
             .expect("[HourglassClient] : Failed to send FetchLongPosition request");
         response_rx.await.expect("[HourglassClient] : Failed to receive FetchLongPosition response")
@@ -116,7 +117,7 @@ impl ClientExecution for HourglassClient
     async fn fetch_short_position(&self, instrument: Instrument) -> Result<Option<Position>, ExchangeError>
     {
         let (response_tx, response_rx) = oneshot::channel();
-        self.request_tx
+        self.client_event_tx
             .send(HourglassClientEvent::FetchShortPosition(instrument, response_tx))
             .expect("[HourglassClient] : Failed to send FetchShortPosition request");
         response_rx.await.expect("[HourglassClient] : Failed to receive FetchShortPosition response")
@@ -126,7 +127,7 @@ impl ClientExecution for HourglassClient
     {
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送开启订单的请求。
-        self.request_tx
+        self.client_event_tx
             .send(OpenOrders((open_requests, response_tx)))
             .expect("Hourglass exchange is currently offline - Failed to send OpenOrders request");
         // 从模拟交易所接收开启订单的响应。
@@ -137,7 +138,7 @@ impl ClientExecution for HourglassClient
     {
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送取消订单的请求。
-        self.request_tx
+        self.client_event_tx
             .send(CancelOrders((cancel_requests, response_tx)))
             .expect("Hourglass exchange is currently offline - Failed to send CancelOrders request");
         // 从模拟交易所接收取消订单的响应。
@@ -149,7 +150,7 @@ impl ClientExecution for HourglassClient
         // 创建一个 oneshot 通道以与模拟交易所通信。
         let (response_tx, response_rx) = oneshot::channel();
         // 向模拟交易所发送取消所有订单的请求。
-        self.request_tx
+        self.client_event_tx
             .send(CancelOrdersAll(response_tx))
             .expect("Hourglass exchange is currently offline - Failed to send CancelOrdersAll request");
         // 从模拟交易所接收取消所有订单的响应。
@@ -161,7 +162,7 @@ impl ClientExecution for HourglassClient
     {
         println!("begin to deposit tokens: {:?}", deposits);
         let (response_tx, response_rx) = oneshot::channel();
-        self.request_tx
+        self.client_event_tx
             .send(HourglassClientEvent::DepositTokens((deposits, response_tx)))
             .expect("Failed to send DepositTokens request");
         response_rx.await.expect("Failed to receive DepositTokens response")
@@ -171,7 +172,7 @@ impl ClientExecution for HourglassClient
     async fn let_it_roll(&self) -> Result<(), ExchangeError>
     {
         // 向模拟交易所发送 LetItRoll 请求
-        self.request_tx
+        self.client_event_tx
             .send(HourglassClientEvent::LetItRoll)
             .expect("Hourglass exchange is currently offline - Failed to send LetItRoll request");
 
@@ -206,7 +207,7 @@ mod tests
         let (request_tx, mut request_rx) = mpsc::unbounded_channel();
         let (_market_tx, market_rx) = mpsc::unbounded_channel();
 
-        let client = HourglassClient { request_tx: request_tx.clone(),
+        let client = HourglassClient { client_event_tx: request_tx.clone(),
                                        market_event_rx: market_rx };
 
         // 启动一个异步任务来调用客户端的 fetch_orders_open 方法
@@ -246,7 +247,7 @@ mod tests
         let (_market_tx, market_rx) = mpsc::unbounded_channel();
 
         // 初始化 HourglassClient
-        let client = HourglassClient { request_tx: request_tx.clone(),
+        let client = HourglassClient { client_event_tx: request_tx.clone(),
                                        market_event_rx: market_rx };
 
         // 启动一个异步任务来调用客户端的 cancel_orders_all 方法
