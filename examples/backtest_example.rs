@@ -16,6 +16,7 @@ use std::sync::atomic::AtomicI64;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex, RwLock};
 use uuid::Uuid;
+use hourglass::ClientExecution;
 use hourglass::hourglass::hourglass_client::HourglassClient;
 
 #[tokio::main]
@@ -79,12 +80,10 @@ async fn main()
 
     // Running the exchange in local mode in tokio runtime
     tokio::spawn(hourglass_exchange.start());
-
-    // build the data distributing loop
-    // NOTE 本循环应该建立在run_local中。在从client接受到LetItRoll后才会调用next方法。
-    // while let Ok(Some(row)) = cursor.next().await {
-    //     let mut account = account_handle.lock().await;
-    //     let _ = account.handle_trade_data(&row);
-    //     println!("{:?}", row)
-    // }
+    // 启动 LetItRoll
+    tokio::spawn(async move {
+        if let Err(e) = hourglass_client.let_it_roll().await {
+            eprintln!("Error executing LetItRoll: {:?}", e);
+        }
+    });
 }
