@@ -27,8 +27,6 @@ A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs
 
 ## 📜 Code Example
 
-以下是 Hourglass 的代码示例：
-
 ```rust
 use dashmap::DashMap;
 use hourglass::{
