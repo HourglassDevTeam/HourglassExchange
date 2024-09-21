@@ -177,7 +177,7 @@ async fn main()
         // Listen for market data
         if let Some(market_data) = hourglass_client.listen_for_market_data().await {
             // Process the market data
-            // Your logic for handling market_data goes here
+            // Your logic for handling market_data & customised trading strategy goes here
             println!("Processed market data: {:?}", market_data);
         }
     }
