@@ -180,7 +180,7 @@ async fn main()
 
     // Running the exchange in local mode in tokio runtime
     tokio::spawn(hourglass_exchange.start());
-    hourglass_client.let_it_roll().await.unwrap();
+    // hourglass_client.let_it_roll().await.unwrap();
 
     loop {
         // Call let_it_roll and handle potential errors
