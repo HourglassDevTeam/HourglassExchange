@@ -182,12 +182,14 @@ impl ClientExecution for HourglassClient
 
 impl HourglassClient
 {
-    pub async fn listen_for_market_data(&mut self)
+    pub async fn listen_for_market_data(&mut self) -> Option<MarketTrade>
     {
-        while let Some(market_event) = self.market_event_rx.recv().await {
-            // 处理接收到的市场数据事件
+        if let Some(market_event) = self.market_event_rx.recv().await {
+            // Process the received market data event
             println!("Received market event: {:?}", market_event);
+            return Some(market_event);
         }
+        None // Return None if there are no events
     }
 }
 

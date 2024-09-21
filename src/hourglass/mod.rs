@@ -65,11 +65,9 @@ impl HourglassExchange
                 Some(event) = self.event_hourglass_rx.recv() => {
                     match event {
                         HourglassClientEvent::LetItRoll => {
-                            println!("Received LetItRoll signal, processing next data...");
                             if let Some(row) = self.process_next_data().await {
                                 let mut account = self.account.lock().await;
                                 let _ = account.handle_trade_data(&row);
-                                println!("Processed data: {:?}", row);
                             } else {
                                 println!("No data processed.");
                             }
@@ -120,9 +118,10 @@ impl HourglassExchange
     }
 
     /// 处理下一条数据
-    async fn process_next_data(&mut self) -> Option<MarketTrade> {
+    async fn process_next_data(&mut self) -> Option<MarketTrade>
+    {
         match &mut self.data_source {
-            DataSource::Backtest(cursor) => {
+            | DataSource::Backtest(cursor) => {
                 // 这里 cursor 需要是 mutable 的
                 if let Ok(Some(row)) = cursor.next().await {
                     // 发送市场数据给客户端
@@ -130,11 +129,12 @@ impl HourglassExchange
                         eprintln!("Failed to send market data to client: {:?}", e);
                     }
                     Some(row)
-                } else {
+                }
+                else {
                     None
                 }
             }
-            _ => {
+            | _ => {
                 println!("Unhandled data source type");
                 None
             }
