@@ -41,6 +41,7 @@ async fn main()
     // 创建通道用于发送和接收事件
     let (event_hourglass_tx, mut event_hourglass_rx) = mpsc::unbounded_channel();
     let (mut request_tx, request_rx) = mpsc::unbounded_channel();
+    let (market_tx, market_rx) = mpsc::unbounded_channel();
 
     // 给定测试用的timestamp和machine_id和IDs
     let timestamp = 1233312345124u64;
@@ -48,10 +49,10 @@ async fn main()
     let test_3_ids = Ids::new(ClientOrderId("test_cid".to_string()), OrderId(1234124124124123));
 
     // 创建并运行 SimulatedExchange
-    tokio::spawn(run_sample_exchange(event_hourglass_tx, request_rx));
+    tokio::spawn(run_sample_exchange(event_hourglass_tx, request_rx,market_tx));
 
     // 初始化 HourglassClient，用于与交易所进行交互
-    let client = HourglassClient { request_tx: request_tx.clone() };
+    let client = HourglassClient { request_tx: request_tx.clone(), market_event_rx: market_rx};
     // // 1. 获取初始的未成交订单列表，检查当前没有未成交订单
     test_1_fetch_initial_orders_and_check_empty(&client).await;
     // // 2. 获取初始的余额信息，检查当前没有发生任何余额变化事件

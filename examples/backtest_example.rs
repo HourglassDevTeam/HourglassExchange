@@ -14,10 +14,8 @@ use hourglass::test_utils::create_test_account_configuration;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicI64;
 use std::sync::Arc;
-use std::time::Instant;
 use tokio::sync::{mpsc, Mutex, RwLock};
 use uuid::Uuid;
-use hourglass::hourglass::account::account_handlers::trade_handler::TradeHandler;
 use hourglass::hourglass::hourglass_client::HourglassClient;
 
 #[tokio::main]
@@ -26,10 +24,12 @@ async fn main()
 
     #[allow(unused)]
     // create the channels
-    let (event_hourglass_tx, mut event_hourglass_rx) = mpsc::unbounded_channel();
-    let (mut request_tx, request_rx) = mpsc::unbounded_channel();
+    let (event_hourglass_tx, event_hourglass_rx) = mpsc::unbounded_channel();
+    let (request_tx, request_rx) = mpsc::unbounded_channel();
+    let (market_tx, market_rx) = mpsc::unbounded_channel();
 
-    let hourglass_client = HourglassClient { request_tx: request_tx.clone() };
+    #[allow(unused)]
+    let hourglass_client = HourglassClient { request_tx: request_tx.clone(), market_event_rx: market_rx };
 
     // Creating initial positions with the updated structure
     let positions = AccountPositions::init();
@@ -67,19 +67,18 @@ async fn main()
     let exchange = "binance";
     let instrument = "futures";
     let date = "2024_05_05";
-    let mut cursor = clickhouse_client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
+    let cursor = clickhouse_client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
 
     // Initialize and configure HourglassExchange
     let hourglass_exchange = HourglassExchange::builder().event_hourglass_rx(request_rx)
         .account(account_arc.clone())
         .data_source(DataSource::Backtest(cursor))
+        .market_event_tx(market_tx)
         .initiate()
         .expect("Failed to build HourglassExchange");
 
-    // 通过 hourglass_exchange 访问 `account`
-    let account_handle = hourglass_exchange.get_account();
     // Running the exchange in local mode in tokio runtime
-    tokio::spawn(hourglass_exchange.run_local());
+    tokio::spawn(hourglass_exchange.start());
 
     // build the data distributing loop
     // NOTE 本循环应该建立在run_local中。在从client接受到LetItRoll后才会调用next方法。

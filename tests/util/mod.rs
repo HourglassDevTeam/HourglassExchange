@@ -35,10 +35,13 @@ use hourglass::{
     test_utils::create_test_account_configuration,
     Exchange,
 };
+use hourglass::hourglass::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
 use hourglass::hourglass::clickhouse_api::datatype::single_level_order_book::SingleLevelOrderBook;
+use hourglass::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
+use hourglass::hourglass::DataSource;
 
 /// Initializes and runs a sample exchange with predefined settings and a test order.
-pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<AccountEvent>, event_hourglass_rx: mpsc::UnboundedReceiver<HourglassClientEvent>)
+pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<AccountEvent>, event_hourglass_rx: mpsc::UnboundedReceiver<HourglassClientEvent>,market_event_tx: mpsc::UnboundedSender<MarketTrade>)
 {
     // Creating initial balances
     let balances = DashMap::new();
@@ -100,15 +103,20 @@ pub async fn run_sample_exchange(event_account_tx: mpsc::UnboundedSender<Account
                                                              exited_positions: closed_positions,
                                                              account_event_tx: event_account_tx,
                                                              account_margin: Arc::new(Default::default()) }));
+    let clickhouse_client = ClickHouseClient::new();
+    let exchange = "binance";
+    let instrument = "futures";
+    let date = "2024_05_05";
+    let cursor = clickhouse_client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
 
     // Initialize and configure HourglassExchange
     let hourglass_exchange = HourglassExchange::builder().event_hourglass_rx(event_hourglass_rx)
-                                                         .account(account_arc)
+                                                         .account(account_arc).market_event_tx(market_event_tx).data_source(DataSource::Backtest(cursor))
                                                          .initiate()
                                                          .expect("Failed to build HourglassExchange");
 
     // Running the exchange in local mode
-    hourglass_exchange.run_local().await;
+    hourglass_exchange.start().await;
     println!("[run_default_exchange] : Hourglass exchange run successfully on local mode.");
 }
 

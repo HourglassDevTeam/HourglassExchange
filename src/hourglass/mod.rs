@@ -11,6 +11,7 @@ use mpsc::UnboundedReceiver;
 use std::sync::Arc;
 use clickhouse::query::RowCursor;
 use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc::UnboundedSender;
 use warp::Filter;
 use crate::common::datafeed::market_event::MarketEvent;
 use crate::hourglass::clickhouse_api::datatype::clickhouse_trade_data::MarketTrade;
@@ -34,6 +35,7 @@ pub struct HourglassExchange
     where HourglassAccount: PositionHandler + TradeHandler + BalanceHandler
 {
     pub event_hourglass_rx: UnboundedReceiver<HourglassClientEvent>,
+    pub market_event_tx: UnboundedSender<MarketTrade>,
     pub account: Arc<Mutex<HourglassAccount>>,
     pub data_source: DataSource,
 }
@@ -50,14 +52,61 @@ impl HourglassExchange
         Arc::clone(&self.account)
     }
 
-    /// 本地运行 [`HourglassExchange`] 并响应各种 [`HourglassClientEvent`]。
-    pub async fn run_local(mut self)
-    {
-        self.process_events().await;
+    pub async fn start(mut self) {
+        loop {
+            tokio::select! {
+            // 监听客户端信号
+            Some(event) = self.event_hourglass_rx.recv() => {
+                match event {
+                    HourglassClientEvent::LetItRoll => {
+                        // 当收到 LetItRoll 信号时，处理下一条数据
+                        println!("Received LetItRoll signal, processing next data...");
+                        if let Some(row) = self.process_next_data().await {
+                            let mut account = self.account.lock().await;
+                            let _ = account.handle_trade_data(&row);
+                            println!("Processed data: {:?}", row);
+                        }
+                    },
+                    // 其他客户端事件处理
+                    HourglassClientEvent::FetchOrdersOpen(response_tx) => self.account.lock().await.fetch_orders_open_and_respond(response_tx).await,
+                    HourglassClientEvent::FetchTokenBalance(token, response_tx) => self.account.lock().await.fetch_token_balance_and_respond(&token, response_tx).await,
+                    HourglassClientEvent::FetchTokenBalances(response_tx) => self.account.lock().await.fetch_token_balances_and_respond(response_tx).await,
+                    HourglassClientEvent::OpenOrders((open_requests, response_tx)) => self.account.lock().await.open_orders(open_requests, response_tx).await.expect("Failed to open."),
+                    HourglassClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.lock().await.cancel_orders(cancel_requests, response_tx).await,
+                    HourglassClientEvent::CancelOrdersAll(response_tx) => self.account.lock().await.cancel_orders_all(response_tx).await,
+                    HourglassClientEvent::FetchAllPositions(response_tx) => self.account.lock().await.fetch_positions_and_respond(response_tx).await,
+                    HourglassClientEvent::FetchLongPosition(instrument, response_tx) => self.account.lock().await.fetch_long_position_and_respond(&instrument, response_tx).await,
+                    HourglassClientEvent::FetchShortPosition(instrument, response_tx) => self.account.lock().await.fetch_short_position_and_respond(&instrument, response_tx).await,
+                    HourglassClientEvent::DepositTokens(deposit_request) => {
+                        self.account.lock().await.deposit_multiple_coins_and_respond(deposit_request.0, deposit_request.1).await;
+                    }
+                    HourglassClientEvent::ConfigureInstruments(position_configs, response_tx) => {
+                        let _ = self.account.lock().await.preconfigure_positions(position_configs, response_tx).await;
+                    }
+                }
+            }
+        }
+        }
     }
 
-    /// 网络运行 [`HourglassExchange`]，并从网络接收事件
-    pub async fn run_online(mut self)
+    /// 处理下一条数据
+    async fn process_next_data(&mut self) -> Option<MarketTrade> {
+        match &mut self.data_source {
+            DataSource::Backtest(cursor) => {
+                cursor.next().await.unwrap() // 调用 next() 获取下一条数据
+            }
+            // 如果有其他数据源类型，应该在这里处理
+            _ => {
+                println!("Unhandled data source type");
+                None
+            }
+        }
+    }
+
+
+
+/// 网络运行 [`HourglassExchange`]，并从网络接收事件
+    pub async fn run_online(self)
     {
         let address = ([127, 0, 0, 1], 3030);
 
@@ -95,37 +144,11 @@ impl HourglassExchange
         // 同时运行 warp 服务器和事件处理逻辑
         tokio::select! {
             _ = warp_server => {},
-            _ = self.process_events() => {},
-        }
-    }
-
-    /// 处理接收到的内部事件
-    async fn process_events(&mut self)
-    {
-        while let Some(event) = self.event_hourglass_rx.recv().await {
-            match event {
-                | HourglassClientEvent::FetchOrdersOpen(response_tx) => self.account.lock().await.fetch_orders_open_and_respond(response_tx).await,
-                | HourglassClientEvent::FetchTokenBalance(token, response_tx) => self.account.lock().await.fetch_token_balance_and_respond(&token, response_tx).await,
-                | HourglassClientEvent::FetchTokenBalances(response_tx) => self.account.lock().await.fetch_token_balances_and_respond(response_tx).await,
-                | HourglassClientEvent::OpenOrders((open_requests, response_tx)) => self.account.lock().await.open_orders(open_requests, response_tx).await.expect("Failed to open."),
-                | HourglassClientEvent::CancelOrders((cancel_requests, response_tx)) => self.account.lock().await.cancel_orders(cancel_requests, response_tx).await,
-                | HourglassClientEvent::CancelOrdersAll(response_tx) => self.account.lock().await.cancel_orders_all(response_tx).await,
-                | HourglassClientEvent::FetchAllPositions(response_tx) => self.account.lock().await.fetch_positions_and_respond(response_tx).await,
-                | HourglassClientEvent::FetchLongPosition(instrument, response_tx) => self.account.lock().await.fetch_long_position_and_respond(&instrument, response_tx).await,
-                | HourglassClientEvent::FetchShortPosition(instrument, response_tx) => self.account.lock().await.fetch_short_position_and_respond(&instrument, response_tx).await,
-                | HourglassClientEvent::DepositTokens(deposit_request) => {
-                    self.account.lock().await.deposit_multiple_coins_and_respond(deposit_request.0, deposit_request.1).await;
-                }
-                | HourglassClientEvent::ConfigureInstruments(position_configs, response_tx) => {
-                    let _ = self.account.lock().await.preconfigure_positions(position_configs, response_tx).await;
-                }
-                | HourglassClientEvent::LetItRoll => {
-                    println!("Received NoOp event, no action's taken.");
-                }
-            }
+            _ = self.start() => {},
         }
     }
 }
+
 
 impl Default for ExchangeBuilder
 {
@@ -134,6 +157,7 @@ impl Default for ExchangeBuilder
         let (_tx, rx) = mpsc::unbounded_channel();
         Self { event_hourglass_rx: Some(rx),
                account: None,
+            market_event_tx: None,
             data_source: None,
         }
     }
@@ -142,7 +166,7 @@ pub struct ExchangeBuilder
 {
     pub(crate) event_hourglass_rx: Option<UnboundedReceiver<HourglassClientEvent>>,
     pub(crate) account: Option<Arc<Mutex<HourglassAccount>>>,
-    // pub(crate) market_event_tx: Option<UnboundedReceiver<MarketEvent<MarketTrade>>>,
+    pub(crate) market_event_tx: Option<UnboundedSender<MarketTrade>>,
     pub(crate) data_source: Option<DataSource>,
 }
 
@@ -152,6 +176,7 @@ impl ExchangeBuilder
     {
         Self { event_hourglass_rx: None,
                account: None,
+            market_event_tx: None,
             data_source: None,}
     }
 
@@ -167,6 +192,14 @@ impl ExchangeBuilder
             ..self }
     }
 
+
+    pub fn market_event_tx(self, value: UnboundedSender<MarketTrade>) -> Self
+    {
+        Self { market_event_tx: Some(value),
+            ..self }
+    }
+
+
     pub fn account(self, value: Arc<Mutex<HourglassAccount>>) -> Self
     {
         Self { account: Some(value), ..self }
@@ -176,15 +209,12 @@ impl ExchangeBuilder
     {
         Ok(HourglassExchange { event_hourglass_rx: self.event_hourglass_rx.ok_or_else(|| ExchangeError::BuilderIncomplete("event_hourglass_rx".to_string()))?,
                                // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::BuilderIncomplete("market_event_tx".to_string()))?,
-                               account: self.account.ok_or_else(|| ExchangeError::BuilderIncomplete("account".to_string()))?,
+            market_event_tx: self.market_event_tx.ok_or_else(|| ExchangeError::BuilderIncomplete("market_tx".to_string()))?,
+            account: self.account.ok_or_else(|| ExchangeError::BuilderIncomplete("account".to_string()))?,
             data_source: self.data_source.ok_or_else(|| ExchangeError::BuilderIncomplete("data_source".to_string()))?,
         })
     }
 
-    // pub fn trade_event_source(self, value: TradeEventSource) -> Self
-    // {
-    //     Self { data_source: Some(value), ..self }
-    // }
 }
 
 #[cfg(test)]
@@ -194,6 +224,7 @@ mod tests
     use crate::test_utils::create_test_account;
     use std::net::TcpListener;
     use tokio::sync::mpsc;
+    use crate::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
 
     #[tokio::test]
     async fn builder_should_create_exchange_builder_with_default_values()
@@ -244,11 +275,18 @@ mod tests
     {
         // 占用端口 3030
         let _listener = TcpListener::bind("127.0.0.1:3030").unwrap();
+        let (market_tx, _market_rx) = mpsc::unbounded_channel();
+        let clickhouse_client = ClickHouseClient::new();
+        let exchange = "binance";
+        let instrument = "futures";
+        let date = "2024_05_05";
+        let cursor = clickhouse_client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
+
 
         let (_tx, rx) = mpsc::unbounded_channel();
         let account = create_test_account().await;
         let account = Arc::new(Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
-        let exchange = HourglassExchange { event_hourglass_rx: rx, account };
+        let exchange = HourglassExchange { event_hourglass_rx: rx, market_event_tx:market_tx, account, data_source: DataSource::Backtest(cursor) };
         let address = "127.0.0.1:3030".parse().unwrap(); // Convert to a SocketAddr
         assert!(is_port_in_use(address));
         exchange.run_online().await;

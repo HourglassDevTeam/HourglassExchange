@@ -1,5 +1,4 @@
 use std::fmt::{Debug, Display, Formatter};
-
 use crate::{
     common::{
         account_positions::{AccountPositions, Position},
@@ -42,14 +41,14 @@ pub trait ClientExecution
     async fn fetch_all_positions(&self) -> Result<AccountPositions, ExchangeError>; // 补全 FetchLongPosition 的实现
     async fn fetch_long_position(&self, instrument: Instrument) -> Result<Option<Position>, ExchangeError>; // 补全 FetchShortPosition 的实现
     async fn fetch_short_position(&self, instrument: Instrument) -> Result<Option<Position>, ExchangeError>;
-
     // async fn fetch_balance(&self) -> Result<TokenBalance, ExchangeError>; // TODO
-
     // async fn fetch_positions(&self) -> Result<AccountPositions, ExchangeError>;  // TODO
     async fn open_orders(&self, open_requests: Vec<Order<RequestOpen>>) -> Vec<Result<Order<Open>, ExchangeError>>;
     async fn cancel_orders(&self, cancel_requests: Vec<Order<RequestCancel>>) -> Vec<Result<Order<Cancelled>, ExchangeError>>;
     async fn cancel_orders_all(&self) -> Result<Vec<Order<Cancelled>>, ExchangeError>; // 实现 DepositTokens 的处理逻辑
     async fn deposit_tokens(&self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError>;
+    // 发送 LetItRoll 命令的函数
+    async fn let_it_roll(&self) -> Result<(), ExchangeError>;
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
