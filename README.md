@@ -59,7 +59,6 @@ use tokio::{
 };
 use uuid::Uuid;
 
-
 #[tokio::main]
 async fn main()
 {
@@ -85,12 +84,25 @@ async fn main()
                                                            latest_ask: 16499.0,
                                                            latest_price: 0.0 });
 
+    let hourglass_account_config =  AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
+        global_position_direction_mode: PositionDirectionMode::Net,
+        global_position_margin_mode: PositionMarginMode::Cross,
+        commission_level: CommissionLevel::Lv1,
+        funding_rate: 0.0,
+        global_leverage_rate: 1.0,
+        fees_book: HashMap::new(),
+        execution_mode: HourglassMode::Backtest,
+        max_price_deviation: 0.05,
+        lazy_account_positions: false,
+        liquidation_threshold: 0.9 };
+
+
     // Instantiate HourglassAccount and wrap in Arc<Mutex> for shared access
     let account_arc = Arc::new(Mutex::new(HourglassAccount { current_session: Uuid::new_v4(),
                                                              machine_id: 0,
                                                              client_trade_counter: 0.into(),
                                                              exchange_timestamp: AtomicI64::new(1234567),
-                                                             config: create_test_account_configuration(),
+                                                             config: hourglass_account_config,
                                                              account_open_book: Arc::new(RwLock::new(AccountOrders::new(0, vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
                                                                                                                                                     maximum: 100,
                                                                                                                                                     minimum: 2,
@@ -134,4 +146,3 @@ async fn main()
         }
     }
 }
-
