@@ -183,7 +183,7 @@ async fn main()
     // hourglass_client.let_it_roll().await.unwrap();
 
     loop {
-        // Call let_it_roll and handle potential errors
+        // Call next entry of data and handle potential errors
         if let Err(e) = hourglass_client.let_it_roll().await {
             eprintln!("Error executing LetItRoll: {:?}", e);
             break;
@@ -193,6 +193,7 @@ async fn main()
         if let Some(market_data) = hourglass_client.listen_for_market_data().await {
             // Process the market data
             // Your logic for handling market_data & customised trading strategy goes here
+
             println!("Processed market data: {:?}", market_data);
         }
     }
