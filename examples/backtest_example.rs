@@ -167,7 +167,7 @@ async fn main()
     let clickhouse_client = ClickHouseClient::new();
     let exchange = "binance";
     let instrument = "futures";
-    let date = "2024_05_05";
+    let date = "2024_08_22";
     let cursor = clickhouse_client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
 
     // Initialize and configure HourglassExchange
