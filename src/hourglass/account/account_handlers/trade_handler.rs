@@ -404,7 +404,7 @@ mod tests
         // assert_eq!(result.is_ok(), true);
         // // 创建一个市场事件，该事件与 open订单完全匹配
         let market_event = MarketTrade { exchange: "binance-futures".to_string(),
-                                         symbol: "ETH_USDT".to_string(),
+                                         symbol: "ETHUSDT".to_string(),
                                          timestamp: 1625247600000,
                                          price: 16605.0, // 前面已经确认是Maker单，成交计算的价格应该按照这里的 16605
                                          side: Side::Buy.to_string(),
@@ -447,7 +447,7 @@ mod tests
 
         // 匹配一个完全匹配的市场事件
         let market_event = MarketTrade { exchange: "binance-futures".to_string(),
-                                         symbol: "ETH_USDT".to_string(),
+                                         symbol: "ETHUSDT".to_string(),
                                          timestamp: 1625247600000,
                                          price: 100.0,
                                          side: Side::Sell.to_string(),
@@ -496,7 +496,7 @@ mod tests
         let mut account = create_test_account().await;
 
         let trade = MarketTrade { exchange: "binance-futures".to_string(),
-                                  symbol: "BTC_USDT".to_string(),
+                                  symbol: "BTCUSDT".to_string(),
                                   timestamp: 1625247600000,
                                   price: 100.0,
                                   side: Side::Buy.to_string(),

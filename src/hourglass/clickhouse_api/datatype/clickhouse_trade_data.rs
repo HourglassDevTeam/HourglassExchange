@@ -91,30 +91,67 @@ impl MarketTrade
         }
     }
 }
-
 impl MarketTrade {
     pub fn parse_base(&self) -> Option<String> {
-        let possible_quote = self.symbol.chars().rev().take_while(|&c| c.is_alphabetic()).collect::<String>().chars().rev().collect::<String>();
-        let token_quote = Token::new(&possible_quote);
+        // 遍历所有的 `StableToken` 变种，并检查 symbol 是否以该稳定币结尾
+        let possible_quote = [
+            StableToken::Tether,
+            StableToken::USD,
+            StableToken::BinanceUSD,
+            StableToken::Dai,
+            StableToken::PaxosStandard,
+            StableToken::TrueUSD,
+            StableToken::GeminiDollar,
+            StableToken::TerraUSD,
+            StableToken::Frax,
+            StableToken::NeutrinoUSD,
+        ]
+            .iter()
+            .find_map(|stable_token| {
+                let token_quote = stable_token.to_token();
+                if self.symbol.ends_with(token_quote.as_ref()) {
+                    Some(token_quote)
+                } else {
+                    None
+                }
+            });
 
-        if StableToken::is_stable_token(&token_quote) {
-            Some(self.symbol.trim_end_matches(&possible_quote).to_string())
+        if let Some(quote_token) = possible_quote {
+            // 从 symbol 中去掉 quote 部分，剩下的就是 base
+            Some(self.symbol.trim_end_matches(quote_token.as_ref()).to_string())
         } else {
             None
         }
     }
 
     pub fn parse_quote(&self) -> Option<String> {
-        let possible_quote = self.symbol.chars().rev().take_while(|&c| c.is_alphabetic()).collect::<String>().chars().rev().collect::<String>();
-        let token_quote = Token::new(&possible_quote);
+        // 遍历所有的 `StableToken` 变种，并检查 symbol 是否以该稳定币结尾
+        let possible_quote = [
+            StableToken::Tether,
+            StableToken::USD,
+            StableToken::BinanceUSD,
+            StableToken::Dai,
+            StableToken::PaxosStandard,
+            StableToken::TrueUSD,
+            StableToken::GeminiDollar,
+            StableToken::TerraUSD,
+            StableToken::Frax,
+            StableToken::NeutrinoUSD,
+        ]
+            .iter()
+            .find_map(|stable_token| {
+                let token_quote = stable_token.to_token();
+                if self.symbol.ends_with(token_quote.as_ref()) {
+                    Some(token_quote.as_ref().to_string())
+                } else {
+                    None
+                }
+            });
 
-        if StableToken::is_stable_token(&token_quote) {
-            Some(possible_quote)
-        } else {
-            None
-        }
+        possible_quote
     }
 }
+
 
 #[cfg(test)]
 mod tests {
