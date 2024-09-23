@@ -162,7 +162,7 @@ async fn main()
     let exchange = "binance";
     let instrument = "futures";
     let date = "2024_05_05";
-    let cursor = clickhouse_client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
+    let cursor = clickhouse_client.cursor_unioned_public_trades_for_test(exchange, instrument, date).await.unwrap();
 
     // Initialize and configure HourglassExchange
     let hourglass_exchange = HourglassExchange::builder().event_hourglass_rx(client_event_rx)
@@ -188,6 +188,9 @@ async fn main()
             // Process the market data
             // Your logic for handling market_data & customised trading strategy goes here?
             println!("Processed market data: {:?}", market_data);
+        }
+        else {
+            break
         }
     }
 }

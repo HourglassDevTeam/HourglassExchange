@@ -285,6 +285,28 @@ impl ClickHouseClient
         client_ref.query(&query).fetch::<MarketTrade>()
     }
 
+    pub async fn cursor_unioned_public_trades_for_test(&self, exchange: &str, instrument: &str, date: &str) -> Result<RowCursor<MarketTrade>>
+    {
+        // 构造数据库名称和表名称
+        let database_name = self.construct_database_name(exchange, instrument, "trades");
+        let table_name = self.construct_union_table_name(exchange, instrument, "trades", date);
+
+        // 使用 ClickHouseQueryBuilder 构造查询语句
+        let query = ClickHouseQueryBuilder::new().select("exchange, symbol, side, price, timestamp, amount")
+            .from(&database_name, &table_name)
+            .order("timestamp", Some("ASC"))
+            .limit(3)
+            .build();
+
+        println!("Constructed query {}", query);
+
+        // 获取 ClickHouse 客户端的只读引用
+        let client_ref = self.client.read().await;
+
+        // 执行查询并获取游标
+        client_ref.query(&query).fetch::<MarketTrade>()
+    }
+
     pub async fn optimize_table(&self, table_path: &str) -> Result<(), Error>
     {
         let optimize_query = format!("OPTIMIZE TABLE {}", table_path);
