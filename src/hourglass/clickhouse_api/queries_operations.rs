@@ -293,10 +293,10 @@ impl ClickHouseClient
 
         // 使用 ClickHouseQueryBuilder 构造查询语句
         let query = ClickHouseQueryBuilder::new().select("exchange, symbol, side, price, timestamp, amount")
-            .from(&database_name, &table_name)
-            .order("timestamp", Some("ASC"))
-            .limit(8)
-            .build();
+                                                 .from(&database_name, &table_name)
+                                                 .order("timestamp", Some("ASC"))
+                                                 .limit(8)
+                                                 .build();
 
         println!("Constructed query {}", query);
 

@@ -23,7 +23,7 @@ async fn main()
     // let mut cursor = client_ref.query(&query).fetch::<ClickhousePublicTrade>().unwrap();
 
     // EXAMPLE 2 USE PREDEFINED METHOD
-    let mut cursor = client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
+    let mut cursor = client.cursor_unioned_public_trades_for_test(exchange, instrument, date).await.unwrap();
     let start_time = Instant::now();
     while let Ok(Some(row)) = cursor.next().await {
         println!("{:?}", row)

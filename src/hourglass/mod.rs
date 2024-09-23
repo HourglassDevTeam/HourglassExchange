@@ -62,72 +62,74 @@ impl HourglassExchange
 
         loop {
             tokio::select! {
-                // 监听客户端信号
-                 Some(event) = self.client_event_rx.recv() => {
-            match event {
-                HourglassClientEvent::LetItRoll => {
-                    if let Some(row) = self.process_next_data().await {
-                        println!("processing LetItRoll");
-                        let mut account = self.account.lock().await;
-                        let _ = account.handle_trade_data(&row);
-                        processed_count += 1; // 每处理一个条目，计数器加1
-                    } else {
-                        // 如果没有更多数据
-                        if processed_count > 0 {
-                            println!("No more data available. Processed {} entries", processed_count);
+                    // 监听客户端信号
+                     Some(event) = self.client_event_rx.recv() => {
+                match event {
+                    HourglassClientEvent::LetItRoll => {
+                        if let Some(row) = self.process_next_data().await {
+                            println!("processing LetItRoll");
+                            let mut account = self.account.lock().await;
+                            let _ = account.handle_trade_data(&row);
+                            processed_count += 1; // 每处理一个条目，计数器加1
                         } else {
-                            println!("No data found.");
+                            // 如果没有更多数据
+                            if processed_count > 0 {
+                                println!("No more data available. Processed {} entries", processed_count);
+                            } else {
+                                println!("No data found.");
+                            }
+                            break; // 优雅退出循环
                         }
-                        break; // 优雅退出循环
-                    }
-                },
-                        // 其他客户端事件处理
-                        HourglassClientEvent::FetchOrdersOpen(response_tx) => {
-                            self.account.lock().await.fetch_orders_open_and_respond(response_tx).await;
-                        },
-                        HourglassClientEvent::FetchTokenBalance(token, response_tx) => {
-                            self.account.lock().await.fetch_token_balance_and_respond(&token, response_tx).await;
-                        },
-                        HourglassClientEvent::FetchTokenBalances(response_tx) => {
-                            self.account.lock().await.fetch_token_balances_and_respond(response_tx).await;
-                        },
-                        HourglassClientEvent::OpenOrders((open_requests, response_tx)) => {
-                            self.account.lock().await.open_orders(open_requests, response_tx).await.expect("Failed to open.");
-                        },
-                        HourglassClientEvent::CancelOrders((cancel_requests, response_tx)) => {
-                            self.account.lock().await.cancel_orders(cancel_requests, response_tx).await;
-                        },
-                        HourglassClientEvent::CancelOrdersAll(response_tx) => {
-                            self.account.lock().await.cancel_orders_all(response_tx).await;
-                        },
-                        HourglassClientEvent::FetchAllPositions(response_tx) => {
-                            self.account.lock().await.fetch_positions_and_respond(response_tx).await;
-                        },
-                        HourglassClientEvent::FetchLongPosition(instrument, response_tx) => {
-                            self.account.lock().await.fetch_long_position_and_respond(&instrument, response_tx).await;
-                        },
-                        HourglassClientEvent::FetchShortPosition(instrument, response_tx) => {
-                            self.account.lock().await.fetch_short_position_and_respond(&instrument, response_tx).await;
+                    },
+                            // 其他客户端事件处理
+                            HourglassClientEvent::FetchOrdersOpen(response_tx) => {
+                                self.account.lock().await.fetch_orders_open_and_respond(response_tx).await;
+                            },
+                            HourglassClientEvent::FetchTokenBalance(token, response_tx) => {
+                                self.account.lock().await.fetch_token_balance_and_respond(&token, response_tx).await;
+                            },
+                            HourglassClientEvent::FetchTokenBalances(response_tx) => {
+                                self.account.lock().await.fetch_token_balances_and_respond(response_tx).await;
+                            },
+                            HourglassClientEvent::OpenOrders((open_requests, response_tx)) => {
+                                self.account.lock().await.open_orders(open_requests, response_tx).await.expect("Failed to open.");
+                            },
+                            HourglassClientEvent::CancelOrders((cancel_requests, response_tx)) => {
+                                self.account.lock().await.cancel_orders(cancel_requests, response_tx).await;
+                            },
+                            HourglassClientEvent::CancelOrdersAll(response_tx) => {
+                                self.account.lock().await.cancel_orders_all(response_tx).await;
+                            },
+                            HourglassClientEvent::FetchAllPositions(response_tx) => {
+                                self.account.lock().await.fetch_positions_and_respond(response_tx).await;
+                            },
+                            HourglassClientEvent::FetchLongPosition(instrument, response_tx) => {
+                                self.account.lock().await.fetch_long_position_and_respond(&instrument, response_tx).await;
+                            },
+                            HourglassClientEvent::FetchShortPosition(instrument, response_tx) => {
+                                self.account.lock().await.fetch_short_position_and_respond(&instrument, response_tx).await;
 
-                        },
-                        HourglassClientEvent::DepositTokens(deposit_request) => {
-                            self.account.lock().await.deposit_multiple_coins_and_respond(deposit_request.0, deposit_request.1).await;
-                        },
-                        HourglassClientEvent::ConfigureInstruments(position_configs, response_tx) => {
-                            let _ = self.account.lock().await.preconfigure_positions(position_configs, response_tx).await;
-                        }
+                            },
+                            HourglassClientEvent::DepositTokens(deposit_request) => {
+                                self.account.lock().await.deposit_multiple_coins_and_respond(deposit_request.0, deposit_request.1).await;
+                            },
+                            HourglassClientEvent::ConfigureInstruments(position_configs, response_tx) => {
+                                let _ = self.account.lock().await.preconfigure_positions(position_configs, response_tx).await;
+                            }
+                        HourglassClientEvent::Login(_) => {
+                            todo!()
+                        }}
                     }
+                    // 加入超时机制，防止一直挂起
+            _ = time::sleep(Duration::from_secs(timeout)) => {
+                if processed_count > 0 {
+                    println!("No more data available.");
+                } else {
+                    println!("No data found.");
                 }
-                // 加入超时机制，防止一直挂起
-        _ = time::sleep(Duration::from_secs(timeout)) => {
-            if processed_count > 0 {
-                println!("No more data available.");
-            } else {
-                println!("No data found.");
+                break; // 超时后优雅退出循环
             }
-            break; // 超时后优雅退出循环
-        }
-            }
+                }
         }
     }
 

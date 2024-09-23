@@ -18,6 +18,7 @@ use crate::{
     hourglass::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, config_request::ConfigurationRequest},
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
+use crate::network::login::LoginRequest;
 
 #[derive(Debug)]
 pub struct HourglassClient
@@ -53,6 +54,7 @@ pub enum HourglassClientEvent
     CancelOrdersAll(Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>),
     ConfigureInstruments(Vec<ConfigurationRequest>, Sender<ConfigureInstrumentsResults>),
     LetItRoll, // Tell the system to send the next datafeed.
+    Login(LoginRequest),
 }
 
 #[async_trait]
@@ -170,7 +172,8 @@ impl ClientExecution for HourglassClient
     }
 
     // 发送 LetItRoll 命令的函数
-    async fn let_it_roll(&self) -> Result<(), ExchangeError> {
+    async fn let_it_roll(&self) -> Result<(), ExchangeError>
+    {
         // Try sending the LetItRoll event and handle the case where the channel is closed
         if let Err(err) = self.client_event_tx.send(HourglassClientEvent::LetItRoll) {
             // Channel is closed, so handle it gracefully instead of panicking
