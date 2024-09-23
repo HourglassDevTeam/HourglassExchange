@@ -919,7 +919,7 @@ impl PositionHandler for HourglassAccount
 
     async fn check_and_handle_liquidation(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>
     {
-        // 解析仪器
+        // 解析金融工具
         let instrument = trade.parse_instrument().ok_or_else(|| ExchangeError::InvalidInstrument("Instrument parsing failed".to_string()))?;
 
         // 获取多头和空头仓位

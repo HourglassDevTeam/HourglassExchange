@@ -88,8 +88,8 @@ use hourglass::{
             order_instructions::OrderInstruction,
             states::{request_cancel::RequestCancel, request_open::RequestOpen},
             Order,
-        },
-        event::{AccountEvent, AccountEventKind},
+        }
+        ,
         token::Token,
         Side,
     },
@@ -133,6 +133,8 @@ async fn main()
     let closed_positions = AccountExitedPositions::init();
 
     let mut single_level_order_books = HashMap::new();
+
+    // FIXME mechanism to be updated to update `single_level_order_books` in
     single_level_order_books.insert(Instrument { base: Token::new("ETH".to_string()),
                                                  quote: Token::new("USDT".to_string()),
                                                  kind: InstrumentKind::Perpetual },
@@ -152,7 +154,7 @@ async fn main()
                                                    lazy_account_positions: false,
                                                    liquidation_threshold: 0.9 };
 
-    /// initialise the tokens possibly to be traded
+    // initialise the tokens possibly to be traded
     let mut instruments: Vec<Instrument> = vec![];
 
     // initialise 1000PEPEUSDT
@@ -248,6 +250,8 @@ struct Ids
     id: OrderId,
 }
 
+
+#[allow(unused)]
 impl Ids
 {
     fn new(cid: ClientOrderId, id: OrderId) -> Self
@@ -277,7 +281,7 @@ pub async fn order_parser(
                 | OrderType::Open(monk_order) => {
                     let order = Order { instruction: monk_order.order_type,                                                 // 订单指令
                                         exchange: Exchange::Hourglass,                                                      // 交易所
-                                        instrument: Instrument::from(("1000PEPEUSDT", "USDT", InstrumentKind::Perpetual)),  // 交易工具
+                                        instrument: Instrument::from(("1000PEPE", "USDT", InstrumentKind::Perpetual)),  // 交易工具
                                         timestamp: 1649192400000000,                                                        // 生成的时候填客户端下单时间,NOTE 回测场景中之后会被加上一个随机延迟时间。
                                         cid: Some(ClientOrderId(format!("{} {}", "PEPEbuy{}".to_string(), order_counter))), // 客户端订单ID
                                         side: monk_order.side,                                                              // 买卖方向
@@ -291,7 +295,7 @@ pub async fn order_parser(
                 | OrderType::Cancel => {
                     let order_cancel = Order { instruction: OrderInstruction::Cancel,
                                                exchange: Exchange::Hourglass,
-                                               instrument: Instrument::from(("1000PEPEUSDT", "USDT", InstrumentKind::Perpetual)),
+                                               instrument: Instrument::from(("1000PEPE", "USDT", InstrumentKind::Perpetual)),
                                                timestamp: 1649192400000000, // 使用当前时间戳
                                                cid: Some(ClientOrderId(format!("{} {}", "PEPEbuy{}".to_string(), order_counter))),
                                                side: Side::Buy,

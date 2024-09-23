@@ -68,8 +68,9 @@ impl HourglassExchange
                     HourglassClientEvent::LetItRoll => {
                         if let Some(row) = self.process_next_data().await {
                             println!("processing LetItRoll");
+                                println!("row: {:?}", row);
                             let mut account = self.account.lock().await;
-                            let _ = account.handle_trade_data(&row);
+                            let _ = account.handle_trade_data(&row).await;
                             processed_count += 1; // 每处理一个条目，计数器加1
                         } else {
                             // 如果没有更多数据
