@@ -64,15 +64,16 @@ impl HourglassExchange
                 // 监听客户端信号
                 Some(event) = self.event_hourglass_rx.recv() => {
                     match event {
-                        HourglassClientEvent::LetItRoll => {
-                            if let Some(row) = self.process_next_data().await {
-                                println!("processing LetItRoll");
-                                let mut account = self.account.lock().await;
-                                let _ = account.handle_trade_data(&row);
-                            } else {
-                                println!("No data processed.");
-                            }
-                        },
+                HourglassClientEvent::LetItRoll => {
+                    if let Some(row) = self.process_next_data().await {
+                        println!("processing LetItRoll");
+                        let mut account = self.account.lock().await;
+                        let _ = account.handle_trade_data(&row);
+                    } else {
+                        println!("No data processed.");
+                        break; // 如果没有更多数据，优雅退出循环
+                    }
+                },
                         // 其他客户端事件处理
                         HourglassClientEvent::FetchOrdersOpen(response_tx) => {
                             self.account.lock().await.fetch_orders_open_and_respond(response_tx).await;
