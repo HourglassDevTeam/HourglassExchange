@@ -57,14 +57,14 @@ mod tests
         // 这里提供了一种方法，通过使用zip函数结合迭代器来交替打印实际和预期的交易数据。
         // 如果两个向量的长度不一致，zip将会停在较短的向量结束时。以下是修改后的打印部分代码：
         // 打印实际加载的数据和预期数据
-        // println!("{:-<159}", ""); // 输出长度为30的分隔线
-        // println!("{:<<50}  Testing load_json_market_trade()  {:>>52}", "<", ">");
-        // for (actual_trade, expected_trade) in actual_trades.iter().zip(expected_trades.iter()) {
-        //     println!("{:->159}", ""); // 输出长度为30的分隔线
-        //     println!("| 实际交易 : {:?} |", actual_trade);
-        //     println!("| 预期交易 : {:?} |", expected_trade);
-        // }
-        // println!("{:-<159}", ""); // 输出长度为30的分隔线
+        println!("{:-<159}", ""); // 输出长度为30的分隔线
+        println!("{:<<50}  Testing load_json_market_trade()  {:>>52}", "<", ">");
+        for (actual_trade, expected_trade) in actual_trades.iter().zip(expected_trades.iter()) {
+            println!("{:->159}", ""); // 输出长度为30的分隔线
+            println!("| 实际交易 : {:?} |", actual_trade);
+            println!("| 预期交易 : {:?} |", expected_trade);
+        }
+        println!("{:-<159}", ""); // 输出长度为30的分隔线
                                   // 断言实际数据与预期数据相等
         assert_eq!(actual_trades, expected_trades);
     }
