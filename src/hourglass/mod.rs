@@ -37,7 +37,7 @@ pub enum DataSource
 pub struct HourglassExchange
     where HourglassAccount: PositionHandler + TradeHandler + BalanceHandler
 {
-    pub event_hourglass_rx: UnboundedReceiver<HourglassClientEvent>,
+    pub client_event_rx: UnboundedReceiver<HourglassClientEvent>,
     pub market_event_tx: UnboundedSender<MarketTrade>,
     pub account: Arc<Mutex<HourglassAccount>>,
     pub data_source: DataSource,
@@ -63,7 +63,7 @@ impl HourglassExchange
         loop {
             tokio::select! {
                 // 监听客户端信号
-                 Some(event) = self.event_hourglass_rx.recv() => {
+                 Some(event) = self.client_event_rx.recv() => {
             match event {
                 HourglassClientEvent::LetItRoll => {
                     if let Some(row) = self.process_next_data().await {
@@ -251,7 +251,7 @@ impl ExchangeBuilder
 
     pub fn initiate(self) -> Result<HourglassExchange, ExchangeError>
     {
-        Ok(HourglassExchange { event_hourglass_rx: self.event_hourglass_rx.ok_or_else(|| ExchangeError::BuilderIncomplete("event_hourglass_rx".to_string()))?,
+        Ok(HourglassExchange { client_event_rx: self.event_hourglass_rx.ok_or_else(|| ExchangeError::BuilderIncomplete("event_hourglass_rx".to_string()))?,
                                // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::BuilderIncomplete("market_event_tx".to_string()))?,
                                market_event_tx: self.market_event_tx.ok_or_else(|| ExchangeError::BuilderIncomplete("market_tx".to_string()))?,
                                account: self.account.ok_or_else(|| ExchangeError::BuilderIncomplete("account".to_string()))?,
@@ -326,7 +326,7 @@ mod tests
         let (_tx, rx) = mpsc::unbounded_channel();
         let account = create_test_account().await;
         let account = Arc::new(Mutex::new(account)); // Wrap `Account` in `Arc<Mutex<Account>>`
-        let exchange = HourglassExchange { event_hourglass_rx: rx,
+        let exchange = HourglassExchange { client_event_rx: rx,
                                            market_event_tx: market_tx,
                                            account,
                                            data_source: DataSource::Backtest(cursor) };

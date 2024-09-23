@@ -170,12 +170,13 @@ impl ClientExecution for HourglassClient
     }
 
     // 发送 LetItRoll 命令的函数
-    async fn let_it_roll(&self) -> Result<(), ExchangeError>
-    {
-        // 向模拟交易所发送 LetItRoll 请求
-        self.client_event_tx
-            .send(HourglassClientEvent::LetItRoll)
-            .expect("Hourglass exchange is currently offline - Failed to send LetItRoll request");
+    async fn let_it_roll(&self) -> Result<(), ExchangeError> {
+        // Try sending the LetItRoll event and handle the case where the channel is closed
+        if let Err(err) = self.client_event_tx.send(HourglassClientEvent::LetItRoll) {
+            // Channel is closed, so handle it gracefully instead of panicking
+            println!("Channel closed, gracefully ending. Failed to send LetItRoll request: {:?}", err);
+            return Ok(());
+        }
 
         println!("Sent LetItRoll command successfully");
         Ok(())
