@@ -68,7 +68,8 @@ impl ClientExecution for HourglassClient
         let (request_tx, market_event_rx) = config;
 
         // 使用 request_tx 和 market_event_rx 初始化 HourglassClient
-        Self { client_event_tx: request_tx, market_event_rx }
+        Self { client_event_tx: request_tx,
+               market_event_rx }
     }
 
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExchangeError>

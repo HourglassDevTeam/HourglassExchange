@@ -100,6 +100,7 @@ impl HourglassExchange
                         },
                         HourglassClientEvent::FetchShortPosition(instrument, response_tx) => {
                             self.account.lock().await.fetch_short_position_and_respond(&instrument, response_tx).await;
+
                         },
                         HourglassClientEvent::DepositTokens(deposit_request) => {
                             self.account.lock().await.deposit_multiple_coins_and_respond(deposit_request.0, deposit_request.1).await;

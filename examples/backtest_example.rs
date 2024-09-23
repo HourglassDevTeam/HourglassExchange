@@ -77,16 +77,16 @@
 /// - The `let_it_roll()` function triggers the next market data to be processed.
 /// - The client listens for market data and processes it as needed.
 /// - The ClickHouse client is responsible for fetching historical data and providing it to the exchange.
-
 use dashmap::DashMap;
 use hourglass::{
     common::{
-        account_positions::{exited_positions::AccountExitedPositions, AccountPositions},
+        account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode, PositionMarginMode},
         instrument::{kind::InstrumentKind, Instrument},
         token::Token,
     },
     hourglass::{
         account::{
+            account_config::{AccountConfig, CommissionLevel, HourglassMode, MarginMode},
             account_latency::{AccountLatency, FluctuationMode},
             account_orders::AccountOrders,
             HourglassAccount,
@@ -101,12 +101,8 @@ use std::{
     collections::HashMap,
     sync::{atomic::AtomicI64, Arc},
 };
-use tokio::{
-    sync::{mpsc, Mutex, RwLock},
-};
+use tokio::sync::{mpsc, Mutex, RwLock};
 use uuid::Uuid;
-use hourglass::common::account_positions::{PositionDirectionMode, PositionMarginMode};
-use hourglass::hourglass::account::account_config::{AccountConfig, CommissionLevel, HourglassMode, MarginMode};
 
 #[tokio::main]
 async fn main()
@@ -118,8 +114,7 @@ async fn main()
 
     #[allow(unused)]
     let mut hourglass_client = HourglassClient { client_event_tx: client_event_tx.clone(),
-                                                 market_event_rx
-    };
+                                                 market_event_rx };
 
     // Creating initial positions with the updated structure
     let positions = AccountPositions::init();
@@ -133,18 +128,17 @@ async fn main()
                                                            latest_ask: 16499.0,
                                                            latest_price: 0.0 });
 
-    let hourglass_account_config =  AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
-        global_position_direction_mode: PositionDirectionMode::Net,
-        global_position_margin_mode: PositionMarginMode::Cross,
-        commission_level: CommissionLevel::Lv1,
-        funding_rate: 0.0,
-        global_leverage_rate: 1.0,
-        fees_book: HashMap::new(),
-        execution_mode: HourglassMode::Backtest,
-        max_price_deviation: 0.05,
-        lazy_account_positions: false,
-        liquidation_threshold: 0.9 };
-
+    let hourglass_account_config = AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
+                                                   global_position_direction_mode: PositionDirectionMode::Net,
+                                                   global_position_margin_mode: PositionMarginMode::Cross,
+                                                   commission_level: CommissionLevel::Lv1,
+                                                   funding_rate: 0.0,
+                                                   global_leverage_rate: 1.0,
+                                                   fees_book: HashMap::new(),
+                                                   execution_mode: HourglassMode::Backtest,
+                                                   max_price_deviation: 0.05,
+                                                   lazy_account_positions: false,
+                                                   liquidation_threshold: 0.9 };
 
     // Instantiate HourglassAccount and wrap in Arc<Mutex> for shared access
     let account_arc = Arc::new(Mutex::new(HourglassAccount { current_session: Uuid::new_v4(),
