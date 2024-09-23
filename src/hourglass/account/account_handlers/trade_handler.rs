@@ -1,4 +1,5 @@
-use crate::{
+use
+crate::{
     common::{
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
@@ -31,7 +32,7 @@ use tracing::warn;
 #[async_trait]
 pub trait TradeHandler
 {
-    async fn create_or_single_level_orderbook_from_market_trade(&mut self, trade: &MarketTrade);
+    async fn create_or_update_single_level_orderbook_from_market_trade(&mut self, trade: &MarketTrade);
     async fn handle_trade_data(&mut self, trade: &MarketTrade) -> Result<(), ExchangeError>;
 
     async fn match_orders(&mut self, market_trade: &MarketTrade) -> Result<Vec<ClientTrade>, ExchangeError>;
@@ -80,7 +81,7 @@ impl TradeHandler for HourglassAccount
     /// # 备注
     /// - `SingleLevelOrderBook::from(trade)` 是一个基于 `trade` 初始化订单簿的工厂方法。
     /// - 该函数异步锁定了 `single_level_order_book`，并且通过 `.await` 实现对共享数据的安全访问。
-    async fn create_or_single_level_orderbook_from_market_trade(&mut self, trade: &MarketTrade)
+    async fn create_or_update_single_level_orderbook_from_market_trade(&mut self, trade: &MarketTrade)
     {
         let instrument = trade.parse_instrument().unwrap();
         let mut orderbook = self.single_level_order_book.lock().await;
@@ -88,6 +89,7 @@ impl TradeHandler for HourglassAccount
         orderbook.entry(instrument)
                  .or_insert_with(|| SingleLevelOrderBook::from(trade)) // 传递引用 &trade
                  .update_from_trade(&trade);
+        println!("[create_or_update_single_level_orderbook_from_market_trade] orderbook: {:?}", orderbook);
     }
 
     /// 处理交易数据的方法
@@ -96,7 +98,7 @@ impl TradeHandler for HourglassAccount
         // 更新时间戳
         self.update_exchange_ts(trade.timestamp);
         // 更新单层OrderBook，注意 这个做法仅仅适用于回测。
-        self.create_or_single_level_orderbook_from_market_trade(trade).await;
+        self.create_or_update_single_level_orderbook_from_market_trade(trade).await;
         // 用交易所记录的用户的挂单去匹配 market_rade 以实现模拟的目的
         self.check_and_handle_liquidation(trade).await?;
         self.match_orders(&trade).await?;
@@ -402,7 +404,7 @@ mod tests
         // assert_eq!(result.is_ok(), true);
         // // 创建一个市场事件，该事件与 open订单完全匹配
         let market_event = MarketTrade { exchange: "binance-futures".to_string(),
-                                         symbol: "ETH_USDT".to_string(),
+                                         symbol: "ETHUSDT".to_string(),
                                          timestamp: 1625247600000,
                                          price: 16605.0, // 前面已经确认是Maker单，成交计算的价格应该按照这里的 16605
                                          side: Side::Buy.to_string(),
@@ -445,7 +447,7 @@ mod tests
 
         // 匹配一个完全匹配的市场事件
         let market_event = MarketTrade { exchange: "binance-futures".to_string(),
-                                         symbol: "ETH_USDT".to_string(),
+                                         symbol: "ETHUSDT".to_string(),
                                          timestamp: 1625247600000,
                                          price: 100.0,
                                          side: Side::Sell.to_string(),
@@ -494,7 +496,7 @@ mod tests
         let mut account = create_test_account().await;
 
         let trade = MarketTrade { exchange: "binance-futures".to_string(),
-                                  symbol: "BTC_USDT".to_string(),
+                                  symbol: "BTCUSDT".to_string(),
                                   timestamp: 1625247600000,
                                   price: 100.0,
                                   side: Side::Buy.to_string(),

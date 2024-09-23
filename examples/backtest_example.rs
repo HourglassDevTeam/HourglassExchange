@@ -1,3 +1,4 @@
+use crate::OrderType::Cancel;
 /// # Backtest Example Documentation
 ///
 /// This code demonstrates how to run a local `HourglassExchange` using simulated market data.
@@ -77,36 +78,43 @@
 /// - The `let_it_roll()` function triggers the next market data to be processed.
 /// - The client listens for market data and processes it as needed.
 /// - The ClickHouse client is responsible for fetching historical data and providing it to the exchange.
-
 use dashmap::DashMap;
 use hourglass::{
     common::{
-        account_positions::{exited_positions::AccountExitedPositions, AccountPositions},
+        account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode, PositionMarginMode},
         instrument::{kind::InstrumentKind, Instrument},
+        order::{
+            identification::{client_order_id::ClientOrderId, OrderId},
+            order_instructions::OrderInstruction,
+            states::{request_cancel::RequestCancel, request_open::RequestOpen},
+            Order,
+        }
+        ,
         token::Token,
+        Side,
     },
     hourglass::{
         account::{
+            account_config::{AccountConfig, CommissionLevel, HourglassMode, MarginMode},
             account_latency::{AccountLatency, FluctuationMode},
             account_orders::AccountOrders,
             HourglassAccount,
         },
-        clickhouse_api::{datatype::single_level_order_book::SingleLevelOrderBook, queries_operations::ClickHouseClient},
-        hourglass_client::HourglassClient,
+        clickhouse_api::{
+            datatype::{clickhouse_trade_data::MarketTrade, single_level_order_book::SingleLevelOrderBook},
+            queries_operations::ClickHouseClient,
+        },
+        hourglass_client_local_mode::HourglassClient,
         DataSource, HourglassExchange,
     },
-    ClientExecution,
+    ClientExecution, Exchange,
 };
 use std::{
     collections::HashMap,
     sync::{atomic::AtomicI64, Arc},
 };
-use tokio::{
-    sync::{mpsc, Mutex, RwLock},
-};
+use tokio::sync::{mpsc, Mutex, RwLock};
 use uuid::Uuid;
-use hourglass::common::account_positions::{PositionDirectionMode, PositionMarginMode};
-use hourglass::hourglass::account::account_config::{AccountConfig, CommissionLevel, HourglassMode, MarginMode};
 
 #[tokio::main]
 async fn main()
@@ -118,14 +126,15 @@ async fn main()
 
     #[allow(unused)]
     let mut hourglass_client = HourglassClient { client_event_tx: client_event_tx.clone(),
-                                                 market_event_rx
-    };
+                                                 market_event_rx };
 
     // Creating initial positions with the updated structure
     let positions = AccountPositions::init();
     let closed_positions = AccountExitedPositions::init();
 
     let mut single_level_order_books = HashMap::new();
+
+    // FIXME mechanism to be updated to update `single_level_order_books` in
     single_level_order_books.insert(Instrument { base: Token::new("ETH".to_string()),
                                                  quote: Token::new("USDT".to_string()),
                                                  kind: InstrumentKind::Perpetual },
@@ -133,29 +142,41 @@ async fn main()
                                                            latest_ask: 16499.0,
                                                            latest_price: 0.0 });
 
-    let hourglass_account_config =  AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
-        global_position_direction_mode: PositionDirectionMode::Net,
-        global_position_margin_mode: PositionMarginMode::Cross,
-        commission_level: CommissionLevel::Lv1,
-        funding_rate: 0.0,
-        global_leverage_rate: 1.0,
-        fees_book: HashMap::new(),
-        execution_mode: HourglassMode::Backtest,
-        max_price_deviation: 0.05,
-        lazy_account_positions: false,
-        liquidation_threshold: 0.9 };
+    let hourglass_account_config = AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
+                                                   global_position_direction_mode: PositionDirectionMode::Net,
+                                                   global_position_margin_mode: PositionMarginMode::Cross,
+                                                   commission_level: CommissionLevel::Lv1,
+                                                   funding_rate: 0.0,
+                                                   global_leverage_rate: 1.0,
+                                                   fees_book: HashMap::new(),
+                                                   execution_mode: HourglassMode::Backtest,
+                                                   max_price_deviation: 0.05,
+                                                   lazy_account_positions: false,
+                                                   liquidation_threshold: 0.9 };
 
+    // initialise the tokens possibly to be traded
+    let mut instruments: Vec<Instrument> = vec![];
+
+    // initialise 1000PEPEUSDT
+    instruments.push(Instrument { base: Token::from("1000PEPE"),
+                                  quote: Token::from("USDT"),
+                                  kind: InstrumentKind::Perpetual });
+
+    // initialise 1000FLOKIUSDT
+    instruments.push(Instrument { base: Token::from("1000FLOKI"),
+                                  quote: Token::from("USDT"),
+                                  kind: InstrumentKind::Perpetual });
 
     // Instantiate HourglassAccount and wrap in Arc<Mutex> for shared access
     let account_arc = Arc::new(Mutex::new(HourglassAccount { current_session: Uuid::new_v4(),
                                                              machine_id: 0,
                                                              client_trade_counter: 0.into(),
-                                                             exchange_timestamp: AtomicI64::new(1234567),
+                                                             exchange_timestamp: AtomicI64::new(0),
                                                              config: hourglass_account_config,
-                                                             account_open_book: Arc::new(RwLock::new(AccountOrders::new(0, vec![], AccountLatency { fluctuation_mode: FluctuationMode::Sine,
-                                                                                                                                                    maximum: 100,
-                                                                                                                                                    minimum: 2,
-                                                                                                                                                    current_value: 0 }).await)),
+                                                             account_open_book: Arc::new(RwLock::new(AccountOrders::new(0, instruments, AccountLatency { fluctuation_mode: FluctuationMode::Sine,
+                                                                                                                                                         maximum: 100,
+                                                                                                                                                         minimum: 2,
+                                                                                                                                                         current_value: 0 }).await)),
                                                              single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
                                                              balances: DashMap::new(),
                                                              positions,
@@ -167,8 +188,8 @@ async fn main()
     let clickhouse_client = ClickHouseClient::new();
     let exchange = "binance";
     let instrument = "futures";
-    let date = "2024_08_22";
-    let cursor = clickhouse_client.cursor_unioned_public_trades(exchange, instrument, date).await.unwrap();
+    let date = "2024_05_05";
+    let cursor = clickhouse_client.cursor_unioned_public_trades_for_test(exchange, instrument, date).await.unwrap();
 
     // Initialize and configure HourglassExchange
     let hourglass_exchange = HourglassExchange::builder().event_hourglass_rx(client_event_rx)
@@ -182,6 +203,21 @@ async fn main()
     tokio::spawn(hourglass_exchange.start());
     // hourglass_client.let_it_roll().await.unwrap();
 
+    let mut tokens_to_be_deposited: Vec<(Token, f64)> = Vec::new();
+
+    // Create the Token instance
+    let usdt_token = Token::from("USDT");
+
+    // Push the tuple (Token, f64) into the vector
+    tokens_to_be_deposited.push((usdt_token, 100000.0));
+
+    // deposit 70000 USDT
+    let _ = hourglass_client.deposit_tokens(tokens_to_be_deposited).await;
+    let balance = hourglass_client.fetch_balances().await.unwrap();
+    println!("Balance updated after deposit: {:?}", balance);
+
+    let mut order_counter: i64 = 0;
+
     loop {
         // Call next entry of data and handle potential errors
         if let Err(e) = hourglass_client.let_it_roll().await {
@@ -191,9 +227,130 @@ async fn main()
 
         // Listen for market data
         if let Some(market_data) = hourglass_client.listen_for_market_data().await {
-            // Process the market data
+            // Process the market data NOTE to be implemented.
+            order_counter += 1;
+
+            order_parser(&hourglass_client, &market_data, order_counter, &mut account_event_rx).await;
+
+
             // Your logic for handling market_data & customised trading strategy goes here?
             println!("Processed market data: {:?}", market_data);
         }
+        else {
+            break
+        }
     }
+}
+
+#[allow(warnings)]
+#[derive(Clone)]
+struct Ids
+{
+    cid: ClientOrderId,
+    id: OrderId,
+}
+
+
+#[allow(unused)]
+impl Ids
+{
+    fn new(cid: ClientOrderId, id: OrderId) -> Self
+    {
+        Self { cid, id }
+    }
+}
+
+pub async fn order_parser(
+    client: &HourglassClient,
+    trade: &MarketTrade,
+    order_counter: i64,
+    account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>
+)
+{
+    match account_rx.recv().await {
+        | Some(AccountEvent { kind: AccountEventKind::OrdersOpen(new_orders),
+                   .. }) => {
+            println!("{:?}", new_orders[0].);
+        }
+        | other => {}
+    }
+
+    match mock_up_strategy(trade) {
+        | Some(operation) => {
+            match operation {
+                | OrderType::Open(monk_order) => {
+                    let order = Order { instruction: monk_order.order_type,                                                 // 订单指令
+                                        exchange: Exchange::Hourglass,                                                      // 交易所
+                                        instrument: Instrument::from(("1000PEPE", "USDT", InstrumentKind::Perpetual)),  // 交易工具
+                                        timestamp: 1649192400000000,                                                        // 生成的时候填客户端下单时间,NOTE 回测场景中之后会被加上一个随机延迟时间。
+                                        cid: Some(ClientOrderId(format!("{} {}", "PEPEbuy{}".to_string(), order_counter))), // 客户端订单ID
+                                        side: monk_order.side,                                                              // 买卖方向
+                                        state: RequestOpen { reduce_only: false,
+                                                             price: monk_order.price,
+                                                             size: monk_order.size } };
+
+                    let new_orders = client.open_orders(vec![order]).await;
+                    println!("[test_3] : {:?}", new_orders);
+                }
+                | OrderType::Cancel => {
+                    let order_cancel = Order { instruction: OrderInstruction::Cancel,
+                                               exchange: Exchange::Hourglass,
+                                               instrument: Instrument::from(("1000PEPE", "USDT", InstrumentKind::Perpetual)),
+                                               timestamp: 1649192400000000, // 使用当前时间戳
+                                               cid: Some(ClientOrderId(format!("{} {}", "PEPEbuy{}".to_string(), order_counter))),
+                                               side: Side::Buy,
+                                               state: RequestCancel::from(Some(ClientOrderId("PEPEbuy".to_string()))) }; // gotta be parsed from an OrderID rather than ClientOrderID
+
+                    let cancelled = client.cancel_orders(vec![order_cancel]).await;
+
+                    println!("[test_5] : {:?}", cancelled);
+                }
+            }
+        }
+        | None => {}
+    }
+}
+
+pub fn mock_up_strategy(trade: &MarketTrade) -> Option<OrderType>
+{
+    // parse the trade price
+    let trade_price = trade.price;
+    // // parse the trade size
+    // let trade_size = trade.amount;
+    // // parse the trade side
+    // let trade_side = Side::from(trade.side.to_string().parse().unwrap());
+    // the strategy's handling logic goes here
+    match trade_price {
+        | px if px == 1000.0 => {
+            let operation = OrderType::Open(MockOrder { order_type: OrderInstruction::Limit,
+                                                        side: Side::Buy,
+                                                        price: 999.0,
+                                                        size: 10.0 });
+
+            Some(operation)
+        }
+        | px if px == 1050.0 => {
+            // let operation = OrderType::Open(MockOrder { order_type: OrderInstruction::Limit,
+            //     side: Side::Buy,
+            //     price: 999.0,
+            //     size: 10.0 });
+
+            Some(Cancel)
+        }
+        | _ => None,
+    }
+}
+
+pub enum OrderType
+{
+    Open(MockOrder),
+    Cancel,
+}
+
+pub struct MockOrder
+{
+    order_type: OrderInstruction,
+    side: Side,
+    price: f64,
+    size: f64,
 }

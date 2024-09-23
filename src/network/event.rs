@@ -75,7 +75,7 @@
 use crate::common::order::Order;
 use crate::{
     common::order::states::{request_cancel::RequestCancel, request_open::RequestOpen},
-    hourglass::hourglass_client::HourglassClientEvent,
+    hourglass::hourglass_client_local_mode::HourglassClientEvent,
 };
 use serde::Deserialize;
 use tokio::sync::oneshot;

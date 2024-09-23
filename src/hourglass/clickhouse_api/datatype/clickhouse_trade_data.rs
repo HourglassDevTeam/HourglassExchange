@@ -2,8 +2,10 @@ use crate::{
     common::instrument::{kind::InstrumentKind, Instrument},
     hourglass::clickhouse_api::queries_operations::Row,
     Token,
+
 };
 use serde::{Deserialize, Serialize};
+use crate::common::stable_token::StableToken;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
@@ -47,115 +49,151 @@ impl MarketTrade
         }
     }
 
-    pub fn parse_instrument(&self) -> Option<Instrument>
-    {
-        let parts: Vec<&str> = self.symbol.split('_').collect();
+    pub fn parse_instrument(&self) -> Option<Instrument> {
+        // 遍历所有的 `StableToken` 变种，并检查 symbol 是否以该稳定币结尾
+        let possible_quote = [
+            StableToken::Tether,
+            StableToken::USD,
+            StableToken::BinanceUSD,
+            StableToken::Dai,
+            StableToken::PaxosStandard,
+            StableToken::TrueUSD,
+            StableToken::GeminiDollar,
+            StableToken::TerraUSD,
+            StableToken::Frax,
+            StableToken::NeutrinoUSD,
+        ]
+            .iter()
+            .find_map(|stable_token| {
+                let token_quote = stable_token.to_token();
+                if self.symbol.ends_with(token_quote.as_ref()) {
+                    Some(token_quote)
+                } else {
+                    None
+                }
+            });
 
-        if parts.len() >= 2 {
-            let base = Token(parts[0].to_string());
-            let quote = Token(parts[1].to_string());
+        if let Some(quote_token) = possible_quote {
+            let base = self.symbol.trim_end_matches(quote_token.as_ref()).to_string();
+            let token_base = Token::new(&base);
 
             // 根据symbol的格式来解析InstrumentKind
             let kind = self.parse_kind();
 
-            Some(Instrument { base, quote, kind })
-        }
-        else {
-            // 没有下划线，可能是现货或其他类型（需要进一步逻辑处理）
-            None
-        }
-    }
-}
-
-impl MarketTrade
-{
-    pub fn parse_base(&self) -> Option<String>
-    {
-        let parts: Vec<&str> = self.symbol.split('_').collect();
-        if parts.len() == 2 {
-            Some(parts[0].to_string())
-        }
-        else {
-            None
-        }
-    }
-
-    pub fn parse_quote(&self) -> Option<String>
-    {
-        let parts: Vec<&str> = self.symbol.split('_').collect();
-        if parts.len() == 2 {
-            Some(parts[1].to_string())
-        }
-        else {
-            None
+            Some(Instrument {
+                base: token_base,
+                quote: quote_token,
+                kind,
+            })
+        } else {
+            println!("Unrecognized symbol: {}", self.symbol);  // 调试输出
+            None // 无法解析出base和quote
         }
     }
 }
+impl MarketTrade {
+    pub fn parse_base(&self) -> Option<String> {
+        // 遍历所有的 `StableToken` 变种，并检查 symbol 是否以该稳定币结尾
+        let possible_quote = [
+            StableToken::Tether,
+            StableToken::USD,
+            StableToken::BinanceUSD,
+            StableToken::Dai,
+            StableToken::PaxosStandard,
+            StableToken::TrueUSD,
+            StableToken::GeminiDollar,
+            StableToken::TerraUSD,
+            StableToken::Frax,
+            StableToken::NeutrinoUSD,
+        ]
+            .iter()
+            .find_map(|stable_token| {
+                let token_quote = stable_token.to_token();
+                if self.symbol.ends_with(token_quote.as_ref()) {
+                    Some(token_quote)
+                } else {
+                    None
+                }
+            });
+
+        if let Some(quote_token) = possible_quote {
+            // 从 symbol 中去掉 quote 部分，剩下的就是 base
+            Some(self.symbol.trim_end_matches(quote_token.as_ref()).to_string())
+        } else {
+            None
+        }
+    }
+
+    pub fn parse_quote(&self) -> Option<String> {
+        // 遍历所有的 `StableToken` 变种，并检查 symbol 是否以该稳定币结尾
+        let possible_quote = [
+            StableToken::Tether,
+            StableToken::USD,
+            StableToken::BinanceUSD,
+            StableToken::Dai,
+            StableToken::PaxosStandard,
+            StableToken::TrueUSD,
+            StableToken::GeminiDollar,
+            StableToken::TerraUSD,
+            StableToken::Frax,
+            StableToken::NeutrinoUSD,
+        ]
+            .iter()
+            .find_map(|stable_token| {
+                let token_quote = stable_token.to_token();
+                if self.symbol.ends_with(token_quote.as_ref()) {
+                    Some(token_quote.as_ref().to_string())
+                } else {
+                    None
+                }
+            });
+
+        possible_quote
+    }
+}
+
 
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_base()
-    {
-        let trade = MarketTrade { exchange: "example".to_string(),
-                                  symbol: "BTC_USD".to_string(),
-                                  side: "buy".to_string(),
-                                  price: 10000.0,
-                                  timestamp: 1625244000,
-                                  amount: 1.0 };
+    fn test_parse_instrument() {
+        let trade = MarketTrade {
+            exchange: "example".to_string(),
+            symbol: "BTCUSDT".to_string(),
+            side: "buy".to_string(),
+            price: 10000.0,
+            timestamp: 1625244000,
+            amount: 1.0,
+        };
 
-        assert_eq!(trade.parse_base(), Some("BTC".to_string()));
+        let instrument = trade.parse_instrument().unwrap();
+        assert_eq!(instrument.base.as_ref(), "BTC");
+        assert_eq!(instrument.quote.as_ref(), "USDT");
 
-        let trade = MarketTrade { exchange: "".to_string(),
-                                  symbol: "ETH_BTC".to_string(),
-                                  side: "".to_string(),
-                                  price: 0.0,
-                                  timestamp: 0,
-                                  amount: 0.0 };
+        let trade = MarketTrade {
+            exchange: "example".to_string(),
+            symbol: "ETHUSDT".to_string(),
+            side: "buy".to_string(),
+            price: 2000.0,
+            timestamp: 1625245000,
+            amount: 1.0,
+        };
 
-        assert_eq!(trade.parse_base(), Some("ETH".to_string()));
+        let instrument = trade.parse_instrument().unwrap();
+        assert_eq!(instrument.base.as_ref(), "ETH");
+        assert_eq!(instrument.quote.as_ref(), "USDT");
 
-        let trade = MarketTrade { exchange: "".to_string(),
-                                  symbol: "XRP".to_string(),
-                                  side: "".to_string(),
-                                  price: 0.0,
-                                  timestamp: 0,
-                                  amount: 0.0 };
+        let trade = MarketTrade {
+            exchange: "example".to_string(),
+            symbol: "XRP".to_string(),
+            side: "buy".to_string(),
+            price: 0.5,
+            timestamp: 1625246000,
+            amount: 1.0,
+        };
 
-        assert_eq!(trade.parse_base(), None);
-    }
-
-    #[test]
-    fn test_parse_quote()
-    {
-        let trade = MarketTrade { exchange: "example".to_string(),
-                                  symbol: "BTC_USD".to_string(),
-                                  side: "buy".to_string(),
-                                  price: 10000.0,
-                                  timestamp: 1625244000,
-                                  amount: 1.0 };
-
-        assert_eq!(trade.parse_quote(), Some("USD".to_string()));
-
-        let trade = MarketTrade { exchange: "".to_string(),
-                                  symbol: "ETH_BTC".to_string(),
-                                  side: "".to_string(),
-                                  price: 0.0,
-                                  timestamp: 0,
-                                  amount: 0.0 };
-
-        assert_eq!(trade.parse_quote(), Some("BTC".to_string()));
-
-        let trade = MarketTrade { exchange: "".to_string(),
-                                  symbol: "XRP".to_string(),
-                                  side: "".to_string(),
-                                  price: 0.0,
-                                  timestamp: 0,
-                                  amount: 0.0 };
-
-        assert_eq!(trade.parse_quote(), None);
+        assert!(trade.parse_instrument().is_none());
     }
 }

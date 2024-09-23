@@ -18,6 +18,7 @@ use crate::{
     hourglass::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, config_request::ConfigurationRequest},
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
+use crate::network::login::LoginRequest;
 
 #[derive(Debug)]
 pub struct HourglassClient
@@ -53,14 +54,15 @@ pub enum HourglassClientEvent
     CancelOrdersAll(Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>),
     ConfigureInstruments(Vec<ConfigurationRequest>, Sender<ConfigureInstrumentsResults>),
     LetItRoll, // Tell the system to send the next datafeed.
+    Login(LoginRequest),
 }
 
 #[async_trait]
 impl ClientExecution for HourglassClient
 {
-    type Config = (UnboundedSender<HourglassClientEvent>, UnboundedReceiver<MarketTrade>);
-
     const CLIENT_KIND: Exchange = Exchange::Hourglass;
+
+    type Config = (UnboundedSender<HourglassClientEvent>, UnboundedReceiver<MarketTrade>);
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {
@@ -68,7 +70,8 @@ impl ClientExecution for HourglassClient
         let (request_tx, market_event_rx) = config;
 
         // 使用 request_tx 和 market_event_rx 初始化 HourglassClient
-        Self { client_event_tx: request_tx, market_event_rx }
+        Self { client_event_tx: request_tx,
+               market_event_rx }
     }
 
     async fn fetch_orders_open(&self) -> Result<Vec<Order<Open>>, ExchangeError>
@@ -171,10 +174,12 @@ impl ClientExecution for HourglassClient
     // 发送 LetItRoll 命令的函数
     async fn let_it_roll(&self) -> Result<(), ExchangeError>
     {
-        // 向模拟交易所发送 LetItRoll 请求
-        self.client_event_tx
-            .send(HourglassClientEvent::LetItRoll)
-            .expect("Hourglass exchange is currently offline - Failed to send LetItRoll request");
+        // Try sending the LetItRoll event and handle the case where the channel is closed
+        if let Err(err) = self.client_event_tx.send(HourglassClientEvent::LetItRoll) {
+            // Channel is closed, so handle it gracefully instead of panicking
+            println!("Failed to send LetItRoll request: {:?}", err);
+            return Err(ExchangeError::Hourglass("Exchange is currently offline".into()));
+        }
 
         println!("Sent LetItRoll command successfully");
         Ok(())
