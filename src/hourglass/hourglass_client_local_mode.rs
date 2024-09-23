@@ -174,8 +174,8 @@ impl ClientExecution for HourglassClient
         // Try sending the LetItRoll event and handle the case where the channel is closed
         if let Err(err) = self.client_event_tx.send(HourglassClientEvent::LetItRoll) {
             // Channel is closed, so handle it gracefully instead of panicking
-            println!("Channel closed, gracefully ending. Failed to send LetItRoll request: {:?}", err);
-            return Ok(());
+            println!("Failed to send LetItRoll request: {:?}", err);
+            return Err(ExchangeError::Hourglass("Exchange is currently offline".into()));
         }
 
         println!("Sent LetItRoll command successfully");
