@@ -4,7 +4,7 @@ use crate::{
     hourglass::{
         account::account_handlers::{balance_handler::BalanceHandler, position_handler::PositionHandler, trade_handler::TradeHandler},
         clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
-        hourglass_client::HourglassClientEvent,
+        hourglass_client_local_mode::HourglassClientEvent,
     },
     network::{event::NetworkEvent, is_port_in_use},
 };
@@ -21,7 +21,7 @@ use warp::Filter;
 pub mod account;
 pub mod clickhouse_api;
 pub mod config_request;
-pub mod hourglass_client;
+pub mod hourglass_client_local_mode;
 pub mod hourglass_orderbook;
 pub mod open_orders_book;
 pub mod risk_reserve;

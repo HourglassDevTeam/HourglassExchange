@@ -92,7 +92,7 @@ use hourglass::{
             HourglassAccount,
         },
         clickhouse_api::{datatype::single_level_order_book::SingleLevelOrderBook, queries_operations::ClickHouseClient},
-        hourglass_client::HourglassClient,
+        hourglass_client_local_mode::HourglassClient,
         DataSource, HourglassExchange,
     },
     ClientExecution,

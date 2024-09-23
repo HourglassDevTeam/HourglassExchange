@@ -33,7 +33,7 @@ use hourglass::{
             datatype::{clickhouse_trade_data::MarketTrade, single_level_order_book::SingleLevelOrderBook},
             queries_operations::ClickHouseClient,
         },
-        hourglass_client::HourglassClientEvent,
+        hourglass_client_local_mode::HourglassClientEvent,
         DataSource, HourglassExchange,
     },
     test_utils::create_test_account_configuration,

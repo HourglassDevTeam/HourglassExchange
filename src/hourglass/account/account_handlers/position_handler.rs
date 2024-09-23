@@ -4,7 +4,7 @@ use crate::{
         instrument::Instrument,
     },
     error::ExchangeError,
-    hourglass::{config_request::ConfigurationRequest, hourglass_client::ConfigureInstrumentsResults},
+    hourglass::{config_request::ConfigurationRequest, hourglass_client_local_mode::ConfigureInstrumentsResults},
     Exchange,
 };
 use async_trait::async_trait;

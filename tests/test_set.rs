@@ -10,7 +10,7 @@ use hourglass::{
     },
     hourglass::{
         clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
-        hourglass_client::{HourglassClient, HourglassClientEvent},
+        hourglass_client_local_mode::{HourglassClient, HourglassClientEvent},
     },
     ClientExecution,
 };
