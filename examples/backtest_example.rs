@@ -138,7 +138,7 @@ async fn main()
     let positions = AccountPositions::init();
     let closed_positions = AccountExitedPositions::init();
 
-    let mut single_level_order_books = HashMap::new();
+    let single_level_order_books = HashMap::new();
 
     // // FIXME mechanism to be updated to update `single_level_order_books` in
     // single_level_order_books.insert(Instrument { base: Token::new("ETH".to_string()),
@@ -219,10 +219,8 @@ async fn main()
 
     // deposit 70000 USDT
     let _ = hourglass_client.deposit_tokens(tokens_to_be_deposited).await;
-    let balance = hourglass_client.fetch_balances().await.unwrap();
-    println!("Balance updated after deposit: {:?}", balance);
-
-    let mut order_counter: i64 = 0;
+    // let balance = hourglass_client.fetch_balances().await.unwrap();
+    // println!("Balance updated after deposit: {:?}", balance);
 
     let mut order_ids = Vec::new();
 
@@ -236,9 +234,8 @@ async fn main()
         // Listen for market data
         if let Some(market_data) = hourglass_client.listen_for_market_data().await {
             // Process the market data NOTE to be implemented.
-            order_counter += 1;
 
-            order_parser(&hourglass_client, &market_data, order_counter, &mut order_ids).await;
+            order_parser(&hourglass_client, &market_data, &mut order_ids).await;
 
             // Your logic for handling market_data & customised trading strategy goes here?
             println!("Processed market data: {:?}", market_data);
@@ -266,7 +263,7 @@ impl Ids
     }
 }
 
-pub async fn order_parser(client: &HourglassClient, trade: &MarketTrade, order_counter: i64, order_ids: &mut Vec<OrderId>)
+pub async fn order_parser(client: &HourglassClient, trade: &MarketTrade,  order_ids: &mut Vec<OrderId>)
 {
     match mock_up_strategy(trade) {
         | Some(operation) => {
