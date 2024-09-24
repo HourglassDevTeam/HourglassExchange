@@ -257,7 +257,6 @@ struct Ids
     id: OrderId,
 }
 
-
 #[allow(unused)]
 impl Ids
 {
