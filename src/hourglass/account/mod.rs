@@ -485,7 +485,7 @@ impl HourglassAccount
             | OrderInstruction::Limit
             | OrderInstruction::ImmediateOrCancel
             | OrderInstruction::FillOrKill
-            | OrderInstruction::PostOnly
+            | OrderInstruction::PostOnlyLimit
             | OrderInstruction::GoodTilCancelled
             | OrderInstruction::Cancel => Ok(()), /* NOTE 不同交易所支持的订单种类不同，如有需要过滤的OrderKind变种，我们要在此处特殊设计
                                                    * | unsupported => Err(ExecutionError::UnsupportedOrderKind(unsupported)), */

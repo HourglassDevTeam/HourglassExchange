@@ -701,7 +701,7 @@ mod tests
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
-        let order = Order { instruction: OrderInstruction::PostOnly,
+        let order = Order { instruction: OrderInstruction::PostOnlyLimit,
                             exchange: Exchange::Binance,
                             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                             cid: Some(ClientOrderId("unit_test".to_string())),

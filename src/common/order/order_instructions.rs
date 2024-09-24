@@ -7,7 +7,7 @@ pub enum OrderInstruction
 {
     Market,
     Limit,
-    PostOnly,
+    PostOnlyLimit,
     ImmediateOrCancel,
     FillOrKill,
     GoodTilCancelled,
@@ -24,7 +24,7 @@ impl Display for OrderInstruction
             | OrderInstruction::ImmediateOrCancel => "immediate_or_cancel",
             | OrderInstruction::FillOrKill => "fill_or_kill",
             | OrderInstruction::GoodTilCancelled => "good_til_cancelled",
-            | OrderInstruction::PostOnly => "post_only",
+            | OrderInstruction::PostOnlyLimit => "post_only",
             | OrderInstruction::Cancel => "cancel_request",
         })
     }
