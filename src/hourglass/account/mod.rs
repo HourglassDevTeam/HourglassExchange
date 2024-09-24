@@ -452,8 +452,8 @@ impl HourglassAccount
             orders_guard.determine_maker_taker(&order, order_book)?
         };
 
-        // 锁已经在此处释放，后续操作可以安全地借用 `self`
-        let (token, required_balance) = self.required_available_balance(&order).await?;
+        // 锁已经在此处释放，后续操作可以安全地借用 `self` NOTE 此处计算required_available_balance要分离出maker的处理规则
+        let (token, required_balance) = self.required_available_balance(&order,order_role).await?;
         println!("[attempt_atomic_open] required balance is quoted in {}: {}", token, required_balance);
         self.has_sufficient_available_balance(token, required_balance)?;
 

@@ -19,6 +19,7 @@ use async_trait::async_trait;
 use dashmap::mapref::one::Ref;
 use std::sync::atomic::Ordering;
 use tokio::sync::oneshot::Sender;
+use crate::common::order::OrderRole;
 
 #[async_trait]
 pub trait BalanceHandler
@@ -40,7 +41,7 @@ pub trait BalanceHandler
     async fn apply_trade_changes(&mut self, trade: &ClientTrade) -> Result<AccountEvent, ExchangeError>;
     /// 将 [`BalanceDelta`] 应用于指定 [`Token`] 的 [`Balance`]，并返回更新后的 [`Balance`] 。
     fn apply_balance_delta(&mut self, token: &Token, delta: BalanceDelta) -> Balance;
-    async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>) -> Result<(&'a Token, f64), ExchangeError>;
+    async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>,order_role: OrderRole) -> Result<(&'a Token, f64), ExchangeError>;
     /// 判断client是否有足够的可用[`Balance`]来执行[`Order<RequestOpen>`]。
     fn has_sufficient_available_balance(&self, token: &Token, required_balance: f64) -> Result<(), ExchangeError>;
 }
@@ -229,7 +230,8 @@ impl BalanceHandler for HourglassAccount
         *base_balance
     }
 
-    async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>) -> Result<(&'a Token, f64), ExchangeError>
+    // NOTE 此处计算required_available_balance要分离出maker的处理规则
+    async fn required_available_balance<'a>(&'a self, order: &'a Order<RequestOpen>,order_role: OrderRole) -> Result<(&'a Token, f64), ExchangeError>
     {
         // 从 AccountConfig 读取 max_price_deviation
         let max_price_deviation = self.config.max_price_deviation;
@@ -245,28 +247,41 @@ impl BalanceHandler for HourglassAccount
                 let latest_ask = order_book.latest_ask;
                 let latest_bid = order_book.latest_bid;
 
-                match order.side {
-                    | Side::Buy => {
-                        // 确保买单价格不比最新卖价低
+                match (order.side, order_role) {
+                    // 处理买单（Side::Buy）
+                    (Side::Buy, OrderRole::Maker) => {
+                        // 确保买单价格在合理范围内
                         if order.state.price < latest_ask * (1.0 - max_price_deviation) {
                             return Err(ExchangeError::OrderRejected("Buy order price is too low compared to the market".into()));
                         }
-                        // 确保买单价格不比最新买价高
                         if order.state.price > latest_bid * (1.0 + max_price_deviation) {
                             return Err(ExchangeError::OrderRejected("Buy order price is too high compared to the market".into()));
                         }
+                        // 计算所需的余额 (挂单价格 * 数量)
+                        let required_balance = order.state.price * order.state.size;
+                        Ok((&order.instrument.quote, required_balance))
+                    }
+                    (Side::Buy, OrderRole::Taker) => {
+                        // taker 必须以最新的卖单价成交
                         let required_balance = latest_ask * order.state.size;
                         Ok((&order.instrument.quote, required_balance))
                     }
-                    | Side::Sell => {
-                        // 确保卖单价格不比最新买价高
+
+                    // 处理卖单（Side::Sell）
+                    (Side::Sell, OrderRole::Maker) => {
+                        // 确保卖单价格在合理范围内
                         if order.state.price > latest_bid * (1.0 + max_price_deviation) {
                             return Err(ExchangeError::OrderRejected("Sell order price is too high compared to the market".into()));
                         }
-                        // 确保卖单价格不比最新卖价低
                         if order.state.price < latest_ask * (1.0 - max_price_deviation) {
                             return Err(ExchangeError::OrderRejected("Sell order price is too low compared to the market".into()));
                         }
+                        // 计算所需的余额 (挂单价格 * 数量)
+                        let required_balance = order.state.price * order.state.size;
+                        Ok((&order.instrument.base, required_balance))
+                    }
+                    (Side::Sell, OrderRole::Taker) => {
+                        // taker 必须以最新的买单价成交
                         let required_balance = latest_bid * order.state.size;
                         Ok((&order.instrument.base, required_balance))
                     }
@@ -277,26 +292,42 @@ impl BalanceHandler for HourglassAccount
                 let latest_ask = order_book.latest_ask;
                 let latest_bid = order_book.latest_bid;
 
-                match order.side {
-                    | Side::Buy => {
+                match (order.side, order_role) {
+                    // Buy 订单处理
+                    (Side::Buy, OrderRole::Maker) => {
+                        // maker 买单，检查价格是否合理，使用指定的价格
                         if order.state.price < latest_ask * (1.0 - max_price_deviation) {
                             return Err(ExchangeError::OrderRejected("Buy order price is too low compared to the market".into()));
                         }
                         if order.state.price > latest_bid * (1.0 + max_price_deviation) {
                             return Err(ExchangeError::OrderRejected("Buy order price is too high compared to the market".into()));
                         }
-                        let required_balance = order.state.price * order.state.size * self.config.global_leverage_rate;
+                        // maker 挂单时需要按照 order.state.price 计算保证金
+                        let required_balance = order.state.price * order.state.size / self.config.global_leverage_rate;
                         Ok((&order.instrument.quote, required_balance))
                     }
-                    | Side::Sell => {
+                    (Side::Buy, OrderRole::Taker) => {
+                        // taker 买单，以市场卖价成交
+                        let required_balance = latest_ask * order.state.size / self.config.global_leverage_rate;
+                        Ok((&order.instrument.quote, required_balance))
+                    }
+                    // Sell 订单处理
+                    (Side::Sell, OrderRole::Maker) => {
+                        // maker 卖单，检查价格是否合理
                         if order.state.price > latest_bid * (1.0 + max_price_deviation) {
                             return Err(ExchangeError::OrderRejected("Sell order price is too high compared to the market".into()));
                         }
                         if order.state.price < latest_ask * (1.0 - max_price_deviation) {
                             return Err(ExchangeError::OrderRejected("Sell order price is too low compared to the market".into()));
                         }
-                        let required_balance = order.state.price * order.state.size * self.config.global_leverage_rate;
-                        Ok((&order.instrument.quote, required_balance))
+                        // maker 卖单按照 order.state.price 计算
+                        let required_balance = order.state.price * order.state.size / self.config.global_leverage_rate;
+                        Ok((&order.instrument.base, required_balance))
+                    }
+                    (Side::Sell, OrderRole::Taker) => {
+                        // taker 卖单，以市场买价成交
+                        let required_balance = latest_bid * order.state.size / self.config.global_leverage_rate;
+                        Ok((&order.instrument.base, required_balance))
                     }
                 }
             }
@@ -442,7 +473,7 @@ mod tests
                                                  size: 2.0,
                                                  reduce_only: false } };
 
-        match account.required_available_balance(&order).await {
+        match account.required_available_balance(&order, OrderRole::Maker).await {
             | Ok((_token, _required_balance)) => {
                 // 这里不应该触发，因为订单价格太低应被拒绝
                 panic!("Test should have failed due to insufficient bid price but has not");
@@ -469,7 +500,7 @@ mod tests
                                                  size: 2.0,
                                                  reduce_only: false } };
 
-        match account.required_available_balance(&order).await {
+        match account.required_available_balance(&order, OrderRole::Maker).await {
             | Ok((token, required_balance)) => {
                 println!("{} {}", token, required_balance);
                 assert_eq!(token, &order.instrument.quote);

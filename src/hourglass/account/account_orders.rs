@@ -208,7 +208,8 @@ impl OrderRoleClassifier for AccountOrders
 
             | OrderInstruction::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
 
-            | OrderInstruction::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
+            // note that PostOnly is not affiliated to Limit mode in Hourglass, but regarded as a standalone mode.
+            | OrderInstruction::PostOnlyLimit => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
 
             | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => {
                 let is_immediate = match order.side {
