@@ -22,9 +22,10 @@ pub trait OrderBookUpdater
 impl OrderBookUpdater for SingleLevelOrderBook
 {
     // NOTE 这里要做一个特殊的机制。为了不让价格未零。当第一条trade进来以后，除了更新本side以外，要把另外一个side的价格也更新成同样的价格。之后再正常更新。
-    fn update_from_trade(&mut self, market_trade: &MarketTrade) {
+    fn update_from_trade(&mut self, market_trade: &MarketTrade)
+    {
         match Side::from_str(&market_trade.side) {
-            Ok(Side::Buy) => {
+            | Ok(Side::Buy) => {
                 // 如果是买单，更新最新的买方价格
                 self.latest_bid = market_trade.price;
                 // 如果卖方价格为0，初始化为相同的价格
@@ -32,7 +33,7 @@ impl OrderBookUpdater for SingleLevelOrderBook
                     self.latest_ask = market_trade.price;
                 }
             }
-            Ok(Side::Sell) => {
+            | Ok(Side::Sell) => {
                 // 如果是卖单，更新最新的卖方价格
                 self.latest_ask = market_trade.price;
                 // 如果买方价格为0，初始化为相同的价格
@@ -40,7 +41,7 @@ impl OrderBookUpdater for SingleLevelOrderBook
                     self.latest_bid = market_trade.price;
                 }
             }
-            _ => {
+            | _ => {
                 // 处理无效的side值
                 eprintln!("Invalid trade side: {}", market_trade.side);
             }

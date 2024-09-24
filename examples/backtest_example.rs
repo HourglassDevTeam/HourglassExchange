@@ -81,6 +81,7 @@ use crate::OrderType::Cancel;
 use dashmap::DashMap;
 use hourglass::{
     common::{
+        token_list::TOKEN_LIST,
         account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode, PositionMarginMode},
         instrument::{kind::InstrumentKind, Instrument},
         order::{
@@ -115,10 +116,19 @@ use std::{
 };
 use tokio::sync::{mpsc, Mutex, RwLock};
 use uuid::Uuid;
+use hourglass::common::balance::{Balance, TokenBalance};
 
 #[tokio::main]
 async fn main()
 {
+    let token_balances: DashMap<Token, Balance> = DashMap::new();
+
+    for token_str in &TOKEN_LIST {
+        let token = Token::new(token_str.to_string());
+        let balance = Balance::new(0.0, 0.0);
+        token_balances.insert(token, balance);
+    }
+
     // create the channels
     let (account_event_tx, _account_event_rx) = mpsc::unbounded_channel();
     let (client_event_tx, client_event_rx) = mpsc::unbounded_channel();
@@ -178,7 +188,7 @@ async fn main()
                                                                                                                                                          minimum: 2,
                                                                                                                                                          current_value: 0 }).await)),
                                                              single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
-                                                             balances: DashMap::new(),
+                                                             balances:token_balances,
                                                              positions,
                                                              exited_positions: closed_positions,
                                                              account_event_tx,

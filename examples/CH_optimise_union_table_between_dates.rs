@@ -47,7 +47,6 @@ async fn main()
 
     // 计算要优化的表格数量
     let total_tables = valid_table_names.len();
-    //
     // #[cfg(feature = "lark")]
     // {
     //     // 加载 .env 文件

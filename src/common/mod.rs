@@ -16,6 +16,7 @@ pub mod stable_token;
 pub mod status;
 pub mod token;
 pub mod trade;
+pub mod token_list;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]
 pub enum Side

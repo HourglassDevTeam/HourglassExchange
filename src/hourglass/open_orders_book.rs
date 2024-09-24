@@ -103,7 +103,8 @@ impl OpenOrdersBook
         None
     }
 
-    pub fn match_bids(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade> {
+    pub fn match_bids(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade>
+    {
         let latest_trade_ts = market_trade.timestamp;
 
         // Track remaining liquidity for matching
@@ -143,7 +144,8 @@ impl OpenOrdersBook
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            } else {
+            }
+            else {
                 // Partial fill
                 let trade_quantity = remaining_liquidity;
                 best_bid.state.filled_quantity += trade_quantity;
@@ -156,8 +158,8 @@ impl OpenOrdersBook
         trades
     }
 
-
-    pub fn match_asks(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade> {
+    pub fn match_asks(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade>
+    {
         let latest_trade_ts = market_trade.timestamp;
 
         // Track remaining liquidity for matching
@@ -197,7 +199,8 @@ impl OpenOrdersBook
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            } else {
+            }
+            else {
                 // Partial fill
                 let trade_quantity = remaining_liquidity;
                 best_ask.state.filled_quantity += trade_quantity;
