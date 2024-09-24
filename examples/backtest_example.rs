@@ -79,9 +79,9 @@ use crate::OrderType::Cancel;
 /// - The client listens for market data and processes it as needed.
 /// - The ClickHouse client is responsible for fetching historical data and providing it to the exchange.
 use dashmap::DashMap;
+use hourglass::common::balance::Balance;
 use hourglass::{
     common::{
-        token_list::TOKEN_LIST,
         account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode, PositionMarginMode},
         instrument::{kind::InstrumentKind, Instrument},
         order::{
@@ -89,9 +89,9 @@ use hourglass::{
             order_instructions::OrderInstruction,
             states::{request_cancel::RequestCancel, request_open::RequestOpen},
             Order,
-        }
-        ,
+        },
         token::Token,
+        token_list::TOKEN_LIST,
         Side,
     },
     hourglass::{
@@ -101,10 +101,7 @@ use hourglass::{
             account_orders::AccountOrders,
             HourglassAccount,
         },
-        clickhouse_api::{
-            datatype::{clickhouse_trade_data::MarketTrade},
-            queries_operations::ClickHouseClient,
-        },
+        clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, queries_operations::ClickHouseClient},
         hourglass_client_local_mode::HourglassClient,
         DataSource, HourglassExchange,
     },
@@ -116,7 +113,6 @@ use std::{
 };
 use tokio::sync::{mpsc, Mutex, RwLock};
 use uuid::Uuid;
-use hourglass::common::balance::{Balance, TokenBalance};
 
 #[tokio::main]
 async fn main()
