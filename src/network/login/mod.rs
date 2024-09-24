@@ -120,6 +120,8 @@ trait Authentication
     #[allow(unused)]
     async fn login(&self, username: String, password: String) -> Result<String, ExchangeError>;
     #[allow(unused)]
-    /// 注销
+    // 注销
     async fn logout(&self, session_token: String) -> Result<(), ExchangeError>;
+    // 删除账户
+    // async fn delete_account(&self) -> Result<(), ExchangeError>;
 }
