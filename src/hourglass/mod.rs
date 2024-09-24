@@ -30,11 +30,19 @@ pub mod open_orders_book;
 pub mod risk_reserve;
 pub mod utils;
 pub mod ws_trade;
+use bcrypt::{hash, verify, DEFAULT_COST};
+use chrono::Utc;
 
 pub enum DataSource
 {
     RealTime(UnboundedReceiver<MarketEvent<MarketTrade>>),
     Backtest(RowCursor<MarketTrade>),
+}
+// 定义查询结果的数据结构
+#[derive(Debug, clickhouse::Row, serde::Deserialize)]
+struct UserInfo
+{
+    pub(crate) password_hash: String,
 }
 
 pub struct HourglassExchange
@@ -44,8 +52,7 @@ where HourglassAccount: PositionHandler + TradeHandler + BalanceHandler
     pub market_event_tx: UnboundedSender<MarketTrade>,
     pub account: Arc<Mutex<HourglassAccount>>,
     pub data_source: DataSource,
-    // NOTE that below fields are added specifically for authentication management on 24th September 2024.
-    pub click_house_client: ClickHouseClient,
+    pub clickhouse_client: ClickHouseClient,
     pub active_sessions: Mutex<HashMap<String, Uuid>>,  // 存储 session_token 和 username 的映射
 }
 
@@ -60,6 +67,69 @@ impl HourglassExchange
     {
         Arc::clone(&self.account)
     }
+
+    #[allow(unused)]
+    async fn register(&self, username: String, email: String, password: String) -> Result<(), ExchangeError>
+    {
+        // 加密密码
+        let password_hash = hash(password, DEFAULT_COST).map_err(|_| ExchangeError::PasswordHashError)?;
+
+        // 创建插入用户信息的 SQL
+        let insert_query = format!(
+            "INSERT INTO accounts.user_info (id, username, email, password_hash, created_at) \
+            VALUES ('{}', '{}', '{}', '{}', '{}')",
+            Uuid::new_v4(),
+            username,
+            email,
+            password_hash,
+            Utc::now()
+        );
+
+        // 执行插入操作
+        self.clickhouse_client.client.read().await.query(&insert_query).execute().await.map_err(|_| ExchangeError::DatabaseError)?;
+
+        Ok(())
+    }
+
+    #[allow(unused)]
+    async fn login(&self, username: String, password: String) -> Result<String, ExchangeError> {
+        // 查询用户的加密密码
+        let select_query = format!(
+            "SELECT password_hash FROM accounts.user_info WHERE username = '{}'",
+            username
+        );
+
+        // 执行查询并解析结果
+        let result = self.clickhouse_client.client.read()
+            .await.query(&select_query)
+            .fetch_one::<UserInfo>()
+            .await
+            .map_err(|_| ExchangeError::InvalidCredentials)?;
+
+        let password_hash = result.password_hash;
+
+        // 验证密码
+        if verify(password, &password_hash).map_err(|_| ExchangeError::InvalidCredentials)? {
+            let session_token = Uuid::new_v4().to_string();
+            // 保存会话信息
+            self.active_sessions.lock().await.insert(session_token.clone(), username.parse().unwrap());
+            Ok(session_token)
+        } else {
+            Err(ExchangeError::InvalidCredentials)
+        }
+    }
+
+    #[allow(unused)]
+    /// 注销
+    async fn logout(&self, session_token: String) -> Result<(), ExchangeError> {
+        let mut sessions = self.active_sessions.lock().await;
+        if sessions.remove(&session_token).is_some() {
+            Ok(())
+        } else {
+            Err(ExchangeError::InvalidSession)
+        }
+    }
+
 
     pub async fn start(mut self)
     {
@@ -275,7 +345,7 @@ impl ExchangeBuilder
                                market_event_tx: self.market_event_tx.ok_or_else(|| ExchangeError::BuilderIncomplete("market_tx".to_string()))?,
                                account: self.account.ok_or_else(|| ExchangeError::BuilderIncomplete("account".to_string()))?,
                                data_source: self.data_source.ok_or_else(|| ExchangeError::BuilderIncomplete("data_source".to_string()))?,
-            click_house_client: ClickHouseClient::new(),
+            clickhouse_client: ClickHouseClient::new(),
             active_sessions: HashMap::new().into(),
         })
     }
@@ -352,7 +422,7 @@ mod tests
                                            market_event_tx: market_tx,
                                            account,
                                            data_source: DataSource::Backtest(cursor),
-            click_house_client: ClickHouseClient::new(),
+            clickhouse_client: ClickHouseClient::new(),
             active_sessions: HashMap::new().into(),
         };
         let address = "127.0.0.1:3030".parse().unwrap(); // Convert to a SocketAddr
