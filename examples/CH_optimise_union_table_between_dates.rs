@@ -1,23 +1,23 @@
 use chrono::{Duration, NaiveDate};
-#[cfg(feature = "lark")]
-use dotenvy::dotenv;
+// #[cfg(feature = "lark")]
+// use dotenvy::dotenv;
 use hourglass::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
-#[cfg(feature = "lark")]
-use open_lark::{custom_bot::CustomBot, service::im::v1::message::MessageText};
+// #[cfg(feature = "lark")]
+// use open_lark::{custom_bot::CustomBot, service::im::v1::message::MessageText};
 use rayon::prelude::*;
 use std::collections::HashSet;
-#[cfg(feature = "lark")]
-use std::env;
+// #[cfg(feature = "lark")]
+// use std::env;
 
 #[tokio::main]
 async fn main()
 {
     // 检测是否为 release 模式
-    #[cfg(debug_assertions)]
-    println!("Running in debug mode");
+    // #[cfg(debug_assertions)]
+    // println!("Running in debug mode");
 
-    #[cfg(not(debug_assertions))]
-    println!("Running in release mode");
+    // #[cfg(not(debug_assertions))]
+    // println!("Running in release mode");
 
     // 创建 ClickHouse 客户端实例
     let client = ClickHouseClient::new();
@@ -47,65 +47,65 @@ async fn main()
 
     // 计算要优化的表格数量
     let total_tables = valid_table_names.len();
+    //
+    // #[cfg(feature = "lark")]
+    // {
+    //     // 加载 .env 文件
+    //     dotenv().expect(".env file not found");
+    //
+    //     // 获取 `hook_url` 和 `secret`，并确保它们的生命周期足够长
+    //     let hook_url = env::var("HOOK_URL").unwrap();
+    //     let secret = env::var("HOOK_SECRET").ok();
+    //
+    //     // 创建 CustomBot 实例
+    //     let bot = CustomBot::new(&hook_url, secret.as_deref());
+    //
+    //     // 如果有表需要优化，汇报开始优化
+    //     if total_tables > 0 {
+    //         let message = MessageText::new(format!("Starting optimization for {} tables.", total_tables).as_str());
+    //         println!("Starting optimization for {} tables.", total_tables);
+    //         bot.send_message(message).await.unwrap();
+    //     }
+    //
+    //     // 初始化已处理的表数
+    //     let mut processed_tables = 0;
+    //
+    //     // 开始优化表格
+    //     while start_date <= end_date {
+    //         let date_str = start_date.format("%Y_%m_%d").to_string();
+    //         let tables_to_remove: Vec<_> = valid_table_names.par_iter().filter(|table_name| table_name.contains(&date_str)).cloned().collect();
+    //
+    //         for table_name in &tables_to_remove {
+    //             let table_path = format!("{}.{}", database, table_name);
+    //
+    //             // 执行优化操作
+    //             if let Err(e) = client.optimize_table(&table_path).await {
+    //                 eprintln!("Error optimizing table {}: {}", table_path, e);
+    //             }
+    //
+    //             // 更新已处理的表数
+    //             processed_tables += 1;
+    //
+    //             // 从 HashSet 中移除已处理的表
+    //             valid_table_names.remove(table_name);
+    //
+    //             // 打印当前总进度
+    //             let progress = (processed_tables as f64 / total_tables as f64) * 100.0;
+    //             println!("Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)", date_str, processed_tables, total_tables, progress);
+    //         }
+    //
+    //         // 迭代到下一天
+    //         start_date += Duration::days(1);
+    //     }
+    //
+    //     // 汇报最终结果
+    //     let final_message = format!("Clickhouse Database Optimization is complete for {} tables across {} days.", total_tables, total_days);
+    //
+    //     let message = MessageText::new(final_message.as_str());
+    //     bot.send_message(message).await.unwrap();
+    // }
 
-    #[cfg(feature = "lark")]
-    {
-        // 加载 .env 文件
-        dotenv().expect(".env file not found");
-
-        // 获取 `hook_url` 和 `secret`，并确保它们的生命周期足够长
-        let hook_url = env::var("HOOK_URL").unwrap();
-        let secret = env::var("HOOK_SECRET").ok();
-
-        // 创建 CustomBot 实例
-        let bot = CustomBot::new(&hook_url, secret.as_deref());
-
-        // 如果有表需要优化，汇报开始优化
-        if total_tables > 0 {
-            let message = MessageText::new(format!("Starting optimization for {} tables.", total_tables).as_str());
-            println!("Starting optimization for {} tables.", total_tables);
-            bot.send_message(message).await.unwrap();
-        }
-
-        // 初始化已处理的表数
-        let mut processed_tables = 0;
-
-        // 开始优化表格
-        while start_date <= end_date {
-            let date_str = start_date.format("%Y_%m_%d").to_string();
-            let tables_to_remove: Vec<_> = valid_table_names.par_iter().filter(|table_name| table_name.contains(&date_str)).cloned().collect();
-
-            for table_name in &tables_to_remove {
-                let table_path = format!("{}.{}", database, table_name);
-
-                // 执行优化操作
-                if let Err(e) = client.optimize_table(&table_path).await {
-                    eprintln!("Error optimizing table {}: {}", table_path, e);
-                }
-
-                // 更新已处理的表数
-                processed_tables += 1;
-
-                // 从 HashSet 中移除已处理的表
-                valid_table_names.remove(table_name);
-
-                // 打印当前总进度
-                let progress = (processed_tables as f64 / total_tables as f64) * 100.0;
-                println!("Date: {} - Total tables processed: {}/{} (Total progress: {:.2}%)", date_str, processed_tables, total_tables, progress);
-            }
-
-            // 迭代到下一天
-            start_date += Duration::days(1);
-        }
-
-        // 汇报最终结果
-        let final_message = format!("Clickhouse Database Optimization is complete for {} tables across {} days.", total_tables, total_days);
-
-        let message = MessageText::new(final_message.as_str());
-        bot.send_message(message).await.unwrap();
-    }
-
-    #[cfg(not(feature = "lark"))]
+    // #[cfg(not(feature = "lark"))]
     {
         // 初始化已处理的表数
         let mut processed_tables = 0;

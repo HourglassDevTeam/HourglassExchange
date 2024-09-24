@@ -1,12 +1,12 @@
 use chrono::{Duration, NaiveDate};
-#[cfg(feature = "lark")]
-use dotenvy::dotenv;
+// #[cfg(feature = "lark")]
+// use dotenvy::dotenv;
 use hourglass::hourglass::{clickhouse_api::queries_operations::ClickHouseClient, utils::chrono_operations::extract_date};
-#[cfg(feature = "lark")]
-use open_lark::{custom_bot::CustomBot, service::im::v1::message::MessageText};
+// #[cfg(feature = "lark")]
+// use open_lark::{custom_bot::CustomBot, service::im::v1::message::MessageText};
 use rayon::prelude::*;
-#[cfg(feature = "lark")]
-use std::env;
+// #[cfg(feature = "lark")]
+// use std::env;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -19,14 +19,14 @@ async fn main()
     #[cfg(debug_assertions)]
     println!("Running in debug mode");
 
-    #[cfg(not(debug_assertions))]
-    println!("Running in release mode");
-
-    #[cfg(feature = "lark")]
-    {
-        // 加载 .env 文件
-        dotenv().expect(".env file not found");
-    }
+    // #[cfg(not(debug_assertions))]
+    // println!("Running in release mode");
+    //
+    // #[cfg(feature = "lark")]
+    // {
+    //     // 加载 .env 文件
+    //     dotenv().expect(".env file not found");
+    // }
 
     // 创建 ClickHouse 客户端实例
     let client = Arc::new(ClickHouseClient::new());
@@ -60,12 +60,12 @@ async fn main()
     let total_tables = table_date_map.lock().unwrap().values().filter(|&&table_date| table_date >= start_date && table_date <= end_date).count();
     let mut processed_tables = 0;
 
-    #[cfg(feature = "lark")]
-    let bot = {
-        let hook_url = env::var("HOOK_URL").unwrap();
-        let secret = env::var("HOOK_SECRET").ok();
-        CustomBot::new(&hook_url, secret.as_deref())
-    };
+    // #[cfg(feature = "lark")]
+    // let bot = {
+    //     let hook_url = env::var("HOOK_URL").unwrap();
+    //     let secret = env::var("HOOK_SECRET").ok();
+    //     CustomBot::new(&hook_url, secret.as_deref())
+    // };
 
     // 遍历日期范围
     let mut current_date = start_date;
@@ -115,11 +115,11 @@ async fn main()
         current_date += Duration::days(1);
     }
 
-    #[cfg(feature = "lark")]
-    {
-        let message = MessageText::new(&format!("Union tables creation is done for {} tables", total_tables));
-        bot.send_message(message).await.unwrap();
-    }
+    // #[cfg(feature = "lark")]
+    // {
+    //     let message = MessageText::new(&format!("Union tables creation is done for {} tables", total_tables));
+    //     bot.send_message(message).await.unwrap();
+    // }
 
     println!("Union tables creation is done for {} tables", total_tables);
 }
