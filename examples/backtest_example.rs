@@ -303,7 +303,7 @@ pub async fn order_parser(
 
                     let cancelled = client.cancel_orders(vec![order_cancel]).await;
 
-                    println!("[test_5] : {:?}", cancelled);
+                    println!("The cancelled orders are  : {:?}", cancelled);
                 }
             }
         }
