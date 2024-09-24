@@ -1,3 +1,5 @@
+use uuid::Uuid;
+use std::collections::HashMap;
 use crate::{
     common::datafeed::market_event::MarketEvent,
     error::ExchangeError,
@@ -17,6 +19,7 @@ use tokio::{
     time::{self, Duration},
 };
 use warp::Filter;
+use crate::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
 
 pub mod account;
 pub mod clickhouse_api;
@@ -35,12 +38,15 @@ pub enum DataSource
 }
 
 pub struct HourglassExchange
-    where HourglassAccount: PositionHandler + TradeHandler + BalanceHandler
+where HourglassAccount: PositionHandler + TradeHandler + BalanceHandler
 {
     pub client_event_rx: UnboundedReceiver<HourglassClientEvent>,
     pub market_event_tx: UnboundedSender<MarketTrade>,
     pub account: Arc<Mutex<HourglassAccount>>,
     pub data_source: DataSource,
+    // NOTE that below fields are added specifically for authentication management on 24th September 2024.
+    pub click_house_client: ClickHouseClient,
+    pub active_sessions: Mutex<HashMap<String, Uuid>>,  // 存储 session_token 和 username 的映射
 }
 
 impl HourglassExchange
@@ -268,7 +274,10 @@ impl ExchangeBuilder
                                // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::BuilderIncomplete("market_event_tx".to_string()))?,
                                market_event_tx: self.market_event_tx.ok_or_else(|| ExchangeError::BuilderIncomplete("market_tx".to_string()))?,
                                account: self.account.ok_or_else(|| ExchangeError::BuilderIncomplete("account".to_string()))?,
-                               data_source: self.data_source.ok_or_else(|| ExchangeError::BuilderIncomplete("data_source".to_string()))? })
+                               data_source: self.data_source.ok_or_else(|| ExchangeError::BuilderIncomplete("data_source".to_string()))?,
+            click_house_client: ClickHouseClient::new(),
+            active_sessions: HashMap::new().into(),
+        })
     }
 }
 
