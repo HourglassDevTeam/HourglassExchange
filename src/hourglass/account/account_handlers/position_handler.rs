@@ -1899,7 +1899,7 @@ mod tests
         let liquidation_triggering_trade = MarketTrade { timestamp: 1690000100,
                                                          price: 11.0, // 设置为低于清算价格
                                                          exchange: "binance-futures".to_string(),
-                                                         symbol: "BTC_USDT".to_string(),
+                                                         symbol: "BTCUSDT".to_string(),
                                                          amount: 10.0,
                                                          side: "Sell".to_string() };
 
@@ -2091,7 +2091,7 @@ mod tests
         let liquidation_trade = MarketTrade { timestamp: 1690000100,
                                               price: 5.0, // 低于清算价格
                                               exchange: "binance-futures".to_string(),
-                                              symbol: "BTC_USDT".to_string(),
+                                              symbol: "BTCUSDT".to_string(),
                                               amount: 10.0,
                                               side: "Sell".to_string() };
 
