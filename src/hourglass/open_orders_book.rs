@@ -103,8 +103,7 @@ impl OpenOrdersBook
         None
     }
 
-    pub fn match_bids(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade>
-    {
+    pub fn match_bids(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade> {
         let latest_trade_ts = market_trade.timestamp;
 
         // Track remaining liquidity for matching
@@ -114,6 +113,14 @@ impl OpenOrdersBook
         let mut trades = Vec::new();
 
         while let Some(mut best_bid) = self.bids.pop() {
+            let bid_timestamp = best_bid.timestamp;
+
+            // 如果传入的market_trade.timestamp比bid_timestamp小，则跳过该bid，但不报错
+            if latest_trade_ts < bid_timestamp {
+                self.bids.push(best_bid);
+                continue;
+            }
+
             // If the best bid price is below the market trade price or liquidity is exhausted, exit loop
             if best_bid.state.price < market_trade.price || remaining_liquidity <= 0.0 {
                 self.bids.push(best_bid);
@@ -136,8 +143,7 @@ impl OpenOrdersBook
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            }
-            else {
+            } else {
                 // Partial fill
                 let trade_quantity = remaining_liquidity;
                 best_bid.state.filled_quantity += trade_quantity;
@@ -150,8 +156,8 @@ impl OpenOrdersBook
         trades
     }
 
-    pub fn match_asks(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade>
-    {
+
+    pub fn match_asks(&mut self, market_trade: &MarketTrade, fees_percent: f64, counter: &AtomicI64) -> Vec<ClientTrade> {
         let latest_trade_ts = market_trade.timestamp;
 
         // Track remaining liquidity for matching
@@ -161,6 +167,14 @@ impl OpenOrdersBook
         let mut trades = Vec::new();
 
         while let Some(mut best_ask) = self.asks.pop() {
+            let ask_timestamp = best_ask.timestamp;
+
+            // 略过 timestamp 比传入的 market_trade.timestamp 小的情况
+            if latest_trade_ts < ask_timestamp {
+                self.asks.push(best_ask);
+                continue;
+            }
+
             // If the best ask price is higher than the market trade price or liquidity is exhausted, exit loop
             if best_ask.state.price > market_trade.price || remaining_liquidity <= 0.0 {
                 self.asks.push(best_ask);
@@ -183,8 +197,7 @@ impl OpenOrdersBook
                 if remaining_liquidity == 0.0 {
                     break;
                 }
-            }
-            else {
+            } else {
                 // Partial fill
                 let trade_quantity = remaining_liquidity;
                 best_ask.state.filled_quantity += trade_quantity;

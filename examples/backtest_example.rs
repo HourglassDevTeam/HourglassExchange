@@ -101,7 +101,7 @@ use hourglass::{
             HourglassAccount,
         },
         clickhouse_api::{
-            datatype::{clickhouse_trade_data::MarketTrade, single_level_order_book::SingleLevelOrderBook},
+            datatype::{clickhouse_trade_data::MarketTrade},
             queries_operations::ClickHouseClient,
         },
         hourglass_client_local_mode::HourglassClient,

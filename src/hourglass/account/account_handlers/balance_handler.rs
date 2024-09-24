@@ -291,6 +291,8 @@ impl BalanceHandler for HourglassAccount
             | InstrumentKind::Perpetual | InstrumentKind::Future => {
                 let latest_ask = order_book.latest_ask;
                 let latest_bid = order_book.latest_bid;
+                println!("[required_available_balance] : latest_ask is {:?}", latest_ask);
+                println!("[required_available_balance] : latest_bid is {:?}", latest_bid);
 
                 match (order.side, order_role) {
                     // Buy 订单处理

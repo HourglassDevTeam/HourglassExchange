@@ -88,7 +88,6 @@ impl TradeHandler for HourglassAccount
         orderbook.entry(instrument)
                  .or_insert_with(|| SingleLevelOrderBook::from(trade)) // 传递引用 &trade
                  .update_from_trade(&trade);
-        println!("[create_or_update_single_level_orderbook_from_market_trade] orderbook: {:?}", orderbook);
     }
 
     /// 处理交易数据的方法
