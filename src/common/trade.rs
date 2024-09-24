@@ -1,4 +1,3 @@
-use serde::{Deserialize, Serialize};
 // 引入相关模块和结构体。
 use crate::{
     common::{
@@ -8,6 +7,7 @@ use crate::{
     },
     Exchange,
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 pub struct ClientTrade

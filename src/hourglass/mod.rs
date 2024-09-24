@@ -1,11 +1,9 @@
-use uuid::Uuid;
-use std::collections::HashMap;
 use crate::{
     common::datafeed::market_event::MarketEvent,
     error::ExchangeError,
     hourglass::{
         account::account_handlers::{balance_handler::BalanceHandler, position_handler::PositionHandler, trade_handler::TradeHandler},
-        clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
+        clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, queries_operations::ClickHouseClient},
         hourglass_client_local_mode::HourglassClientEvent,
     },
     network::{event::NetworkEvent, is_port_in_use},
@@ -13,13 +11,13 @@ use crate::{
 use account::HourglassAccount;
 use clickhouse::query::RowCursor;
 use mpsc::UnboundedReceiver;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tokio::{
     sync::{mpsc, mpsc::UnboundedSender, Mutex},
     time::{self, Duration},
 };
+use uuid::Uuid;
 use warp::Filter;
-use crate::hourglass::clickhouse_api::queries_operations::ClickHouseClient;
 
 pub mod account;
 pub mod clickhouse_api;
@@ -46,14 +44,14 @@ struct UserInfo
 }
 
 pub struct HourglassExchange
-where HourglassAccount: PositionHandler + TradeHandler + BalanceHandler
+    where HourglassAccount: PositionHandler + TradeHandler + BalanceHandler
 {
     pub client_event_rx: UnboundedReceiver<HourglassClientEvent>,
     pub market_event_tx: UnboundedSender<MarketTrade>,
     pub account: Arc<Mutex<HourglassAccount>>,
     pub data_source: DataSource,
     pub clickhouse_client: ClickHouseClient,
-    pub active_sessions: Mutex<HashMap<String, Uuid>>,  // 存储 session_token 和 username 的映射
+    pub active_sessions: Mutex<HashMap<String, Uuid>>, // 存储 session_token 和 username 的映射
 }
 
 impl HourglassExchange
@@ -76,13 +74,13 @@ impl HourglassExchange
 
         // 创建插入用户信息的 SQL
         let insert_query = format!(
-            "INSERT INTO accounts.user_info (id, username, email, password_hash, created_at) \
+                                   "INSERT INTO accounts.user_info (id, username, email, password_hash, created_at) \
             VALUES ('{}', '{}', '{}', '{}', '{}')",
-            Uuid::new_v4(),
-            username,
-            email,
-            password_hash,
-            Utc::now()
+                                   Uuid::new_v4(),
+                                   username,
+                                   email,
+                                   password_hash,
+                                   Utc::now()
         );
 
         // 执行插入操作
@@ -92,19 +90,20 @@ impl HourglassExchange
     }
 
     #[allow(unused)]
-    async fn login(&self, username: String, password: String) -> Result<String, ExchangeError> {
+    async fn login(&self, username: String, password: String) -> Result<String, ExchangeError>
+    {
         // 查询用户的加密密码
-        let select_query = format!(
-            "SELECT password_hash FROM accounts.user_info WHERE username = '{}'",
-            username
-        );
+        let select_query = format!("SELECT password_hash FROM accounts.user_info WHERE username = '{}'", username);
 
         // 执行查询并解析结果
-        let result = self.clickhouse_client.client.read()
-            .await.query(&select_query)
-            .fetch_one::<UserInfo>()
-            .await
-            .map_err(|_| ExchangeError::InvalidCredentials)?;
+        let result = self.clickhouse_client
+                         .client
+                         .read()
+                         .await
+                         .query(&select_query)
+                         .fetch_one::<UserInfo>()
+                         .await
+                         .map_err(|_| ExchangeError::InvalidCredentials)?;
 
         let password_hash = result.password_hash;
 
@@ -114,22 +113,24 @@ impl HourglassExchange
             // 保存会话信息
             self.active_sessions.lock().await.insert(session_token.clone(), username.parse().unwrap());
             Ok(session_token)
-        } else {
+        }
+        else {
             Err(ExchangeError::InvalidCredentials)
         }
     }
 
     #[allow(unused)]
     /// 注销
-    async fn logout(&self, session_token: String) -> Result<(), ExchangeError> {
+    async fn logout(&self, session_token: String) -> Result<(), ExchangeError>
+    {
         let mut sessions = self.active_sessions.lock().await;
         if sessions.remove(&session_token).is_some() {
             Ok(())
-        } else {
+        }
+        else {
             Err(ExchangeError::InvalidSession)
         }
     }
-
 
     pub async fn start(mut self)
     {
@@ -345,9 +346,8 @@ impl ExchangeBuilder
                                market_event_tx: self.market_event_tx.ok_or_else(|| ExchangeError::BuilderIncomplete("market_tx".to_string()))?,
                                account: self.account.ok_or_else(|| ExchangeError::BuilderIncomplete("account".to_string()))?,
                                data_source: self.data_source.ok_or_else(|| ExchangeError::BuilderIncomplete("data_source".to_string()))?,
-            clickhouse_client: ClickHouseClient::new(),
-            active_sessions: HashMap::new().into(),
-        })
+                               clickhouse_client: ClickHouseClient::new(),
+                               active_sessions: HashMap::new().into() })
     }
 }
 
@@ -422,9 +422,8 @@ mod tests
                                            market_event_tx: market_tx,
                                            account,
                                            data_source: DataSource::Backtest(cursor),
-            clickhouse_client: ClickHouseClient::new(),
-            active_sessions: HashMap::new().into(),
-        };
+                                           clickhouse_client: ClickHouseClient::new(),
+                                           active_sessions: HashMap::new().into() };
         let address = "127.0.0.1:3030".parse().unwrap(); // Convert to a SocketAddr
         assert!(is_port_in_use(address));
         exchange.run_online().await;

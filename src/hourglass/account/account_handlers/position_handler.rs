@@ -559,7 +559,7 @@ impl PositionHandler for HourglassAccount
             }
             else {
                 Err(ExchangeError::ConfigInheritanceNotAllowed)
-            }
+            };
         }
 
         // 如果两个方向的配置都不存在，报错

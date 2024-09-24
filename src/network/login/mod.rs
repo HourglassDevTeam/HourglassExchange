@@ -1,12 +1,6 @@
-use crate::{
-    error::ExchangeError,
-    hourglass::{clickhouse_api::queries_operations::ClickHouseClient, hourglass_client_local_mode::HourglassClient},
-};
+use crate::{error::ExchangeError, hourglass::clickhouse_api::queries_operations::ClickHouseClient};
 use async_trait::async_trait;
-use bcrypt::{hash, DEFAULT_COST};
-use chrono::Utc;
 use tokio::sync::oneshot;
-use uuid::Uuid;
 
 /// 定义用户注册请求
 #[derive(Debug)]
