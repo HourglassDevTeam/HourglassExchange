@@ -16,10 +16,9 @@ use crate::{
         token::Token,
     },
     hourglass::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, config_request::ConfigurationRequest},
-    network::login::LoginRequest,
+    network::login::{LoginRequest, LogoutRequest, RegisterRequest},
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
-use crate::network::login::{LogoutRequest, RegisterRequest};
 
 #[derive(Debug)]
 pub struct HourglassClient
