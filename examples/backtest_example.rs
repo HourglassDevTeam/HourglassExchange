@@ -134,13 +134,13 @@ async fn main()
 
     let mut single_level_order_books = HashMap::new();
 
-    // FIXME mechanism to be updated to update `single_level_order_books` in
-    single_level_order_books.insert(Instrument { base: Token::new("ETH".to_string()),
-                                                 quote: Token::new("USDT".to_string()),
-                                                 kind: InstrumentKind::Perpetual },
-                                    SingleLevelOrderBook { latest_bid: 16305.0,
-                                                           latest_ask: 16499.0,
-                                                           latest_price: 0.0 });
+    // // FIXME mechanism to be updated to update `single_level_order_books` in
+    // single_level_order_books.insert(Instrument { base: Token::new("ETH".to_string()),
+    //                                              quote: Token::new("USDT".to_string()),
+    //                                              kind: InstrumentKind::Perpetual },
+    //                                 SingleLevelOrderBook { latest_bid: 16305.0,
+    //                                                        latest_ask: 16499.0,
+    //                                                        latest_price: 0.0 });
 
     let hourglass_account_config = AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
                                                    global_position_direction_mode: PositionDirectionMode::Net,
@@ -150,7 +150,7 @@ async fn main()
                                                    global_leverage_rate: 1.0,
                                                    fees_book: HashMap::new(),
                                                    execution_mode: HourglassMode::Backtest,
-                                                   max_price_deviation: 0.05,
+                                                   max_price_deviation: 0.1,
                                                    lazy_account_positions: false,
                                                    liquidation_threshold: 0.9 };
 
@@ -218,6 +218,8 @@ async fn main()
 
     let mut order_counter: i64 = 0;
 
+    let mut order_ids = Vec::new();
+
     loop {
         // Call next entry of data and handle potential errors
         if let Err(e) = hourglass_client.let_it_roll().await {
@@ -230,8 +232,7 @@ async fn main()
             // Process the market data NOTE to be implemented.
             order_counter += 1;
 
-            order_parser(&hourglass_client, &market_data, order_counter, &mut account_event_rx).await;
-
+            order_parser(&hourglass_client, &market_data, order_counter, &mut order_ids).await;
 
             // Your logic for handling market_data & customised trading strategy goes here?
             println!("Processed market data: {:?}", market_data);
@@ -260,46 +261,43 @@ impl Ids
     }
 }
 
-pub async fn order_parser(
-    client: &HourglassClient,
-    trade: &MarketTrade,
-    order_counter: i64,
-    account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>
-)
+pub async fn order_parser(client: &HourglassClient, trade: &MarketTrade, order_counter: i64, order_ids: &mut Vec<OrderId>)
 {
-    match account_rx.recv().await {
-        | Some(AccountEvent { kind: AccountEventKind::OrdersOpen(new_orders),
-                   .. }) => {
-            println!("{:?}", new_orders[0].);
-        }
-        | other => {}
-    }
-
     match mock_up_strategy(trade) {
         | Some(operation) => {
             match operation {
                 | OrderType::Open(monk_order) => {
                     let order = Order { instruction: monk_order.order_type,                                                 // 订单指令
                                         exchange: Exchange::Hourglass,                                                      // 交易所
-                                        instrument: Instrument::from(("1000PEPE", "USDT", InstrumentKind::Perpetual)),  // 交易工具
+                                        instrument: Instrument::from(("1000PEPE", "USDT", InstrumentKind::Perpetual)),      // 交易工具
                                         timestamp: 1649192400000000,                                                        // 生成的时候填客户端下单时间,NOTE 回测场景中之后会被加上一个随机延迟时间。
-                                        cid: Some(ClientOrderId(format!("{} {}", "PEPEbuy{}".to_string(), order_counter))), // 客户端订单ID
+                                        cid: None, // 客户端订单ID
                                         side: monk_order.side,                                                              // 买卖方向
                                         state: RequestOpen { reduce_only: false,
                                                              price: monk_order.price,
                                                              size: monk_order.size } };
 
                     let new_orders = client.open_orders(vec![order]).await;
-                    println!("[test_3] : {:?}", new_orders);
+                    println!("[test_3] : {:?}", &new_orders);
+
+                    for order in new_orders {
+                        match order {
+                            | Ok(order) => order_ids.push(order.state.id),
+                            | Err(e) => {
+                                println!("{:?}", e);
+                                return
+                            }
+                        }
+                    }
                 }
                 | OrderType::Cancel => {
                     let order_cancel = Order { instruction: OrderInstruction::Cancel,
                                                exchange: Exchange::Hourglass,
                                                instrument: Instrument::from(("1000PEPE", "USDT", InstrumentKind::Perpetual)),
                                                timestamp: 1649192400000000, // 使用当前时间戳
-                                               cid: Some(ClientOrderId(format!("{} {}", "PEPEbuy{}".to_string(), order_counter))),
+                                               cid: None,
                                                side: Side::Buy,
-                                               state: RequestCancel::from(Some(ClientOrderId("PEPEbuy".to_string()))) }; // gotta be parsed from an OrderID rather than ClientOrderID
+                                               state: RequestCancel::from(order_ids[0].clone()) }; // gotta be parsed from an OrderID rather than ClientOrderID
 
                     let cancelled = client.cancel_orders(vec![order_cancel]).await;
 
@@ -321,10 +319,10 @@ pub fn mock_up_strategy(trade: &MarketTrade) -> Option<OrderType>
     // let trade_side = Side::from(trade.side.to_string().parse().unwrap());
     // the strategy's handling logic goes here
     match trade_price {
-        | px if px == 1000.0 => {
+        | px if px == 0.0086733 => {
             let operation = OrderType::Open(MockOrder { order_type: OrderInstruction::Limit,
                                                         side: Side::Buy,
-                                                        price: 999.0,
+                                                        price: 0.0085,
                                                         size: 10.0 });
 
             Some(operation)
