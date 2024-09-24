@@ -351,7 +351,10 @@ mod tests
         let exchange = HourglassExchange { client_event_rx: rx,
                                            market_event_tx: market_tx,
                                            account,
-                                           data_source: DataSource::Backtest(cursor) };
+                                           data_source: DataSource::Backtest(cursor),
+            click_house_client: ClickHouseClient::new(),
+            active_sessions: HashMap::new().into(),
+        };
         let address = "127.0.0.1:3030".parse().unwrap(); // Convert to a SocketAddr
         assert!(is_port_in_use(address));
         exchange.run_online().await;
