@@ -1,68 +1,96 @@
-use std::collections::HashMap;
+use crate::hourglass::hourglass_client_local_mode::HourglassClient;
 use async_trait::async_trait;
-use crate::{error::ExchangeError, hourglass::hourglass_client_local_mode::HourglassClient};
-/// 添加一个登陆验证模块
+use bcrypt::{hash, DEFAULT_COST};
 use tokio::sync::oneshot;
-use crate::hourglass::hourglass_client_local_mode::HourglassClientEvent;
+use uuid::Uuid;
+use crate::{
+    error::ExchangeError,
+    hourglass::clickhouse_api::queries_operations::ClickHouseClient,
+};
+use chrono::Utc;
 
-// 定义登录请求结构体
+/// 定义用户注册请求
 #[derive(Debug)]
-pub struct LoginRequest
-{
+pub struct RegisterRequest {
     pub username: String,
-    pub password: String, // 或者 token
+    pub email: String,
+    pub password: String,  // 这是未加密的密码
+    pub response_tx: oneshot::Sender<Result<(), ExchangeError>>,
+}
+
+/// 定义登录请求
+#[derive(Debug)]
+pub struct LoginRequest {
+    pub username: String,
+    pub password: String,  // 未加密的密码
     pub response_tx: oneshot::Sender<Result<LoginResponse, ExchangeError>>,
 }
 
-// 登录响应结构体
+/// 登录响应结构体
 #[derive(Debug)]
-pub struct LoginResponse
-{
-    pub session_token: String, // 可以返回一个令牌
+pub struct LoginResponse {
+    pub session_token: String,  // 成功登录后返回的 session 令牌
+}
+
+/// 注销请求结构体
+#[derive(Debug)]
+pub struct LogoutRequest {
+    pub session_token: String,
+    pub response_tx: oneshot::Sender<Result<(), ExchangeError>>,
 }
 
 #[async_trait]
 pub trait Authenticator {
-    // 验证客户端是否已登录
-    fn is_authenticated(&self, authenticated_clients: &HashMap<String, String>) -> bool;
-    // 认证方法，用于验证用户名和密码
-    fn authenticate_client(&self, username: &str, password: &str) -> Result<String, ExchangeError>;
-    async fn login(&self, username: String, password: String) -> Result<String, ExchangeError>;
+    async fn register(&self, client: ClickHouseClient,username: String, email: String, password: String) -> Result<(), ExchangeError>;
+    // async fn login(&self, client: ClickHouseClient,username: String, password: String) -> Result<String, ExchangeError>;
+    // async fn logout(&self, session_token: String) -> Result<(), ExchangeError>;
+}
+
+
+// 定义查询结果的数据结构
+#[derive(Debug, clickhouse::Row, serde::Deserialize)]
+pub struct UserInfo {
+    _password_hash: String,
 }
 
 #[async_trait]
 impl Authenticator for HourglassClient {
-    // 验证客户端是否已登录
-    fn is_authenticated(&self, authenticated_clients: &HashMap<String, String>) -> bool {
-        // 检查是否有有效的 token
-        // 可以根据情况检查客户端的令牌
-        !authenticated_clients.is_empty()
+    /// 注册用户
+    async fn register(&self, client: ClickHouseClient, username: String, email: String, password: String) -> Result<(), ExchangeError> {
+        // 加密密码
+        let password_hash = hash(password, DEFAULT_COST).map_err(|_| ExchangeError::PasswordHashError)?;
+
+        // 创建插入用户信息的 SQL
+        let insert_query = format!(
+            "INSERT INTO accounts.user_info (id, username, email, password_hash, created_at) \
+            VALUES ('{}', '{}', '{}', '{}', '{}')",
+            Uuid::new_v4(), username, email, password_hash, Utc::now()
+        );
+
+        // 执行插入操作
+        client.client.
+            read().await.query(&insert_query)
+            .execute()
+            .await
+            .map_err(|_| ExchangeError::DatabaseError)?;
+
+        Ok(())
     }
 
-    // 认证方法，用于验证用户名和密码
-    fn authenticate_client(&self, username: &str, password: &str) -> Result<String, ExchangeError> {
-        // 假设我们有一个简单的用户名密码验证逻辑
-        if username == "user" && password == "pass" {
-            // 生成一个 token，表示成功登录
-            Ok("valid_token".to_string())
-        } else {
-            Err(ExchangeError::AuthenticationFailed)
-        }
-    }
-
-    async fn login(&self, username: String, password: String) -> Result<String, ExchangeError> {
-        let (response_tx, response_rx) = oneshot::channel();
-        let login_request = LoginRequest {
-            username,
-            password,
-            response_tx
-        };
-
-        self.client_event_tx.send(HourglassClientEvent::Login(login_request)).expect("Failed to send Login request");
-
-        // 等待服务器返回的令牌或错误信息
-        let login_response = response_rx.await.expect("Failed to receive Login response")?;
-
-        Ok(login_response.session_token)
-    }
+    // async fn login(&self, client: ClickHouseClient,username: String, password: String) -> Result<String, ExchangeError> {
+    //     todo!()
+    // }
+    //
+    // async fn logout(&self, session_token: String) -> Result<(), ExchangeError> {
+    //     todo!()
+    // }
 }
+
+/// HourglassClient 事件，用于处理用户相关事件
+#[derive(Debug)]
+pub enum HourglassClientEvent {
+    Register(RegisterRequest),
+    Login(LoginRequest),
+    Logout(LogoutRequest),
+}
+

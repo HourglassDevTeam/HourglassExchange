@@ -117,10 +117,20 @@ impl HourglassExchange
                             HourglassClientEvent::ConfigureInstruments(position_configs, response_tx) => {
                                 let _ = self.account.lock().await.preconfigure_positions(position_configs, response_tx).await;
                             }
+
                         HourglassClientEvent::Login(_) => {
                             todo!()
-                        }}
+                        }
+
+                        HourglassClientEvent::Register(_) => {
+                            todo!()
+                        }
+
+                        HourglassClientEvent::Logout(_) => {
+                todo!()
+                        }
                     }
+                }
                     // 加入超时机制，防止一直挂起
             _ = time::sleep(Duration::from_secs(timeout)) => {
                 if processed_count > 0 {

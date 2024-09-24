@@ -1,4 +1,5 @@
-use serde::{Deserialize, Serialize};
+use
+serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::common::{
@@ -169,8 +170,22 @@ pub enum ExchangeError
 
     #[error("Config Inheritance Not Allowed.")]
     ConfigInheritanceNotAllowed,
+
     #[error("AuthenticationFailed.")]
     AuthenticationFailed,
+
     #[error("InvalidTradeSize.")]
     InvalidTradeSize,
+
+    #[error("InvalidCredentials.")]
+    InvalidCredentials,
+
+    #[error("InvalidSession.")]
+    InvalidSession,
+
+    #[error("DatabaseError.")]
+    DatabaseError,
+
+    #[error("PasswordHashError.")]
+    PasswordHashError,
 }

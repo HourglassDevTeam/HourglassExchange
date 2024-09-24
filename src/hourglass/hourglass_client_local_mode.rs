@@ -16,9 +16,10 @@ use crate::{
         token::Token,
     },
     hourglass::{clickhouse_api::datatype::clickhouse_trade_data::MarketTrade, config_request::ConfigurationRequest},
+    network::login::LoginRequest,
     AccountEvent, ClientExecution, Exchange, ExchangeError, RequestOpen,
 };
-use crate::network::login::LoginRequest;
+use crate::network::login::{LogoutRequest, RegisterRequest};
 
 #[derive(Debug)]
 pub struct HourglassClient
@@ -54,15 +55,17 @@ pub enum HourglassClientEvent
     CancelOrdersAll(Sender<Result<Vec<Order<Cancelled>>, ExchangeError>>),
     ConfigureInstruments(Vec<ConfigurationRequest>, Sender<ConfigureInstrumentsResults>),
     LetItRoll, // Tell the system to send the next datafeed.
+    Register(RegisterRequest),
     Login(LoginRequest),
+    Logout(LogoutRequest),
 }
 
 #[async_trait]
 impl ClientExecution for HourglassClient
 {
-    const CLIENT_KIND: Exchange = Exchange::Hourglass;
-
     type Config = (UnboundedSender<HourglassClientEvent>, UnboundedReceiver<MarketTrade>);
+
+    const CLIENT_KIND: Exchange = Exchange::Hourglass;
 
     async fn init(config: Self::Config, _: UnboundedSender<AccountEvent>) -> Self
     {

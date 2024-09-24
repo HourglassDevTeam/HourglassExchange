@@ -12,6 +12,9 @@ default = []
 
 [dependencies]
 
+# crypt
+bcrypt = "0.15.1"  # 或者使用 argon2
+
 # optional
 dotenvy = { version = "0.15", optional = true }
 #open-lark = { path = "../open-lark", optional = true }

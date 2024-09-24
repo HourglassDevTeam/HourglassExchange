@@ -1,5 +1,4 @@
-use
-crate::{
+use crate::{
     common::{
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},

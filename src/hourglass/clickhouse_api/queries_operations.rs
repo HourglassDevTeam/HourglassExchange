@@ -397,6 +397,45 @@ impl ClickHouseClient
 
         Ok(())
     }
+
+    pub async fn create_database_if_not_exists(&self, database: &str) -> Result<(), Error>
+    {
+        // 创建数据库的SQL查询
+        let create_db_query = format!("CREATE DATABASE IF NOT EXISTS {}", database);
+
+        // 执行创建数据库的SQL查询
+        self.client.read().await.query(&create_db_query).execute().await?;
+
+        println!("Database {} created successfully or already exists", database);
+        Ok(())
+    }
+
+    pub async fn create_users_table(&self, database: &str) -> Result<(), Error>
+    {
+        // 首先创建数据库（如果不存在）
+        self.create_database_if_not_exists(database).await?;
+
+        // 创建用户表的SQL查询
+        let create_table_query = format!(
+                                         "CREATE TABLE IF NOT EXISTS {}.user_info ( \
+        id UUID, \
+        username String, \
+        email String, \
+        password_hash String, \
+        created_at DateTime64(3), \
+        last_login DateTime64(3) DEFAULT now() \
+    )   ENGINE = ReplacingMergeTree() \
+        PARTITION BY toYYYYMMDD(created_at) \
+        ORDER BY (created_at, id)",
+                                         database
+        );
+
+        // 执行创建表的SQL查询
+        self.client.read().await.query(&create_table_query).execute().await?;
+
+        println!("Table {}.user_info created successfully", database);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -418,32 +457,4 @@ mod tests
         let table_name = client.construct_table_name("binance", "futures", "trades", "2024_08_24", "BTC", "USDT");
         assert_eq!(table_name, "binance_futures_trades_2024_08_24_BTCUSDT");
     }
-
-    // #[tokio::test]
-    // async fn test_get_table_names() {
-    //     let client = setup_clickhouse_client().await;
-    //     let table_names = client.get_table_names("binance_futures_trades").await;
-    //
-    //     // 假设数据库中有一些表
-    //     assert!(!table_names.is_empty(), "Expected to find some tables in the database");
-    // }
-
-    // #[tokio::test]
-    // async fn test_optimize_table() {
-    //     let client = setup_clickhouse_client().await;
-    //
-    //     let result = client.optimize_table("binance_futures_trades.binance_futures_trades_2024_05_05_1000BONKUSDT").await;
-    //     assert!(result.is_ok(), "Expected table optimization to succeed");
-    // }
-
-    // #[tokio::test]
-    // async fn test_optimize_union_tables_in_date_range() {
-    //     let client = setup_clickhouse_client().await;
-    //
-    //     let start_date = NaiveDate::from_ymd_opt(2024, 5, 5).unwrap();
-    //     let end_date = NaiveDate::from_ymd_opt(2024, 5, 5).unwrap();
-    //
-    //     let result = client.optimize_union_tables_in_date_range("binance", "futures", "trades", start_date, end_date).await;
-    //     assert!(result.is_ok(), "Expected optimization of union tables to succeed");
-    // }
 }
