@@ -926,8 +926,8 @@ impl PositionHandler for HourglassAccount
 
         // 获取多头和空头仓位
         let (long_position, short_position) = self.get_position_both_ways(&instrument).await?;
-        info!("long position: {:?}", long_position);
-        info!("short position: {:?}", short_position);
+        // info!("Long Position: {:?}", long_position);
+        // info!("Short Position: {:?}", short_position);
 
         // 生成新的交易 ID
         let trade_id_value = self.client_trade_counter.fetch_add(1, Ordering::SeqCst);

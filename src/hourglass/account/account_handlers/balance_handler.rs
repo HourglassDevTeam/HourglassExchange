@@ -354,7 +354,7 @@ impl BalanceHandler for HourglassAccount
     {
         let available = self.get_balance(token)?.available;
         if available >= required_balance {
-            info!("[has_sufficient_available_balance] : account has sufficient balance");
+            info!("Currently the account has sufficient balance");
             Ok(())
         }
         else {
