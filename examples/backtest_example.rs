@@ -116,7 +116,7 @@ use log::{Level, LevelFilter, Record};
 use time::Duration;
 use hourglass::hourglass_log::{
     appender::{file::Period, FileAppender},
-    info, LoggerGuard, TideLogFormat,
+    info, LoggerGuard, LogFormat,
 };
 
 
@@ -125,26 +125,26 @@ fn init() -> LoggerGuard {
     // 由于将消息格式化为字符串可能会减慢日志宏调用的速度，习惯的方式是将所需字段原样发送到日志线程，然后在日志线程中构建消息。
     // Send 表示类型可以安全地在线程之间传递所有权，而 Sync 表示类型可以安全地在线程之间共享访问而不会引发数据竞争。
     // 在这里，Box<dyn Send + Sync + std::fmt::Display> 表示存储的对象需要是可以跨线程传递和共享访问的，并且必须实现 std::fmt::Display trait，以便可以将其格式化为字符串。
-    struct TideFormatter;
+    struct Formatter;
 
     struct Msg {
         level: Level,
-        thread: Option<String>,
-        file_path: Option<&'static str>, // 这意味着这个file_path字符串引用是与整个程序的生命周期相同的，也就是说，在整个程序运行期间都有效。
-        line: Option<u32>,
+        // thread: Option<String>,
+        // file_path: Option<&'static str>, // 这意味着这个file_path字符串引用是与整个程序的生命周期相同的，也就是说，在整个程序运行期间都有效。
+        // line: Option<u32>,
         args: String,
-        module_path: Option<&'static str>,
+        // module_path: Option<&'static str>,
     }
 
-    impl TideLogFormat for TideFormatter {
+    impl LogFormat for Formatter {
         fn msg(&self, record: &Record) -> Box<dyn Send + Sync + std::fmt::Display> {
             Box::new(Msg {
                 level: record.level(),
-                thread: std::thread::current().name().map(|n| n.to_string()),
-                file_path: record.file_static(),
-                line: record.line(),
+                // thread: std::thread::current().name().map(|n| n.to_string()),
+                // file_path: record.file_static(),
+                // line: record.line(),
                 args: format!("{}", record.args()),
-                module_path: record.module_path_static(),
+                // module_path: record.module_path_static(),
             })
         }
     }
@@ -152,24 +152,24 @@ fn init() -> LoggerGuard {
     impl Display for Msg {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.write_str(&format!(
-                "{}@{}||{}:{}[{}] {}",
-                self.thread.as_ref().map(|x| x.as_str()).unwrap_or(""),
-                self.module_path.unwrap_or(""),
-                self.file_path.unwrap_or(""),
-                self.line.unwrap_or(0),
+                "[{}][{}]",
+                // self.thread.as_ref().map(|x| x.as_str()).unwrap_or(""),
+                // self.module_path.unwrap_or(""),
+                // self.file_path.unwrap_or(""),
+                // self.line.unwrap_or(0),
                 self.level,
                 self.args
             ))
         }
     }
 
-    let time_format =
-        time::format_description::parse_owned::<1>("[year]年[month]月[day]日 [hour]时[minute]分[second]秒.[subsecond digits:6]").unwrap();
+    // let time_format =
+    //     time::format_description::parse_owned::<1>("[month]月[day]日 [hour]时[minute]分[second]秒.[subsecond digits:6]").unwrap();
     hourglass_log::Builder::new()
-        // 使用我们自己的格式TideLogFormat
-        .format(TideFormatter)
-        // 使用我们自己的时间格式
-        .time_format(time_format)
+        // 使用自定义格式TideLogFormat
+        .format(Formatter)
+        // 使用自定义的时间格式
+        // .time_format(time_format)
         // 全局最大日志级别
         .max_log_level(LevelFilter::Info)
         // 定义 root appender, 传递 None 会写入到 stderr
@@ -283,6 +283,7 @@ async fn main()
 
     // Running the exchange in local mode in tokio runtime
     tokio::spawn(hourglass_exchange.start());
+
     // hourglass_client.let_it_roll().await.unwrap();
 
     let mut tokens_to_be_deposited: Vec<(Token, f64)> = Vec::new();

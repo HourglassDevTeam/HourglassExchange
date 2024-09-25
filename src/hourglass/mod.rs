@@ -1,3 +1,4 @@
+use crate::hourglass_log::warn;
 use crate::{
     common::datafeed::market_event::MarketEvent,
     error::ExchangeError,
@@ -70,17 +71,15 @@ impl HourglassExchange
                 match event {
                     HourglassClientEvent::LetItRoll => {
                         if let Some(row) = self.process_next_data().await {
-                            println!("processing LetItRoll");
-                                println!("row: {:?}", row);
                             let mut account = self.account.lock().await;
                             let _ = account.handle_trade_data(&row).await;
                             processed_count += 1; // 每处理一个条目，计数器加1
                         } else {
                             // 如果没有更多数据
                             if processed_count > 0 {
-                                println!("No more data available. Processed {} entries", processed_count);
+                                warn!("No more data available. Processed {} entries", processed_count);
                             } else {
-                                println!("No data found.");
+                                warn!("No data found.");
                             }
                             break; // 优雅退出循环
                         }

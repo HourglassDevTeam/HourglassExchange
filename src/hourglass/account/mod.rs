@@ -1,3 +1,4 @@
+use crate::hourglass_log::info;
 use crate::{
     common::{
         account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode},
@@ -437,16 +438,14 @@ impl HourglassAccount
         // 验证订单的基本合法性
         Self::validate_order_instruction(order.instruction)?;
 
-        println!("[attempt_atomic_open] : successfully validated order instruction");
+        info!("[attempt_atomic_open] : successfully validated order instruction");
 
         // 将锁的作用域限制在这个块内， 通过和订单簿比较价格来判断是潜在的 Taker 还是 Maker。
         let order_role = {
             let mut order_books_lock = self.single_level_order_book.lock().await;
-            println!("[attempt_atomic_open] order_books_lock: {:?}", order_books_lock);
-            println!("instrument is {:#?}", order.instrument);
-
+            info!("[attempt_atomic_open] order_books_lock: {:?}", order_books_lock);
+            info!("instrument is {:#?}", order.instrument);
             let order_book = order_books_lock.get_mut(&order.instrument).unwrap(); // 引用的生命周期延长
-
             let orders_guard = self.account_open_book.read().await;
             // 将订单簿传递给 determine_maker_taker
             orders_guard.determine_maker_taker(&order, order_book)?
@@ -454,7 +453,7 @@ impl HourglassAccount
 
         // 锁已经在此处释放，后续操作可以安全地借用 `self` NOTE 此处计算required_available_balance要分离出maker的处理规则
         let (token, required_balance) = self.required_available_balance(&order, order_role).await?;
-        println!("[attempt_atomic_open] required balance is quoted in {}: {}", token, required_balance);
+        info!("[attempt_atomic_open] required balance is quoted in {}: {}", token, required_balance);
         self.has_sufficient_available_balance(token, required_balance)?;
 
         let open_order = {
@@ -603,7 +602,7 @@ impl HourglassAccount
         // 验证取消请求的合法性
         Self::validate_order_request_cancel(&request)?;
 
-        println!("Attempting to cancel order: {:?}", request);
+        info!("Attempting to cancel order: {:?}", request);
 
         // 使用写锁获取订单簿，以允许修改
         let removed_order = {
@@ -611,18 +610,18 @@ impl HourglassAccount
             let mut orders = orders_guard.get_ins_orders_mut(&request.instrument)?;
 
             // 打印当前订单簿状态
-            println!("Current orders before cancellation: {:?}", *orders);
+            info!("Current orders before cancellation: {:?}", *orders);
 
             // 使用 find_matching_order 查找并移除订单
             match request.side {
                 | Side::Buy => {
                     let index = Self::find_matching_order(&orders.bids, &request)?;
-                    println!("Removing Buy Order at index: {}", index);
+                    info!("Removing Buy Order at index: {}", index);
                     orders.bids.remove(index)
                 }
                 | Side::Sell => {
                     let index = Self::find_matching_order(&orders.asks, &request)?;
-                    println!("Removing Sell Order at index: {}", index);
+                    info!("Removing Sell Order at index: {}", index);
                     orders.asks.remove(index)
                 }
             }
@@ -632,7 +631,7 @@ impl HourglassAccount
         let balance_event = match self.apply_cancel_order_changes(&removed_order) {
             | Ok(event) => event,
             | Err(e) => {
-                println!("Failed to apply balance changes: {:?}", e);
+                info!("Failed to apply balance changes: {:?}", e);
                 return Err(e); // 如果更新余额时发生错误，返回错误
             }
         };
@@ -652,12 +651,12 @@ impl HourglassAccount
         self.send_account_event(orders_cancelled_event)?;
         self.send_account_event(balance_event)?;
 
-        println!("Order successfully cancelled: {:?}", cancelled_order);
+        info!("Order successfully cancelled: {:?}", cancelled_order);
 
         // 打印取消后的订单簿状态
         let orders_guard = self.account_open_book.read().await;
         let orders = orders_guard.get_ins_orders_mut(&cancelled_order.instrument)?;
-        println!("Current orders after cancellation: {:?}", *orders);
+        info!("Current orders after cancellation: {:?}", *orders);
 
         Ok(cancelled_order)
     }
@@ -845,7 +844,7 @@ mod tests
         {
             // 充值前查询 USDT 余额
             let initial_balance = account.get_balance(&Token::from("USDT")).unwrap();
-            // println!("Initial USDT balance: {:?}", *initial_balance);
+            // info!("Initial USDT balance: {:?}", *initial_balance);
             assert_eq!(initial_balance.total, 10_000.0);
         } // `initial_balance` 的作用域在此结束，释放了不可变借用
 
@@ -854,7 +853,7 @@ mod tests
 
         // 充值后再次查询 USDT 余额
         let updated_balance = account.get_balance(&Token::from("USDT")).unwrap();
-        // println!("Updated USDT balance: {:?}", *updated_balance);
+        // info!("Updated USDT balance: {:?}", *updated_balance);
 
         // 验证余额更新
         assert_eq!(balance.token, Token("USDT".into()));
@@ -879,8 +878,8 @@ mod tests
         let usdt_initial_balance = account.get_balance(&Token::from("USDT")).as_deref().unwrap().clone();
         let btc_initial_balance = account.get_balance(&Token::from("BTC")).as_deref().unwrap().clone();
 
-        println!("Initial USDT balance: {:?}", usdt_initial_balance);
-        println!("Initial BTC balance: {:?}", btc_initial_balance);
+        info!("Initial USDT balance: {:?}", usdt_initial_balance);
+        info!("Initial BTC balance: {:?}", btc_initial_balance);
 
         assert_eq!(usdt_initial_balance.total, 10_000.0 + usdt_amount);
         assert_eq!(btc_initial_balance.total, 0.0);
@@ -892,8 +891,8 @@ mod tests
         let usdt_balance = account.get_balance(&Token::from("USDT")).unwrap();
         let btc_balance = account.get_balance(&Token::from("BTC")).unwrap();
 
-        println!("Updated USDT balance: {:?}", *usdt_balance);
-        println!("Updated BTC balance: {:?}", *btc_balance);
+        info!("Updated USDT balance: {:?}", *usdt_balance);
+        info!("Updated BTC balance: {:?}", *btc_balance);
 
         // 购买后，USDT 余额应为 10_000 - 100，BTC 余额应为 0.002
         assert_eq!(usdt_balance.total, 10_000.0);

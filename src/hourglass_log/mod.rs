@@ -268,7 +268,7 @@ pub fn manual_cleanup(dir: &Path) -> io::Result<()> {
                     if ext == "log" {
                         found_log_files = true;
                         fs::remove_file(&path)?;
-                        println!("[TideLog] : 删除了日志文件: {:?}", path);
+                        println!("[HourglassLog] : 删除了日志文件: {:?}", path);
                     }
                 }
             }
@@ -277,7 +277,7 @@ pub fn manual_cleanup(dir: &Path) -> io::Result<()> {
 
     // 如果在整个目录中没有找到任何 .log 文件，打印消息
     if !found_log_files && dir == Path::new(".") {
-        println!("[TideLog] : 在路径 '{}' 下没有找到 .log 文件。", dir.to_string_lossy());
+        println!("[HourglassLog] : 在路径 '{}' 下没有找到 .log 文件。", dir.to_string_lossy());
     }
     Ok(())
 }
@@ -350,7 +350,7 @@ impl LogMsg {
                 msg
             );
             if let Err(e) = writer.write_all(s.as_bytes()) {
-                eprintln!("[TideLog] : 日志记录器写入消息失败: {}", e);
+                eprintln!("[HourglassLog] : 日志记录器写入消息失败: {}", e);
             };
             *missed_entry = 0;
         } else {
@@ -366,7 +366,7 @@ impl LogMsg {
                 msg
             );
             if let Err(e) = writer.write_all(s.as_bytes()) {
-                eprintln!("[TideLog] : 日志记录器写入消息失败: {}", e);
+                eprintln!("[HourglassLog] : 日志记录器写入消息失败: {}", e);
             };
         }
     }
@@ -384,14 +384,14 @@ enum LoggerOutput {
     FlushError(io::Error),
 }
 
-pub trait TideLogFormat: Send + Sync {
+pub trait LogFormat: Send + Sync {
     /// 将 record 引用转换为 box 对象，然后发送到 log 线程，最后格式化为字符串。
     /// 注：record 是一个记录结构体，包含了日志信息。
     fn msg(&self, record: &Record) -> Box<dyn Send + Sync + Display>;
 }
 
 pub struct TideLogFormatter;
-impl TideLogFormat for TideLogFormatter {
+impl LogFormat for TideLogFormatter {
     /// 返回一个 box 对象，它包含用于稍后格式化为字符串的必要数据（例如线程名称、代码行号等）。
     #[inline]
     fn msg(&self, record: &Record) -> Box<dyn Send + Sync + Display> {
@@ -449,13 +449,13 @@ impl Drop for LoggerGuard {
     fn drop(&mut self) {
         self.queue
             .send(LoggerInput::Flush)
-            .expect("[TideLog]：在刷新时日志队列关闭了，这是一个bug");
-        self.notification.recv().expect("[TideLog]：日志通知已关闭，这是一个bug");
+            .expect("[HourglassLog]：在刷新时日志队列关闭了，这是一个bug");
+        self.notification.recv().expect("[HourglassLog]：日志通知已关闭，这是一个bug");
     }
 }
 
 pub struct Logger {
-    format: Box<dyn TideLogFormat>,
+    format: Box<dyn LogFormat>,
     level: LevelFilter,
     queue: Sender<LoggerInput>,
     notification: Receiver<LoggerOutput>,
@@ -512,7 +512,7 @@ impl Log for Logger {
             if let Err(_) = self.queue.send(msg) {
                 let stop = self.stopped.load(Ordering::SeqCst);
                 if !stop {
-                    eprintln!("[TideLog] : 在记录日志时，日志队列关闭了，这是一个bug");
+                    eprintln!("[HourglassLog] : 在记录日志时，日志队列关闭了，这是一个bug");
                     self.stopped.store(true, Ordering::SeqCst)
                 }
             }
@@ -522,7 +522,7 @@ impl Log for Logger {
                     if let Some(s) = &self.discard_state {
                         let count = s.count.fetch_add(1, Ordering::SeqCst);
                         if s.last.load().elapsed().as_secs() >= 5 {
-                            eprintln!("[TideLog] : 日志消息过多。省略的日志数量：{}", count);
+                            eprintln!("[HourglassLog] : 日志消息过多。省略的日志数量：{}", count);
                             s.last.store(Arc::new(Instant::now()));
                         }
                     }
@@ -530,7 +530,7 @@ impl Log for Logger {
                 | Err(TrySendError::Disconnected(_)) => {
                     let stop = self.stopped.load(Ordering::SeqCst);
                     if !stop {
-                        eprintln!("[TideLog] : 在记录日志时，日志队列关闭了，这是一个bug");
+                        eprintln!("[HourglassLog] : 在记录日志时，日志队列关闭了，这是一个bug");
                         self.stopped.store(true, Ordering::SeqCst)
                     }
                 }
@@ -546,10 +546,10 @@ impl Log for Logger {
         // 向日志队列发送一个刷新命令。如果队列已关闭，则抛出异常。
         self.queue
             .send(LoggerInput::Flush)
-            .expect("[TideLog] : 在刷新时日志队列关闭了，这是一个bug");
+            .expect("[HourglassLog] : 在刷新时日志队列关闭了，这是一个bug");
 
         // 等待通知，以确认刷新操作已完成。如果通知通道已关闭，则抛出异常。
-        self.notification.recv().expect("[TideLog] : 日志通知关闭了，这是一个错误");
+        self.notification.recv().expect("[HourglassLog] : 日志通知关闭了，这是一个错误");
     }
 }
 
@@ -564,7 +564,7 @@ struct BoundedChannelOption {
 /// 因此，日志中的时间戳不会意识到操作系统中时区的变化。
 
 pub struct Builder {
-    format: Box<dyn TideLogFormat>,
+    format: Box<dyn LogFormat>,
     time_format: Option<OwnedFormatItem>,
     level: Option<LevelFilter>,
     root_level: Option<LevelFilter>,
@@ -622,7 +622,7 @@ impl Builder {
 
     /// Set custom formatter
     #[inline]
-    pub fn format<F: TideLogFormat + 'static>(mut self, format: F) -> Builder {
+    pub fn format<F: LogFormat + 'static>(mut self, format: F) -> Builder {
         self.format = Box::new(format);
         self
     }
@@ -771,13 +771,13 @@ impl Builder {
         // 检查过滤器中的appender names是否有效
         for appender_name in filters.iter().filter_map(|x| x.appender) {
             if !self.appenders.contains_key(appender_name) {
-                panic!("[TideLog] : Appender {} not configured", appender_name);
+                panic!("[HourglassLog] : Appender {} not configured", appender_name);
             }
         }
         let global_level = self.level.unwrap_or(LevelFilter::Info);
         let root_level = self.root_level.unwrap_or(global_level);
         if global_level < root_level {
-            warn!("[TideLog] : 日志级别高于 {} 的将被忽略", global_level,);
+            warn!("[HourglassLog] : 日志级别高于 {} 的将被忽略", global_level,);
         }
 
         let (sync_sender, receiver) = match &self.bounded_channel_option {
@@ -792,7 +792,7 @@ impl Builder {
             for filter in &filters {
                 if let Some(level) = filter.level {
                     if global_level < level {
-                        warn!("[TideLog] : 在 `{}` 中，日志级别高于 {} 的消息将被忽略。", global_level, filter.path,);
+                        warn!("[HourglassLog] : 在 `{}` 中，日志级别高于 {} 的消息将被忽略。", global_level, filter.path,);
                     }
                 }
             }
@@ -838,23 +838,23 @@ impl Builder {
                         if let Some(error) = flush_result {
                             notification_sender
                                 .send(LoggerOutput::FlushError(error))
-                                .expect("[TideLog] : 日志通知失败");
+                                .expect("[HourglassLog] : 日志通知失败");
                         } else {
-                            notification_sender.send(LoggerOutput::Flushed).expect("[TideLog] : 日志通知失败");
+                            notification_sender.send(LoggerOutput::Flushed).expect("[HourglassLog] : 日志通知失败");
                         }
                     }
                     | Err(RecvTimeoutError::Timeout) => {
                         if last_flush.elapsed() > Duration::from_millis(1000) {
                             let flush_errors = appenders.values_mut().chain([&mut root]).filter_map(|w| w.flush().err());
                             for err in flush_errors {
-                                warn!("TideLog flush error: {}", err);
+                                warn!("HourglassLog flush error: {}", err);
                             }
                             last_flush = Instant::now();
                         };
                     }
                     | Err(e) => {
                         eprintln!(
-                            "[TideLog] : sender 关闭，但没有发送 quit 信号，请检查详细信息：{}，这可能有助于发现潜在的错误",
+                            "[HourglassLog] : sender 关闭，但没有发送 quit 信号，请检查详细信息：{}，这可能有助于发现潜在的错误",
                             e
                         );
                     }

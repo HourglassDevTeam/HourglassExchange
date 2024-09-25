@@ -1,3 +1,5 @@
+use crate::hourglass_log::warn;
+use crate::hourglass_log::info;
 use async_trait::async_trait;
 use mpsc::UnboundedSender;
 use oneshot::Sender;
@@ -165,7 +167,7 @@ impl ClientExecution for HourglassClient
     // 实现 DepositTokens 的处理逻辑
     async fn deposit_tokens(&self, deposits: Vec<(Token, f64)>) -> Result<Vec<TokenBalance>, ExchangeError>
     {
-        println!("begin to deposit tokens: {:?}", deposits);
+        info!("begin to deposit tokens: {:?}", deposits);
         let (response_tx, response_rx) = oneshot::channel();
         self.client_event_tx
             .send(HourglassClientEvent::DepositTokens((deposits, response_tx)))
@@ -179,11 +181,11 @@ impl ClientExecution for HourglassClient
         // Try sending the LetItRoll event and handle the case where the channel is closed
         if let Err(err) = self.client_event_tx.send(HourglassClientEvent::LetItRoll) {
             // Channel is closed, so handle it gracefully instead of panicking
-            println!("Failed to send LetItRoll request: {:?}", err);
+            warn!("Failed to send LetItRoll request: {:?}", err);
             return Err(ExchangeError::Hourglass("Exchange is currently offline".into()));
         }
 
-        println!("Sent LetItRoll command successfully");
+        info!("Sent LetItRoll command successfully");
         Ok(())
     }
 }
@@ -194,7 +196,7 @@ impl HourglassClient
     {
         if let Some(market_event) = self.market_event_rx.recv().await {
             // Process the received market data event
-            println!("Received market event: {:?}", market_event);
+            info!("Received market event: {:?}", market_event);
             return Some(market_event);
         }
         None // Return None if there are no events
@@ -260,25 +262,25 @@ mod tests
         // 启动一个异步任务来调用客户端的 cancel_orders_all 方法
         let client_task = tokio::spawn(async move {
             let result = client.cancel_orders_all().await;
-            println!("Client received response: {:?}", result); // 打印客户端接收到的响应
+            info!("Client received response: {:?}", result); // 打印客户端接收到的响应
             assert!(result.is_ok(), "Expected a successful result");
             assert!(result.unwrap().is_empty(), "Expected an empty list of cancelled orders");
         });
 
         // 模拟从 HourglassClientEvent 接收器获取 CancelOrdersAll 事件
         if let Some(CancelOrdersAll(tx)) = request_rx.recv().await {
-            // println!("Received CancelOrdersAll event");
+            // info!("Received CancelOrdersAll event");
 
             // 发送一个空的取消订单列表作为响应
             let response = Ok(vec![]);
-            // println!("Response being sent: {:?}", response); // 打印将要发送的响应
+            // info!("Response being sent: {:?}", response); // 打印将要发送的响应
 
             // 发送响应，并确认是否成功发送
             if tx.send(response).is_ok() {
-                println!("Response sent successfully");
+                info!("Response sent successfully");
             }
             else {
-                println!("Failed to send CancelOrdersAll response");
+                info!("Failed to send CancelOrdersAll response");
             }
         }
         else {
