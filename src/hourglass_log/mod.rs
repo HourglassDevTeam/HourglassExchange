@@ -335,17 +335,17 @@ impl LogMsg {
                 }
             }
             last_log.insert(self.limit_key, now);
-            let delay = duration(self.time, now);
+            // let delay = duration(self.time, now);
             let utc_datetime = to_utc(self.time);
 
             let offset_datetime = offset.map(|o| utc_datetime.to_offset(o)).unwrap_or(utc_datetime);
 
             let s = format!(
-                "[{}]-[Delay={}ms]-[{}]\n{}\n",
+                "[{}]-[{}]{}\n",
                 offset_datetime
                     .format(&time_format)
                     .unwrap_or_else(|_| offset_datetime.format(&time::format_description::well_known::Rfc3339).unwrap()),
-                delay.as_millis(),
+                // delay.as_millis(),
                 *missed_entry,
                 msg
             );
@@ -354,15 +354,15 @@ impl LogMsg {
             };
             *missed_entry = 0;
         } else {
-            let delay = duration(self.time, now);
+            // let delay = duration(self.time, now);
             let utc_datetime = to_utc(self.time);
             let offset_datetime = offset.map(|o| utc_datetime.to_offset(o)).unwrap_or(utc_datetime);
             let s = format!(
-                "[{}]-[Delay={}ms]\n{}\n",
+                "[{}]-{}\n",
                 offset_datetime
                     .format(&time_format)
                     .unwrap_or_else(|_| offset_datetime.format(&time::format_description::well_known::Rfc3339).unwrap()),
-                delay.as_millis(),
+                // delay.as_millis(),
                 msg
             );
             if let Err(e) = writer.write_all(s.as_bytes()) {

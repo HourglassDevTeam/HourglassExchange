@@ -235,7 +235,7 @@ impl BalanceHandler for HourglassAccount
     {
         // 从 AccountConfig 读取 max_price_deviation
         let max_price_deviation = self.config.max_price_deviation;
-        info!("[required_available_balance] : max_price_deviation is {:?}", max_price_deviation);
+        info!("[required_available_balance] : The Maximum of price deviation is {:?}", max_price_deviation);
 
         // 将锁定的 order_book 引用存储在一个变量中，确保其生命周期足够长
         let mut order_books_lock = self.single_level_order_book.lock().await;

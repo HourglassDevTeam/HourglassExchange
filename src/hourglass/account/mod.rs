@@ -438,7 +438,7 @@ impl HourglassAccount
         // 验证订单的基本合法性
         Self::validate_order_instruction(order.instruction)?;
 
-        info!("[attempt_atomic_open] : successfully validated order instruction");
+        info!("[attempt_atomic_open] : Successfully validated order instruction");
 
         // 将锁的作用域限制在这个块内， 通过和订单簿比较价格来判断是潜在的 Taker 还是 Maker。
         let order_role = {
