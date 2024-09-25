@@ -152,7 +152,7 @@ fn init() -> LoggerGuard {
     impl Display for Msg {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.write_str(&format!(
-                "[{}][{}]",
+                "[{}] {}",
                 // self.thread.as_ref().map(|x| x.as_str()).unwrap_or(""),
                 // self.module_path.unwrap_or(""),
                 // self.file_path.unwrap_or(""),
@@ -190,7 +190,7 @@ async fn main()
 {
     // init logger
     let _logger = init(); // 这行代码中的变量 _guard 并不是一个必须的命名，而是遵循 Rust 的命名约定和设计模式。
-    info!("Backtest begins!");
+    warn!("Backtest begins!");
 
 
     let token_balances: DashMap<Token, Balance> = DashMap::new();
@@ -215,14 +215,6 @@ async fn main()
     let closed_positions = AccountExitedPositions::init();
 
     let single_level_order_books = HashMap::new();
-
-    // // FIXME mechanism to be updated to update `single_level_order_books` in
-    // single_level_order_books.insert(Instrument { base: Token::new("ETH".to_string()),
-    //                                              quote: Token::new("USDT".to_string()),
-    //                                              kind: InstrumentKind::Perpetual },
-    //                                 SingleLevelOrderBook { latest_bid: 16305.0,
-    //                                                        latest_ask: 16499.0,
-    //                                                        latest_price: 0.0 });
 
     let hourglass_account_config = AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
                                                    global_position_direction_mode: PositionDirectionMode::Net,

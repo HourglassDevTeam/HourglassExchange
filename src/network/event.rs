@@ -1,3 +1,4 @@
+use log::error;
 /// # NetworkEvent 结构体
 ///
 /// `NetworkEvent` 是一个用于在网络中传递事件的结构体，包含了事件的类型和相关的负载数据（payload）。
@@ -123,7 +124,9 @@ impl NetworkEvent
                 let (response_tx, _response_rx) = oneshot::channel();
                 Ok(HourglassClientEvent::CancelOrdersAll(response_tx))
             }
-            | _ => Err("Unknown event type".to_string()),
+            | _ => {
+                error!("Unknown event type");
+                Err("Unknown event type".to_string()) },
         }
     }
 }
