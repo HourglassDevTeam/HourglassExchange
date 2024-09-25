@@ -190,7 +190,7 @@ async fn main()
 {
     // init logger
     let _logger = init(); // 这行代码中的变量 _guard 并不是一个必须的命名，而是遵循 Rust 的命名约定和设计模式。
-    info!("两只老虎，两只老虎，跑得快，跑得快，一只没有耳朵，一只没有尾巴，真奇怪！真奇怪！两只老虎，两只老虎，跑得快，跑得快，一只没有耳朵，一只没有尾巴，真奇怪！真奇怪！");
+    info!("Backtest begins!");
 
 
     let token_balances: DashMap<Token, Balance> = DashMap::new();
