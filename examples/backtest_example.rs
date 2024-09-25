@@ -1,3 +1,4 @@
+use hourglass::hourglass_log::warn;
 use crate::OrderType::Cancel;
 /// # Backtest Example Documentation
 ///
@@ -80,43 +81,118 @@ use crate::OrderType::Cancel;
 /// - The ClickHouse client is responsible for fetching historical data and providing it to the exchange.
 use dashmap::DashMap;
 use hourglass::common::balance::Balance;
-use hourglass::{
-    common::{
-        account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode, PositionMarginMode},
-        instrument::{kind::InstrumentKind, Instrument},
-        order::{
-            identification::{client_order_id::ClientOrderId, OrderId},
-            order_instructions::OrderInstruction,
-            states::{request_cancel::RequestCancel, request_open::RequestOpen},
-            Order,
-        },
-        token::Token,
-        token_list::TOKEN_LIST,
-        Side,
+use hourglass::{common::{
+    account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode, PositionMarginMode},
+    instrument::{kind::InstrumentKind, Instrument},
+    order::{
+        identification::{client_order_id::ClientOrderId, OrderId},
+        order_instructions::OrderInstruction,
+        states::{request_cancel::RequestCancel, request_open::RequestOpen},
+        Order,
     },
-    hourglass::{
-        account::{
-            account_config::{AccountConfig, CommissionLevel, HourglassMode, MarginMode},
-            account_latency::{AccountLatency, FluctuationMode},
-            account_orders::AccountOrders,
-            HourglassAccount,
-        },
-        clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, queries_operations::ClickHouseClient},
-        hourglass_client_local_mode::HourglassClient,
-        DataSource, HourglassExchange,
+    token::Token,
+    token_list::TOKEN_LIST,
+    Side,
+}, hourglass::{
+    account::{
+        account_config::{AccountConfig, CommissionLevel, HourglassMode, MarginMode},
+        account_latency::{AccountLatency, FluctuationMode},
+        account_orders::AccountOrders,
+        HourglassAccount,
     },
-    ClientExecution, Exchange,
-};
+    clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, queries_operations::ClickHouseClient},
+    hourglass_client_local_mode::HourglassClient,
+    DataSource, HourglassExchange,
+}, hourglass_log, ClientExecution, Exchange};
 use std::{
     collections::HashMap,
     sync::{atomic::AtomicI64, Arc},
 };
 use tokio::sync::{mpsc, Mutex, RwLock};
 use uuid::Uuid;
+use std::fmt::Display;
+
+use log::{Level, LevelFilter, Record};
+use time::Duration;
+use hourglass::hourglass_log::{
+    appender::{file::Period, FileAppender},
+    info, LoggerGuard, TideLogFormat,
+};
+
+
+fn init() -> LoggerGuard {
+    // TideFormatter定义了如何构建消息。
+    // 由于将消息格式化为字符串可能会减慢日志宏调用的速度，习惯的方式是将所需字段原样发送到日志线程，然后在日志线程中构建消息。
+    // Send 表示类型可以安全地在线程之间传递所有权，而 Sync 表示类型可以安全地在线程之间共享访问而不会引发数据竞争。
+    // 在这里，Box<dyn Send + Sync + std::fmt::Display> 表示存储的对象需要是可以跨线程传递和共享访问的，并且必须实现 std::fmt::Display trait，以便可以将其格式化为字符串。
+    struct TideFormatter;
+
+    struct Msg {
+        level: Level,
+        thread: Option<String>,
+        file_path: Option<&'static str>, // 这意味着这个file_path字符串引用是与整个程序的生命周期相同的，也就是说，在整个程序运行期间都有效。
+        line: Option<u32>,
+        args: String,
+        module_path: Option<&'static str>,
+    }
+
+    impl TideLogFormat for TideFormatter {
+        fn msg(&self, record: &Record) -> Box<dyn Send + Sync + std::fmt::Display> {
+            Box::new(Msg {
+                level: record.level(),
+                thread: std::thread::current().name().map(|n| n.to_string()),
+                file_path: record.file_static(),
+                line: record.line(),
+                args: format!("{}", record.args()),
+                module_path: record.module_path_static(),
+            })
+        }
+    }
+
+    impl Display for Msg {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str(&format!(
+                "{}@{}||{}:{}[{}] {}",
+                self.thread.as_ref().map(|x| x.as_str()).unwrap_or(""),
+                self.module_path.unwrap_or(""),
+                self.file_path.unwrap_or(""),
+                self.line.unwrap_or(0),
+                self.level,
+                self.args
+            ))
+        }
+    }
+
+    let time_format =
+        time::format_description::parse_owned::<1>("[year]年[month]月[day]日 [hour]时[minute]分[second]秒.[subsecond digits:6]").unwrap();
+    hourglass_log::Builder::new()
+        // 使用我们自己的格式TideLogFormat
+        .format(TideFormatter)
+        // 使用我们自己的时间格式
+        .time_format(time_format)
+        // 全局最大日志级别
+        .max_log_level(LevelFilter::Info)
+        // 定义 root appender, 传递 None 会写入到 stderr
+        .root(
+            FileAppender::builder()
+                .path("./backtest.log")
+                .rotate(Period::Minute)
+                .expire(Duration::hours(8))
+                .build(),
+        )
+        .try_init()
+        .expect("logger build or set failed")
+}
+
 
 #[tokio::main]
 async fn main()
 {
+    // init logger
+    let _logger = init(); // 这行代码中的变量 _guard 并不是一个必须的命名，而是遵循 Rust 的命名约定和设计模式。
+    info!("两只老虎，两只老虎，跑得快，跑得快，一只没有耳朵，一只没有尾巴，真奇怪！真奇怪！两只老虎，两只老虎，跑得快，跑得快，一只没有耳朵，一只没有尾巴，真奇怪！真奇怪！");
+
+
     let token_balances: DashMap<Token, Balance> = DashMap::new();
 
     for token_str in &TOKEN_LIST {
@@ -220,14 +296,14 @@ async fn main()
     // deposit 70000 USDT
     let _ = hourglass_client.deposit_tokens(tokens_to_be_deposited).await;
     // let balance = hourglass_client.fetch_balances().await.unwrap();
-    // println!("Balance updated after deposit: {:?}", balance);
+    // info!("Balance updated after deposit: {:?}", balance);
 
     let mut order_ids = Vec::new();
 
     loop {
         // Call next entry of data and handle potential errors
         if let Err(e) = hourglass_client.let_it_roll().await {
-            eprintln!("Error executing LetItRoll: {:?}", e);
+            warn!("Error executing LetItRoll: {:?}", e);
             break;
         }
 
@@ -238,7 +314,7 @@ async fn main()
             order_parser(&hourglass_client, &market_data, &mut order_ids).await;
 
             // Your logic for handling market_data & customised trading strategy goes here?
-            println!("Processed market data: {:?}", market_data);
+            info!("Processed market data: {:?}", market_data);
         }
         else {
             break
@@ -280,13 +356,13 @@ pub async fn order_parser(client: &HourglassClient, trade: &MarketTrade,  order_
                                                              size: monk_order.size } };
 
                     let new_orders = client.open_orders(vec![order]).await;
-                    println!("[test_3] : {:?}", &new_orders);
+                    info!("The new orders are : {:?}", &new_orders);
 
                     for order in new_orders {
                         match order {
                             | Ok(order) => order_ids.push(order.state.id),
                             | Err(e) => {
-                                println!("{:?}", e);
+                                info!("{:?}", e);
                                 return
                             }
                         }
@@ -303,7 +379,7 @@ pub async fn order_parser(client: &HourglassClient, trade: &MarketTrade,  order_
 
                     let cancelled = client.cancel_orders(vec![order_cancel]).await;
 
-                    println!("The cancelled orders are  : {:?}", cancelled);
+                    info!("The cancelled orders are  : {:?}", cancelled);
                 }
             }
         }

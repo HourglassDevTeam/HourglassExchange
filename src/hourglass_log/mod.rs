@@ -2,20 +2,20 @@
 //!
 //! 在 `Cargo.toml` 中添加：
 //! ```toml
-//! tidelog = "0.1"
+//! hourglass_log = "0.1"
 //! ```
 //!
-//! 在 `main` 函数开始时配置并初始化 tidelog：
+//! 在 `main` 函数开始时配置并初始化 hourglass_log：
 //! ```
-//! // tidelog 重新导出 `log` 的宏，所以不需要添加 `log` 到依赖中
+//! // hourglass_log 重新导出 `log` 的宏，所以不需要添加 `log` 到依赖中
 //! use log::{error, info, warn};
-//! use tidelog::{appender::FileAppender, debug, trace};
+//! use hourglass_log::{appender::FileAppender, debug, trace};
 //!
 //! // 最简配置，使用默认设置
 //!
 //! // 当 _guard 被丢弃时，它会调用并等待日志记录器的 `flush`。
 //! // 由于 _guard 与 `main` 函数的生命周期共享，因此无需在 `main` 函数结束时手动调用 flush。
-//! let _guard = tidelog::builder().try_init().unwrap();
+//! let _guard = hourglass_log::builder().try_init().unwrap();
 //!
 //! trace!("Hello world!");
 //! debug!("Hello world!");
@@ -26,14 +26,14 @@
 //!
 //! 更复杂的使用方法：
 //! ```rust
-//! use tidelog::{
+//! use hourglass_log::{
 //!     appender::{Duration, FileAppender, Period},
 //!     LevelFilter, TideLogFormatter,
 //! };
 //!
 //! let time_format = time::format_description::parse_owned::<1>("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:6]").unwrap();
 //! // 配置日志记录器
-//! let _guard = tidelog::builder()
+//! let _guard = hourglass_log::builder()
 //!     // 全局最大日志级别
 //!     .max_log_level(LevelFilter::Info)
 //!     // 自定义时间戳格式
@@ -41,7 +41,7 @@
 //!     // 设置全局日志格式器
 //!     .format(TideLogFormatter)
 //!     // 使用有界通道避免在日志过多时大量消耗内存
-//!     // 设置为 `false` 表示告诉 tidelog 丢弃过量日志。
+//!     // 设置为 `false` 表示告诉 hourglass_log 丢弃过量日志。
 //!     // 设置为 `true` 则会阻塞日志调用以等待日志线程。
 //!     // 这里是默认设置
 //!     .bounded(100_000, false) // .unbounded()
@@ -59,9 +59,9 @@
 //!     .utc()
 //!     // 根附加器的日志级别过滤
 //!     .root_log_level(LevelFilter::Warn)
-//!     // 将 tidelog::appender 的日志写入 "./tidelog-appender.log" 而不是 "./current.log"
-//!     .filter("tidelog::appender", "tidelog-appender", LevelFilter::Error)
-//!     .appender("tidelog-appender", FileAppender::new("tidelog-appender.log"))
+//!     // 将 hourglass_log::appender 的日志写入 "./hourglass_log-appender.log" 而不是 "./current.log"
+//!     .filter("hourglass_log::appender", "hourglass_log-appender", LevelFilter::Error)
+//!     .appender("hourglass_log-appender", FileAppender::new("hourglass_log-appender.log"))
 //!     .try_init()
 //!     .expect("日志构建或设置失败");
 //! ```
@@ -80,7 +80,7 @@
 //! 当格式化日志消息为字符串代价过高时，这种方法很有帮助。
 //!
 //! 当同时指定 `random_drop` 和 `limit` 时，
-//! tidelog 将在随机丢弃消息后限制日志输出。
+//! hourglass_log 将在随机丢弃消息后限制日志输出。
 //! ```rust
 //! log::info!(drop=0.99f32, limit=1000;
 //!     "丢弃 99% 的消息。幸存的 1% 消息在相邻日志消息输出间至少有 1000ms 的间隔"
@@ -89,16 +89,16 @@
 //!
 //! ## 自定义时间戳格式
 //!
-//! `tidelog` 依赖 `time` 包来格式化时间戳。要使用自定义时间格式，
+//! `hourglass_log` 依赖 `time` 包来格式化时间戳。要使用自定义时间格式，
 //! 首先构造一个有效的时间格式描述，
-//! 然后通过 `tidelog::time_format(&mut self)` 传递给 tidelog 构建器。
+//! 然后通过 `hourglass_log::time_format(&mut self)` 传递给 hourglass_log 构建器。
 //!
-//! 如果在格式化时间戳时发生错误，`tidelog` 将回退到 RFC3339 时间格式。
+//! 如果在格式化时间戳时发生错误，`hourglass_log` 将回退到 RFC3339 时间格式。
 //!
 //! ### 示例
 //! ```rust
 //! let format = time::format_description::parse_owned::<1>("[year]/[month]/[day] [hour]:[minute]:[second].[subsecond digits:6]").unwrap();
-//! let _guard = tidelog::builder().time_format(format).try_init().unwrap();
+//! let _guard = hourglass_log::builder().time_format(format).try_init().unwrap();
 //! log::info!("使用自定义时间戳格式的日志");
 //! // 输出：
 //! // 2023/06/14 11:13:26.160840 0ms INFO main [main.rs:3] 使用自定义时间戳格式的日志
@@ -106,17 +106,17 @@
 //!
 //! ## 限制日志写入频率
 //!
-//! `tidelog` 允许限制单个日志调用的写入频率。
+//! `hourglass_log` 允许限制单个日志调用的写入频率。
 //! 如果上面的行在 3000ms 内被多次调用，则只记录一次，
 //! 并添加一个数字，反映自上次日志以来丢弃的日志消息数量。
 //!
 //! 每个日志调用都有一个独立的间隔，所以我们可以为不同的日志调用设置不同的间隔。
-//! 在内部，`tidelog` 通过模块名、文件名和代码行的组合记录最后一次打印时间。
+//! 在内部，`hourglass_log` 通过模块名、文件名和代码行的组合记录最后一次打印时间。
 //!
 //! ### 示例
 //!
 //! ```rust
-//! # use tidelog::info;
+//! # use hourglass_log::info;
 //! info!(limit=3000i64; "限制每 {}s 运行一次！", 3);
 //! ```
 //! 上述特定日志调用的最小间隔是 3000ms。
@@ -128,7 +128,7 @@
 //! 上面的数字 **2** 表示自上次日志以来丢弃了多少条日志消息。
 //!
 //! ## 日志轮换
-//! `tidelog` 支持本地时区的日志轮换。可用的轮换周期包括：
+//! `hourglass_log` 支持本地时区的日志轮换。可用的轮换周期包括：
 //!
 //! - 分钟 `Period::Minute`
 //! - 小时 `Period::Hour`
@@ -199,7 +199,7 @@ use tm::{duration, now, to_utc, Time};
 
 pub mod appender;
 
-#[cfg(not(feature = "tsc"))]
+// #[cfg(not(feature = "tsc"))]
 mod tm {
     use super::*;
 
@@ -219,25 +219,25 @@ mod tm {
     }
 }
 
-#[cfg(feature = "tsc")]
-mod tm {
-    use super::*;
-
-    pub type Time = minstant::Instant;
-    #[inline]
-    pub fn now() -> Time {
-        minstant::Instant::now()
-    }
-    #[inline]
-    pub fn to_utc(time: Time) -> OffsetDateTime {
-        static ANCHOR: once_cell::sync::Lazy<minstant::Anchor> = once_cell::sync::Lazy::new(|| minstant::Anchor::new());
-        OffsetDateTime::from_unix_timestamp_nanos(time.as_unix_nanos(&ANCHOR) as i128).unwrap()
-    }
-    #[inline]
-    pub fn duration(from: Time, to: Time) -> Duration {
-        to.duration_since(from)
-    }
-}
+// #[cfg(feature = "tsc")]
+// mod tm {
+//     use super::*;
+//
+//     pub type Time = minstant::Instant;
+//     #[inline]
+//     pub fn now() -> Time {
+//         minstant::Instant::now()
+//     }
+//     #[inline]
+//     pub fn to_utc(time: Time) -> OffsetDateTime {
+//         static ANCHOR: once_cell::sync::Lazy<minstant::Anchor> = once_cell::sync::Lazy::new(|| minstant::Anchor::new());
+//         OffsetDateTime::from_unix_timestamp_nanos(time.as_unix_nanos(&ANCHOR) as i128).unwrap()
+//     }
+//     #[inline]
+//     pub fn duration(from: Time, to: Time) -> Duration {
+//         to.duration_since(from)
+//     }
+// }
 
 #[cfg(target_family = "unix")]
 fn local_timezone() -> UtcOffset {
@@ -282,10 +282,10 @@ pub fn manual_cleanup(dir: &Path) -> io::Result<()> {
     Ok(())
 }
 
-#[cfg(not(target_family = "unix"))]
-fn local_timezone() -> UtcOffset {
-    UtcOffset::current_local_offset().unwrap_or(UtcOffset::UTC)
-}
+// #[cfg(not(target_family = "unix"))]
+// fn local_timezone() -> UtcOffset {
+//     UtcOffset::current_local_offset().unwrap_or(UtcOffset::UTC)
+// }
 
 struct LogMsg {
     time: Time,
@@ -485,21 +485,6 @@ impl Log for Logger {
     }
 
     fn log(&self, record: &Record) {
-        #[cfg(feature = "random_drop")]
-        {
-            // 在 info! 宏中，random_drop 参数会被作为一个键值对附加到 Record 结构体中。
-            // 因此，Logger 在处理日志时，可以根据这个键值对来决定是否记录日志。
-            let random_drop = record
-                .key_values()
-                .get(Key::from_str("random_drop"))
-                .or_else(|| record.key_values().get(Key::from_str("drop")))
-                .and_then(|x| x.to_f64())
-                .unwrap_or(1.) as f32;
-            if random_drop < 1. && fastrand::f32() < random_drop {
-                return;
-            }
-        }
-
         let limit = record.key_values().get(Key::from_str("limit")).and_then(|x| x.to_u64()).unwrap_or(0) as u32;
 
         let msg = self.format.msg(record);
@@ -575,7 +560,7 @@ struct BoundedChannelOption {
 }
 
 /// # 本地时区
-/// 出于性能考虑，`tidelog` 只在一开始获取一次时区信息，并永久使用这个本地时区偏移量。
+/// 出于性能考虑，`hourglass_log` 只在一开始获取一次时区信息，并永久使用这个本地时区偏移量。
 /// 因此，日志中的时间戳不会意识到操作系统中时区的变化。
 
 pub struct Builder {
@@ -609,7 +594,7 @@ pub enum LogTimezone {
 
 impl Builder {
     #[inline]
-    /// 使用默认设置创建一个 tidelog 构建器：
+    /// 使用默认设置创建一个 hourglass_log 构建器：
     /// - 全局日志级别：信息（INFO）
     /// - 根日志级别：信息（INFO）
     /// - 默认格式器：`TideLogFormatter`
@@ -683,7 +668,7 @@ impl Builder {
 
     /// 添加一个带有名称的附加器
     ///
-    /// 结合 `Builder::filter()` 使用，tidelog 可以将不同模块路径的日志输出到不同的目标。
+    /// 结合 `Builder::filter()` 使用，hourglass_log 可以将不同模块路径的日志输出到不同的目标。
     #[inline]
     pub fn appender(mut self, name: &'static str, appender: impl Write + Send + 'static) -> Builder {
         self.appenders.insert(name, Box::new(appender));
@@ -695,7 +680,7 @@ impl Builder {
     ///
     /// **注意**：比 `Builder::max_log_level` 更详细的日志级别将被忽略。
     /// 假设我们将 `max_log_level` 配置为信息级别 INFO，即使过滤器的级别设置为调试级别 DEBUG，
-    /// tidelog 仍将只记录到信息级别 INFO。
+    /// hourglass_log 仍将只记录到信息级别 INFO。
     #[inline]
     pub fn filter<A: Into<Option<&'static str>>, L: Into<Option<LevelFilter>>>(
         mut self,
