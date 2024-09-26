@@ -68,6 +68,8 @@ async fn main() {
         // 获取响应体
         // `to_bytes(res.into_body()).await.unwrap()` 用于将 `hyper::Body` 转换为 `bytes::Bytes`。
         // `hyper::Body` 是流式传输的响应体，`to_bytes` 会收集流中的所有字节并返回一个字节数组。
+        // In Warp (and more specifically in the hyper library that Warp uses under the hood),
+        // the into_body method is used to extract the body of an HTTP response or request as a Body type.
         let body = to_bytes(res.into_body()).await.unwrap();
         let body_str = String::from_utf8_lossy(&body);
         println!("Response body: {}", body_str);
