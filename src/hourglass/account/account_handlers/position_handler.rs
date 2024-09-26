@@ -1,5 +1,3 @@
-use crate::hourglass_log::warn;
-use crate::hourglass_log::info;
 use crate::{
     common::{
         account_positions::{Position, PositionConfig},
@@ -7,6 +5,7 @@ use crate::{
     },
     error::ExchangeError,
     hourglass::{config_request::ConfigurationRequest, hourglass_client_local_mode::ConfigureInstrumentsResults},
+    hourglass_log::{info, warn},
     Exchange,
 };
 use async_trait::async_trait;

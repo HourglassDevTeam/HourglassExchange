@@ -1,4 +1,3 @@
-use crate::hourglass_log::info;
 use crate::{
     common::{
         balance::{Balance, BalanceDelta, TokenBalance},
@@ -14,6 +13,7 @@ use crate::{
     },
     error::ExchangeError,
     hourglass::account::{respond, DashMapRefMut, HourglassAccount},
+    hourglass_log::info,
     Exchange,
 };
 use async_trait::async_trait;

@@ -1,7 +1,7 @@
+use log::error;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{fmt, fmt::Display, sync::LazyLock};
-use log::error;
 
 // **ClientOrderId**
 // - **定义和作用**：`ClientOrderId` 是由客户端生成的，主要用于客户端内部的订单管理和跟踪。它在客户端内唯一，可以帮助用户追踪订单状态，而不需要等待交易所生成的 `OrderID`。

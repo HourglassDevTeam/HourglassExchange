@@ -112,14 +112,11 @@ impl Authentication for HourglassExchange
         }
     }
 }
-
+#[allow(unused)]
 trait Authentication
 {
-    #[allow(unused)]
     async fn handle_register(&self, username: String, email: String, password: String) -> Result<(), ExchangeError>;
-    #[allow(unused)]
     async fn handle_login(&self, username: String, password: String) -> Result<String, ExchangeError>;
-    #[allow(unused)]
     // 注销
     async fn handle_logout(&self, session_token: String) -> Result<(), ExchangeError>;
     // 删除账户

@@ -10,24 +10,30 @@ pub mod file;
 /// Chain multiple appenders
 ///
 /// This can help when you want to log the same content to multiple destinations
-pub struct ChainAppenders {
+pub struct ChainAppenders
+{
     writers: Vec<Box<dyn Write + Send>>,
 }
 
-impl ChainAppenders {
-    pub fn new(writers: Vec<Box<dyn Write + Send>>) -> Self {
+impl ChainAppenders
+{
+    pub fn new(writers: Vec<Box<dyn Write + Send>>) -> Self
+    {
         Self { writers }
     }
 }
-impl Write for ChainAppenders {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+impl Write for ChainAppenders
+{
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize>
+    {
         for writer in &mut self.writers {
             writer.write_all(buf)?;
         }
         Ok(buf.len())
     }
 
-    fn flush(&mut self) -> std::io::Result<()> {
+    fn flush(&mut self) -> std::io::Result<()>
+    {
         for writer in &mut self.writers {
             writer.flush()?;
         }

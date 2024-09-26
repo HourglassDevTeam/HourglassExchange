@@ -33,7 +33,7 @@ redis = "0.27.0"
 rand_distr = "0.4.3" # 随机分布生成库，用于生成各种概率分布的随机数
 
 # Async 异步
-tokio = { version = "1.17.0", features = ["sync", "macros", "rt-multi-thread"] } # 异步运行时库，提供任务调度、多线程支持和异步I/O
+tokio = { version = "1.17.0", features = ["sync", "macros", "rt-multi-thread","signal"] } # 异步运行时库，提供任务调度、多线程支持和异步I/O
 futures = "0.3.21" # 用于异步编程的未来（Future）抽象和实用工具
 async-trait = "0.1.57" # 用于在异步上下文中使用trait的库
 async-stream = "0.3" # 提供异步流的宏和工具
@@ -71,6 +71,7 @@ hashbrown = "0.14.5"
 once_cell = "1.19.0"
 fastrand = "2.1.1"
 typed-builder = "0.20.0"
+hyper = "1.4.1"
 
 [dev-dependencies]
 tempfile = "3.12.0"

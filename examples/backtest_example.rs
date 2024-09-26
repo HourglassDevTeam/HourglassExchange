@@ -1,4 +1,3 @@
-use hourglass::hourglass_log::warn;
 use crate::OrderType::Cancel;
 /// # Backtest Example Documentation
 ///
@@ -80,54 +79,61 @@ use crate::OrderType::Cancel;
 /// - The client listens for market data and processes it as needed.
 /// - The ClickHouse client is responsible for fetching historical data and providing it to the exchange.
 use dashmap::DashMap;
-use hourglass::common::balance::Balance;
-use hourglass::{common::{
-    account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode, PositionMarginMode},
-    instrument::{kind::InstrumentKind, Instrument},
-    order::{
-        identification::{client_order_id::ClientOrderId, OrderId},
-        order_instructions::OrderInstruction,
-        states::{request_cancel::RequestCancel, request_open::RequestOpen},
-        Order,
+use hourglass::{
+    common::{
+        account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode, PositionMarginMode},
+        balance::Balance,
+        instrument::{kind::InstrumentKind, Instrument},
+        order::{
+            identification::{client_order_id::ClientOrderId, OrderId},
+            order_instructions::OrderInstruction,
+            states::{request_cancel::RequestCancel, request_open::RequestOpen},
+            Order,
+        },
+        token::Token,
+        token_list::TOKEN_LIST,
+        Side,
     },
-    token::Token,
-    token_list::TOKEN_LIST,
-    Side,
-}, hourglass::{
-    account::{
-        account_config::{AccountConfig, CommissionLevel, HourglassMode, MarginMode},
-        account_latency::{AccountLatency, FluctuationMode},
-        account_orders::AccountOrders,
-        HourglassAccount,
+    hourglass::{
+        account::{
+            account_config::{AccountConfig, CommissionLevel, HourglassMode, MarginMode},
+            account_latency::{AccountLatency, FluctuationMode},
+            account_orders::AccountOrders,
+            HourglassAccount,
+        },
+        clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, queries_operations::ClickHouseClient},
+        hourglass_client_local_mode::HourglassClient,
+        DataSource, HourglassExchange,
     },
-    clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, queries_operations::ClickHouseClient},
-    hourglass_client_local_mode::HourglassClient,
-    DataSource, HourglassExchange,
-}, hourglass_log, ClientExecution, Exchange};
+    hourglass_log,
+    hourglass_log::warn,
+    ClientExecution, Exchange,
+};
 use std::{
     collections::HashMap,
+    fmt::Display,
     sync::{atomic::AtomicI64, Arc},
 };
 use tokio::sync::{mpsc, Mutex, RwLock};
 use uuid::Uuid;
-use std::fmt::Display;
 
-use log::{Level, LevelFilter, Record};
-use time::Duration;
 use hourglass::hourglass_log::{
     appender::{file::Period, FileAppender},
-    info, LoggerGuard, LogFormat,
+    info, LogFormat, LoggerGuard,
 };
+use log::{Level, LevelFilter, Record};
+use time::Duration;
 
-
-fn init() -> LoggerGuard {
+fn init() -> LoggerGuard
+{
     // TideFormatter定义了如何构建消息。
     // 由于将消息格式化为字符串可能会减慢日志宏调用的速度，习惯的方式是将所需字段原样发送到日志线程，然后在日志线程中构建消息。
     // Send 表示类型可以安全地在线程之间传递所有权，而 Sync 表示类型可以安全地在线程之间共享访问而不会引发数据竞争。
     // 在这里，Box<dyn Send + Sync + std::fmt::Display> 表示存储的对象需要是可以跨线程传递和共享访问的，并且必须实现 std::fmt::Display trait，以便可以将其格式化为字符串。
     struct Formatter;
 
-    struct Msg {
+    struct Msg
+    {
         level: Level,
         // thread: Option<String>,
         // file_path: Option<&'static str>, // 这意味着这个file_path字符串引用是与整个程序的生命周期相同的，也就是说，在整个程序运行期间都有效。
@@ -136,54 +142,47 @@ fn init() -> LoggerGuard {
         // module_path: Option<&'static str>,
     }
 
-    impl LogFormat for Formatter {
-        fn msg(&self, record: &Record) -> Box<dyn Send + Sync + std::fmt::Display> {
-            Box::new(Msg {
-                level: record.level(),
-                // thread: std::thread::current().name().map(|n| n.to_string()),
-                // file_path: record.file_static(),
-                // line: record.line(),
-                args: format!("{}", record.args()),
-                // module_path: record.module_path_static(),
-            })
+    impl LogFormat for Formatter
+    {
+        fn msg(&self, record: &Record) -> Box<dyn Send + Sync + std::fmt::Display>
+        {
+            Box::new(Msg { level: record.level(),
+                           // thread: std::thread::current().name().map(|n| n.to_string()),
+                           // file_path: record.file_static(),
+                           // line: record.line(),
+                           args: format!("{}", record.args())
+                           /* module_path: record.module_path_static(), */ })
         }
     }
 
-    impl Display for Msg {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            f.write_str(&format!(
-                "[{}] {}",
-                // self.thread.as_ref().map(|x| x.as_str()).unwrap_or(""),
-                // self.module_path.unwrap_or(""),
-                // self.file_path.unwrap_or(""),
-                // self.line.unwrap_or(0),
-                self.level,
-                self.args
-            ))
+    impl Display for Msg
+    {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+        {
+            f.write_str(&format!("[{}] {}",
+                                 // self.thread.as_ref().map(|x| x.as_str()).unwrap_or(""),
+                                 // self.module_path.unwrap_or(""),
+                                 // self.file_path.unwrap_or(""),
+                                 // self.line.unwrap_or(0),
+                                 self.level,
+                                 self.args))
         }
     }
 
     // let time_format =
     //     time::format_description::parse_owned::<1>("[month]月[day]日 [hour]时[minute]分[second]秒.[subsecond digits:6]").unwrap();
     hourglass_log::Builder::new()
-        // 使用自定义格式TideLogFormat
-        .format(Formatter)
-        // 使用自定义的时间格式
-        // .time_format(time_format)
-        // 全局最大日志级别
-        .max_log_level(LevelFilter::Info)
-        // 定义 root appender, 传递 None 会写入到 stderr
-        .root(
-            FileAppender::builder()
-                .path("./backtest.log")
-                .rotate(Period::Minute)
-                .expire(Duration::hours(8))
-                .build(),
-        )
-        .try_init()
-        .expect("logger build or set failed")
+                                 // 使用自定义格式TideLogFormat
+                                 .format(Formatter)
+                                 // 使用自定义的时间格式
+                                 // .time_format(time_format)
+                                 // 全局最大日志级别
+                                 .max_log_level(LevelFilter::Info)
+                                 // 定义 root appender, 传递 None 会写入到 stderr
+                                 .root(FileAppender::builder().path("./backtest.log").rotate(Period::Minute).expire(Duration::hours(8)).build())
+                                 .try_init()
+                                 .expect("logger build or set failed")
 }
-
 
 #[tokio::main]
 async fn main()
@@ -191,7 +190,6 @@ async fn main()
     // init logger
     let _logger = init(); // 这行代码中的变量 _guard 并不是一个必须的命名，而是遵循 Rust 的命名约定和设计模式。
     warn!("Backtest begins!");
-
 
     let token_balances: DashMap<Token, Balance> = DashMap::new();
 
@@ -252,7 +250,7 @@ async fn main()
                                                                                                                                                          minimum: 2,
                                                                                                                                                          current_value: 0 }).await)),
                                                              single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
-                                                             balances:token_balances,
+                                                             balances: token_balances,
                                                              positions,
                                                              exited_positions: closed_positions,
                                                              account_event_tx,
@@ -332,18 +330,18 @@ impl Ids
     }
 }
 
-pub async fn order_parser(client: &HourglassClient, trade: &MarketTrade,  order_ids: &mut Vec<OrderId>)
+pub async fn order_parser(client: &HourglassClient, trade: &MarketTrade, order_ids: &mut Vec<OrderId>)
 {
     match mock_up_strategy(trade) {
         | Some(operation) => {
             match operation {
                 | OrderType::Open(monk_order) => {
-                    let order = Order { instruction: monk_order.order_type,                                                 // 订单指令
-                                        exchange: Exchange::Hourglass,                                                      // 交易所
-                                        instrument: Instrument::from(("1000PEPE", "USDT", InstrumentKind::Perpetual)),      // 交易工具
-                                        timestamp: 1649192400000000,                                                        // 生成的时候填客户端下单时间,NOTE 回测场景中之后会被加上一个随机延迟时间。
-                                        cid: None, // 客户端订单ID
-                                        side: monk_order.side,                                                              // 买卖方向
+                    let order = Order { instruction: monk_order.order_type,                                            // 订单指令
+                                        exchange: Exchange::Hourglass,                                                 // 交易所
+                                        instrument: Instrument::from(("1000PEPE", "USDT", InstrumentKind::Perpetual)), // 交易工具
+                                        timestamp: 1649192400000000,                                                   // 生成的时候填客户端下单时间,NOTE 回测场景中之后会被加上一个随机延迟时间。
+                                        cid: None,                                                                     // 客户端订单ID
+                                        side: monk_order.side,                                                         // 买卖方向
                                         state: RequestOpen { reduce_only: false,
                                                              price: monk_order.price,
                                                              size: monk_order.size } };

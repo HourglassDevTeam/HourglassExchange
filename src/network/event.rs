@@ -1,4 +1,3 @@
-use log::error;
 /// # NetworkEvent 结构体
 ///
 /// `NetworkEvent` 是一个用于在网络中传递事件的结构体，包含了事件的类型和相关的负载数据（payload）。
@@ -78,6 +77,7 @@ use crate::{
     common::order::states::{request_cancel::RequestCancel, request_open::RequestOpen},
     hourglass::hourglass_client_local_mode::HourglassClientEvent,
 };
+use log::error;
 use serde::Deserialize;
 use tokio::sync::oneshot;
 
@@ -126,10 +126,12 @@ impl NetworkEvent
             }
             | _ => {
                 error!("Unknown event type");
-                Err("Unknown event type".to_string()) },
+                Err("Unknown event type".to_string())
+            }
         }
     }
 }
+
 #[cfg(test)]
 mod tests
 {

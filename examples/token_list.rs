@@ -326,8 +326,8 @@ fn main()
     println!("The array contains {} strings.", count);
     let mut token_balances: Vec<TokenBalance> = Vec::with_capacity(count);
     for token in token_list {
-        let balance = Balance::new(0.0,0.0);
-        let token_balance = TokenBalance::new(&*token,balance);
+        let balance = Balance::new(0.0, 0.0);
+        let token_balance = TokenBalance::new(&*token, balance);
         token_balances.push(token_balance);
     }
     println!("Token Balances are {:#?} .", token_balances);

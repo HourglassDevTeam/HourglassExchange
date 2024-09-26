@@ -1,4 +1,3 @@
-use crate::hourglass_log::info;
 use crate::{
     common::{
         account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode},
@@ -23,6 +22,7 @@ use crate::{
         },
         clickhouse_api::datatype::single_level_order_book::{OrderBookUpdater, SingleLevelOrderBook},
     },
+    hourglass_log::info,
     Exchange,
 };
 use account_config::AccountConfig;

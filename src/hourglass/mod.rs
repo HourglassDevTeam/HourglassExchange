@@ -1,4 +1,3 @@
-use crate::hourglass_log::warn;
 use crate::{
     common::datafeed::market_event::MarketEvent,
     error::ExchangeError,
@@ -7,6 +6,7 @@ use crate::{
         clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, queries_operations::ClickHouseClient},
         hourglass_client_local_mode::HourglassClientEvent,
     },
+    hourglass_log::warn,
     network::{event::NetworkEvent, is_port_in_use},
 };
 use account::HourglassAccount;
@@ -19,7 +19,6 @@ use tokio::{
 };
 use uuid::Uuid;
 use warp::Filter;
-use crate::network::login::{LoginRequest, RegisterRequest};
 
 pub mod account;
 pub mod clickhouse_api;

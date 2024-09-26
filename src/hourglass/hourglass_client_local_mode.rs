@@ -1,5 +1,4 @@
-use crate::hourglass_log::warn;
-use crate::hourglass_log::info;
+use crate::hourglass_log::{info, warn};
 use async_trait::async_trait;
 use mpsc::UnboundedSender;
 use oneshot::Sender;

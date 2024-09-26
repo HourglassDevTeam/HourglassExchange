@@ -23,10 +23,10 @@ pub mod common;
 pub mod dashboard;
 pub mod error;
 pub mod hourglass;
+pub mod hourglass_log;
 pub mod network;
 pub mod test_utils;
 pub mod vault;
-pub mod hourglass_log;
 
 /// 定义与交易所的通信。每个交易所集成都需要自己的实现。
 #[async_trait]

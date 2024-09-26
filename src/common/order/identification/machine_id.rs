@@ -49,8 +49,8 @@ fn get_mac_address() -> Result<String, String>
 #[cfg(test)]
 mod tests
 {
-    use log::info;
     use super::*;
+    use log::info;
 
     /// 测试生成机器ID的函数。
     ///

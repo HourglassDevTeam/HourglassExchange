@@ -8,8 +8,8 @@
 //! 在 `main` 函数开始时配置并初始化 hourglass_log：
 //! ```
 //! // hourglass_log 重新导出 `log` 的宏，所以不需要添加 `log` 到依赖中
-//! use log::{error, info, warn};
 //! use hourglass_log::{appender::FileAppender, debug, trace};
+//! use log::{error, info, warn};
 //!
 //! // 最简配置，使用默认设置
 //!
@@ -34,36 +34,30 @@
 //! let time_format = time::format_description::parse_owned::<1>("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:6]").unwrap();
 //! // 配置日志记录器
 //! let _guard = hourglass_log::builder()
-//!     // 全局最大日志级别
-//!     .max_log_level(LevelFilter::Info)
-//!     // 自定义时间戳格式
-//!     .time_format(time_format)
-//!     // 设置全局日志格式器
-//!     .format(TideLogFormatter)
-//!     // 使用有界通道避免在日志过多时大量消耗内存
-//!     // 设置为 `false` 表示告诉 hourglass_log 丢弃过量日志。
-//!     // 设置为 `true` 则会阻塞日志调用以等待日志线程。
-//!     // 这里是默认设置
-//!     .bounded(100_000, false) // .unbounded()
-//!     // 定义根附加器，传递任何实现了 Write 和 Send 的类型
-//!     // 省略 `Builder::root` 将日志写入 stderr
-//!     .root(
-//!         FileAppender::builder()
-//!             .path("./current.log")
-//!             .rotate(Period::Day)
-//!             .expire(Duration::days(7))
-//!             .build(),
-//!     )
-//!     // 不转换时间戳为本地时区(不影响工作线程)
-//!     // 但可以提高日志线程性能（提高吞吐量）。
-//!     .utc()
-//!     // 根附加器的日志级别过滤
-//!     .root_log_level(LevelFilter::Warn)
-//!     // 将 hourglass_log::appender 的日志写入 "./hourglass_log-appender.log" 而不是 "./current.log"
-//!     .filter("hourglass_log::appender", "hourglass_log-appender", LevelFilter::Error)
-//!     .appender("hourglass_log-appender", FileAppender::new("hourglass_log-appender.log"))
-//!     .try_init()
-//!     .expect("日志构建或设置失败");
+//!                                      // 全局最大日志级别
+//!                                      .max_log_level(LevelFilter::Info)
+//!                                      // 自定义时间戳格式
+//!                                      .time_format(time_format)
+//!                                      // 设置全局日志格式器
+//!                                      .format(TideLogFormatter)
+//!                                      // 使用有界通道避免在日志过多时大量消耗内存
+//!                                      // 设置为 `false` 表示告诉 hourglass_log 丢弃过量日志。
+//!                                      // 设置为 `true` 则会阻塞日志调用以等待日志线程。
+//!                                      // 这里是默认设置
+//!                                      .bounded(100_000, false) // .unbounded()
+//!                                      // 定义根附加器，传递任何实现了 Write 和 Send 的类型
+//!                                      // 省略 `Builder::root` 将日志写入 stderr
+//!                                      .root(FileAppender::builder().path("./current.log").rotate(Period::Day).expire(Duration::days(7)).build())
+//!                                      // 不转换时间戳为本地时区(不影响工作线程)
+//!                                      // 但可以提高日志线程性能（提高吞吐量）。
+//!                                      .utc()
+//!                                      // 根附加器的日志级别过滤
+//!                                      .root_log_level(LevelFilter::Warn)
+//!                                      // 将 hourglass_log::appender 的日志写入 "./hourglass_log-appender.log" 而不是 "./current.log"
+//!                                      .filter("hourglass_log::appender", "hourglass_log-appender", LevelFilter::Error)
+//!                                      .appender("hourglass_log-appender", FileAppender::new("hourglass_log-appender.log"))
+//!                                      .try_init()
+//!                                      .expect("日志构建或设置失败");
 //! ```
 //!
 //! 查看 `./examples` 获取更多示例（例如自定义格式）。
@@ -200,21 +194,25 @@ use tm::{duration, now, to_utc, Time};
 pub mod appender;
 
 // #[cfg(not(feature = "tsc"))]
-mod tm {
+mod tm
+{
     use super::*;
 
     pub type Time = std::time::SystemTime;
     #[inline]
-    pub fn now() -> Time {
+    pub fn now() -> Time
+    {
         std::time::SystemTime::now()
     }
     #[inline]
-    pub fn to_utc(time: Time) -> OffsetDateTime {
+    pub fn to_utc(time: Time) -> OffsetDateTime
+    {
         time.into()
     }
 
     #[inline]
-    pub fn duration(from: Time, to: Time) -> Duration {
+    pub fn duration(from: Time, to: Time) -> Duration
+    {
         to.duration_since(from).unwrap_or_default()
     }
 }
@@ -240,18 +238,20 @@ mod tm {
 // }
 
 #[cfg(target_family = "unix")]
-fn local_timezone() -> UtcOffset {
+fn local_timezone() -> UtcOffset
+{
     UtcOffset::current_local_offset().unwrap_or_else(|_| {
-        let tz = tz::TimeZone::local().unwrap();
-        let current_local_time_type = tz.find_current_local_time_type().unwrap();
-        let diff_secs = current_local_time_type.ut_offset();
-        UtcOffset::from_whole_seconds(diff_secs).unwrap()
-    })
+                                         let tz = tz::TimeZone::local().unwrap();
+                                         let current_local_time_type = tz.find_current_local_time_type().unwrap();
+                                         let diff_secs = current_local_time_type.ut_offset();
+                                         UtcOffset::from_whole_seconds(diff_secs).unwrap()
+                                     })
 }
 
 #[cfg(target_family = "unix")]
 /// 手动清理项目文件夹中的所有 .log 文件。
-pub fn manual_cleanup(dir: &Path) -> io::Result<()> {
+pub fn manual_cleanup(dir: &Path) -> io::Result<()>
+{
     let mut found_log_files = false;
 
     if dir.is_dir() {
@@ -262,7 +262,8 @@ pub fn manual_cleanup(dir: &Path) -> io::Result<()> {
             if path.is_dir() {
                 // 递归地清理子目录中的日志文件
                 manual_cleanup(&path)?;
-            } else {
+            }
+            else {
                 // 检查文件是否是 .log 文件并删除它
                 if let Some(ext) = path.extension() {
                     if ext == "log" {
@@ -287,7 +288,8 @@ pub fn manual_cleanup(dir: &Path) -> io::Result<()> {
 //     UtcOffset::current_local_offset().unwrap_or(UtcOffset::UTC)
 // }
 
-struct LogMsg {
+struct LogMsg
+{
     time: Time,
     msg: Box<dyn Sync + Send + Display>,
     level: Level,
@@ -295,18 +297,18 @@ struct LogMsg {
     limit: u32,
     limit_key: u64,
 }
-impl LogMsg {
-    fn write(
-        self,
-        filters: &Vec<Directive>,
-        appenders: &mut HashMap<&'static str, Box<dyn Write + Send>>,
-        root: &mut Box<dyn Write + Send>,
-        root_level: LevelFilter,
-        missed_log: &mut HashMap<u64, i64, nohash_hasher::BuildNoHashHasher<u64>>,
-        last_log: &mut HashMap<u64, Time, nohash_hasher::BuildNoHashHasher<u64>>,
-        offset: Option<UtcOffset>,
-        time_format: &OwnedFormatItem,
-    ) {
+impl LogMsg
+{
+    fn write(self,
+             filters: &Vec<Directive>,
+             appenders: &mut HashMap<&'static str, Box<dyn Write + Send>>,
+             root: &mut Box<dyn Write + Send>,
+             root_level: LevelFilter,
+             missed_log: &mut HashMap<u64, i64, nohash_hasher::BuildNoHashHasher<u64>>,
+             last_log: &mut HashMap<u64, Time, nohash_hasher::BuildNoHashHasher<u64>>,
+             offset: Option<UtcOffset>,
+             time_format: &OwnedFormatItem)
+    {
         let msg = self.msg.to_string();
         if msg.is_empty() {
             return;
@@ -319,7 +321,8 @@ impl LogMsg {
                 return;
             }
             filter.appender.and_then(|n| appenders.get_mut(n)).unwrap_or(root)
-        } else {
+        }
+        else {
             if root_level < self.level {
                 return;
             }
@@ -340,31 +343,26 @@ impl LogMsg {
 
             let offset_datetime = offset.map(|o| utc_datetime.to_offset(o)).unwrap_or(utc_datetime);
 
-            let s = format!(
-                "[{}]-[{}]{}\n",
-                offset_datetime
-                    .format(&time_format)
-                    .unwrap_or_else(|_| offset_datetime.format(&time::format_description::well_known::Rfc3339).unwrap()),
-                // delay.as_millis(),
-                *missed_entry,
-                msg
-            );
+            let s = format!("[{}]-[{}]{}\n",
+                            offset_datetime.format(&time_format)
+                                           .unwrap_or_else(|_| offset_datetime.format(&time::format_description::well_known::Rfc3339).unwrap()),
+                            // delay.as_millis(),
+                            *missed_entry,
+                            msg);
             if let Err(e) = writer.write_all(s.as_bytes()) {
                 eprintln!("[HourglassLog] : 日志记录器写入消息失败: {}", e);
             };
             *missed_entry = 0;
-        } else {
+        }
+        else {
             // let delay = duration(self.time, now);
             let utc_datetime = to_utc(self.time);
             let offset_datetime = offset.map(|o| utc_datetime.to_offset(o)).unwrap_or(utc_datetime);
-            let s = format!(
-                "[{}]-{}\n",
-                offset_datetime
-                    .format(&time_format)
-                    .unwrap_or_else(|_| offset_datetime.format(&time::format_description::well_known::Rfc3339).unwrap()),
-                // delay.as_millis(),
-                msg
-            );
+            let s = format!("[{}]-{}\n",
+                            offset_datetime.format(&time_format)
+                                           .unwrap_or_else(|_| offset_datetime.format(&time::format_description::well_known::Rfc3339).unwrap()),
+                            // delay.as_millis(),
+                            msg);
             if let Err(e) = writer.write_all(s.as_bytes()) {
                 eprintln!("[HourglassLog] : 日志记录器写入消息失败: {}", e);
             };
@@ -372,48 +370,47 @@ impl LogMsg {
     }
 }
 
-enum LoggerInput {
+enum LoggerInput
+{
     LogMsg(LogMsg),
     Flush,
 }
 
 #[allow(dead_code)]
 #[derive(Debug)]
-enum LoggerOutput {
+enum LoggerOutput
+{
     Flushed,
     FlushError(io::Error),
 }
 
-pub trait LogFormat: Send + Sync {
+pub trait LogFormat: Send + Sync
+{
     /// 将 record 引用转换为 box 对象，然后发送到 log 线程，最后格式化为字符串。
     /// 注：record 是一个记录结构体，包含了日志信息。
     fn msg(&self, record: &Record) -> Box<dyn Send + Sync + Display>;
 }
 
 pub struct TideLogFormatter;
-impl LogFormat for TideLogFormatter {
+impl LogFormat for TideLogFormatter
+{
     /// 返回一个 box 对象，它包含用于稍后格式化为字符串的必要数据（例如线程名称、代码行号等）。
     #[inline]
-    fn msg(&self, record: &Record) -> Box<dyn Send + Sync + Display> {
-        Box::new(Message {
-            level: record.level(),
-            thread: std::thread::current().name().map(|n| n.to_string()),
-            file: record
-                .file_static()
-                .map(|s| Cow::Borrowed(s))
-                .or_else(|| record.file().map(|s| Cow::Owned(s.to_owned())))
-                .unwrap_or(Cow::Borrowed("")),
-            line: record.line(),
-            args: record
-                .args()
-                .as_str()
-                .map(|s| Cow::Borrowed(s))
-                .unwrap_or_else(|| Cow::Owned(format!("{}", record.args()))),
-        })
+    fn msg(&self, record: &Record) -> Box<dyn Send + Sync + Display>
+    {
+        Box::new(Message { level: record.level(),
+                           thread: std::thread::current().name().map(|n| n.to_string()),
+                           file: record.file_static()
+                                       .map(|s| Cow::Borrowed(s))
+                                       .or_else(|| record.file().map(|s| Cow::Owned(s.to_owned())))
+                                       .unwrap_or(Cow::Borrowed("")),
+                           line: record.line(),
+                           args: record.args().as_str().map(|s| Cow::Borrowed(s)).unwrap_or_else(|| Cow::Owned(format!("{}", record.args()))) })
     }
 }
 
-struct Message {
+struct Message
+{
     level: Level,
     thread: Option<String>,
     file: Cow<'static, str>,
@@ -421,40 +418,43 @@ struct Message {
     args: Cow<'static, str>,
 }
 
-impl Display for Message {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&format!(
-            "{} {} [{}:{}] {}",
-            self.level,
-            self.thread.as_ref().map(|x| x.as_str()).unwrap_or(""),
-            self.file,
-            self.line.unwrap_or(0),
-            self.args
-        ))
+impl Display for Message
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    {
+        f.write_str(&format!("{} {} [{}:{}] {}",
+                             self.level,
+                             self.thread.as_ref().map(|x| x.as_str()).unwrap_or(""),
+                             self.file,
+                             self.line.unwrap_or(0),
+                             self.args))
     }
 }
 
-struct DiscardState {
+struct DiscardState
+{
     last: ArcSwap<Instant>,
     count: AtomicUsize,
 }
 
 // 一个在释放时刷新与 Logger 相关日志的守卫
 /// 这个守卫可以确保当应用程序退出时，所有日志都被写入到目的地。
-pub struct LoggerGuard {
+pub struct LoggerGuard
+{
     queue: Sender<LoggerInput>,
     notification: Receiver<LoggerOutput>,
 }
-impl Drop for LoggerGuard {
-    fn drop(&mut self) {
-        self.queue
-            .send(LoggerInput::Flush)
-            .expect("[HourglassLog]：在刷新时日志队列关闭了，这是一个bug");
+impl Drop for LoggerGuard
+{
+    fn drop(&mut self)
+    {
+        self.queue.send(LoggerInput::Flush).expect("[HourglassLog]：在刷新时日志队列关闭了，这是一个bug");
         self.notification.recv().expect("[HourglassLog]：日志通知已关闭，这是一个bug");
     }
 }
 
-pub struct Logger {
+pub struct Logger
+{
     format: Box<dyn LogFormat>,
     level: LevelFilter,
     queue: Sender<LoggerInput>,
@@ -464,12 +464,12 @@ pub struct Logger {
     stopped: AtomicBool,
 }
 
-impl Logger {
-    pub fn init(self) -> Result<LoggerGuard, SetLoggerError> {
-        let guard = LoggerGuard {
-            queue: self.queue.clone(),
-            notification: self.notification.clone(),
-        };
+impl Logger
+{
+    pub fn init(self) -> Result<LoggerGuard, SetLoggerError>
+    {
+        let guard = LoggerGuard { queue: self.queue.clone(),
+                                  notification: self.notification.clone() };
 
         set_max_level(self.level);
         let boxed = Box::new(self);
@@ -477,37 +477,40 @@ impl Logger {
     }
 }
 
-impl Log for Logger {
+impl Log for Logger
+{
     #[inline]
-    fn enabled(&self, metadata: &Metadata) -> bool {
+    fn enabled(&self, metadata: &Metadata) -> bool
+    {
         // 已在日志宏中进行了检查
         self.level >= metadata.level()
     }
 
-    fn log(&self, record: &Record) {
+    fn log(&self, record: &Record)
+    {
         let limit = record.key_values().get(Key::from_str("limit")).and_then(|x| x.to_u64()).unwrap_or(0) as u32;
 
         let msg = self.format.msg(record);
         let limit_key = if limit == 0 {
             0
-        } else {
+        }
+        else {
             let mut b = hashbrown::hash_map::DefaultHashBuilder::default().build_hasher();
             if let Some(p) = record.module_path() {
                 p.as_bytes().hash(&mut b);
-            } else {
+            }
+            else {
                 record.file().unwrap_or("").as_bytes().hash(&mut b);
             }
             record.line().unwrap_or(0).hash(&mut b);
             b.finish()
         };
-        let msg = LoggerInput::LogMsg(LogMsg {
-            time: now(),
-            msg,
-            target: record.target().to_owned(),
-            level: record.level(),
-            limit,
-            limit_key,
-        });
+        let msg = LoggerInput::LogMsg(LogMsg { time: now(),
+                                               msg,
+                                               target: record.target().to_owned(),
+                                               level: record.level(),
+                                               limit,
+                                               limit_key });
         if self.block {
             if let Err(_) = self.queue.send(msg) {
                 let stop = self.stopped.load(Ordering::SeqCst);
@@ -516,7 +519,8 @@ impl Log for Logger {
                     self.stopped.store(true, Ordering::SeqCst)
                 }
             }
-        } else {
+        }
+        else {
             match self.queue.try_send(msg) {
                 | Err(TrySendError::Full(_)) => {
                     if let Some(s) = &self.discard_state {
@@ -542,18 +546,18 @@ impl Log for Logger {
     /// 刷新函数
     /// 该函数用于刷新日志队列。它向日志队列发送一个刷新命令，并等待通知，
     /// 以确保所有待处理的日志消息都已被正确处理。
-    fn flush(&self) {
+    fn flush(&self)
+    {
         // 向日志队列发送一个刷新命令。如果队列已关闭，则抛出异常。
-        self.queue
-            .send(LoggerInput::Flush)
-            .expect("[HourglassLog] : 在刷新时日志队列关闭了，这是一个bug");
+        self.queue.send(LoggerInput::Flush).expect("[HourglassLog] : 在刷新时日志队列关闭了，这是一个bug");
 
         // 等待通知，以确认刷新操作已完成。如果通知通道已关闭，则抛出异常。
         self.notification.recv().expect("[HourglassLog] : 日志通知关闭了，这是一个错误");
     }
 }
 
-struct BoundedChannelOption {
+struct BoundedChannelOption
+{
     size: usize,
     block: bool,
     print: bool,
@@ -563,7 +567,8 @@ struct BoundedChannelOption {
 /// 出于性能考虑，`hourglass_log` 只在一开始获取一次时区信息，并永久使用这个本地时区偏移量。
 /// 因此，日志中的时间戳不会意识到操作系统中时区的变化。
 
-pub struct Builder {
+pub struct Builder
+{
     format: Box<dyn LogFormat>,
     time_format: Option<OwnedFormatItem>,
     level: Option<LevelFilter>,
@@ -575,16 +580,19 @@ pub struct Builder {
     timezone: LogTimezone,
 }
 #[inline]
-pub fn builder() -> Builder {
+pub fn builder() -> Builder
+{
     Builder::new()
 }
 
-struct Directive {
+struct Directive
+{
     path: &'static str,
     level: Option<LevelFilter>,
     appender: Option<&'static str>,
 }
-pub enum LogTimezone {
+pub enum LogTimezone
+{
     /// local timezone
     /// Only *unix OS is supported for now
     Local,
@@ -592,7 +600,8 @@ pub enum LogTimezone {
     Fixed(UtcOffset),
 }
 
-impl Builder {
+impl Builder
+{
     #[inline]
     /// 使用默认设置创建一个 hourglass_log 构建器：
     /// - 全局日志级别：信息（INFO）
@@ -602,33 +611,32 @@ impl Builder {
     /// - 在工作线程和日志线程之间使用有界通道，大小限制为 100,000
     /// - 丢弃过多的日志消息
     /// - 使用本地时区的时间戳进行日志记录
-    pub fn new() -> Builder {
-        Builder {
-            format: Box::new(TideLogFormatter),
-            level: None,
-            root_level: None,
-            root: Box::new(stderr()) as Box<dyn Write + Send>,
-            appenders: HashMap::new(),
-            filters: Vec::new(),
-            bounded_channel_option: Some(BoundedChannelOption {
-                size: 100_000,
-                block: false,
-                print: false,
-            }),
-            timezone: LogTimezone::Local,
-            time_format: None,
-        }
+    pub fn new() -> Builder
+    {
+        Builder { format: Box::new(TideLogFormatter),
+                  level: None,
+                  root_level: None,
+                  root: Box::new(stderr()) as Box<dyn Write + Send>,
+                  appenders: HashMap::new(),
+                  filters: Vec::new(),
+                  bounded_channel_option: Some(BoundedChannelOption { size: 100_000,
+                                                                      block: false,
+                                                                      print: false }),
+                  timezone: LogTimezone::Local,
+                  time_format: None }
     }
 
     /// Set custom formatter
     #[inline]
-    pub fn format<F: LogFormat + 'static>(mut self, format: F) -> Builder {
+    pub fn format<F: LogFormat + 'static>(mut self, format: F) -> Builder
+    {
         self.format = Box::new(format);
         self
     }
 
     #[inline]
-    pub fn time_format(mut self, format: OwnedFormatItem) -> Builder {
+    pub fn time_format(mut self, format: OwnedFormatItem) -> Builder
+    {
         self.time_format = Some(format);
         self
     }
@@ -641,18 +649,18 @@ impl Builder {
     /// 默认情况下，过多的日志消息会被静默丢弃。要显示已丢弃的日志消息数量，
     /// 可参见 `Builder::print_omitted_count()`。
     #[inline]
-    pub fn bounded(mut self, size: usize, block_when_full: bool) -> Builder {
-        self.bounded_channel_option = Some(BoundedChannelOption {
-            size,
-            block: block_when_full,
-            print: false,
-        });
+    pub fn bounded(mut self, size: usize, block_when_full: bool) -> Builder
+    {
+        self.bounded_channel_option = Some(BoundedChannelOption { size,
+                                                                  block: block_when_full,
+                                                                  print: false });
         self
     }
 
     /// 当日志线程的通道是有界的，并且设置为丢弃过多的日志消息时，是否打印被省略的日志数量。
     #[inline]
-    pub fn print_omitted_count(mut self, print: bool) -> Builder {
+    pub fn print_omitted_count(mut self, print: bool) -> Builder
+    {
         self.bounded_channel_option.as_mut().map(|o| o.print = print);
         self
     }
@@ -661,7 +669,8 @@ impl Builder {
     /// **注意**：过多的日志消息将导致巨大的内存消耗，因为日志消息会排队等待日志线程处理。
     /// 当日志消息超过当前通道大小时，默认会将大小翻倍， 由于通道扩展需要分配内存，日志调用可能会变慢。
     #[inline]
-    pub fn unbounded(mut self) -> Builder {
+    pub fn unbounded(mut self) -> Builder
+    {
         self.bounded_channel_option = None;
         self
     }
@@ -670,7 +679,8 @@ impl Builder {
     ///
     /// 结合 `Builder::filter()` 使用，hourglass_log 可以将不同模块路径的日志输出到不同的目标。
     #[inline]
-    pub fn appender(mut self, name: &'static str, appender: impl Write + Send + 'static) -> Builder {
+    pub fn appender(mut self, name: &'static str, appender: impl Write + Send + 'static) -> Builder
+    {
         self.appenders.insert(name, Box::new(appender));
         self
     }
@@ -682,20 +692,12 @@ impl Builder {
     /// 假设我们将 `max_log_level` 配置为信息级别 INFO，即使过滤器的级别设置为调试级别 DEBUG，
     /// hourglass_log 仍将只记录到信息级别 INFO。
     #[inline]
-    pub fn filter<A: Into<Option<&'static str>>, L: Into<Option<LevelFilter>>>(
-        mut self,
-        module_path: &'static str,
-        appender: A,
-        level: L,
-    ) -> Builder {
+    pub fn filter<A: Into<Option<&'static str>>, L: Into<Option<LevelFilter>>>(mut self, module_path: &'static str, appender: A, level: L) -> Builder
+    {
         let appender = appender.into();
         let level = level.into();
         if appender.is_some() || level.is_some() {
-            self.filters.push(Directive {
-                path: module_path,
-                appender,
-                level,
-            });
+            self.filters.push(Directive { path: module_path, appender, level });
         }
         self
     }
@@ -703,7 +705,8 @@ impl Builder {
     #[inline]
     /// 配置默认的日志输出目标。
     /// 如果省略此方法，日志将输出到标准错误输出（stderr）。
-    pub fn root(mut self, writer: impl Write + Send + 'static) -> Builder {
+    pub fn root(mut self, writer: impl Write + Send + 'static) -> Builder
+    {
         self.root = Box::new(writer);
         self
     }
@@ -711,13 +714,15 @@ impl Builder {
     #[inline]
     /// 设置最大日志级别
     /// 比此级别更详细的日志将不会被发送到日志线程。
-    pub fn max_log_level(mut self, level: LevelFilter) -> Builder {
+    pub fn max_log_level(mut self, level: LevelFilter) -> Builder
+    {
         self.level = Some(level);
         self
     }
 
     #[inline]
-    pub fn root_log_level(mut self, level: LevelFilter) -> Builder {
+    pub fn root_log_level(mut self, level: LevelFilter) -> Builder
+    {
         self.root_level = Some(level);
         self
     }
@@ -727,43 +732,47 @@ impl Builder {
     /// 1. 目前 `time` v0.3 版本不支持在类 Unix 操作系统的多线程进程中访问本地偏移量。
     /// 2. 从操作系统获取时区信息相对较慢（大约几微秒），与获取 UTC 时间戳（大约几十纳秒）相比。
     #[inline]
-    pub fn local_timezone(mut self) -> Builder {
+    pub fn local_timezone(mut self) -> Builder
+    {
         self.timezone = LogTimezone::Local;
         self
     }
 
     #[inline]
     /// 使用 UTC 时区的 timestamps 记录日志
-    pub fn utc(mut self) -> Builder {
+    pub fn utc(mut self) -> Builder
+    {
         self.timezone = LogTimezone::Utc;
         self
     }
 
     #[inline]
     /// 使用固定时区 (例如: UTC) 的时间戳记录日志
-    pub fn fixed_timezone(mut self, timezone: UtcOffset) -> Builder {
+    pub fn fixed_timezone(mut self, timezone: UtcOffset) -> Builder
+    {
         self.timezone = LogTimezone::Fixed(timezone);
         self
     }
 
     #[inline]
     /// 指定日志消息的时间戳时区
-    pub fn timezone(mut self, timezone: LogTimezone) -> Builder {
+    pub fn timezone(mut self, timezone: LogTimezone) -> Builder
+    {
         self.timezone = timezone;
         self
     }
 
     /// 完成TideLog记录器的构建。
     /// 此调用会启动一个日志线程，将日志消息格式化为字符串，然后写入输出目标。
-    pub fn build(self) -> Result<Logger, IoError> {
+    pub fn build(self) -> Result<Logger, IoError>
+    {
         let offset = match self.timezone {
             | LogTimezone::Local => Some(local_timezone()),
             | LogTimezone::Utc => None,
             | LogTimezone::Fixed(offset) => Some(offset),
         };
-        let time_format = self.time_format.unwrap_or_else(|| {
-            time::format_description::parse_owned::<1>("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]+[offset_hour]").unwrap()
-        });
+        let time_format = self.time_format
+                              .unwrap_or_else(|| time::format_description::parse_owned::<1>("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]+[offset_hour]").unwrap());
         let mut filters = self.filters;
         // 确保根据最长路径匹配，对过滤器的路径进行排序。
         filters.sort_by(|a, b| a.path.len().cmp(&b.path.len()));
@@ -786,111 +795,90 @@ impl Builder {
         };
         let (notification_sender, notification_receiver) = bounded(1);
         std::thread::Builder::new().name("logger".to_string()).spawn(move || {
-            let mut appenders = self.appenders;
-            let filters = filters;
+                                                                   let mut appenders = self.appenders;
+                                                                   let filters = filters;
 
-            for filter in &filters {
-                if let Some(level) = filter.level {
-                    if global_level < level {
-                        warn!("[HourglassLog] : 在 `{}` 中，日志级别高于 {} 的消息将被忽略。", global_level, filter.path,);
-                    }
-                }
-            }
+                                                                   for filter in &filters {
+                                                                       if let Some(level) = filter.level {
+                                                                           if global_level < level {
+                                                                               warn!("[HourglassLog] : 在 `{}` 中，日志级别高于 {} 的消息将被忽略。", global_level, filter.path,);
+                                                                           }
+                                                                       }
+                                                                   }
 
-            let mut root = self.root;
-            let mut last_log = HashMap::default();
-            let mut missed_log = HashMap::default();
-            let mut last_flush = Instant::now();
-            let timeout = Duration::from_millis(200);
-            loop {
-                match receiver.recv_timeout(timeout) {
-                    | Ok(LoggerInput::LogMsg(log_msg)) => {
-                        log_msg.write(
-                            &filters,
-                            &mut appenders,
-                            &mut root,
-                            root_level,
-                            &mut missed_log,
-                            &mut last_log,
-                            offset,
-                            &time_format,
-                        );
-                    }
-                    | Ok(LoggerInput::Flush) => {
-                        let max = receiver.len();
-                        'queue: for _ in 1..=max {
-                            if let Ok(LoggerInput::LogMsg(msg)) = receiver.try_recv() {
-                                msg.write(
-                                    &filters,
-                                    &mut appenders,
-                                    &mut root,
-                                    root_level,
-                                    &mut missed_log,
-                                    &mut last_log,
-                                    offset,
-                                    &time_format,
-                                )
-                            } else {
-                                break 'queue;
-                            }
-                        }
-                        let flush_result = appenders.values_mut().chain([&mut root]).find_map(|w| w.flush().err());
-                        if let Some(error) = flush_result {
-                            notification_sender
-                                .send(LoggerOutput::FlushError(error))
-                                .expect("[HourglassLog] : 日志通知失败");
-                        } else {
-                            notification_sender.send(LoggerOutput::Flushed).expect("[HourglassLog] : 日志通知失败");
-                        }
-                    }
-                    | Err(RecvTimeoutError::Timeout) => {
-                        if last_flush.elapsed() > Duration::from_millis(1000) {
-                            let flush_errors = appenders.values_mut().chain([&mut root]).filter_map(|w| w.flush().err());
-                            for err in flush_errors {
-                                warn!("HourglassLog flush error: {}", err);
-                            }
-                            last_flush = Instant::now();
-                        };
-                    }
-                    | Err(e) => {
-                        eprintln!(
-                            "[HourglassLog] : sender 关闭，但没有发送 quit 信号，请检查详细信息：{}，这可能有助于发现潜在的错误",
-                            e
-                        );
-                    }
-                }
-            }
-        })?;
+                                                                   let mut root = self.root;
+                                                                   let mut last_log = HashMap::default();
+                                                                   let mut missed_log = HashMap::default();
+                                                                   let mut last_flush = Instant::now();
+                                                                   let timeout = Duration::from_millis(200);
+                                                                   loop {
+                                                                       match receiver.recv_timeout(timeout) {
+                                                                           | Ok(LoggerInput::LogMsg(log_msg)) => {
+                                                                               log_msg.write(&filters, &mut appenders, &mut root, root_level, &mut missed_log, &mut last_log, offset, &time_format);
+                                                                           }
+                                                                           | Ok(LoggerInput::Flush) => {
+                                                                               let max = receiver.len();
+                                                                               'queue: for _ in 1..=max {
+                                                                                   if let Ok(LoggerInput::LogMsg(msg)) = receiver.try_recv() {
+                                                                                       msg.write(&filters, &mut appenders, &mut root, root_level, &mut missed_log, &mut last_log, offset, &time_format)
+                                                                                   }
+                                                                                   else {
+                                                                                       break 'queue;
+                                                                                   }
+                                                                               }
+                                                                               let flush_result = appenders.values_mut().chain([&mut root]).find_map(|w| w.flush().err());
+                                                                               if let Some(error) = flush_result {
+                                                                                   notification_sender.send(LoggerOutput::FlushError(error)).expect("[HourglassLog] : 日志通知失败");
+                                                                               }
+                                                                               else {
+                                                                                   notification_sender.send(LoggerOutput::Flushed).expect("[HourglassLog] : 日志通知失败");
+                                                                               }
+                                                                           }
+                                                                           | Err(RecvTimeoutError::Timeout) => {
+                                                                               if last_flush.elapsed() > Duration::from_millis(1000) {
+                                                                                   let flush_errors = appenders.values_mut().chain([&mut root]).filter_map(|w| w.flush().err());
+                                                                                   for err in flush_errors {
+                                                                                       warn!("HourglassLog flush error: {}", err);
+                                                                                   }
+                                                                                   last_flush = Instant::now();
+                                                                               };
+                                                                           }
+                                                                           | Err(e) => {
+                                                                               eprintln!("[HourglassLog] : sender 关闭，但没有发送 quit 信号，请检查详细信息：{}，这可能有助于发现潜在的错误", e);
+                                                                           }
+                                                                       }
+                                                                   }
+                                                               })?;
         let block = self.bounded_channel_option.as_ref().map(|x| x.block).unwrap_or(false);
         let print = self.bounded_channel_option.as_ref().map(|x| x.print).unwrap_or(false);
-        Ok(Logger {
-            format: self.format,
-            level: global_level,
-            queue: sync_sender,
-            notification: notification_receiver,
-            block,
-            discard_state: if block || !print {
-                None
-            } else {
-                Some(DiscardState {
-                    last: ArcSwap::new(Arc::new(Instant::now())),
-                    count: AtomicUsize::new(0),
-                })
-            },
-            stopped: AtomicBool::new(false),
-        })
+        Ok(Logger { format: self.format,
+                    level: global_level,
+                    queue: sync_sender,
+                    notification: notification_receiver,
+                    block,
+                    discard_state: if block || !print {
+                        None
+                    }
+                    else {
+                        Some(DiscardState { last: ArcSwap::new(Arc::new(Instant::now())),
+                                            count: AtomicUsize::new(0) })
+                    },
+                    stopped: AtomicBool::new(false) })
     }
 
     /// 尝试构建并设置成全局日志记录器。
-    pub fn try_init(self) -> Result<LoggerGuard, Box<dyn std::error::Error>> {
+    pub fn try_init(self) -> Result<LoggerGuard, Box<dyn std::error::Error>>
+    {
         let logger = self.build()?;
         Ok(logger.init()?)
     }
 }
 
-impl Default for Builder {
+impl Default for Builder
+{
     #[inline]
-    fn default() -> Self {
+    fn default() -> Self
+    {
         Builder::new()
     }
 }
