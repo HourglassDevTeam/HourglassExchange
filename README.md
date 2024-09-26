@@ -25,7 +25,6 @@ A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs
 - **Liquidation Mechanism**: Supports a liquidation mechanism with configurable liquidation thresholds, enabling automated risk management and position liquidation when certain conditions are met.
 
 
-
 ## 📜 Code Example
 
 ```rust
