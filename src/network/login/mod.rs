@@ -47,7 +47,7 @@ pub struct LogoutRequest
 impl Authentication for HourglassExchange
 {
     #[allow(unused)]
-    async fn register(&self, username: String, email: String, password: String) -> Result<(), ExchangeError>
+    async fn handle_register(&self, username: String, email: String, password: String) -> Result<(), ExchangeError>
     {
         // 加密密码
         let password_hash = hash(password, DEFAULT_COST).map_err(|_| ExchangeError::PasswordHashError)?;
@@ -70,7 +70,7 @@ impl Authentication for HourglassExchange
     }
 
     #[allow(unused)]
-    async fn login(&self, username: String, password: String) -> Result<String, ExchangeError>
+    async fn handle_login(&self, username: String, password: String) -> Result<String, ExchangeError>
     {
         // 查询用户的加密密码
         let select_query = format!("SELECT password_hash FROM accounts.user_info WHERE username = '{}'", username);
@@ -101,7 +101,7 @@ impl Authentication for HourglassExchange
 
     #[allow(unused)]
     /// 注销
-    async fn logout(&self, session_token: String) -> Result<(), ExchangeError>
+    async fn handle_logout(&self, session_token: String) -> Result<(), ExchangeError>
     {
         let mut sessions = self.active_sessions.lock().await;
         if sessions.remove(&session_token).is_some() {
@@ -116,12 +116,12 @@ impl Authentication for HourglassExchange
 trait Authentication
 {
     #[allow(unused)]
-    async fn register(&self, username: String, email: String, password: String) -> Result<(), ExchangeError>;
+    async fn handle_register(&self, username: String, email: String, password: String) -> Result<(), ExchangeError>;
     #[allow(unused)]
-    async fn login(&self, username: String, password: String) -> Result<String, ExchangeError>;
+    async fn handle_login(&self, username: String, password: String) -> Result<String, ExchangeError>;
     #[allow(unused)]
     // 注销
-    async fn logout(&self, session_token: String) -> Result<(), ExchangeError>;
+    async fn handle_logout(&self, session_token: String) -> Result<(), ExchangeError>;
     // 删除账户
     // async fn delete_account(&self) -> Result<(), ExchangeError>;
 }
