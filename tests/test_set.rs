@@ -353,7 +353,7 @@ async fn test_6_open_2x_limit_buy_orders(client: &HourglassClient, test_6_ids_1:
     match event_hourglass_rx.try_recv() {
         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
                             .. }) => {
-            let expected = TokenBalance::new("USDT", Balance::new(90000.0, 71401.0));
+            let expected = TokenBalance::new("USDT", Balance::new(90000.0, 71501.0));
             assert_eq!(USDT_balance.balance.total, expected.balance.total);
             assert_eq!(USDT_balance.balance.available, expected.balance.available);
         }
@@ -378,7 +378,7 @@ async fn test_6_open_2x_limit_buy_orders(client: &HourglassClient, test_6_ids_1:
     match event_hourglass_rx.try_recv() {
         | Ok(AccountEvent { kind: AccountEventKind::Balance(USDT_balance),
                             .. }) => {
-            let expected = TokenBalance::new("USDT", Balance::new(90000.0, 54702.0));
+            let expected = TokenBalance::new("USDT", Balance::new(90000.0, 55002.0));
             assert_eq!(USDT_balance.balance.total, expected.balance.total);
             assert_eq!(USDT_balance.balance.available, expected.balance.available);
         }

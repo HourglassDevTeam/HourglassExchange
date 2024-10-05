@@ -82,15 +82,16 @@ use dashmap::DashMap;
 use hourglass::{
     common::{
         account_positions::{exited_positions::AccountExitedPositions, AccountPositions, PositionDirectionMode, PositionMarginMode},
+        balance::Balance,
         instrument::{kind::InstrumentKind, Instrument},
         order::{
             identification::{client_order_id::ClientOrderId, OrderId},
             order_instructions::OrderInstruction,
             states::{request_cancel::RequestCancel, request_open::RequestOpen},
             Order,
-        }
-        ,
+        },
         token::Token,
+        token_list::TOKEN_LIST,
         Side,
     },
     hourglass::{
@@ -100,25 +101,104 @@ use hourglass::{
             account_orders::AccountOrders,
             HourglassAccount,
         },
-        clickhouse_api::{
-            datatype::{clickhouse_trade_data::MarketTrade, single_level_order_book::SingleLevelOrderBook},
-            queries_operations::ClickHouseClient,
-        },
+        clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, queries_operations::ClickHouseClient},
         hourglass_client_local_mode::HourglassClient,
         DataSource, HourglassExchange,
     },
+    hourglass_log,
+    hourglass_log::warn,
     ClientExecution, Exchange,
 };
 use std::{
     collections::HashMap,
+    fmt::Display,
     sync::{atomic::AtomicI64, Arc},
 };
 use tokio::sync::{mpsc, Mutex, RwLock};
 use uuid::Uuid;
 
+use hourglass::hourglass_log::{
+    appender::{file::Period, FileAppender},
+    info, LogFormat, LoggerGuard,
+};
+use log::{Level, LevelFilter, Record};
+use time::Duration;
+
+fn init() -> LoggerGuard
+{
+    // TideFormatter定义了如何构建消息。
+    // 由于将消息格式化为字符串可能会减慢日志宏调用的速度，习惯的方式是将所需字段原样发送到日志线程，然后在日志线程中构建消息。
+    // Send 表示类型可以安全地在线程之间传递所有权，而 Sync 表示类型可以安全地在线程之间共享访问而不会引发数据竞争。
+    // 在这里，Box<dyn Send + Sync + std::fmt::Display> 表示存储的对象需要是可以跨线程传递和共享访问的，并且必须实现 std::fmt::Display trait，以便可以将其格式化为字符串。
+    struct Formatter;
+
+    struct Msg
+    {
+        level: Level,
+        // thread: Option<String>,
+        // file_path: Option<&'static str>, // 这意味着这个file_path字符串引用是与整个程序的生命周期相同的，也就是说，在整个程序运行期间都有效。
+        // line: Option<u32>,
+        args: String,
+        // module_path: Option<&'static str>,
+    }
+
+    impl LogFormat for Formatter
+    {
+        fn msg(&self, record: &Record) -> Box<dyn Send + Sync + std::fmt::Display>
+        {
+            Box::new(Msg { level: record.level(),
+                           // thread: std::thread::current().name().map(|n| n.to_string()),
+                           // file_path: record.file_static(),
+                           // line: record.line(),
+                           args: format!("{}", record.args())
+                           /* module_path: record.module_path_static(), */ })
+        }
+    }
+
+    impl Display for Msg
+    {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+        {
+            f.write_str(&format!("[{}] {}",
+                                 // self.thread.as_ref().map(|x| x.as_str()).unwrap_or(""),
+                                 // self.module_path.unwrap_or(""),
+                                 // self.file_path.unwrap_or(""),
+                                 // self.line.unwrap_or(0),
+                                 self.level,
+                                 self.args))
+        }
+    }
+
+    // let time_format =
+    //     time::format_description::parse_owned::<1>("[month]月[day]日 [hour]时[minute]分[second]秒.[subsecond digits:6]").unwrap();
+    hourglass_log::Builder::new()
+                                 // 使用自定义格式TideLogFormat
+                                 .format(Formatter)
+                                 // 使用自定义的时间格式
+                                 // .time_format(time_format)
+                                 // 全局最大日志级别
+                                 .max_log_level(LevelFilter::Info)
+                                 // 定义 root appender, 传递 None 会写入到 stderr
+                                 .root(FileAppender::builder().path("./backtest.log").rotate(Period::Minute).expire(Duration::hours(8)).build())
+                                 .try_init()
+                                 .expect("logger build or set failed")
+}
+
 #[tokio::main]
 async fn main()
 {
+    // init logger
+    let _logger = init(); // 这行代码中的变量 _guard 并不是一个必须的命名，而是遵循 Rust 的命名约定和设计模式。
+    warn!("Backtest begins!");
+
+    let token_balances: DashMap<Token, Balance> = DashMap::new();
+
+    for token_str in &TOKEN_LIST {
+        let token = Token::new(token_str.to_string());
+        let balance = Balance::new(0.0, 0.0);
+        token_balances.insert(token, balance);
+    }
+
     // create the channels
     let (account_event_tx, _account_event_rx) = mpsc::unbounded_channel();
     let (client_event_tx, client_event_rx) = mpsc::unbounded_channel();
@@ -132,15 +212,7 @@ async fn main()
     let positions = AccountPositions::init();
     let closed_positions = AccountExitedPositions::init();
 
-    let mut single_level_order_books = HashMap::new();
-
-    // FIXME mechanism to be updated to update `single_level_order_books` in
-    single_level_order_books.insert(Instrument { base: Token::new("ETH".to_string()),
-                                                 quote: Token::new("USDT".to_string()),
-                                                 kind: InstrumentKind::Perpetual },
-                                    SingleLevelOrderBook { latest_bid: 16305.0,
-                                                           latest_ask: 16499.0,
-                                                           latest_price: 0.0 });
+    let single_level_order_books = HashMap::new();
 
     let hourglass_account_config = AccountConfig { margin_mode: MarginMode::SingleCurrencyMargin,
                                                    global_position_direction_mode: PositionDirectionMode::Net,
@@ -150,7 +222,7 @@ async fn main()
                                                    global_leverage_rate: 1.0,
                                                    fees_book: HashMap::new(),
                                                    execution_mode: HourglassMode::Backtest,
-                                                   max_price_deviation: 0.05,
+                                                   max_price_deviation: 0.1,
                                                    lazy_account_positions: false,
                                                    liquidation_threshold: 0.9 };
 
@@ -178,7 +250,7 @@ async fn main()
                                                                                                                                                          minimum: 2,
                                                                                                                                                          current_value: 0 }).await)),
                                                              single_level_order_book: Arc::new(Mutex::new(single_level_order_books)),
-                                                             balances: DashMap::new(),
+                                                             balances: token_balances,
                                                              positions,
                                                              exited_positions: closed_positions,
                                                              account_event_tx,
@@ -201,6 +273,7 @@ async fn main()
 
     // Running the exchange in local mode in tokio runtime
     tokio::spawn(hourglass_exchange.start());
+
     // hourglass_client.let_it_roll().await.unwrap();
 
     let mut tokens_to_be_deposited: Vec<(Token, f64)> = Vec::new();
@@ -213,28 +286,26 @@ async fn main()
 
     // deposit 70000 USDT
     let _ = hourglass_client.deposit_tokens(tokens_to_be_deposited).await;
-    let balance = hourglass_client.fetch_balances().await.unwrap();
-    println!("Balance updated after deposit: {:?}", balance);
+    // let balance = hourglass_client.fetch_balances().await.unwrap();
+    // info!("Balance updated after deposit: {:?}", balance);
 
-    let mut order_counter: i64 = 0;
+    let mut order_ids = Vec::new();
 
     loop {
         // Call next entry of data and handle potential errors
         if let Err(e) = hourglass_client.let_it_roll().await {
-            eprintln!("Error executing LetItRoll: {:?}", e);
+            warn!("Error executing LetItRoll: {:?}", e);
             break;
         }
 
         // Listen for market data
         if let Some(market_data) = hourglass_client.listen_for_market_data().await {
             // Process the market data NOTE to be implemented.
-            order_counter += 1;
 
-            order_parser(&hourglass_client, &market_data, order_counter, &mut account_event_rx).await;
-
+            order_parser(&hourglass_client, &market_data, &mut order_ids).await;
 
             // Your logic for handling market_data & customised trading strategy goes here?
-            println!("Processed market data: {:?}", market_data);
+            info!("Processed market data: {:?}", market_data);
         }
         else {
             break
@@ -250,7 +321,6 @@ struct Ids
     id: OrderId,
 }
 
-
 #[allow(unused)]
 impl Ids
 {
@@ -260,50 +330,47 @@ impl Ids
     }
 }
 
-pub async fn order_parser(
-    client: &HourglassClient,
-    trade: &MarketTrade,
-    order_counter: i64,
-    account_rx: &mut mpsc::UnboundedReceiver<AccountEvent>
-)
+pub async fn order_parser(client: &HourglassClient, trade: &MarketTrade, order_ids: &mut Vec<OrderId>)
 {
-    match account_rx.recv().await {
-        | Some(AccountEvent { kind: AccountEventKind::OrdersOpen(new_orders),
-                   .. }) => {
-            println!("{:?}", new_orders[0].);
-        }
-        | other => {}
-    }
-
     match mock_up_strategy(trade) {
         | Some(operation) => {
             match operation {
                 | OrderType::Open(monk_order) => {
-                    let order = Order { instruction: monk_order.order_type,                                                 // 订单指令
-                                        exchange: Exchange::Hourglass,                                                      // 交易所
-                                        instrument: Instrument::from(("1000PEPE", "USDT", InstrumentKind::Perpetual)),  // 交易工具
-                                        timestamp: 1649192400000000,                                                        // 生成的时候填客户端下单时间,NOTE 回测场景中之后会被加上一个随机延迟时间。
-                                        cid: Some(ClientOrderId(format!("{} {}", "PEPEbuy{}".to_string(), order_counter))), // 客户端订单ID
-                                        side: monk_order.side,                                                              // 买卖方向
+                    let order = Order { instruction: monk_order.order_type,                                            // 订单指令
+                                        exchange: Exchange::Hourglass,                                                 // 交易所
+                                        instrument: Instrument::from(("1000PEPE", "USDT", InstrumentKind::Perpetual)), // 交易工具
+                                        timestamp: 1649192400000000,                                                   // 生成的时候填客户端下单时间,NOTE 回测场景中之后会被加上一个随机延迟时间。
+                                        cid: None,                                                                     // 客户端订单ID
+                                        side: monk_order.side,                                                         // 买卖方向
                                         state: RequestOpen { reduce_only: false,
                                                              price: monk_order.price,
                                                              size: monk_order.size } };
 
                     let new_orders = client.open_orders(vec![order]).await;
-                    println!("[test_3] : {:?}", new_orders);
+                    info!("The new orders are : {:?}", &new_orders);
+
+                    for order in new_orders {
+                        match order {
+                            | Ok(order) => order_ids.push(order.state.id),
+                            | Err(e) => {
+                                info!("{:?}", e);
+                                return
+                            }
+                        }
+                    }
                 }
                 | OrderType::Cancel => {
                     let order_cancel = Order { instruction: OrderInstruction::Cancel,
                                                exchange: Exchange::Hourglass,
                                                instrument: Instrument::from(("1000PEPE", "USDT", InstrumentKind::Perpetual)),
                                                timestamp: 1649192400000000, // 使用当前时间戳
-                                               cid: Some(ClientOrderId(format!("{} {}", "PEPEbuy{}".to_string(), order_counter))),
+                                               cid: None,
                                                side: Side::Buy,
-                                               state: RequestCancel::from(Some(ClientOrderId("PEPEbuy".to_string()))) }; // gotta be parsed from an OrderID rather than ClientOrderID
+                                               state: RequestCancel::from(order_ids[0].clone()) }; // gotta be parsed from an OrderID rather than ClientOrderID
 
                     let cancelled = client.cancel_orders(vec![order_cancel]).await;
 
-                    println!("[test_5] : {:?}", cancelled);
+                    info!("The cancelled orders are  : {:?}", cancelled);
                 }
             }
         }
@@ -321,10 +388,10 @@ pub fn mock_up_strategy(trade: &MarketTrade) -> Option<OrderType>
     // let trade_side = Side::from(trade.side.to_string().parse().unwrap());
     // the strategy's handling logic goes here
     match trade_price {
-        | px if px == 1000.0 => {
+        | px if px == 0.0086733 => {
             let operation = OrderType::Open(MockOrder { order_type: OrderInstruction::Limit,
                                                         side: Side::Buy,
-                                                        price: 999.0,
+                                                        price: 0.0085,
                                                         size: 10.0 });
 
             Some(operation)

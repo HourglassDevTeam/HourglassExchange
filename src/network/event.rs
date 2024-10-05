@@ -77,6 +77,7 @@ use crate::{
     common::order::states::{request_cancel::RequestCancel, request_open::RequestOpen},
     hourglass::hourglass_client_local_mode::HourglassClientEvent,
 };
+use log::error;
 use serde::Deserialize;
 use tokio::sync::oneshot;
 
@@ -123,10 +124,14 @@ impl NetworkEvent
                 let (response_tx, _response_rx) = oneshot::channel();
                 Ok(HourglassClientEvent::CancelOrdersAll(response_tx))
             }
-            | _ => Err("Unknown event type".to_string()),
+            | _ => {
+                error!("Unknown event type");
+                Err("Unknown event type".to_string())
+            }
         }
     }
 }
+
 #[cfg(test)]
 mod tests
 {

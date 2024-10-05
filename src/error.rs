@@ -169,8 +169,22 @@ pub enum ExchangeError
 
     #[error("Config Inheritance Not Allowed.")]
     ConfigInheritanceNotAllowed,
+
     #[error("AuthenticationFailed.")]
     AuthenticationFailed,
+
     #[error("InvalidTradeSize.")]
     InvalidTradeSize,
+
+    #[error("InvalidCredentials.")]
+    InvalidCredentials,
+
+    #[error("InvalidSession.")]
+    InvalidSession,
+
+    #[error("DatabaseError.")]
+    DatabaseError,
+
+    #[error("PasswordHashError.")]
+    PasswordHashError,
 }

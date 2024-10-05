@@ -4,3 +4,4 @@
 Cargo.lock
 /exportToHTML/
 .gitlab-ci.yml
+*.log

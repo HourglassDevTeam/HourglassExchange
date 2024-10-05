@@ -208,7 +208,8 @@ impl OrderRoleClassifier for AccountOrders
 
             | OrderInstruction::Limit => self.determine_limit_order_role(order, current_price), // 限价订单的判断逻辑
 
-            | OrderInstruction::PostOnly => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
+            // note that PostOnly is not affiliated to Limit mode in Hourglass, but regarded as a standalone mode.
+            | OrderInstruction::PostOnlyLimit => self.determine_post_only_order_role(order, current_price), // 仅挂单的判断逻辑
 
             | OrderInstruction::ImmediateOrCancel | OrderInstruction::FillOrKill => {
                 let is_immediate = match order.side {
@@ -700,7 +701,7 @@ mod tests
         let account_latency = AccountLatency::new(FluctuationMode::Sine, 100, 10);
         let account_orders = AccountOrders::new(123123, instruments, account_latency).await;
 
-        let order = Order { instruction: OrderInstruction::PostOnly,
+        let order = Order { instruction: OrderInstruction::PostOnlyLimit,
                             exchange: Exchange::Binance,
                             instrument: Instrument::new("BTC", "USD", InstrumentKind::Spot),
                             cid: Some(ClientOrderId("unit_test".to_string())),

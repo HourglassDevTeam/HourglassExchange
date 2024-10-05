@@ -23,6 +23,7 @@ pub mod common;
 pub mod dashboard;
 pub mod error;
 pub mod hourglass;
+pub mod hourglass_log;
 pub mod network;
 pub mod test_utils;
 pub mod vault;

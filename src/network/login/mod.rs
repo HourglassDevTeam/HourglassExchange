@@ -1,68 +1,124 @@
-use std::collections::HashMap;
-use async_trait::async_trait;
-use crate::{error::ExchangeError, hourglass::hourglass_client_local_mode::HourglassClient};
-/// 添加一个登陆验证模块
+use crate::{error::ExchangeError, hourglass::HourglassExchange};
+use bcrypt::{hash, verify, DEFAULT_COST};
+use chrono::Utc;
 use tokio::sync::oneshot;
-use crate::hourglass::hourglass_client_local_mode::HourglassClientEvent;
+use uuid::Uuid;
 
-// 定义登录请求结构体
+/// 定义用户注册请求
+#[derive(Debug)]
+pub struct RegisterRequest
+{
+    pub username: String,
+    pub email: String,
+    pub password: String, // 这是未加密的密码
+    pub response_tx: oneshot::Sender<Result<(), ExchangeError>>,
+}
+
+/// 定义登录请求
 #[derive(Debug)]
 pub struct LoginRequest
 {
     pub username: String,
-    pub password: String, // 或者 token
+    pub password: String, // 未加密的密码
     pub response_tx: oneshot::Sender<Result<LoginResponse, ExchangeError>>,
 }
 
-// 登录响应结构体
+/// 登录响应结构体
 #[derive(Debug)]
 pub struct LoginResponse
 {
-    pub session_token: String, // 可以返回一个令牌
+    pub session_token: String, // 成功登录后返回的 session 令牌
+}
+// 定义查询结果的数据结构
+#[derive(Debug, clickhouse::Row, serde::Deserialize)]
+struct UserInfo
+{
+    pub(crate) password_hash: String,
 }
 
-#[async_trait]
-pub trait Authenticator {
-    // 验证客户端是否已登录
-    fn is_authenticated(&self, authenticated_clients: &HashMap<String, String>) -> bool;
-    // 认证方法，用于验证用户名和密码
-    fn authenticate_client(&self, username: &str, password: &str) -> Result<String, ExchangeError>;
-    async fn login(&self, username: String, password: String) -> Result<String, ExchangeError>;
+/// 注销请求结构体
+#[derive(Debug)]
+pub struct LogoutRequest
+{
+    pub session_token: String,
+    pub response_tx: oneshot::Sender<Result<(), ExchangeError>>,
 }
 
-#[async_trait]
-impl Authenticator for HourglassClient {
-    // 验证客户端是否已登录
-    fn is_authenticated(&self, authenticated_clients: &HashMap<String, String>) -> bool {
-        // 检查是否有有效的 token
-        // 可以根据情况检查客户端的令牌
-        !authenticated_clients.is_empty()
+impl Authentication for HourglassExchange
+{
+    #[allow(unused)]
+    async fn handle_register(&self, username: String, email: String, password: String) -> Result<(), ExchangeError>
+    {
+        // 加密密码
+        let password_hash = hash(password, DEFAULT_COST).map_err(|_| ExchangeError::PasswordHashError)?;
+
+        // 创建插入用户信息的 SQL
+        let insert_query = format!(
+                                   "INSERT INTO accounts.user_info (id, username, email, password_hash, created_at) \
+            VALUES ('{}', '{}', '{}', '{}', '{}')",
+                                   Uuid::new_v4(),
+                                   username,
+                                   email,
+                                   password_hash,
+                                   Utc::now()
+        );
+
+        // 执行插入操作
+        self.clickhouse_client.client.read().await.query(&insert_query).execute().await.map_err(|_| ExchangeError::DatabaseError)?;
+
+        Ok(())
     }
 
-    // 认证方法，用于验证用户名和密码
-    fn authenticate_client(&self, username: &str, password: &str) -> Result<String, ExchangeError> {
-        // 假设我们有一个简单的用户名密码验证逻辑
-        if username == "user" && password == "pass" {
-            // 生成一个 token，表示成功登录
-            Ok("valid_token".to_string())
-        } else {
-            Err(ExchangeError::AuthenticationFailed)
+    #[allow(unused)]
+    async fn handle_login(&self, username: String, password: String) -> Result<String, ExchangeError>
+    {
+        // 查询用户的加密密码
+        let select_query = format!("SELECT password_hash FROM accounts.user_info WHERE username = '{}'", username);
+
+        // 执行查询并解析结果
+        let result = self.clickhouse_client
+                         .client
+                         .read()
+                         .await
+                         .query(&select_query)
+                         .fetch_one::<UserInfo>()
+                         .await
+                         .map_err(|_| ExchangeError::InvalidCredentials)?;
+
+        let password_hash = result.password_hash;
+
+        // 验证密码
+        if verify(password, &password_hash).map_err(|_| ExchangeError::InvalidCredentials)? {
+            let session_token = Uuid::new_v4().to_string();
+            // 保存会话信息
+            self.active_sessions.lock().await.insert(session_token.clone(), username.parse().unwrap());
+            Ok(session_token)
+        }
+        else {
+            Err(ExchangeError::InvalidCredentials)
         }
     }
 
-    async fn login(&self, username: String, password: String) -> Result<String, ExchangeError> {
-        let (response_tx, response_rx) = oneshot::channel();
-        let login_request = LoginRequest {
-            username,
-            password,
-            response_tx
-        };
-
-        self.client_event_tx.send(HourglassClientEvent::Login(login_request)).expect("Failed to send Login request");
-
-        // 等待服务器返回的令牌或错误信息
-        let login_response = response_rx.await.expect("Failed to receive Login response")?;
-
-        Ok(login_response.session_token)
+    #[allow(unused)]
+    /// 注销
+    async fn handle_logout(&self, session_token: String) -> Result<(), ExchangeError>
+    {
+        let mut sessions = self.active_sessions.lock().await;
+        if sessions.remove(&session_token).is_some() {
+            Ok(())
+        }
+        else {
+            Err(ExchangeError::InvalidSession)
+        }
     }
+}
+#[allow(unused)]
+trait Authentication
+{
+    async fn handle_register(&self, username: String, email: String, password: String) -> Result<(), ExchangeError>;
+    async fn handle_login(&self, username: String, password: String) -> Result<String, ExchangeError>;
+    // 注销
+    async fn handle_logout(&self, session_token: String) -> Result<(), ExchangeError>;
+    // 删除账户
+    // async fn delete_account(&self) -> Result<(), ExchangeError>;
 }

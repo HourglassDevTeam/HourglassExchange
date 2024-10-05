@@ -50,6 +50,7 @@ fn get_mac_address() -> Result<String, String>
 mod tests
 {
     use super::*;
+    use log::info;
 
     /// 测试生成机器ID的函数。
     ///
@@ -61,7 +62,7 @@ mod tests
         let machine_id = generate_machine_id();
         match machine_id {
             | Ok(id) => {
-                println!("本机的机器ID为: {:?}", id);
+                info!("本机的机器ID为: {:?}", id);
 
                 // 确保生成的机器ID不是0
                 assert_ne!(id, 0, "机器ID不应为0。");
@@ -84,7 +85,7 @@ mod tests
         let mac_address = get_mac_address();
         match mac_address {
             | Ok(mac) => {
-                println!("本机的MAC地址为: {:?}", mac);
+                info!("本机的MAC地址为: {:?}", mac);
                 assert!(!mac.is_empty(), "MAC地址不应为空。");
             }
             | Err(e) => panic!("获取MAC地址失败: {}", e),

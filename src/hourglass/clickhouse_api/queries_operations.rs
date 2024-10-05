@@ -1,3 +1,4 @@
+use crate::hourglass_log::{info, warn};
 use chrono::NaiveDate;
 use clickhouse::query::RowCursor;
 pub use clickhouse::{
@@ -36,7 +37,7 @@ impl ClickHouseClient
     pub fn new() -> Self
     {
         let client = Client::default().with_url("http://localhost:8123").with_user("default").with_password("");
-        println!("Successfully connected to the ClickHouse server.");
+        info!("Successfully connected to the ClickHouse server.");
         Self { client: Arc::new(RwLock::new(client)) }
     }
 }
@@ -116,9 +117,9 @@ impl ClickHouseClient
     pub async fn get_table_names(&self, database: &str) -> Vec<String>
     {
         let table_names_query = format!("SHOW TABLES FROM {database}",);
-        println!("Trying to retrieve table names within database : {:}", database);
+        info!("Trying to retrieve table names within database : {:}", database);
         self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
-                                                                                          eprintln!("Error loading table names: {:?}", e);
+                                                                                          warn!("Error loading table names: {:?}", e);
 
                                                                                           vec![]
                                                                                       })
@@ -127,9 +128,9 @@ impl ClickHouseClient
     pub async fn get_union_table_names(&self, database: &str) -> Vec<String>
     {
         let table_names_query = format!("SHOW TABLES FROM {database} LIKE '%union%'",);
-        println!("Trying to retrieve table names within the database that contain 'union': {:?}", table_names_query);
+        info!("Trying to retrieve table names within the database that contain 'union': {:?}", table_names_query);
         self.client.read().await.query(&table_names_query).fetch_all::<String>().await.unwrap_or_else(|e| {
-                                                                                          eprintln!("Error loading table names: {:?}", e);
+                                                                                          warn!("Error loading table names: {:?}", e);
 
                                                                                           vec![]
                                                                                       })
@@ -174,7 +175,7 @@ impl ClickHouseClient
                                               // 如果启用进度汇报，每处理完一个表就汇报一次进度
                                               if report_progress {
                                                   let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
-                                                  println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
+                                                  info!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
                                               }
                                           });
 
@@ -190,14 +191,14 @@ impl ClickHouseClient
         );
 
         if report_progress {
-            println!("Successfully constructed the final query.");
+            info!("Successfully constructed the final query.");
         }
 
         // 执行创建新表的查询
         self.client.read().await.query(&final_query).execute().await?;
 
         if report_progress {
-            println!("Table {}.{} created successfully.", database, new_table_name);
+            info!("Table {}.{} created successfully.", database, new_table_name);
         }
 
         Ok(())
@@ -213,7 +214,7 @@ impl ClickHouseClient
                                                  .order("timestamp", Some("DESC"))
                                                  .build();
 
-        println!("Constructed query {}", query);
+        info!("Constructed query {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<MarketTrade>().await?;
         Ok(trade_datas)
     }
@@ -228,7 +229,7 @@ impl ClickHouseClient
                                                  .order("timestamp", Some("DESC"))
                                                  .limit(1)
                                                  .build();
-        println!("Constructed query :  {}", query);
+        info!("Constructed query :  {}", query);
         let trade_data = self.client.read().await.query(&query).fetch_one::<MarketTrade>().await?;
         Ok(trade_data)
     }
@@ -238,7 +239,7 @@ impl ClickHouseClient
         let table_name = self.construct_union_table_name(exchange, instrument, channel, date);
         let database = self.construct_database_name(exchange, instrument, "trades");
         let query = format!("SELECT exchange, symbol, side, price, timestamp, amount FROM {}.{} ORDER BY timestamp", database, table_name);
-        println!("Executing query: {}", query);
+        info!("Executing query: {}", query);
         let trade_datas = self.client.read().await.query(&query).fetch_all::<MarketTrade>().await?;
         Ok(trade_datas)
     }
@@ -255,7 +256,7 @@ impl ClickHouseClient
                                                  .order("timestamp", Some("DESC"))
                                                  .build();
 
-        // println!("Constructed query {}", query);
+        // info!("Constructed query {}", query);
 
         // 获取 ClickHouse 客户端的只读引用
         let client_ref = self.client.read().await;
@@ -276,7 +277,7 @@ impl ClickHouseClient
                                                  .order("timestamp", Some("ASC"))
                                                  .build();
 
-        println!("Constructed query {}", query);
+        info!("Constructed query {}", query);
 
         // 获取 ClickHouse 客户端的只读引用
         let client_ref = self.client.read().await;
@@ -298,7 +299,7 @@ impl ClickHouseClient
                                                  .limit(8)
                                                  .build();
 
-        println!("Constructed query {}", query);
+        info!("Constructed query {}", query);
 
         // 获取 ClickHouse 客户端的只读引用
         let client_ref = self.client.read().await;
@@ -310,10 +311,10 @@ impl ClickHouseClient
     pub async fn optimize_table(&self, table_path: &str) -> Result<(), Error>
     {
         let optimize_query = format!("OPTIMIZE TABLE {}", table_path);
-        println!("Sending optimize query for table: {}", table_path);
+        info!("Sending optimize query for table: {}", table_path);
         // 执行优化查询
         self.client.read().await.query(&optimize_query).execute().await?;
-        println!("Table {} has been optimized.", table_path);
+        info!("Table {} has been optimized.", table_path);
         Ok(())
     }
 
@@ -336,10 +337,10 @@ impl ClickHouseClient
             for table_name in &table_names {
                 if table_name.contains("union") {
                     let table_path = format!("{}.{}", database, table_name);
-                    println!("Optimizing table: {}", table_path);
+                    info!("Optimizing table: {}", table_path);
 
                     if let Err(e) = self.optimize_table(&table_path).await {
-                        eprintln!("Error optimizing table {}: {}", table_path, e);
+                        warn!("Error optimizing table {}: {}", table_path, e);
                     }
 
                     processed_tables += 1;
@@ -347,12 +348,12 @@ impl ClickHouseClient
             }
 
             let progress = (processed_days as f64 / total_days as f64) * 100.0;
-            println!("Date: {} - Union tables processed: {}/{}, Total progress: {:.2}%", date_str, processed_tables, table_names.len(), progress);
+            info!("Date: {} - Union tables processed: {}/{}, Total progress: {:.2}%", date_str, processed_tables, table_names.len(), progress);
 
             start_date += chrono::Duration::days(1);
         }
 
-        println!("Union table optimization is complete for {} days.", total_days);
+        info!("Union table optimization is complete for {} days.", total_days);
         Ok(())
     }
 
@@ -373,7 +374,7 @@ impl ClickHouseClient
                                                          // 如果启用进度汇报，每处理完一个表就汇报一次进度
                                                          if report_progress {
                                                              let progress = ((i + 1) as f64 / total_tables as f64) * 100.0;
-                                                             println!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
+                                                             info!("Progress: Processed {} / {} tables ({:.2}%)", i + 1, total_tables, progress);
                                                          }
                                                      });
 
@@ -383,18 +384,57 @@ impl ClickHouseClient
         let final_query = format!("INSERT INTO {}.{} SELECT DISTINCT symbol, side, price, timestamp, amount FROM ({})",
                                   database, target_table_name, union_all_query);
 
-        println!("The Final Query is : {}", final_query);
+        info!("The Final Query is : {}", final_query);
         if report_progress {
-            println!("Successfully constructed the final insert query.");
+            info!("Successfully constructed the final insert query.");
         }
 
         // 执行插入数据的查询
         self.client.read().await.query(&final_query).execute().await?;
 
         if report_progress {
-            println!("Data inserted into {}.{} successfully.", database, target_table_name);
+            info!("Data inserted into {}.{} successfully.", database, target_table_name);
         }
 
+        Ok(())
+    }
+
+    pub async fn create_database_if_not_exists(&self, database: &str) -> Result<(), Error>
+    {
+        // 创建数据库的SQL查询
+        let create_db_query = format!("CREATE DATABASE IF NOT EXISTS {}", database);
+
+        // 执行创建数据库的SQL查询
+        self.client.read().await.query(&create_db_query).execute().await?;
+
+        info!("Database {} created successfully or already exists", database);
+        Ok(())
+    }
+
+    pub async fn create_users_table(&self, database: &str) -> Result<(), Error>
+    {
+        // 首先创建数据库（如果不存在）
+        self.create_database_if_not_exists(database).await?;
+
+        // 创建用户表的SQL查询
+        let create_table_query = format!(
+                                         "CREATE TABLE IF NOT EXISTS {}.user_info ( \
+        id UUID, \
+        username String, \
+        email String, \
+        password_hash String, \
+        created_at DateTime64(3), \
+        last_login DateTime64(3) DEFAULT now() \
+    )   ENGINE = ReplacingMergeTree() \
+        PARTITION BY toYYYYMMDD(created_at) \
+        ORDER BY (created_at, id)",
+                                         database
+        );
+
+        // 执行创建表的SQL查询
+        self.client.read().await.query(&create_table_query).execute().await?;
+
+        info!("Table {}.user_info created successfully", database);
         Ok(())
     }
 }
@@ -418,32 +458,4 @@ mod tests
         let table_name = client.construct_table_name("binance", "futures", "trades", "2024_08_24", "BTC", "USDT");
         assert_eq!(table_name, "binance_futures_trades_2024_08_24_BTCUSDT");
     }
-
-    // #[tokio::test]
-    // async fn test_get_table_names() {
-    //     let client = setup_clickhouse_client().await;
-    //     let table_names = client.get_table_names("binance_futures_trades").await;
-    //
-    //     // 假设数据库中有一些表
-    //     assert!(!table_names.is_empty(), "Expected to find some tables in the database");
-    // }
-
-    // #[tokio::test]
-    // async fn test_optimize_table() {
-    //     let client = setup_clickhouse_client().await;
-    //
-    //     let result = client.optimize_table("binance_futures_trades.binance_futures_trades_2024_05_05_1000BONKUSDT").await;
-    //     assert!(result.is_ok(), "Expected table optimization to succeed");
-    // }
-
-    // #[tokio::test]
-    // async fn test_optimize_union_tables_in_date_range() {
-    //     let client = setup_clickhouse_client().await;
-    //
-    //     let start_date = NaiveDate::from_ymd_opt(2024, 5, 5).unwrap();
-    //     let end_date = NaiveDate::from_ymd_opt(2024, 5, 5).unwrap();
-    //
-    //     let result = client.optimize_union_tables_in_date_range("binance", "futures", "trades", start_date, end_date).await;
-    //     assert!(result.is_ok(), "Expected optimization of union tables to succeed");
-    // }
 }

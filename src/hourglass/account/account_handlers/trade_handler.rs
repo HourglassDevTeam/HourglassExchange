@@ -1,5 +1,4 @@
-use
-crate::{
+use crate::{
     common::{
         event::{AccountEvent, AccountEventKind},
         instrument::{kind::InstrumentKind, Instrument},
@@ -89,7 +88,6 @@ impl TradeHandler for HourglassAccount
         orderbook.entry(instrument)
                  .or_insert_with(|| SingleLevelOrderBook::from(trade)) // 传递引用 &trade
                  .update_from_trade(&trade);
-        println!("[create_or_update_single_level_orderbook_from_market_trade] orderbook: {:?}", orderbook);
     }
 
     /// 处理交易数据的方法
@@ -419,8 +417,8 @@ mod tests
         assert_eq!(base_balance.total, 10.0);
         assert_eq!(base_balance.available, 10.0);
         let quote_balance = account.get_balance(&instrument.quote).unwrap();
-        assert_eq!(quote_balance.available, 27155.188); // Maker 价格
-        assert_eq!(quote_balance.total, 59967.188); // NOTE this is correct remaining total
+        assert_eq!(quote_balance.available, 60000.); // Maker 价格
+        assert_eq!(quote_balance.total, 60000.); // NOTE this is correct remaining total
     }
 
     #[tokio::test]

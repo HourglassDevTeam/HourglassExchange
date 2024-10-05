@@ -5,6 +5,7 @@ use crate::{
     },
     error::ExchangeError,
     hourglass::{config_request::ConfigurationRequest, hourglass_client_local_mode::ConfigureInstrumentsResults},
+    hourglass_log::{info, warn},
     Exchange,
 };
 use async_trait::async_trait;
@@ -237,7 +238,7 @@ impl PositionHandler for HourglassAccount
         }
 
         response_tx.send(results).unwrap_or_else(|_| {
-                                     eprintln!("Failed to send preconfigure_positions response");
+                                     warn!("Failed to send preconfigure_positions response");
                                  });
 
         Ok(position_configs)
@@ -559,7 +560,7 @@ impl PositionHandler for HourglassAccount
             }
             else {
                 Err(ExchangeError::ConfigInheritanceNotAllowed)
-            }
+            };
         }
 
         // 如果两个方向的配置都不存在，报错
@@ -655,23 +656,23 @@ impl PositionHandler for HourglassAccount
         // 根据处理类型调用不同的处理逻辑
         match handling_type {
             | PositionHandling::OpenBrandNewPosition => {
-                println!("executing PositionHandling::OpenBrandNewPosition");
+                info!("executing PositionHandling::OpenBrandNewPosition");
                 self.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await?;
             }
             | PositionHandling::UpdateExisting => {
-                println!("executing PositionHandling::UpdateExisting");
+                info!("executing PositionHandling::UpdateExisting");
                 self.update_existing_position(trade).await?;
             }
             | PositionHandling::CloseComplete => {
-                println!("executing PositionHandling::CloseComplete");
+                info!("executing PositionHandling::CloseComplete");
                 self.close_position(trade.instrument.clone(), trade.side).await?;
             }
             | PositionHandling::CloseCompleteAndReverse { remaining_size: reverse_size } => {
-                println!("executing PositionHandling::CloseCompleteAndReverse");
+                info!("executing PositionHandling::CloseCompleteAndReverse");
                 self.close_and_reverse_position(trade, reverse_size).await?;
             }
             | PositionHandling::ClosePartial => {
-                println!("executing PositionHandling::ClosePartial");
+                info!("executing PositionHandling::ClosePartial");
                 self.partial_close_position(trade).await?;
             }
         }
@@ -924,8 +925,8 @@ impl PositionHandler for HourglassAccount
 
         // 获取多头和空头仓位
         let (long_position, short_position) = self.get_position_both_ways(&instrument).await?;
-        println!("long position: {:?}", long_position);
-        println!("short position: {:?}", short_position);
+        // info!("Long Position: {:?}", long_position);
+        // info!("Short Position: {:?}", short_position);
 
         // 生成新的交易 ID
         let trade_id_value = self.client_trade_counter.fetch_add(1, Ordering::SeqCst);
@@ -1058,9 +1059,9 @@ impl PositionHandler for HourglassAccount
                         | PositionMarginMode::Isolated => {
                             // 根据平仓比例减少 Isolated 保证金
                             if let Some(isolated_margin) = position.isolated_margin {
-                                println!("isolated_margin: {}", isolated_margin);
+                                info!("isolated_margin: {}", isolated_margin);
                                 let margin_to_subtract = trade.price * trade.size / position.pos_config.leverage;
-                                println!("margin to subtract: {}", margin_to_subtract);
+                                info!("margin to subtract: {}", margin_to_subtract);
                                 position.isolated_margin = Some(isolated_margin - margin_to_subtract);
                             }
                         }
@@ -1071,7 +1072,7 @@ impl PositionHandler for HourglassAccount
                 }
             }
             | Side::Buy => {
-                println!("Sell side partial_close_position");
+                info!("Sell side partial_close_position");
                 // 获取并锁定空头仓位
                 let mut short_positions = self.positions.perpetual_pos_short.write().await;
                 if let Some(position) = short_positions.get_mut(&trade.instrument) {
@@ -1462,7 +1463,7 @@ mod tests
 
         // 创建一个多头仓位
         let result = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await;
-        println!("the result is {:#?}", result);
+        info!("the result is {:#?}", result);
 
         // 部分平仓
         let closing_trade = ClientTrade { exchange: Exchange::Hourglass,
@@ -1893,13 +1894,13 @@ mod tests
         // 创建多头仓位
         let pos = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await.unwrap();
 
-        println!("liquidation price is {}", pos.liquidation_price);
+        info!("liquidation price is {}", pos.liquidation_price);
 
         // 触发清算的市场价格
         let liquidation_triggering_trade = MarketTrade { timestamp: 1690000100,
                                                          price: 11.0, // 设置为低于清算价格
                                                          exchange: "binance-futures".to_string(),
-                                                         symbol: "BTC_USDT".to_string(),
+                                                         symbol: "BTCUSDT".to_string(),
                                                          amount: 10.0,
                                                          side: "Sell".to_string() };
 
@@ -1908,7 +1909,7 @@ mod tests
 
         // 检查多头仓位是否已被完全移除
         let long_positions = account.positions.perpetual_pos_long.read().await;
-        println!("long positions: {:?}", long_positions);
+        info!("long positions: {:?}", long_positions);
         assert!(!long_positions.contains_key(&trade.instrument));
     }
 
@@ -2083,15 +2084,15 @@ mod tests
         let pos = account.create_perpetual_position(trade.clone(), PositionHandling::OpenBrandNewPosition).await.unwrap();
 
         let current_margin = account.account_margin.clone();
-        println!("current margin is {:?}", current_margin);
+        info!("current margin is {:?}", current_margin);
         let liquidation_price = pos.liquidation_price;
-        println!("current liquidation_price is {:?}", liquidation_price);
+        info!("current liquidation_price is {:?}", liquidation_price);
 
         // 市场触发爆仓
         let liquidation_trade = MarketTrade { timestamp: 1690000100,
                                               price: 5.0, // 低于清算价格
                                               exchange: "binance-futures".to_string(),
-                                              symbol: "BTC_USDT".to_string(),
+                                              symbol: "BTCUSDT".to_string(),
                                               amount: 10.0,
                                               side: "Sell".to_string() };
 

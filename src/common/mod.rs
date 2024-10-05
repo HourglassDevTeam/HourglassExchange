@@ -15,6 +15,7 @@ pub mod order;
 pub mod stable_token;
 pub mod status;
 pub mod token;
+pub mod token_list;
 pub mod trade;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize, Serialize)]

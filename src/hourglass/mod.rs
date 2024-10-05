@@ -3,19 +3,21 @@ use crate::{
     error::ExchangeError,
     hourglass::{
         account::account_handlers::{balance_handler::BalanceHandler, position_handler::PositionHandler, trade_handler::TradeHandler},
-        clickhouse_api::datatype::clickhouse_trade_data::MarketTrade,
+        clickhouse_api::{datatype::clickhouse_trade_data::MarketTrade, queries_operations::ClickHouseClient},
         hourglass_client_local_mode::HourglassClientEvent,
     },
+    hourglass_log::warn,
     network::{event::NetworkEvent, is_port_in_use},
 };
 use account::HourglassAccount;
 use clickhouse::query::RowCursor;
 use mpsc::UnboundedReceiver;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tokio::{
     sync::{mpsc, mpsc::UnboundedSender, Mutex},
     time::{self, Duration},
 };
+use uuid::Uuid;
 use warp::Filter;
 
 pub mod account;
@@ -41,6 +43,8 @@ pub struct HourglassExchange
     pub market_event_tx: UnboundedSender<MarketTrade>,
     pub account: Arc<Mutex<HourglassAccount>>,
     pub data_source: DataSource,
+    pub clickhouse_client: ClickHouseClient,
+    pub active_sessions: Mutex<HashMap<String, Uuid>>, // 存储 session_token 和 username 的映射
 }
 
 impl HourglassExchange
@@ -67,17 +71,15 @@ impl HourglassExchange
                 match event {
                     HourglassClientEvent::LetItRoll => {
                         if let Some(row) = self.process_next_data().await {
-                            println!("processing LetItRoll");
-                                println!("row: {:?}", row);
                             let mut account = self.account.lock().await;
                             let _ = account.handle_trade_data(&row).await;
                             processed_count += 1; // 每处理一个条目，计数器加1
                         } else {
                             // 如果没有更多数据
                             if processed_count > 0 {
-                                println!("No more data available. Processed {} entries", processed_count);
+                                warn!("No more data available. Processed {} entries", processed_count);
                             } else {
-                                println!("No data found.");
+                                warn!("No data found.");
                             }
                             break; // 优雅退出循环
                         }
@@ -117,10 +119,20 @@ impl HourglassExchange
                             HourglassClientEvent::ConfigureInstruments(position_configs, response_tx) => {
                                 let _ = self.account.lock().await.preconfigure_positions(position_configs, response_tx).await;
                             }
+
                         HourglassClientEvent::Login(_) => {
                             todo!()
-                        }}
+                        }
+
+                        HourglassClientEvent::Register(_) => {
+                            todo!()
+                        }
+
+                        HourglassClientEvent::Logout(_) => {
+                todo!()
+                        }
                     }
+                }
                     // 加入超时机制，防止一直挂起
             _ = time::sleep(Duration::from_secs(timeout)) => {
                 if processed_count > 0 {
@@ -161,7 +173,7 @@ impl HourglassExchange
     /// 网络运行 [`HourglassExchange`]，并从网络接收事件
     pub async fn run_online(self)
     {
-        let address = ([127, 0, 0, 1], 3030);
+        let address = ([127, 0, 0, 1], 8888);
 
         // 检查端口是否已经被占用
         if is_port_in_use(address) {
@@ -258,7 +270,9 @@ impl ExchangeBuilder
                                // market_event_tx: self.market_event_tx.ok_or_else(|| ExecutionError::BuilderIncomplete("market_event_tx".to_string()))?,
                                market_event_tx: self.market_event_tx.ok_or_else(|| ExchangeError::BuilderIncomplete("market_tx".to_string()))?,
                                account: self.account.ok_or_else(|| ExchangeError::BuilderIncomplete("account".to_string()))?,
-                               data_source: self.data_source.ok_or_else(|| ExchangeError::BuilderIncomplete("data_source".to_string()))? })
+                               data_source: self.data_source.ok_or_else(|| ExchangeError::BuilderIncomplete("data_source".to_string()))?,
+                               clickhouse_client: ClickHouseClient::new(),
+                               active_sessions: HashMap::new().into() })
     }
 }
 
@@ -332,7 +346,9 @@ mod tests
         let exchange = HourglassExchange { client_event_rx: rx,
                                            market_event_tx: market_tx,
                                            account,
-                                           data_source: DataSource::Backtest(cursor) };
+                                           data_source: DataSource::Backtest(cursor),
+                                           clickhouse_client: ClickHouseClient::new(),
+                                           active_sessions: HashMap::new().into() };
         let address = "127.0.0.1:3030".parse().unwrap(); // Convert to a SocketAddr
         assert!(is_port_in_use(address));
         exchange.run_online().await;

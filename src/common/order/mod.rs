@@ -43,7 +43,7 @@ mod tests
     {
         assert_eq!(format!("{}", OrderInstruction::Market), "market");
         assert_eq!(format!("{}", OrderInstruction::Limit), "limit");
-        assert_eq!(format!("{}", OrderInstruction::PostOnly), "post_only");
+        assert_eq!(format!("{}", OrderInstruction::PostOnlyLimit), "post_only");
         assert_eq!(format!("{}", OrderInstruction::ImmediateOrCancel), "immediate_or_cancel");
         assert_eq!(format!("{}", OrderInstruction::FillOrKill), "fill_or_kill");
         assert_eq!(format!("{}", OrderInstruction::GoodTilCancelled), "good_til_cancelled");

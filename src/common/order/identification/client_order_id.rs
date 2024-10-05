@@ -1,3 +1,4 @@
+use log::error;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{fmt, fmt::Display, sync::LazyLock};
@@ -55,6 +56,7 @@ impl ClientOrderId
             Ok(ClientOrderId(custom_id))
         }
         else {
+            error!("Invalid ClientOrderId format");
             Err("Invalid ClientOrderId format".into())
         }
     }

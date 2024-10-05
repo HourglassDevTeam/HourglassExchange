@@ -4,9 +4,10 @@ A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs
 
 [**中文版 README**](https://github.com/arthur19q3/Hourglass/blob/master/README_CN.md)
 
-## ⚠️ Warning
+## Warnings
 
-**HourGlass is under active development.** Please use with caution in production environments. Currently, only perpetual contracts are supported.
+**⚠️️️ Hourglass supports Linux exclusively.** We apologise but windows systems are not supported as of yet.
+**⚠️ HourGlass is under active development.** Please use with caution in production environments. Currently, only perpetual contracts are supported.
 
 ## ✨ Features
 
@@ -22,7 +23,6 @@ A simulated crypto exchange inspired by [Barter.rs](https://github.com/barter-rs
 - **Multiple Stablecoins**: Supports multiple stablecoins, providing users with a variety of stable currency options.
 - **Trade Data Backtesting**: Allows backtesting using only trade data, with future support planned for order book data.
 - **Liquidation Mechanism**: Supports a liquidation mechanism with configurable liquidation thresholds, enabling automated risk management and position liquidation when certain conditions are met.
-
 
 
 ## 📜 Code Example
