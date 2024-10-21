@@ -105,24 +105,7 @@ pub struct FileAppender
 
 impl FileAppender
 {
-    /// FileAppender构建器。
-    ///
-    /// 您可以在构建器中配置文件路径、轮换周期、过期时长和时区，
-    /// 并获取相应的 `FileAppender`。
-    ///
-    /// ```rust
-    /// use hourglass_log::{
-    ///     appender::{Duration, FileAppender, Period},
-    ///     LogTimezone,
-    /// };
-    /// use time::UtcOffset;
-    ///
-    /// let appender = FileAppender::builder().path("./mylog.log")
-    ///                                       .rotate(Period::Day)
-    ///                                       .expire(Duration::days(7))
-    ///                                       .timezone(LogTimezone::Fixed(UtcOffset::from_hms(8, 0, 0).unwrap()))
-    ///                                       .build();
-    /// ```
+
     pub fn builder() -> FileAppenderBuilderBuilder
     {
         FileAppenderBuilder::builder()
