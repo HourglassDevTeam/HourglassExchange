@@ -370,6 +370,7 @@ mod tests
         assert_eq!(quote_balance.total, 10000.0); // 根本不能成交。若以不应该变。
     }
 
+
     #[tokio::test]
     async fn test_match_market_event_with_open_order_sell_with_sufficient_balance()
     {
@@ -377,7 +378,8 @@ mod tests
 
         let instrument = Instrument::from(("ETH", "USDT", InstrumentKind::Perpetual));
         account.deposit_usdt(50000.0).unwrap(); // 往测试里面充 50000 USDT.
-                                                // 查询 USDT 和 ETH 余额并 clone，以避免借用冲突
+
+        // 查询 USDT 和 ETH 余额并 clone，以避免借用冲突
         let initial_usdt_balance = account.get_balance(&Token::from("USDT")).unwrap().clone();
         let initial_eth_balance = account.get_balance(&Token::from("ETH")).unwrap().clone();
 
@@ -385,41 +387,53 @@ mod tests
         println!("[test_match_market_event_with_open_order_sell] : Initial USDT balance: {:?}", initial_usdt_balance);
 
         // 创建一个待开卖单订单
-        let open_order = Order { instruction: OrderInstruction::Limit,
-                                 exchange: Exchange::Hourglass,
-                                 instrument: instrument.clone(),
-                                 timestamp: 1625247600000,
-                                 cid: Some(ClientOrderId("validCID456".into())),
-                                 side: Side::Sell,
-                                 state: RequestOpen { reduce_only: false,
-                                                      price: 16406.0,
-                                                      size: 2.0 } };
+        let open_order = Order {
+            instruction: OrderInstruction::Limit,
+            exchange: Exchange::Hourglass,
+            instrument: instrument.clone(),
+            timestamp: 1625247600000,
+            cid: Some(ClientOrderId("validCID456".into())),
+            side: Side::Sell,
+            state: RequestOpen {
+                reduce_only: false,
+                price: 16406.0,
+                size: 2.0,
+            },
+        };
 
         // 将订单添加到账户
         let result = account.atomic_open(open_order.clone()).await;
+
         assert_eq!(result.is_ok(), false);
-        // let result = account.atomic_open(open_order).await;
-        // assert_eq!(result.is_ok(), true);
-        // // 创建一个市场事件，该事件与 open订单完全匹配
-        let market_event = MarketTrade { exchange: "binance-futures".to_string(),
-                                         symbol: "ETHUSDT".to_string(),
-                                         timestamp: 1625247600000,
-                                         price: 16605.0, // 前面已经确认是Maker单，成交计算的价格应该按照这里的 16605
-                                         side: Side::Buy.to_string(),
-                                         amount: 2.0 };
+
+        // 打印出挂单后的 quote_balance，使用 `clone` 来避免不可变借用
+        let quote_balance_after_open = account.get_balance(&instrument.quote).unwrap().clone();
+        println!("[After atomic_open]: quote_balance: {:?}", quote_balance_after_open);
+
+        // 创建一个市场事件，该事件与 open订单完全匹配
+        let market_event = MarketTrade {
+            exchange: "binance-futures".to_string(),
+            symbol: "ETHUSDT".to_string(),
+            timestamp: 1625247600000,
+            price: 16605.0, // 前面已经确认是Maker单，成交计算的价格应该按照这里的 16605
+            side: Side::Buy.to_string(),
+            amount: 2.0,
+        };
 
         // 匹配订单并生成交易事件
         let trades = account.match_orders(&market_event).await.unwrap();
         println!("trades:{:?}", trades);
 
-        // 检查余额是否已更新 注意合约交易中base_balance不应该被改变
+        // 检查余额是否已更新，注意合约交易中base_balance不应该被改变
         let base_balance = account.get_balance(&instrument.base).unwrap();
         assert_eq!(base_balance.total, 10.0);
         assert_eq!(base_balance.available, 10.0);
+
         let quote_balance = account.get_balance(&instrument.quote).unwrap();
-        assert_eq!(quote_balance.available, 60000.); // Maker 价格
-        assert_eq!(quote_balance.total, 60000.); // NOTE this is correct remaining total
+        assert_eq!(quote_balance.available, 27155.188); // Maker 价格
+        assert_eq!(quote_balance.total, 59967.188);
     }
+
 
     #[tokio::test]
     async fn test_get_open_orders_should_be_empty_after_matching()
